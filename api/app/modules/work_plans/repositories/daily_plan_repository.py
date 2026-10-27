@@ -151,10 +151,12 @@ class DailyPlanRepository(BaseRepository):
                 team_id = COALESCE(CAST(:team_id AS uuid), team_id),
                 project_id = COALESCE(CAST(:project_id AS uuid), project_id),
                 work_date = COALESCE(CAST(:work_date AS date), work_date),
-                site_name = COALESCE(:site_name, site_name),
-                site_lat = COALESCE(CAST(:site_lat AS numeric), site_lat),
-                site_lng = COALESCE(CAST(:site_lng AS numeric), site_lng),
-                attendance_radius_m = COALESCE(CAST(:attendance_radius_m AS int), attendance_radius_m),
+                site_name = CASE WHEN :site_name_set THEN :site_name ELSE site_name END,
+                site_lat = CASE WHEN :site_lat_set THEN CAST(:site_lat AS numeric) ELSE site_lat END,
+                site_lng = CASE WHEN :site_lng_set THEN CAST(:site_lng AS numeric) ELSE site_lng END,
+                attendance_radius_m = CASE WHEN :attendance_radius_m_set
+                                            THEN CAST(:attendance_radius_m AS int)
+                                            ELSE attendance_radius_m END,
                 clock_in_time = COALESCE(CAST(:clock_in_time AS time), clock_in_time),
                 clock_out_time = COALESCE(CAST(:clock_out_time AS time), clock_out_time),
                 update_at = now()
@@ -274,3 +276,112 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"c": str(completion_id)},
         ))
+
+    async def has_daily_report(self, daily_plan_id: UUID | str) -> bool:
+        """Apakah laporan harian sudah ada dan belum dihapus."""
+        val = await self.scalar(
+            "SELECT 1 FROM work_plan_daily_report WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id)},
+        )
+        return bool(val)
+
+    async def get_daily_report(self, daily_plan_id: UUID | str) -> Any:
+        """Mengambil data laporan harian jadwal kerja."""
+        return await self.fetchone(
+            """
+            SELECT r.report_id, r.daily_plan_id, r.leader_employee_id, e.full_name AS leader_name,
+                   r.summary, r.obstacles, r.photos_json, r.submitted_at, r.create_at
+            FROM work_plan_daily_report r
+            LEFT JOIN employee e ON e.employee_id = r.leader_employee_id
+            WHERE r.daily_plan_id = CAST(:id AS uuid) AND r.delete_at IS NULL
+            """,
+            {"id": str(daily_plan_id)},
+        )
+
+    async def create_daily_report(
+        self,
+        daily_plan_id: UUID | str,
+        leader_id: UUID | str,
+        summary: str,
+        obstacles: str | None,
+        photos: list[Any],
+    ) -> UUID:
+        """Membuat atau memperbarui laporan harian ketua tim."""
+        import json
+        sql = """
+            INSERT INTO work_plan_daily_report (
+                daily_plan_id, leader_employee_id, summary, obstacles, photos_json, submitted_at
+            ) VALUES (
+                CAST(:did AS uuid), CAST(:lid AS uuid), :summary, :obstacles, CAST(:photos AS jsonb), now()
+            )
+            ON CONFLICT (daily_plan_id) DO UPDATE SET
+                leader_employee_id = EXCLUDED.leader_employee_id,
+                summary = EXCLUDED.summary,
+                obstacles = EXCLUDED.obstacles,
+                photos_json = EXCLUDED.photos_json,
+                submitted_at = now(),
+                update_at = now(),
+                delete_at = NULL
+            RETURNING report_id
+        """
+        report_id: UUID = await self.scalar(
+            sql,
+            {
+                "did": str(daily_plan_id),
+                "lid": str(leader_id),
+                "summary": summary.strip(),
+                "obstacles": obstacles.strip() if obstacles and obstacles.strip() else None,
+                "photos": json.dumps(photos),
+            },
+        )
+        return report_id
+
+    async def active_leader_plan_without_report(
+        self, employee_id: UUID | str, work_date: date
+    ) -> UUID | None:
+        """Cari apakah karyawan adalah ketua tim pada jadwal harian hari ini yang belum memiliki laporan."""
+        sql = """
+            SELECT wpd.daily_plan_id
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE t.leader_employee_id = CAST(:eid AS uuid)
+              AND wpd.work_date = :wdate
+              AND wpd.status IN ('APPROVED', 'ONGOING')
+              AND wpd.delete_at IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM work_plan_daily_report r
+                  WHERE r.daily_plan_id = wpd.daily_plan_id AND r.delete_at IS NULL
+              )
+            LIMIT 1
+        """
+        val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
+        return UUID(str(val)) if val is not None else None
+
+    async def team_standing(self, team_id: UUID | str) -> Any:
+        """Ambil informasi tim aktif."""
+        return await self.fetchone(
+            "SELECT team_id, name, division_id, leader_employee_id FROM team "
+            "WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(team_id)},
+        )
+
+    async def get_weekly_reports_for_team(
+        self, team_id: UUID | str, start_date: date, end_date: date
+    ) -> list[Any]:
+        """Ambil seluruh laporan harian tim dalam rentang 1 minggu (Senin-Sabtu) untuk meeting mingguan."""
+        return list(await self.fetchall(
+            """
+            SELECT r.report_id, r.daily_plan_id, r.leader_employee_id, e.full_name AS leader_name,
+                   r.summary, r.obstacles, r.photos_json, r.submitted_at, r.create_at,
+                   wpd.work_date, wpd.status as plan_status
+            FROM work_plan_daily_report r
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = r.daily_plan_id
+            LEFT JOIN employee e ON e.employee_id = r.leader_employee_id
+            WHERE wpd.team_id = CAST(:team AS uuid)
+              AND wpd.work_date BETWEEN :start AND :end
+              AND r.delete_at IS NULL AND wpd.delete_at IS NULL
+            ORDER BY wpd.work_date ASC
+            """,
+            {"team": str(team_id), "start": start_date, "end": end_date},
+        ))
+

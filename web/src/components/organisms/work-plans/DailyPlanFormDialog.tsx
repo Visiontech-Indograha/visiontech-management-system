@@ -31,8 +31,8 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const update = useUpdateDailyPlan(plan?.daily_plan_id ?? "");
   const [teamId, setTeamId] = useState(plan?.team_id ?? initial?.team_id ?? "");
   const [siteName, setSiteName] = useState(plan?.site_name ?? "");
-  const [lat, setLat] = useState(plan ? String(plan.site_lat) : "");
-  const [lng, setLng] = useState(plan ? String(plan.site_lng) : "");
+  const [lat, setLat] = useState(plan ? String(plan.site_lat ?? "") : "");
+  const [lng, setLng] = useState(plan ? String(plan.site_lng ?? "") : "");
   const [hits, setHits] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
@@ -59,12 +59,22 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
     setErrors({});
     setFormError(null);
     if (!team) return setErrors({ team_id: "Pilih tim." });
-    if (siteName.trim().length < 2) return setErrors({ site_name: "Nama lokasi wajib diisi." });
-    if (!lat || !lng || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) return setErrors({ site_lat: "Isi koordinat atau pilih dari pencarian." });
+    const latitude = lat.trim();
+    const longitude = lng.trim();
+    if (siteName.trim() && siteName.trim().length < 2) return setErrors({ site_name: "Nama lokasi minimal 2 karakter." });
+    if (Boolean(latitude) !== Boolean(longitude)) {
+      return setErrors({ site_lat: "Isi kedua koordinat atau kosongkan keduanya.", site_lng: "Isi kedua koordinat atau kosongkan keduanya." });
+    }
+    if (latitude && (
+      !Number.isFinite(Number(latitude)) || Math.abs(Number(latitude)) > 90 ||
+      !Number.isFinite(Number(longitude)) || Math.abs(Number(longitude)) > 180
+    )) {
+      return setErrors({ site_lat: "Koordinat tidak valid (latitude -90..90, longitude -180..180)." });
+    }
     const body = {
-      site_name: siteName.trim(),
-      site_lat: lat,
-      site_lng: lng,
+      site_name: siteName.trim() || null,
+      site_lat: latitude ? Number(latitude) : null,
+      site_lng: longitude ? Number(longitude) : null,
       attendance_radius_m: Number(value("attendance_radius_m") || 150),
       clock_in_time: value("clock_in_time") || "07:00",
       clock_out_time: value("clock_out_time") || "16:00",
@@ -97,7 +107,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           ))}
         </SelectField>
         <TextField name="work_date" label="Tanggal" type="date" defaultValue={plan?.work_date ?? initial?.work_date} error={errors.work_date} />
-        <TextField label="Lokasi site" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Nama site/titik kumpul tim (dipakai untuk absen)." />
+        <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui; koordinat wajib dilengkapi sebelum presensi." />
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <ActionButton type="button" size="sm" variant="outline" disabled={searching || siteName.trim().length < 3} onClick={search}>
             {searching ? "Mencari…" : "Cari koordinat"}

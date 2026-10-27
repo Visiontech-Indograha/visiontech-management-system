@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, model_validator
 SurveyFormat = Literal["ACS", "CCTV"]
 LineCategory = Literal["MATERIAL", "KEBUTUHAN", "KABEL"]
 SurveyState = Literal["DRAFT", "SUBMITTED", "APPROVED"]
-FollowPhase = Literal["PREPARATION", "INSTALLATION", "REPLACEMENT", "MAINTENANCE"]
+FollowPhase = Literal["PREPARATION", "INSTALLATION", "REPLACEMENT", "MAINTENANCE", "SURVEY"]
 PointStatus = Literal["EXISTING", "PROPOSED"]  # sudah terpasang / usulan pemasangan baru
 
 
@@ -97,6 +97,7 @@ class PlanFromSurveyIn(BaseModel):
 
     daily_plan_id: UUID | None = None  # jadwal DRAFT/SUBMITTED yang sudah ada, atau
     work_date: date | None = None  # tanggal: jadwal DRAFT tim dibuat otomatis bila belum ada
+    team_id: UUID | None = None  # bila diisi: jadwalkan ke tim ini (default = tim survei)
     work_type_id: UUID | None = None  # kosong = pemasangan lanjutan bawaan tiap jenis titik
     task_phase: FollowPhase = "INSTALLATION"
     point_ids: list[UUID] = Field(default_factory=list, max_length=100)  # kosong = semua titik

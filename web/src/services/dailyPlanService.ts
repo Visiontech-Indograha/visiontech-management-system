@@ -126,3 +126,39 @@ export const usePlanItem = (itemId: string) =>
     queryKey: ["plan-item", itemId],
     queryFn: async () => (await api.get<components["schemas"]["PlanItemOut"]>(`/work-plans/items/${itemId}`)).data,
   });
+
+export interface WeeklyPresentation {
+  team_id: string;
+  team_name: string;
+  week_start: string;
+  week_end: string;
+  total_plans: number;
+  completed_plans: number;
+  daily_reports: Array<{
+    report_id: string;
+    daily_plan_id: string;
+    leader_employee_id: string;
+    leader_name?: string | null;
+    summary: string;
+    obstacles?: string | null;
+    photos_json: unknown[];
+    submitted_at: string;
+    create_at: string;
+  }>;
+  presentation_notes?: string | null;
+  pm_feedback?: string | null;
+}
+
+export async function getWeeklyPresentation(teamId: string, meetingDate: string): Promise<WeeklyPresentation> {
+  return (await api.get<WeeklyPresentation>(`/work-plans/teams/${teamId}/weekly-presentation`, {
+    params: { meeting_date: meetingDate },
+  })).data;
+}
+
+export const useWeeklyPresentation = (teamId: string, meetingDate: string) =>
+  useQuery({
+    queryKey: ["weekly-presentation", teamId, meetingDate],
+    queryFn: () => getWeeklyPresentation(teamId, meetingDate),
+    enabled: Boolean(teamId && meetingDate),
+  });
+

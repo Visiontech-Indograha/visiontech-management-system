@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
+import { Briefcase, Building2 } from "lucide-react";
 import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
@@ -16,12 +17,15 @@ import {
   AttendancePage,
   AttendanceRecapPage,
   AuditLogPage,
+  ClientsPage,
   DirectoryPage,
   EmployeeDetailPage,
+  LeavesPage,
   MessPage,
   MyDocumentsPage,
   OffboardingPage,
   OvertimeRecapPage,
+  ProjectsPage,
   SitesPage,
   TeamsPage,
   DailyPlansPage,
@@ -32,7 +36,6 @@ import {
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
-
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
@@ -49,6 +52,7 @@ const PAGES: Record<string, ReactNode> = {
   "/offboarding": <OffboardingPage />,
   "/assets": <AssetsPage />,
   "/attendance": <AttendancePage />,
+  "/leaves": <LeavesPage />,
   "/attendance-recap": <AttendanceRecapPage />,
   "/overtime-recap": <OvertimeRecapPage />,
 };
@@ -58,46 +62,63 @@ export const routes: RouteObject[] = [
   {
     element: <TitleLayout />,
     children: [
-  { path: "/login", element: <LoginPage /> },
-  { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
-  { path: "/verify/work-completion/:id", element: <VerifyCompletionPage /> }, // QR BAST resmi, publik
-  {
-    element: <RequireAuth />,
-    children: [
-      { path: "/change-password", element: <ChangePasswordPage /> },
+      { path: "/login", element: <LoginPage /> },
+      { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
+      { path: "/verify/work-completion/:id", element: <VerifyCompletionPage /> }, // QR BAST resmi, publik
+      { path: "/work-completion/:id", element: <VerifyCompletionPage /> }, // Alias URL QR dokumen resmi, publik
       {
-        element: <AppShell />,
+        element: <RequireAuth />,
         children: [
-          { path: "/", element: <HomePage /> },
-          ...NAV_ITEMS.filter((i) => i.path !== "/").map((item) => ({
-            path: item.path,
-            element: (
-              <RequireAccess item={item}>{PAGES[item.path] ?? <ComingSoonPage title={item.label} />}</RequireAccess>
-            ),
-          })),
+          { path: "/change-password", element: <ChangePasswordPage /> },
           {
-            path: "/surveys/:id",
-            element: (
-              <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/surveys")!}>
-                <SurveyDetailPage />
-              </RequireAccess>
-            ),
+            element: <AppShell />,
+            children: [
+              { path: "/", element: <HomePage /> },
+              ...NAV_ITEMS.filter((i) => i.path !== "/").map((item) => ({
+                path: item.path,
+                element: (
+                  <RequireAccess item={item}>{PAGES[item.path] ?? <ComingSoonPage title={item.label} />}</RequireAccess>
+                ),
+              })),
+              {
+                path: "/surveys/:id",
+                element: (
+                  <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/surveys")!}>
+                    <SurveyDetailPage />
+                  </RequireAccess>
+                ),
+              },
+              {
+                path: "/directory/:id",
+                element: (
+                  <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/directory")!}>
+                    <EmployeeDetailPage />
+                  </RequireAccess>
+                ),
+              },
+              {
+                path: "/clients",
+                element: (
+                  <RequireAccess item={{ path: "/clients", label: "Klien", icon: Building2, requires: ["create:plan"] }}>
+                    <ClientsPage />
+                  </RequireAccess>
+                ),
+              },
+              {
+                path: "/projects",
+                element: (
+                  <RequireAccess item={{ path: "/projects", label: "Proyek", icon: Briefcase, requires: ["create:plan"] }}>
+                    <ProjectsPage />
+                  </RequireAccess>
+                ),
+              },
+              { path: "/account", element: <AccountPage /> },
+              { path: "/forbidden", element: <ForbiddenPage /> },
+              { path: "*", element: <NotFoundPage /> },
+            ],
           },
-          {
-            path: "/directory/:id",
-            element: (
-              <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/directory")!}>
-                <EmployeeDetailPage />
-              </RequireAccess>
-            ),
-          },
-          { path: "/account", element: <AccountPage /> },
-          { path: "/forbidden", element: <ForbiddenPage /> },
-          { path: "*", element: <NotFoundPage /> },
         ],
       },
-    ],
-  },
     ],
   },
 ];

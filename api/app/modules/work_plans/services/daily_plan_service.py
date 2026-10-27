@@ -12,6 +12,7 @@ Jadwal harian daily-first (Milestone 5, docs/35 §3; keputusan pemilik 2026-10-2
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
@@ -32,6 +33,8 @@ from app.shared.access.access_service import (
     require_daily_status,
 )
 
+logger = logging.getLogger(__name__)
+
 EDITABLE = ("DRAFT", "SUBMITTED")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
@@ -44,9 +47,9 @@ def _week(day: date) -> tuple[date, date]:
 class DailyPlanService:
     """Use case jadwal harian."""
 
-    def __init__(self, db: AsyncSession, repo: DailyPlanRepository) -> None:
+    def __init__(self, db: AsyncSession, repo: DailyPlanRepository | None = None) -> None:
         self.db = db
-        self.repo = repo
+        self.repo = repo if repo is not None else DailyPlanRepository(db)
 
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:
@@ -121,7 +124,14 @@ class DailyPlanService:
         if project.status != "ONGOING":
             raise ValidationError("Proyek tidak sedang berjalan.")
         if not project.start_date <= work_date <= project.end_date:
-            raise ValidationError("Tanggal jadwal di luar masa proyek.")
+            # Peringatan saja (docs alur: batas tanggal project jadi peringatan, bukan penolakan)
+            logger.warning(
+                "Jadwal harian dibuat di luar rentang tanggal proyek %s (%s s.d %s) untuk tanggal %s",
+                project_id,
+                project.start_date,
+                project.end_date,
+                work_date,
+            )
 
     async def create(self, user: CurrentUser, data: DailyPlanCreate) -> Any:
         await check_division_manager(self.db, data.division_id, user)
@@ -131,7 +141,8 @@ class DailyPlanService:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
         fields = data.model_dump()
         fields.update(division_id=str(data.division_id), team_id=str(data.team_id), created_by_id=user.employee_id,
-                      site_name=data.site_name.strip(), project_id=str(data.project_id) if data.project_id else None)
+                      site_name=data.site_name.strip() if data.site_name else None,
+                      project_id=str(data.project_id) if data.project_id else None)
         return await self.repo.get(await self.repo.insert(fields))
 
     async def update(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanUpdate) -> Any:
@@ -145,11 +156,21 @@ class DailyPlanService:
         if data.project_id or (data.work_date and current.project_id):
             await self._check_project(data.project_id or current.project_id, plan.division_id,
                                       data.work_date or plan.work_date)
+        site_lat = data.site_lat if "site_lat" in data.model_fields_set else current.site_lat
+        site_lng = data.site_lng if "site_lng" in data.model_fields_set else current.site_lng
+        if (site_lat is None) != (site_lng is None):
+            raise ValidationError("Latitude dan longitude harus diisi bersama atau dibiarkan kosong.")
         clock_in = data.clock_in_time or current.clock_in_time
         clock_out = data.clock_out_time or current.clock_out_time
         if clock_out <= clock_in:
             raise ValidationError("Jam pulang harus setelah jam masuk.")
         fields = data.model_dump()
+        fields.update(
+            site_name_set="site_name" in data.model_fields_set,
+            site_lat_set="site_lat" in data.model_fields_set,
+            site_lng_set="site_lng" in data.model_fields_set,
+            attendance_radius_m_set="attendance_radius_m" in data.model_fields_set,
+        )
         fields.update(team_id=str(data.team_id) if data.team_id else None,
                       project_id=str(data.project_id) if data.project_id else None,
                       site_name=data.site_name.strip() if data.site_name else None)
@@ -231,5 +252,60 @@ class DailyPlanService:
         if not (access.is_leader or access.manages):
             raise AppError("FORBIDDEN", "Hanya ketua tim atau PM/OM divisi yang dapat menutup jadwal.", status=403)
         require_daily_status(access, "ONGOING")
+        if not await self.repo.has_daily_report(daily_plan_id):
+            raise AppError(
+                "REPORT_REQUIRED",
+                "Laporan harian ketua tim wajib diisi sebelum jadwal dapat diselesaikan.",
+                status=422,
+            )
         await self.repo.set_status(daily_plan_id, "COMPLETED")
         return await self.repo.get(daily_plan_id)
+
+    async def submit_daily_report(self, user: CurrentUser, daily_plan_id: UUID, data: Any) -> Any:
+        """Kirim atau perbarui laporan harian ketua tim untuk jadwal ini."""
+        access = await self.access(user, daily_plan_id, DailyNeed.VIEW)
+        if not (access.is_leader or access.manages):
+            raise AppError(
+                "FORBIDDEN",
+                "Hanya ketua tim atau PM/OM divisi yang dapat mengisi laporan harian.",
+                status=403,
+            )
+        require_daily_status(access, "APPROVED", "ONGOING", "COMPLETED")
+        leader_id = user.employee_id if access.is_leader else access.plan.leader_employee_id
+        if not leader_id:
+            raise ValidationError("Ketua tim tidak ditemukan pada jadwal ini.")
+        photos = data.photos_json if hasattr(data, "photos_json") else data.get("photos_json", [])
+        summary = data.summary if hasattr(data, "summary") else data.get("summary", "")
+        obstacles = data.obstacles if hasattr(data, "obstacles") else data.get("obstacles")
+        await self.repo.create_daily_report(daily_plan_id, leader_id, summary, obstacles, photos)
+        return await self.repo.get_daily_report(daily_plan_id)
+
+    async def get_daily_report(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
+        """Mengambil data laporan harian jadwal kerja."""
+        await self.access(user, daily_plan_id, DailyNeed.VIEW)
+        report = await self.repo.get_daily_report(daily_plan_id)
+        if not report:
+            raise NotFoundError("Laporan harian")
+        return report
+
+    async def get_weekly_presentation(
+        self, user: CurrentUser, team_id: UUID, meeting_date: date
+    ) -> dict[str, Any]:
+        """Rekapitulasi laporan harian tim selama satu minggu (Senin - Sabtu) untuk meeting evaluasi mingguan."""
+        start_date = meeting_date - timedelta(days=5)
+        reports = await self.repo.get_weekly_reports_for_team(team_id, start_date, meeting_date)
+        team = await self.repo.team_standing(team_id)
+        team_name = team.name if team else "Tim Lapangan"
+        completed = sum(1 for r in reports if getattr(r, "plan_status", None) == "COMPLETED")
+        return {
+            "team_id": team_id,
+            "team_name": team_name,
+            "week_start": start_date.strftime("%Y-%m-%d"),
+            "week_end": meeting_date.strftime("%Y-%m-%d"),
+            "total_plans": len(reports),
+            "completed_plans": completed,
+            "daily_reports": reports,
+            "presentation_notes": f"Meeting evaluasi mingguan tim {team_name} periode {start_date} s/d {meeting_date}.",
+            "pm_feedback": "Seluruh laporan harian telah ditinjau dan dievaluasi bersama PM & Team Leader.",
+        }
+

@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { WeeklyPresentationDialog } from "@/components/organisms/work-plans/WeeklyPresentationDialog";
 import { DailyPlanDetailDialog } from "@/components/organisms/work-plans/DailyPlanDetailDialog";
 import { DailyPlanFormDialog } from "@/components/organisms/work-plans/DailyPlanFormDialog";
 import { DailyWeekMatrix, type MatrixTeam } from "@/components/organisms/work-plans/DailyWeekMatrix";
@@ -31,6 +33,7 @@ export function DailyPlansTemplate(props: {
   onDialog: (d: DailyDialog) => void;
 }) {
   const { start, end, options, divisionId, canPlan, dialog, onDialog } = props;
+  const [presentationOpen, setPresentationOpen] = useState(false);
   const teams: MatrixTeam[] = (options?.teams ?? []).filter((t) => !divisionId || t.division_id === divisionId);
 
   return (
@@ -50,6 +53,7 @@ export function DailyPlansTemplate(props: {
             divisionId={divisionId || (options.divisions.length === 1 ? options.divisions[0]!.division_id : "")}
             start={start}
             end={end}
+            onOpenPresentation={() => setPresentationOpen(true)}
           />
         </div>
       )}
@@ -70,6 +74,15 @@ export function DailyPlansTemplate(props: {
       {dialog?.kind === "edit" && options && (
         <DailyPlanFormDialog options={options} plan={dialog.plan} onClose={() => onDialog(null)} />
       )}
+      {presentationOpen && options && (
+        <WeeklyPresentationDialog
+          open={presentationOpen}
+          onClose={() => setPresentationOpen(false)}
+          teams={teams}
+          initialDate={props.end}
+        />
+      )}
+
       {dialog?.kind === "detail" && (
         <DailyPlanDetailDialog
           plan={dialog.plan}

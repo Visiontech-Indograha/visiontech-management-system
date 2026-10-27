@@ -63,7 +63,8 @@ class PlanItemRepository(BaseRepository):
         """Kunci baris item (FOR UPDATE) — dua keputusan rollover bersamaan tidak lolos."""
         return await self.fetchone(
             "SELECT item_id, daily_plan_id, status, rollover_approval_status::text AS rollover_approval_status, "
-            "target_qty, completed_qty FROM work_plan_item WHERE item_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "target_qty, completed_qty, delay_reason FROM work_plan_item "
+            "WHERE item_id = CAST(:id AS uuid) AND delete_at IS NULL "
             "FOR UPDATE",
             {"id": str(item_id)},
         )
@@ -313,6 +314,43 @@ class PlanItemRepository(BaseRepository):
             {"uid": user_id, "role": role[:30], "id": str(item_id), "diff": json.dumps(diff, default=str)},
         )
 
+    async def log_activity(
+        self, user_id: str, role: str, action: str, item_id: UUID | str, diff: dict[str, Any]
+    ) -> None:
+        """Catatan perubahan item jadwal (misal saat hari APPROVED/ONGOING diubah) ke app_activity_logs."""
+        await self.execute(
+            """
+            INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                                           changed_diff)
+            VALUES (CAST(:uid AS uuid), :role, 'web_react', :action, 'work_plan_item', CAST(:id AS uuid),
+                    CAST(:diff AS jsonb))
+            """,
+            {
+                "uid": user_id, "role": role[:30], "action": action,
+                "id": str(item_id), "diff": json.dumps(diff, default=str),
+            },
+        )
+
+    async def relink_dependents(self, old_item_id: UUID | str, new_item_id: UUID | str) -> int:
+        """Alihkan item-item yang menunggu old_item ke new_item hasil rollover berantai."""
+        result = await self.execute(
+            """
+            UPDATE work_plan_item
+            SET depends_on_item_id = CAST(:new_id AS uuid), update_at = now()
+            WHERE depends_on_item_id = CAST(:old_id AS uuid) AND delete_at IS NULL
+            """,
+            {"old_id": str(old_item_id), "new_id": str(new_item_id)},
+        )
+        return getattr(result, "rowcount", 0)
+
+    async def team_division(self, team_id: UUID | str) -> str | None:
+        """Cek divisi dari team_id."""
+        val = await self.scalar(
+            "SELECT CAST(division_id AS text) FROM team WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(team_id)},
+        )
+        return str(val) if val else None
+
     async def target_day(self, daily_plan_id: UUID | str) -> Any:
         return await self.fetchone(
             "SELECT daily_plan_id, work_date, team_id, division_id, status FROM work_plan_daily "
@@ -327,18 +365,28 @@ class PlanItemRepository(BaseRepository):
             {"t": str(team_id), "d": work_date},
         )
 
-    async def clone_day(self, source_daily_id: UUID | str, work_date: date, approver: str | None) -> UUID:
-        """Jadwal baru di tanggal tujuan rollover: salin divisi, tim, lokasi, radius, jam; langsung disetujui PM."""
+    async def clone_day(
+        self,
+        source_daily_id: UUID | str,
+        work_date: date,
+        approver: str | None,
+        target_team_id: UUID | str | None = None,
+    ) -> UUID:
+        """Jadwal baru di tanggal tujuan rollover: salin divisi, tim (atau tim target), lokasi, radius, jam; disetujui PM."""  # noqa: E501
         new_id: UUID = await self.scalar(
             """
             INSERT INTO work_plan_daily (division_id, team_id, work_date, site_name, site_lat, site_lng,
                                          attendance_radius_m, clock_in_time, clock_out_time, status, created_by_id,
                                          approved_by_pm_id, approved_at)
-            SELECT division_id, team_id, :d, site_name, site_lat, site_lng, attendance_radius_m, clock_in_time,
-                   clock_out_time, 'APPROVED', COALESCE(CAST(:pm AS uuid), created_by_id), CAST(:pm AS uuid), now()
+            SELECT division_id, COALESCE(CAST(:target_team AS uuid), team_id), :d, site_name, site_lat, site_lng,
+                   attendance_radius_m, clock_in_time, clock_out_time, 'APPROVED',
+                   COALESCE(CAST(:pm AS uuid), created_by_id), CAST(:pm AS uuid), now()
             FROM work_plan_daily WHERE daily_plan_id = CAST(:id AS uuid)
             RETURNING daily_plan_id
             """,
-            {"id": str(source_daily_id), "d": work_date, "pm": approver},
+            {
+                "id": str(source_daily_id), "d": work_date, "pm": approver,
+                "target_team": str(target_team_id) if target_team_id else None,
+            },
         )
         return new_id

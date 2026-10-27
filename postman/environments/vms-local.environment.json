@@ -1,67 +1,64 @@
 {
+  "_": {
+    "postman_variable_scope": "environment",
+    "postman_exported_at": "2026-10-26T15:15:01.936Z",
+    "postman_exported_using": "Newman/6.2.3"
+  },
   "id": "e817e089-633d-4c3e-862d-b1086256c9a1",
   "name": "VMS Local Environment",
   "values": [
     {
-      "key": "baseUrl",
+      "type": "any",
       "value": "http://127.0.0.1:8000/api/v1",
-      "type": "default",
-      "enabled": true
+      "key": "baseUrl"
     },
     {
-      "key": "bearer_token",
+      "type": "default",
       "value": "",
-      "type": "default",
-      "enabled": true
+      "key": "bearer_token"
     },
     {
-      "key": "division_id",
-      "value": "33333333-0000-4000-a000-000000000001",
-      "type": "default",
-      "enabled": true
+      "type": "any",
+      "value": "d5e28fbd-d14a-414e-9eab-ce7f05bc5125",
+      "key": "division_id"
     },
     {
-      "key": "team_id",
-      "value": "44444444-0000-4000-a000-000000000001",
-      "type": "default",
-      "enabled": true
+      "type": "any",
+      "value": "49c3828f-38cc-4e4d-8e91-ff84fec89da6",
+      "key": "team_id"
     },
     {
-      "key": "work_type_id",
-      "value": "71111111-0000-4000-a000-000000000001",
-      "type": "default",
-      "enabled": true
+      "type": "any",
+      "value": "e6a9dfd0-7a5e-4010-90b4-0ab0da0f7c77",
+      "key": "work_type_id"
     },
     {
-      "key": "test_completion_id",
+      "type": "any",
+      "value": "91d1d168-dfa1-4c8f-b17e-de64c6e8fc9b",
+      "key": "test_completion_id"
+    },
+    {
+      "type": "any",
       "value": "",
-      "type": "default",
-      "enabled": true
+      "key": "test_daily_plan_id"
     },
     {
-      "key": "test_daily_plan_id",
+      "type": "any",
       "value": "",
-      "type": "default",
-      "enabled": true
+      "key": "test_prereq_item_id"
     },
     {
-      "key": "test_prereq_item_id",
+      "type": "any",
       "value": "",
-      "type": "default",
-      "enabled": true
+      "key": "test_main_item_id"
     },
     {
-      "key": "test_main_item_id",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "bom_id",
-      "value": "",
-      "type": "default",
-      "enabled": true
+      "type": "any",
+      "value": "d09c45b9-851a-41e7-8a5c-19ca80741fb7",
+      "key": "bom_id"
     }
   ],
-  "_postman_variable_scope": "environment"
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-10-26T15:15:16.478Z",
+  "_postman_exported_using": "Newman/6.2.3"
 }

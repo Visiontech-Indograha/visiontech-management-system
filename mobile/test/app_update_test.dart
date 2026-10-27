@@ -164,4 +164,45 @@ void main() {
       expect(prefs.data['last_build'], 5);
     },
   );
+  testWidgets(
+    'AboutAppCard menampilkan tombol periksa pembaruan jika appUpdateEnabled aktif',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appUpdateEnabledProvider.overrideWithValue(true),
+            appUpdateServiceProvider.overrideWithValue(FakeUpdateService()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: AboutAppCard()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Versi aplikasi'), findsOneWidget);
+      expect(find.text('Periksa pembaruan'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'AboutAppCard menyembunyikan tombol periksa pembaruan jika appUpdateEnabled mati (play store)',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appUpdateEnabledProvider.overrideWithValue(false),
+            appUpdateServiceProvider.overrideWithValue(FakeUpdateService()),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: AboutAppCard()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Versi aplikasi'), findsOneWidget);
+      expect(find.text('Periksa pembaruan'), findsNothing);
+    },
+  );
 }

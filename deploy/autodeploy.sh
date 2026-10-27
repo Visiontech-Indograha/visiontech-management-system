@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy otomatis VMS (R-20): setiap menit (cron) memeriksa branch `prod` di GitHub.
-# Ada commit baru → build image → backup DB → up -d → migrasi → cek kesehatan,
+# Ada commit baru → build image → backup DB → migrasi → up -d → cek kesehatan,
 # lalu lapor ke Discord #vms-deploy (mulai, berhasil/gagal + log build lengkap sebagai lampiran).
 #
 # Pasang di server (sekali): lihat deploy/README.md.
@@ -206,7 +206,7 @@ discord "🚀 [$ENV_NAME] Deploy dimulai — $SHORT" 3447003 \
 **Perubahan yang ikut:**
 $CHANGES
 
-⏳ Build → backup → nyalakan → migrasi → cek siap pakai. Kabar berikutnya menyusul."
+⏳ Build → backup → migrasi → nyalakan → cek siap pakai. Kabar berikutnya menyusul."
 
 (
   step "Checkout $SHORT"
@@ -214,25 +214,17 @@ $CHANGES
   rm -f api/.env web/.env
   step "Build image (docker compose build)"
   docker compose --progress=plain build 2>&1 || exit 12
+  step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
+  ./backup.sh "pra-deploy-$SHORT" || exit 13
+  step "Migrasi database (Alembic Master Schema V2)"
+  docker compose run --rm --no-deps api python -m alembic upgrade head 2>&1 || exit 15
   step "Jalankan kontainer baru (up -d)"
-  # Compose dapat mempertahankan kontainer lama bila isi image baru identik (mis. commit hanya docs),
-  # padahal pemeriksaan di bawah sengaja mewajibkan ID image hasil build terbaru.
-  # Dijalankan SEBELUM backup & migrasi supaya pemeriksaan berikutnya memakai api.env yang baru —
-  # kalau tidak, perbaikan api.env baru terbaca pada deploy setelahnya (jebakan insiden 2026-10-13).
+  # Migrasi harus selesai sebelum versi API baru mulai menerima request.
   docker compose up -d --force-recreate 2>&1 || exit 14
   step "Tunggu API tersambung ke basis data (maks 60 dtk)"
   wait_api_reaches_db || { db_hint; exit 17; }
   step "Tunggu API tersambung ke MinIO (maks 30 dtk)"
   wait_api_reaches_minio || { minio_hint; exit 18; }
-  step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
-  ./backup.sh "pra-deploy-$SHORT" || exit 13
-  step "Migrasi database (Master Schema V2: migration_v3, idempoten)"
-  # V2 tidak memakai rantai alembic V1 (skema = db/06 + DDL idempoten di app/database/migration_v3.py).
-  docker exec ${PFX}_api python -c "
-import asyncio
-from app.database.migration_v3 import apply_v3_migrations
-asyncio.run(apply_v3_migrations())
-print('migrasi V2: selesai')" 2>&1 || exit 15
   step "Cek siap pakai (api, basis data, web, jalur /api, 3x berturut-turut)"
   ok=0
   for i in $(seq 1 24); do                     # maks ±2 menit

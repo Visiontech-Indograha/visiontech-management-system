@@ -2413,11 +2413,18 @@
    "DailyPlanCreate": {
     "properties": {
      "attendance_radius_m": {
+      "anyOf": [
+       {
+        "maximum": 5000.0,
+        "minimum": 10.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "default": 150,
-      "maximum": 5000.0,
-      "minimum": 10.0,
-      "title": "Attendance Radius M",
-      "type": "integer"
+      "title": "Attendance Radius M"
      },
      "clock_in_time": {
       "default": "07:00:00",
@@ -2457,6 +2464,9 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Site Lat"
@@ -2470,15 +2480,25 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Site Lng"
      },
      "site_name": {
-      "maxLength": 150,
-      "minLength": 2,
-      "title": "Site Name",
-      "type": "string"
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
      },
      "team_id": {
       "format": "uuid",
@@ -2494,10 +2514,7 @@
     "required": [
      "division_id",
      "team_id",
-     "work_date",
-     "site_name",
-     "site_lat",
-     "site_lng"
+     "work_date"
     ],
     "title": "DailyPlanCreate",
     "type": "object"
@@ -2538,8 +2555,15 @@
       "type": "array"
      },
      "attendance_radius_m": {
-      "title": "Attendance Radius M",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Radius M"
      },
      "clock_in_time": {
       "format": "time",
@@ -2678,16 +2702,37 @@
       "title": "Rejection Reason"
      },
      "site_lat": {
-      "title": "Site Lat",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
      },
      "site_lng": {
-      "title": "Site Lng",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
      },
      "site_name": {
-      "title": "Site Name",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
      },
      "status": {
       "enum": [
@@ -2724,10 +2769,6 @@
      "leader_employee_id",
      "leader_name",
      "work_date",
-     "site_name",
-     "site_lat",
-     "site_lng",
-     "attendance_radius_m",
      "clock_in_time",
      "clock_out_time",
      "status",
@@ -2763,8 +2804,15 @@
       "title": "Approved By Pm Id"
      },
      "attendance_radius_m": {
-      "title": "Attendance Radius M",
-      "type": "integer"
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Radius M"
      },
      "clock_in_time": {
       "format": "time",
@@ -2895,16 +2943,37 @@
       "title": "Rejection Reason"
      },
      "site_lat": {
-      "title": "Site Lat",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
      },
      "site_lng": {
-      "title": "Site Lng",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
      },
      "site_name": {
-      "title": "Site Name",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
      },
      "status": {
       "enum": [
@@ -2941,10 +3010,6 @@
      "leader_employee_id",
      "leader_name",
      "work_date",
-     "site_name",
-     "site_lat",
-     "site_lng",
-     "attendance_radius_m",
      "clock_in_time",
      "clock_out_time",
      "status",
@@ -3075,6 +3140,129 @@
      }
     },
     "title": "DailyPlanUpdate",
+    "type": "object"
+   },
+   "DailyReportCreate": {
+    "properties": {
+     "obstacles": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Kendala atau hambatan di lapangan jika ada",
+      "title": "Obstacles"
+     },
+     "photos_json": {
+      "description": "Foto dokumentasi hasil kerja",
+      "items": {
+       "anyOf": [
+        {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        {
+         "type": "string"
+        }
+       ]
+      },
+      "title": "Photos Json",
+      "type": "array"
+     },
+     "summary": {
+      "description": "Ringkasan hasil kerja harian",
+      "minLength": 3,
+      "title": "Summary",
+      "type": "string"
+     }
+    },
+    "required": [
+     "summary"
+    ],
+    "title": "DailyReportCreate",
+    "type": "object"
+   },
+   "DailyReportOut": {
+    "properties": {
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     },
+     "leader_employee_id": {
+      "format": "uuid",
+      "title": "Leader Employee Id",
+      "type": "string"
+     },
+     "leader_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Name"
+     },
+     "obstacles": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Obstacles"
+     },
+     "photos_json": {
+      "items": {
+       "anyOf": [
+        {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        {
+         "type": "string"
+        }
+       ]
+      },
+      "title": "Photos Json",
+      "type": "array"
+     },
+     "report_id": {
+      "format": "uuid",
+      "title": "Report Id",
+      "type": "string"
+     },
+     "submitted_at": {
+      "format": "date-time",
+      "title": "Submitted At",
+      "type": "string"
+     },
+     "summary": {
+      "title": "Summary",
+      "type": "string"
+     }
+    },
+    "required": [
+     "report_id",
+     "daily_plan_id",
+     "leader_employee_id",
+     "summary",
+     "submitted_at",
+     "create_at"
+    ],
+    "title": "DailyReportOut",
     "type": "object"
    },
    "DefaultMaterialIn": {
@@ -5255,6 +5443,288 @@
      }
     },
     "title": "JobPositionUpdate",
+    "type": "object"
+   },
+   "LeaveBalanceResponse": {
+    "properties": {
+     "balance_id": {
+      "format": "uuid",
+      "title": "Balance Id",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_name": {
+      "title": "Employee Name",
+      "type": "string"
+     },
+     "period_year": {
+      "title": "Period Year",
+      "type": "integer"
+     },
+     "remaining_quota": {
+      "title": "Remaining Quota",
+      "type": "integer"
+     },
+     "total_quota": {
+      "title": "Total Quota",
+      "type": "integer"
+     },
+     "used_quota": {
+      "title": "Used Quota",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "balance_id",
+     "employee_id",
+     "employee_name",
+     "period_year",
+     "total_quota",
+     "used_quota",
+     "remaining_quota"
+    ],
+    "title": "LeaveBalanceResponse",
+    "type": "object"
+   },
+   "LeaveCreate": {
+    "properties": {
+     "attachment_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attachment File Id"
+     },
+     "employee_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Id"
+     },
+     "end_date": {
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "leave_type": {
+      "enum": [
+       "ANNUAL",
+       "SICK",
+       "MATERNITY",
+       "UNPAID",
+       "OTHER"
+      ],
+      "title": "Leave Type",
+      "type": "string"
+     },
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Reason",
+      "type": "string"
+     },
+     "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "leave_type",
+     "start_date",
+     "end_date",
+     "reason"
+    ],
+    "title": "LeaveCreate",
+    "type": "object"
+   },
+   "LeaveResponse": {
+    "properties": {
+     "attachment_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attachment Path"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_name": {
+      "title": "Employee Name",
+      "type": "string"
+     },
+     "employee_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee No"
+     },
+     "end_date": {
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "leave_id": {
+      "format": "uuid",
+      "title": "Leave Id",
+      "type": "string"
+     },
+     "leave_type": {
+      "enum": [
+       "ANNUAL",
+       "SICK",
+       "MATERNITY",
+       "UNPAID",
+       "OTHER"
+      ],
+      "title": "Leave Type",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "rejection_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Rejection Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "reviewed_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By Name"
+     },
+     "start_date": {
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "PENDING",
+       "APPROVED_BY_PM",
+       "APPROVED_BY_HR",
+       "APPROVED_BY_FINANCE",
+       "REJECTED",
+       "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "total_days": {
+      "title": "Total Days",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "leave_id",
+     "employee_id",
+     "employee_name",
+     "leave_type",
+     "start_date",
+     "end_date",
+     "total_days",
+     "reason",
+     "status",
+     "create_at"
+    ],
+    "title": "LeaveResponse",
+    "type": "object"
+   },
+   "LeaveReview": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "APPROVED",
+       "REJECTED"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "LeaveReview",
     "type": "object"
    },
    "LineEditIn": {
@@ -7445,10 +7915,23 @@
        "PREPARATION",
        "INSTALLATION",
        "REPLACEMENT",
-       "MAINTENANCE"
+       "MAINTENANCE",
+       "SURVEY"
       ],
       "title": "Task Phase",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "work_date": {
       "anyOf": [
@@ -9134,6 +9617,18 @@
        }
       ],
       "title": "Target Date"
+     },
+     "target_team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Team Id"
      }
     },
     "required": [
@@ -10761,6 +11256,104 @@
     "title": "VehicleUpdate",
     "type": "object"
    },
+   "WeeklyPresentationOut": {
+    "properties": {
+     "completed_plans": {
+      "title": "Completed Plans",
+      "type": "integer"
+     },
+     "daily_reports": {
+      "items": {
+       "$ref": "#/components/schemas/DailyReportOut"
+      },
+      "title": "Daily Reports",
+      "type": "array"
+     },
+     "pm_feedback": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Feedback"
+     },
+     "presentation_notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Presentation Notes"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     },
+     "total_plans": {
+      "title": "Total Plans",
+      "type": "integer"
+     },
+     "week_end": {
+      "title": "Week End",
+      "type": "string"
+     },
+     "week_start": {
+      "title": "Week Start",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "team_name",
+     "week_start",
+     "week_end",
+     "total_plans",
+     "completed_plans"
+    ],
+    "title": "WeeklyPresentationOut",
+    "type": "object"
+   },
+   "WorkCompletionAccDecision": {
+    "description": "Schema keputusan ACC Client oleh PM.",
+    "properties": {
+     "decision": {
+      "enum": [
+       "MENUNGGU_ACC",
+       "DITERIMA",
+       "DITOLAK_REWORK"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "WorkCompletionAccDecision",
+    "type": "object"
+   },
    "WorkCompletionBomIn": {
     "description": "Schema input item Bon Material (BoM) untuk order proyek klien.",
     "properties": {
@@ -11073,6 +11666,18 @@
    "WorkCompletionCreate": {
     "description": "Schema input pembuatan Order Klien baru oleh PM / OM.",
     "properties": {
+     "client_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Id"
+     },
      "client_name": {
       "anyOf": [
        {
@@ -11249,6 +11854,54 @@
    "WorkCompletionOut": {
     "description": "Schema output representasi Order Proyek Klien.",
     "properties": {
+     "acc_decided_at": {
+      "anyOf": [
+       {},
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acc Decided At"
+     },
+     "acc_decided_by_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acc Decided By Id"
+     },
+     "acc_decided_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acc Decided By Name"
+     },
+     "acc_notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Acc Notes"
+     },
+     "acc_status": {
+      "default": "MENUNGGU_ACC",
+      "title": "Acc Status",
+      "type": "string"
+     },
      "bom_items": {
       "items": {
        "$ref": "#/components/schemas/WorkCompletionBomOut"
@@ -11256,9 +11909,28 @@
       "title": "Bom Items",
       "type": "array"
      },
+     "client_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Id"
+     },
      "client_name": {
-      "title": "Client Name",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
      },
      "completed_target_unit": {
       "default": 0,
@@ -11471,6 +12143,13 @@
       "title": "Realization Photos Json",
       "type": "array"
      },
+     "revisions": {
+      "items": {
+       "$ref": "#/components/schemas/WorkCompletionRevisionOut"
+      },
+      "title": "Revisions",
+      "type": "array"
+     },
      "signature_hash": {
       "anyOf": [
        {
@@ -11555,7 +12234,6 @@
     },
     "required": [
      "completion_id",
-     "client_name",
      "project_title",
      "total_target_unit",
      "unit_measure",
@@ -11563,6 +12241,121 @@
      "priority_level"
     ],
     "title": "WorkCompletionOut",
+    "type": "object"
+   },
+   "WorkCompletionRevisionCreate": {
+    "description": "Schema penambahan revisi permintaan dari klien.",
+    "properties": {
+     "create_survey": {
+      "default": false,
+      "description": "Otomatis buat draf survei tugas untuk revisi ini",
+      "title": "Create Survey",
+      "type": "boolean"
+     },
+     "description": {
+      "description": "Deskripsi permintaan revisi/tambahan klien",
+      "minLength": 3,
+      "title": "Description",
+      "type": "string"
+     },
+     "request_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Request Date"
+     }
+    },
+    "required": [
+     "description"
+    ],
+    "title": "WorkCompletionRevisionCreate",
+    "type": "object"
+   },
+   "WorkCompletionRevisionOut": {
+    "description": "Schema output revisi klien.",
+    "properties": {
+     "completion_id": {
+      "format": "uuid",
+      "title": "Completion Id",
+      "type": "string"
+     },
+     "create_at": {
+      "anyOf": [
+       {},
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Create At"
+     },
+     "created_by_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created By Id"
+     },
+     "created_by_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created By Name"
+     },
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "request_date": {
+      "format": "date",
+      "title": "Request Date",
+      "type": "string"
+     },
+     "revision_id": {
+      "format": "uuid",
+      "title": "Revision Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "survey_task_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Task Id"
+     }
+    },
+    "required": [
+     "revision_id",
+     "completion_id",
+     "description",
+     "request_date",
+     "status"
+    ],
+    "title": "WorkCompletionRevisionOut",
     "type": "object"
    },
    "WorkCompletionSignRequest": {
@@ -11640,6 +12433,18 @@
    "WorkCompletionUpdate": {
     "description": "Schema pembaruan detail Order Klien.",
     "properties": {
+     "client_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Id"
+     },
      "client_name": {
       "anyOf": [
        {
@@ -11912,8 +12717,15 @@
       "default": "WORK",
       "enum": [
        "WORK",
+       "INSTALLATION",
        "SURVEY_TASK",
-       "SURVEY_POINT"
+       "SURVEY_POINT",
+       "MAINTENANCE",
+       "REPLACEMENT",
+       "PREPARATION",
+       "DISMANTLE",
+       "COMMISSIONING",
+       "TROUBLESHOOTING"
       ],
       "title": "Kind",
       "type": "string"
@@ -12021,8 +12833,15 @@
       "default": "WORK",
       "enum": [
        "WORK",
+       "INSTALLATION",
        "SURVEY_TASK",
-       "SURVEY_POINT"
+       "SURVEY_POINT",
+       "MAINTENANCE",
+       "REPLACEMENT",
+       "PREPARATION",
+       "DISMANTLE",
+       "COMMISSIONING",
+       "TROUBLESHOOTING"
       ],
       "title": "Kind",
       "type": "string"
@@ -17725,6 +18544,318 @@
     ]
    }
   },
+  "/api/v1/leaves": {
+   "get": {
+    "description": "Mengambil riwayat atau daftar permohonan cuti.",
+    "operationId": "list_leaves_api_v1_leaves_get",
+    "parameters": [
+     {
+      "description": "Filter per karyawan",
+      "in": "query",
+      "name": "employee_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter per karyawan",
+       "title": "Employee Id"
+      }
+     },
+     {
+      "description": "Filter status cuti",
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter status cuti",
+       "title": "Status"
+      }
+     },
+     {
+      "description": "Tahun cuti",
+      "in": "query",
+      "name": "year",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tahun cuti",
+       "title": "Year"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/LeaveResponse"
+         },
+         "title": "Response List Leaves Api V1 Leaves Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Leaves",
+    "tags": [
+     "Leaves"
+    ]
+   },
+   "post": {
+    "description": "Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).",
+    "operationId": "apply_leave_api_v1_leaves_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LeaveCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Apply Leave",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/balances/{employee_id}": {
+   "get": {
+    "description": "Mengambil kuota dan sisa cuti tahunan karyawan.",
+    "operationId": "get_leave_balance_api_v1_leaves_balances__employee_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Tahun kuota cuti",
+      "in": "query",
+      "name": "year",
+      "required": false,
+      "schema": {
+       "default": 2026,
+       "description": "Tahun kuota cuti",
+       "title": "Year",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveBalanceResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Leave Balance",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/{leave_id}": {
+   "get": {
+    "description": "Detail permohonan cuti.",
+    "operationId": "get_leave_api_v1_leaves__leave_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "leave_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Leave Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Leave",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/{leave_id}/review": {
+   "post": {
+    "description": "Persetujuan atau penolakan cuti oleh PM atau HR/OM/Super Admin.",
+    "operationId": "review_leave_api_v1_leaves__leave_id__review_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "leave_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Leave Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LeaveReview"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Review Leave",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
   "/api/v1/media/download": {
    "get": {
     "description": "Unduh media rujukan (Content-Disposition: attachment).",
@@ -20455,6 +21586,64 @@
     ]
    }
   },
+  "/api/v1/work-completions/{completion_id}/acc-decision": {
+   "post": {
+    "operationId": "decide_acc_status_api_v1_work_completions__completion_id__acc_decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "completion_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Completion Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkCompletionAccDecision"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkCompletionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Keputusan ACC Klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)",
+    "tags": [
+     "Work Completions (Order Klien)"
+    ]
+   }
+  },
   "/api/v1/work-completions/{completion_id}/bom": {
    "get": {
     "operationId": "list_work_completion_bom_api_v1_work_completions__completion_id__bom_get",
@@ -20617,6 +21806,116 @@
      }
     ],
     "summary": "Hapus Foto Realisasi BAST",
+    "tags": [
+     "Work Completions (Order Klien)"
+    ]
+   }
+  },
+  "/api/v1/work-completions/{completion_id}/revisions": {
+   "get": {
+    "operationId": "list_revisions_api_v1_work_completions__completion_id__revisions_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "completion_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Completion Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/WorkCompletionRevisionOut"
+         },
+         "title": "Response List Revisions Api V1 Work Completions  Completion Id  Revisions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daftar Revisi Klien",
+    "tags": [
+     "Work Completions (Order Klien)"
+    ]
+   },
+   "post": {
+    "operationId": "create_revision_api_v1_work_completions__completion_id__revisions_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "completion_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Completion Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkCompletionRevisionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Create Revision Api V1 Work Completions  Completion Id  Revisions Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Catat Revisi / Tambahan Pekerjaan dari Klien",
     "tags": [
      "Work Completions (Order Klien)"
     ]
@@ -21794,6 +23093,112 @@
      }
     ],
     "summary": "Reject Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/report": {
+   "get": {
+    "description": "Detail laporan harian untuk jadwal kerja harian.",
+    "operationId": "get_daily_report_api_v1_work_plans_daily__daily_plan_id__report_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyReportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ambil Laporan Harian Tim",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   },
+   "post": {
+    "description": "Laporan harian aktif (ringkasan, kendala, foto) oleh ketua tim atau PM/OM.",
+    "operationId": "submit_daily_report_api_v1_work_plans_daily__daily_plan_id__report_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyReportCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyReportOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Kirim atau Perbarui Laporan Harian Ketua Tim",
     "tags": [
      "Work Plans (Daily-First)"
     ]
@@ -23202,6 +24607,67 @@
     "summary": "Submit Survey",
     "tags": [
      "Work Plan Surveys"
+    ]
+   }
+  },
+  "/api/v1/work-plans/teams/{team_id}/weekly-presentation": {
+   "get": {
+    "description": "Rekapitulasi presentasi laporan harian selama satu minggu untuk setiap tim pada pertemuan hari Sabtu.",
+    "operationId": "get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Tanggal pertemuan evaluasi hari Sabtu",
+      "in": "query",
+      "name": "meeting_date",
+      "required": true,
+      "schema": {
+       "description": "Tanggal pertemuan evaluasi hari Sabtu",
+       "format": "date",
+       "title": "Meeting Date",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyPresentationOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Team Weekly Presentation",
+    "tags": [
+     "Work Plans (Daily-First)"
     ]
    }
   },

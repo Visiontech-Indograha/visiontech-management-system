@@ -690,6 +690,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/{daily_plan_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ambil Laporan Harian Tim
+         * @description Detail laporan harian untuk jadwal kerja harian.
+         */
+        get: operations["get_daily_report_api_v1_work_plans_daily__daily_plan_id__report_get"];
+        put?: never;
+        /**
+         * Kirim atau Perbarui Laporan Harian Ketua Tim
+         * @description Laporan harian aktif (ringkasan, kendala, foto) oleh ketua tim atau PM/OM.
+         */
+        post: operations["submit_daily_report_api_v1_work_plans_daily__daily_plan_id__report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/orders/{completion_id}/schedule": {
         parameters: {
             query?: never;
@@ -1020,6 +1044,41 @@ export interface paths {
         put?: never;
         /** Sinkronisasi Otomatis BoM dari Template Jenis Pekerjaan */
         post: operations["sync_bom_from_work_types_api_v1_work_completions__completion_id__sync_bom_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/acc-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Keputusan ACC Klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK) */
+        post: operations["decide_acc_status_api_v1_work_completions__completion_id__acc_decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-completions/{completion_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar Revisi Klien */
+        get: operations["list_revisions_api_v1_work_completions__completion_id__revisions_get"];
+        put?: never;
+        /** Catat Revisi / Tambahan Pekerjaan dari Klien */
+        post: operations["create_revision_api_v1_work_completions__completion_id__revisions_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4262,16 +4321,16 @@ export interface components {
              */
             work_date: string;
             /** Site Name */
-            site_name: string;
+            site_name?: string | null;
             /** Site Lat */
-            site_lat: number | string;
+            site_lat?: number | string | null;
             /** Site Lng */
-            site_lng: number | string;
+            site_lng?: number | string | null;
             /**
              * Attendance Radius M
              * @default 150
              */
-            attendance_radius_m: number;
+            attendance_radius_m: number | null;
             /**
              * Clock In Time
              * Format: time
@@ -4329,13 +4388,13 @@ export interface components {
              */
             work_date: string;
             /** Site Name */
-            site_name: string;
+            site_name?: string | null;
             /** Site Lat */
-            site_lat: string;
+            site_lat?: string | null;
             /** Site Lng */
-            site_lng: string;
+            site_lng?: string | null;
             /** Attendance Radius M */
-            attendance_radius_m: number;
+            attendance_radius_m?: number | null;
             /**
              * Clock In Time
              * Format: time
@@ -4437,13 +4496,13 @@ export interface components {
              */
             work_date: string;
             /** Site Name */
-            site_name: string;
+            site_name?: string | null;
             /** Site Lat */
-            site_lat: string;
+            site_lat?: string | null;
             /** Site Lng */
-            site_lng: string;
+            site_lng?: string | null;
             /** Attendance Radius M */
-            attendance_radius_m: number;
+            attendance_radius_m?: number | null;
             /**
              * Clock In Time
              * Format: time
@@ -4511,6 +4570,64 @@ export interface components {
             clock_in_time?: string | null;
             /** Clock Out Time */
             clock_out_time?: string | null;
+        };
+        /** DailyReportCreate */
+        DailyReportCreate: {
+            /**
+             * Summary
+             * @description Ringkasan hasil kerja harian
+             */
+            summary: string;
+            /**
+             * Obstacles
+             * @description Kendala atau hambatan di lapangan jika ada
+             */
+            obstacles?: string | null;
+            /**
+             * Photos Json
+             * @description Foto dokumentasi hasil kerja
+             */
+            photos_json?: ({
+                [key: string]: unknown;
+            } | string)[];
+        };
+        /** DailyReportOut */
+        DailyReportOut: {
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /** Leader Name */
+            leader_name?: string | null;
+            /** Summary */
+            summary: string;
+            /** Obstacles */
+            obstacles?: string | null;
+            /** Photos Json */
+            photos_json?: ({
+                [key: string]: unknown;
+            } | string)[];
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
         };
         /**
          * DefaultMaterialIn
@@ -6204,6 +6321,8 @@ export interface components {
             daily_plan_id?: string | null;
             /** Work Date */
             work_date?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Work Type Id */
             work_type_id?: string | null;
             /**
@@ -6211,7 +6330,7 @@ export interface components {
              * @default INSTALLATION
              * @enum {string}
              */
-            task_phase: "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            task_phase: "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE" | "SURVEY";
             /** Point Ids */
             point_ids?: string[];
             /** Preparation Work Type Id */
@@ -6773,6 +6892,8 @@ export interface components {
             target_daily_plan_id?: string | null;
             /** Target Date */
             target_date?: string | null;
+            /** Target Team Id */
+            target_team_id?: string | null;
             /** Note */
             note?: string | null;
         };
@@ -7418,6 +7539,19 @@ export interface components {
             photo_file_id?: string | null;
         };
         /**
+         * WorkCompletionAccDecision
+         * @description Schema keputusan ACC Client oleh PM.
+         */
+        WorkCompletionAccDecision: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "MENUNGGU_ACC" | "DITERIMA" | "DITOLAK_REWORK";
+            /** Notes */
+            notes?: string | null;
+        };
+        /**
          * WorkCompletionBomIn
          * @description Schema input item Bon Material (BoM) untuk order proyek klien.
          */
@@ -7529,6 +7663,8 @@ export interface components {
             pm_id?: string | null;
             /** Project Id */
             project_id?: string | null;
+            /** Client Id */
+            client_id?: string | null;
             /**
              * Client Name
              * @description Nama klien (kosong = dari proyek)
@@ -7607,8 +7743,10 @@ export interface components {
             pm_id?: string | null;
             /** Pm Name */
             pm_name?: string | null;
+            /** Client Id */
+            client_id?: string | null;
             /** Client Name */
-            client_name: string;
+            client_name?: string | null;
             /** Project Title */
             project_title: string;
             /** Order Number */
@@ -7633,6 +7771,21 @@ export interface components {
             order_status: string;
             /** Priority Level */
             priority_level: string;
+            /**
+             * Acc Status
+             * @default MENUNGGU_ACC
+             */
+            acc_status: string;
+            /** Acc Decided At */
+            acc_decided_at?: unknown | null;
+            /** Acc Decided By Id */
+            acc_decided_by_id?: string | null;
+            /** Acc Decided By Name */
+            acc_decided_by_name?: string | null;
+            /** Acc Notes */
+            acc_notes?: string | null;
+            /** Revisions */
+            revisions?: components["schemas"]["WorkCompletionRevisionOut"][];
             /** Start Work Date */
             start_work_date?: unknown | null;
             /** End Work Date */
@@ -7673,6 +7826,58 @@ export interface components {
             update_at?: unknown | null;
         };
         /**
+         * WorkCompletionRevisionCreate
+         * @description Schema penambahan revisi permintaan dari klien.
+         */
+        WorkCompletionRevisionCreate: {
+            /**
+             * Description
+             * @description Deskripsi permintaan revisi/tambahan klien
+             */
+            description: string;
+            /** Request Date */
+            request_date?: string | null;
+            /**
+             * Create Survey
+             * @description Otomatis buat draf survei tugas untuk revisi ini
+             * @default false
+             */
+            create_survey: boolean;
+        };
+        /**
+         * WorkCompletionRevisionOut
+         * @description Schema output revisi klien.
+         */
+        WorkCompletionRevisionOut: {
+            /**
+             * Revision Id
+             * Format: uuid
+             */
+            revision_id: string;
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Description */
+            description: string;
+            /**
+             * Request Date
+             * Format: date
+             */
+            request_date: string;
+            /** Survey Task Id */
+            survey_task_id?: string | null;
+            /** Status */
+            status: string;
+            /** Created By Id */
+            created_by_id?: string | null;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Create At */
+            create_at?: unknown | null;
+        };
+        /**
          * WorkCompletionSignRequest
          * @description Schema tanda tangan digital Berita Acara Penyelesaian.
          */
@@ -7707,6 +7912,8 @@ export interface components {
          * @description Schema pembaruan detail Order Klien.
          */
         WorkCompletionUpdate: {
+            /** Client Id */
+            client_id?: string | null;
             /** Client Name */
             client_name?: string | null;
             /** Project Title */
@@ -7780,7 +7987,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "SURVEY_TASK" | "SURVEY_POINT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
         };
@@ -7812,7 +8019,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "SURVEY_TASK" | "SURVEY_POINT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
             /** Follow Up Name */
@@ -9271,6 +9478,72 @@ export interface operations {
             };
         };
     };
+    get_daily_report_api_v1_work_plans_daily__daily_plan_id__report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_daily_report_api_v1_work_plans_daily__daily_plan_id__report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyReportCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     order_schedule_api_v1_work_plans_orders__completion_id__schedule_get: {
         parameters: {
             query?: never;
@@ -10081,6 +10354,109 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_acc_status_api_v1_work_completions__completion_id__acc_decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkCompletionAccDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_revisions_api_v1_work_completions__completion_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkCompletionRevisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_revision_api_v1_work_completions__completion_id__revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                completion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkCompletionRevisionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

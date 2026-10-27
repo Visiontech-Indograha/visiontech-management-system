@@ -127,13 +127,16 @@ class AssetRepository(BaseRepository):
         return {r.type for r in rows}
 
     async def plan_for_loan(self, daily_plan_id: UUID | str, employee_id: UUID | str) -> Any:
-        """Jadwal harian (belum dihapus) + apakah karyawan anggota aktif tim jadwal itu + apakah sudah lewat."""
+        """Jadwal harian (belum dihapus) + apakah karyawan anggota aktif/ketua tim jadwal itu + apakah sudah lewat."""
         return await self.fetchone(
             f"""
             SELECT wpd.daily_plan_id, wpd.work_date, wpd.work_date < {_WIB_TODAY} AS is_past,
-                   EXISTS (SELECT 1 FROM member m WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
-                           AND m.is_active AND m.delete_at IS NULL) AS on_team
+                   (t.leader_employee_id = CAST(:emp AS uuid)
+                    OR EXISTS (SELECT 1 FROM member m
+                               WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
+                                 AND m.is_active AND m.delete_at IS NULL)) AS on_team
             FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
             WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND wpd.delete_at IS NULL
             """,
             {"id": str(daily_plan_id), "emp": str(employee_id)},
@@ -263,7 +266,7 @@ class AssetRepository(BaseRepository):
         await self.execute(
             f"UPDATE {table} SET status = CAST(:status AS asset_status_enum), update_at = now() "
             f"WHERE {col} = CAST(:id AS uuid)",
-            {"id": str(asset_id), "status": status},
+            {"id": str(asset_id), "status": status.lower()},
         )
 
     async def has_open_loan(self, asset_type: str, asset_id: UUID | str) -> bool:
@@ -392,7 +395,7 @@ class AssetRepository(BaseRepository):
             RETURNING assignment_id
             """,
             {"type": asset_type, "asset": str(asset_id), "emp": str(employee_id),
-             "plan": str(daily_plan_id) if daily_plan_id else None, "status": status, "photo": handover_path},
+             "plan": str(daily_plan_id) if daily_plan_id else None, "status": status.lower(), "photo": handover_path},
         )
         return assignment_id
 
@@ -400,5 +403,5 @@ class AssetRepository(BaseRepository):
         await self.execute(
             "UPDATE asset_assignment SET returned_at = now(), assignment_status = CAST(:c AS asset_status_enum), "
             "update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
-            {"id": str(assignment_id), "c": condition},
+            {"id": str(assignment_id), "c": condition.lower()},
         )

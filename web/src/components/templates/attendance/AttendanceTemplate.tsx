@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { AttendanceNavTabs } from "@/components/organisms/attendance/AttendanceNavTabs";
 import { AttendanceExplainDialog } from "@/components/organisms/attendance/AttendanceExplainDialog";
 import { AttendanceFilter } from "@/components/organisms/attendance/AttendanceFilter";
 import { AttendanceList } from "@/components/organisms/attendance/AttendanceList";
@@ -25,6 +26,7 @@ export function AttendanceTemplate({ list, filters: f, onFilterChange: set, hasT
 }) {
   return (
     <PageTemplate title="Absensi">
+      <AttendanceNavTabs activeTab="attendance" />
       <OfficeCheckInCard />
       {hasTeam && (
         <AttendanceScopeTabs

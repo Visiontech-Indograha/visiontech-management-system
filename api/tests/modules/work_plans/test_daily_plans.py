@@ -35,6 +35,11 @@ def test_pm_creates_draft_and_runs_full_cycle(client, world: World):
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).json()["status"] == "APPROVED"
     assert client.post(f"/work-plans/daily/{pid}/start", headers=pm).status_code == 403  # bukan ketua
     assert client.post(f"/work-plans/daily/{pid}/start", headers=leader).json()["status"] == "ONGOING"
+    missing_report = client.post(f"/work-plans/daily/{pid}/complete", headers=leader)
+    assert missing_report.status_code == 422
+    report = client.post(f"/work-plans/daily/{pid}/report", headers=leader,
+                         json={"summary": "Pekerjaan selesai", "photos_json": []})
+    assert report.status_code == 201, report.text
     assert client.post(f"/work-plans/daily/{pid}/complete", headers=leader).json()["status"] == "COMPLETED"
 
 

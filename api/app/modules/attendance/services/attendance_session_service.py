@@ -306,6 +306,16 @@ class AttendanceSessionService:
                         f"Absensi masuk belum dibuka. Jam masuk kerja dimulai pukul {settings.ATTENDANCE_OPEN_TIME}.",
                         status=422,
                     )
+        leave_info = await self.repo.is_on_approved_leave(employee_id, today)
+        if isinstance(leave_info, (tuple, list)) and len(leave_info) == 2:
+            on_leave, leave_type = leave_info
+            if on_leave:
+                raise AppError(
+                    "ON_APPROVED_LEAVE",
+                    f"Anda sedang dalam masa cuti/izin/sakit resmi ({leave_type}). Absensi tidak diperkenankan.",
+                    status=409,
+                )
+
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         if await self.repo.active_on(employee_id, today):
@@ -439,12 +449,17 @@ class AttendanceSessionService:
         if should_check_close and now_local is not None:
             close_hour, close_min = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
             if now_local.time() >= time(close_hour, close_min):
-                raise AppError(
-                    "CHECKOUT_CLOSED",
-                    f"Batas waktu absensi pulang mandiri telah ditutup pada pukul {settings.ATTENDANCE_CLOSE_TIME}. "
-                    "Sesi yang belum selesai akan ditutup secara otomatis oleh sistem.",
-                    status=422,
-                )
+                has_ot = await self.repo.has_active_overtime(worker.employee_id, work_date)
+                if not has_ot:
+                    raise AppError(
+                        "CHECKOUT_CLOSED",
+                        (
+                            f"Batas waktu absensi pulang mandiri telah ditutup pada pukul "
+                            f"{settings.ATTENDANCE_CLOSE_TIME}. "
+                            "Sesi yang belum selesai akan ditutup secara otomatis oleh sistem."
+                        ),
+                        status=422,
+                    )
 
         if accuracy_m is not None:  # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
             limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M

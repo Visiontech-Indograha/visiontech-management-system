@@ -12,6 +12,7 @@ Jadwal harian daily-first (Milestone 5, docs/35 §3; keputusan pemilik 2026-10-2
 """
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
@@ -31,6 +32,8 @@ from app.shared.access.access_service import (
     is_admin,
     require_daily_status,
 )
+
+logger = logging.getLogger(__name__)
 
 EDITABLE = ("DRAFT", "SUBMITTED")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
@@ -122,7 +125,13 @@ class DailyPlanService:
             raise ValidationError("Proyek tidak sedang berjalan.")
         if not project.start_date <= work_date <= project.end_date:
             # Peringatan saja (docs alur: batas tanggal project jadi peringatan, bukan penolakan)
-            pass
+            logger.warning(
+                "Jadwal harian dibuat di luar rentang tanggal proyek %s (%s s.d %s) untuk tanggal %s",
+                project_id,
+                project.start_date,
+                project.end_date,
+                work_date,
+            )
 
     async def create(self, user: CurrentUser, data: DailyPlanCreate) -> Any:
         await check_division_manager(self.db, data.division_id, user)

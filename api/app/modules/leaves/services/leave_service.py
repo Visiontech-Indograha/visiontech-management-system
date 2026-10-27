@@ -5,6 +5,7 @@ Service logika bisnis cuti, izin, dan sakit.
 """
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -28,7 +29,16 @@ class LeaveService:
         if data.end_date < data.start_date:
             raise ValidationError("Tanggal akhir cuti tidak boleh sebelum tanggal mulai.")
 
-        total_days = (data.end_date - data.start_date).days + 1
+        # Hitung hari kerja efektif: kecualikan hari Minggu sebagai hari libur mingguan resmi
+        total_days = sum(
+            1 for i in range((data.end_date - data.start_date).days + 1)
+            if (data.start_date + timedelta(days=i)).weekday() != 6
+        )
+        if total_days <= 0:
+            raise ValidationError(
+                "Permohonan cuti harus mencakup minimal 1 hari kerja efektif (bukan hari libur saja)."
+            )
+
         year = data.start_date.year
 
         if data.leave_type == "ANNUAL":
@@ -74,9 +84,15 @@ class LeaveService:
             note=data.note.strip() if data.note else None,
         )
 
-        # Potong kuota cuti tahunan saat disetujui (PM atau HR)
-        if data.decision == "APPROVED" and leave.leave_type == "ANNUAL":
-            await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, leave.total_days)
+        # Potong kuota cuti tahunan hanya saat disetujui pertama kali (mencegah double deduction)
+        # Serta kembalikan saldo (refund) jika persetujuan awal PM kemudian ditolak oleh HR
+        if leave.leave_type == "ANNUAL":
+            if data.decision == "APPROVED" and leave.status == "PENDING":
+                # Pemotongan pertama kali (baik oleh PM maupun langsung oleh HR)
+                await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, leave.total_days)
+            elif data.decision == "REJECTED" and leave.status == "APPROVED_BY_PM":
+                # Pengembalian kuota karena sebelumnya sudah dipotong saat disetujui PM
+                await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
 
         return await self.repo.get_leave(leave_id)
 

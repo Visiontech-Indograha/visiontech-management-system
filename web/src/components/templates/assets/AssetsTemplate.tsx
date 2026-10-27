@@ -2,6 +2,7 @@ import { AssetCreateButton } from "@/components/organisms/assets/AssetCreateButt
 import { AssetCreateDialog } from "@/components/organisms/assets/AssetCreateDialog";
 import { AssetLendDialog } from "@/components/organisms/assets/AssetLendDialog";
 import { AssetList, type AssetAction } from "@/components/organisms/assets/AssetList";
+import { LoanRequestsPanel } from "@/components/organisms/assets/LoanRequestsPanel";
 import { AssetReturnDialog } from "@/components/organisms/assets/AssetReturnDialog";
 import { AssetStatusDialog } from "@/components/organisms/assets/AssetStatusDialog";
 import { VehicleFilesDialog } from "@/components/organisms/assets/VehicleFilesDialog";
@@ -20,6 +21,7 @@ export function AssetsTemplate({ canManage, open, onOpen, close }: {
 }) {
   return (
     <PageTemplate title="Kendaraan & alat" action={canManage && <AssetCreateButton onCreate={(asset) => onOpen({ kind: "create", asset })} />}>
+      {canManage && <LoanRequestsPanel onReceive={(loan) => onOpen({ kind: "return", loan })} />}
       <AssetList canManage={canManage} onOpen={onOpen} />
       {open?.kind === "create" && <AssetCreateDialog kind={open.asset} onClose={close} />}
       {open?.kind === "lend" && <AssetLendDialog kind={open.asset} assetId={open.id} assetName={open.name} onClose={close} />}

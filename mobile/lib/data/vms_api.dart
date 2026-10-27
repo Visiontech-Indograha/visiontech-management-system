@@ -357,7 +357,10 @@ class VmsApi {
     final res = await _dio.post<List<int>>(
       '$_p/exports/team-week',
       data: {'team_id': teamId, 'start_date': start},
-      options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 3)),
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 3),
+      ),
     );
     return res.data ?? const <int>[];
   }
@@ -367,7 +370,10 @@ class VmsApi {
     final res = await _dio.post<List<int>>(
       '$_p/exports/work-completions/$completionId',
       data: {'template': 'PROGRESS_SLIDES'},
-      options: Options(responseType: ResponseType.bytes, receiveTimeout: const Duration(minutes: 3)),
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 3),
+      ),
     );
     return res.data ?? const <int>[];
   }
@@ -470,6 +476,116 @@ class VmsApi {
   // --- Lembur -------------------------------------------------------------
   Future<List<Map<String, dynamic>>> myOvertime() async =>
       _list((await _dio.get('$_p/overtime')).data);
+
+  // --- Mess, dokumen, koreksi laporan -------------------------------------------
+  Future<List<Map<String, dynamic>>> myMess() async => _list((await _dio.get('$_p/mess/me')).data);
+
+  Future<List<Map<String, dynamic>>> myDocuments(String employeeId) async =>
+      _list(((await _dio.get('$_p/employees/$employeeId/documents')).data as Map)['items']);
+
+  Future<List<Map<String, dynamic>>> planCorrections(String dailyPlanId) async =>
+      _list((await _dio.get('$_p/work-plans/daily/$dailyPlanId/corrections')).data);
+
+  Future<Map<String, dynamic>> requestCorrection(String dailyPlanId, String reason) async => _map(
+    (await _dio.post('$_p/work-plans/daily/$dailyPlanId/corrections', data: {'reason': reason})).data,
+  );
+
+  Future<Map<String, dynamic>> submitCorrection(String correctionId) async =>
+      _map((await _dio.post('$_p/work-plans/corrections/$correctionId/submit')).data);
+
+  // --- Aset: pinjam & kembali -------------------------------------------------
+  Future<List<Map<String, dynamic>>> assetsAvailable(String kind) async =>
+      _list(
+        (await _dio.get(
+          '$_p/assets/$kind',
+          queryParameters: {'status': 'ready'},
+        )).data,
+      );
+
+  Future<List<Map<String, dynamic>>> myLoans() async => _list(
+    (await _dio.get('$_p/assets/loans', queryParameters: {'open': true})).data,
+  );
+
+  Future<List<Map<String, dynamic>>> myLoanRequests() async =>
+      _list((await _dio.get('$_p/assets/loan-requests')).data);
+
+  Future<Map<String, dynamic>> requestLoan({
+    required String assetType,
+    required String assetId,
+    required String purpose,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/assets/loan-requests',
+      data: {
+        'asset_type': assetType,
+        if (assetType == 'TOOL') 'tool_id': assetId else 'vehicle_id': assetId,
+        'purpose': purpose,
+      },
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> cancelLoanRequest(String requestId) async =>
+      _map(
+        (await _dio.post('$_p/assets/loan-requests/$requestId/cancel')).data,
+      );
+
+  Future<Map<String, dynamic>> requestReturn({
+    required String assignmentId,
+    required String condition,
+    required String photoFileId,
+    String? note,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/assets/loans/$assignmentId/return-request',
+      data: {
+        'condition': condition,
+        'photo_file_id': photoFileId,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    )).data,
+  );
+
+  // --- Rekap absen --------------------------------------------------------------
+  Future<Map<String, dynamic>> myRecap(String month) async => _map(
+    (await _dio.get(
+      '$_p/attendance/me/recap',
+      queryParameters: {'month': month},
+    )).data,
+  );
+
+  // --- Cuti -----------------------------------------------------------------
+  Future<List<Map<String, dynamic>>> leaveTypes() async =>
+      _list((await _dio.get('$_p/leaves/types')).data);
+
+  Future<List<Map<String, dynamic>>> myLeaves(String employeeId) async => _list(
+    (await _dio.get(
+      '$_p/leaves',
+      queryParameters: {'employee_id': employeeId},
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> leaveBalance(String employeeId) async =>
+      _map((await _dio.get('$_p/leaves/balances/$employeeId')).data);
+
+  Future<Map<String, dynamic>> applyLeave({
+    required String leaveType,
+    required String startDate,
+    required String endDate,
+    required String reason,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/leaves',
+      data: {
+        'leave_type': leaveType,
+        'start_date': startDate,
+        'end_date': endDate,
+        'reason': reason,
+      },
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> cancelLeave(String leaveId) async =>
+      _map((await _dio.post('$_p/leaves/$leaveId/cancel')).data);
 
   // --- Berkas & sinkronisasi ---------------------------------------------
   /// Unggah satu berkas (foto bukti/swafoto) → `file_id`.

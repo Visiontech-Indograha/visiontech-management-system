@@ -20,7 +20,11 @@ from app.modules.assets.schemas.asset_schema import (
     InspectionOut,
     LoanCreate,
     LoanOut,
+    LoanRequestCreate,
+    LoanRequestOut,
+    LoanRequestReview,
     LoanReturn,
+    LoanReturnRequest,
     ToolCreate,
     ToolOut,
     ToolUpdate,
@@ -191,3 +195,48 @@ async def return_asset(
 ) -> LoanOut:
     """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
     return await controller.handle_return(assignment_id, data.condition)
+
+
+# ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────
+@router.get("/loan-requests", response_model=list[LoanRequestOut])
+async def list_loan_requests(
+    status_filter: str | None = Query(None, alias="status"),
+    current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+) -> list[LoanRequestOut]:
+    """Pengajuan pinjam aset. Pengelola aset melihat semua; karyawan hanya miliknya."""
+    return await controller.handle_requests(current_user, status_filter)
+
+
+@router.post("/loan-requests", response_model=LoanRequestOut, status_code=status.HTTP_201_CREATED)
+async def request_loan(
+    data: LoanRequestCreate, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> LoanRequestOut:
+    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri."""
+    return await controller.handle_request_loan(current_user, data)
+
+
+@router.post("/loan-requests/{request_id}/cancel", response_model=LoanRequestOut)
+async def cancel_loan_request(
+    request_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> LoanRequestOut:
+    """Pemohon membatalkan pengajuan yang masih menunggu."""
+    return await controller.handle_cancel_request(current_user, request_id)
+
+
+@router.post("/loan-requests/{request_id}/review", response_model=LoanRequestOut)
+async def review_loan_request(
+    request_id: UUID, data: LoanRequestReview, current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+) -> LoanRequestOut:
+    """HR/GA menyetujui (langsung serah terima) atau menolak pengajuan."""
+    return await controller.handle_review_request(current_user, request_id, data)
+
+
+@router.post("/loans/{assignment_id}/return-request", response_model=LoanOut)
+async def request_return(
+    assignment_id: UUID, data: LoanReturnRequest, current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+) -> LoanOut:
+    """Pemegang aset mengajukan pengembalian dengan kondisi dan foto; pengelola yang mengonfirmasi."""
+    return await controller.handle_return_request(current_user, assignment_id, data)

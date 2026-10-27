@@ -213,3 +213,59 @@ class LoanOut(BaseModel):
     loaned_at: datetime
     returned_at: datetime | None = None
     handover_file_id: UUID | None = None
+    return_requested_at: datetime | None = None
+    return_condition: ReturnCondition | None = None
+    return_note: str | None = None
+    return_file_id: UUID | None = None
+
+
+class LoanRequestCreate(BaseModel):
+    """Karyawan mengajukan pinjam aset; employee_id selalu diambil dari akun yang login."""
+
+    asset_type: AssetType
+    tool_id: UUID | None = None
+    vehicle_id: UUID | None = None
+    purpose: str = Field(min_length=3, max_length=1000)
+    needed_on: date | None = None
+
+    @model_validator(mode="after")
+    def _one_asset(self) -> LoanRequestCreate:
+        tool = self.asset_type == "TOOL"
+        wanted, other = (self.tool_id, self.vehicle_id) if tool else (self.vehicle_id, self.tool_id)
+        if wanted is None or other is not None:
+            field = "tool_id" if tool else "vehicle_id"
+            raise ValueError(f"Isi {field} saja sesuai jenis aset {self.asset_type}.")
+        return self
+
+
+class LoanRequestReview(BaseModel):
+    decision: Literal["APPROVED", "REJECTED"]
+    note: str | None = Field(default=None, max_length=1000)
+
+
+class LoanReturnRequest(BaseModel):
+    """Pengajuan pengembalian oleh pemegang aset: kondisi, catatan, dan foto kondisi."""
+
+    condition: ReturnCondition = "ready"
+    note: str | None = Field(default=None, max_length=1000)
+    photo_file_id: UUID
+
+
+LoanRequestStatus = Literal["PENDING", "APPROVED", "REJECTED", "CANCELLED"]
+
+
+class LoanRequestOut(BaseModel):
+    request_id: UUID
+    asset_type: AssetType
+    asset_id: UUID
+    asset_name: str
+    asset_code: str
+    employee_id: UUID
+    employee_name: str
+    purpose: str
+    needed_on: date | None = None
+    status: LoanRequestStatus
+    review_note: str | None = None
+    reviewed_at: datetime | None = None
+    assignment_id: UUID | None = None
+    create_at: datetime

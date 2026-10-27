@@ -914,5 +914,27 @@ class AttendanceSessionRepository(BaseRepository):
         val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
         return val is not None
 
+    async def my_recap_rows(self, employee_id: UUID | str, start: Any, end: Any) -> list[Any]:
+        """Absensi satu karyawan dalam rentang tanggal (WIB) untuk rekap pribadi."""
+        return list(
+            await self.fetchall(
+                f"""
+                SELECT a.attendance_date AS work_date, a.clock_in_at AS check_in_at, a.clock_out_at AS check_out_at,
+                       ({IS_LATE_A}) AS is_late,
+                       (a.clock_out_at IS NOT NULL
+                        AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
+                       a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM', 'APPROVED') AS is_valid,
+                       a.om_approval_status = 'PENDING_OM' AS is_pending,
+                       a.meal_allowance_amount::float AS meal_allowance_amount,
+                       a.city_zone_status AS city_zone
+                FROM attendance a
+                WHERE a.employee_id = CAST(:emp AS uuid) AND a.delete_at IS NULL
+                  AND a.attendance_date BETWEEN :start AND :end
+                ORDER BY a.attendance_date DESC
+                """,
+                {"emp": str(employee_id), "start": start, "end": end},
+            )
+        )
+
 
 CRUDAttendanceSession = AttendanceSessionRepository

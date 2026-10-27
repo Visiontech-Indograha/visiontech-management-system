@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
@@ -403,6 +404,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ),
+                const SectionTitle('Layanan Karyawan'),
+                for (final (route, icon, label) in const [
+                  (
+                    '/recap',
+                    Icons.event_available_rounded,
+                    'Rekap Absen & Uang Makan',
+                  ),
+                  ('/leaves', Icons.beach_access_rounded, 'Cuti & Izin'),
+                  ('/assets', Icons.directions_car_rounded, 'Kendaraan & Alat'),
+                  ('/overtime', Icons.more_time_rounded, 'Riwayat Lembur'),
+                  ('/mess', Icons.home_work_rounded, 'Mess'),
+                  ('/documents', Icons.badge_rounded, 'Dokumen Saya'),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: FadeSlideIn(
+                      index: 1,
+                      child: SurfaceCard(
+                        onTap: () => context.push(route),
+                        child: Row(
+                          children: [
+                            IconTile(icon: icon, accent: Accent.teal, size: 40),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                label,
+                                style: VmsTextStyles.bodySm.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 const SectionTitle('Biometrik Wajah (Face API)'),
                 FadeSlideIn(
                   index: 1,

@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import require_permission
+from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
@@ -34,6 +34,15 @@ async def list_stays(
 ) -> list[MessStayOut]:
     """Mengambil daftar riwayat dan jadwal hunian mess karyawan."""
     return await controller.handle_list_stays(current_user, employee_id, start, end)
+
+
+@router.get("/me", response_model=list[MessStayOut])
+async def my_stays(
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: MessController = Depends(),
+) -> list[MessStayOut]:
+    """Riwayat dan jadwal hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini)."""
+    return await controller.handle_my_stays(current_user)
 
 
 @router.get("/{mess_stay_id}", response_model=MessStayOut)

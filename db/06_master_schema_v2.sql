@@ -412,10 +412,54 @@ CREATE TABLE IF NOT EXISTS asset_assignment (
     loaned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     returned_at TIMESTAMPTZ NULL, -- Jika NULL berarti belum dikembalikan (menahan proses Offboarding 1A)
     handover_photo_path VARCHAR(255) NULL,
+    return_requested_at TIMESTAMPTZ NULL, -- Karyawan mengajukan pengembalian; pengelola mengonfirmasi (returned_at)
+    return_condition VARCHAR(20) NULL,
+    return_note TEXT NULL,
+    return_photo_path VARCHAR(255) NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
+
+-- 20b. Tabel asset_loan_request (Karyawan mengajukan pinjam aset, HR/GA menyetujui -> asset_assignment)
+CREATE TABLE IF NOT EXISTS asset_loan_request (
+    request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_type VARCHAR(20) NOT NULL,
+    tool_id UUID NULL REFERENCES tool(tool_id),
+    vehicle_id UUID NULL REFERENCES vehicle(vehicle_id),
+    employee_id UUID NOT NULL REFERENCES employee(employee_id),
+    purpose TEXT NOT NULL,
+    needed_on DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED')),
+    review_note TEXT NULL,
+    reviewed_by_id UUID NULL REFERENCES employee(employee_id),
+    reviewed_at TIMESTAMPTZ NULL,
+    assignment_id UUID NULL REFERENCES asset_assignment(assignment_id),
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL
+);
+CREATE INDEX IF NOT EXISTS idx_asset_loan_request_employee ON asset_loan_request (employee_id, status);
+
+-- 17b. Tabel daily_report_correction (Koreksi laporan harian: ketua mengajukan, PM menyetujui/mengembalikan)
+CREATE TABLE IF NOT EXISTS daily_report_correction (
+    correction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id),
+    requested_by_id UUID NOT NULL REFERENCES employee(employee_id),
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'REQUESTED'
+        CHECK (status IN ('REQUESTED', 'REVISING', 'IN_REVIEW', 'ACCEPTED', 'REJECTED')),
+    review_note TEXT NULL,
+    reviewed_by_id UUID NULL REFERENCES employee(employee_id),
+    reviewed_at TIMESTAMPTZ NULL,
+    revision_count INT NOT NULL DEFAULT 0,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_daily_report_correction_open ON daily_report_correction (daily_plan_id)
+    WHERE status IN ('REQUESTED', 'REVISING', 'IN_REVIEW') AND delete_at IS NULL;
 
 -- 21. Tabel employee_offboarding (Konfirmasi 1A: Prosedur Offboarding PKWT & Pengembalian Barang)
 CREATE TABLE IF NOT EXISTS employee_offboarding (

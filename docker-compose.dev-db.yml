@@ -1,0 +1,41 @@
+# Database PostgreSQL lokal untuk development dan tes (versi sama dengan server: 18).
+#
+#   docker compose -f docker-compose.dev-db.yml up -d
+#   # terapkan skema (sekali, DB baru):
+#   for f in 06_master_schema_v2 07_master_seed_v2 08_master_v2_tambahan; do
+#     docker exec -i vms-dev-db  psql -U postgres -d vms_dev  -v ON_ERROR_STOP=1 -q < db/$f.sql
+#     docker exec -i vms-test-db psql -U postgres -d vms_test -v ON_ERROR_STOP=1 -q < db/$f.sql
+#   done
+#   # lalu migrasi Alembic ke head untuk tiap DB (api/): DATABASE_URL & MIGRATION_DATABASE_URL diarahkan ke DB itu,
+#   #   .venv/Scripts/python -m alembic -c alembic.ini upgrade head
+#
+# api/.env      -> DATABASE_URL / MIGRATION_DATABASE_URL = postgresql+asyncpg://postgres:vmsdev@127.0.0.1:55433/vms_dev
+# api/.env.test -> TEST_DATABASE_URL                    = postgresql+asyncpg://postgres:vmstest@127.0.0.1:55432/vms_test
+# Tes: pytest -n 4  (suite penuh ~2 menit; sebelumnya 17-29 menit ke DB di jaringan jauh)
+services:
+  vms-dev-db:
+    image: postgres:18
+    container_name: vms-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: vmsdev
+      POSTGRES_DB: vms_dev
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - vms-dev-pgdata:/var/lib/postgresql
+
+  # DB tes: sengaja tanpa fsync agar cepat. Jangan dipakai untuk data yang harus tahan crash.
+  vms-test-db:
+    image: postgres:18
+    container_name: vms-test-db
+    restart: unless-stopped
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off", "-c", "full_page_writes=off", "-c", "max_connections=200"]
+    environment:
+      POSTGRES_PASSWORD: vmstest
+      POSTGRES_DB: vms_test
+    ports:
+      - "127.0.0.1:55432:5432"
+
+volumes:
+  vms-dev-pgdata:

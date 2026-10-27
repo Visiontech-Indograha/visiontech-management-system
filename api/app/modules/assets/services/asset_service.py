@@ -12,6 +12,9 @@ Inventaris aset (Milestone 4, docs/36; alur docs/35 §6): alat pribadi/umum, ken
   (Motorcycle → SIM C; Car/Truck → SIM A atau SIM B I/II).
 - Pengembalian menutup peminjaman (`returned_at`) dengan kondisi ready/damaged/lost yang juga menjadi status aset.
 - Inspeksi kendaraan: pengelola aset atau pemegang kendaraan saat itu.
+- Pengajuan pinjam: karyawan mengajukan untuk dirinya sendiri; pengelola aset (HR/GA) menyetujui -> serah
+  terima biasa (`lend`) atau menolak. Pengajuan pengembalian: pemegang aset mengirim kondisi + foto;
+  pengelola mengonfirmasi lewat pengembalian biasa.
 """
 from __future__ import annotations
 
@@ -26,6 +29,9 @@ from app.modules.assets.repositories.asset_repository import AssetRepository
 from app.modules.assets.schemas.asset_schema import (
     InspectionCreate,
     LoanCreate,
+    LoanRequestCreate,
+    LoanRequestReview,
+    LoanReturnRequest,
     ToolCreate,
     ToolUpdate,
     VehicleCreate,
@@ -247,4 +253,80 @@ class AssetService:
             raise AppError("ALREADY_RETURNED", "Aset ini sudah dikembalikan.", status=409)
         await self.repo.close_loan(assignment_id, condition)
         await self.repo.set_status(loan.asset_type, loan.asset_id, condition)
+        return await self.repo.get_loan(assignment_id)
+
+    # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────
+    async def _own_employee(self, user: CurrentUser) -> UUID:
+        own = await self.repo.employee_of_user(user.user_id)
+        if own is None:
+            raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
+        return UUID(own)
+
+    async def request_loan(self, user: CurrentUser, data: LoanRequestCreate) -> Any:
+        employee_id = await self._own_employee(user)
+        asset_id = data.tool_id or data.vehicle_id
+        assert asset_id is not None
+        asset = await self.repo.lock_asset(data.asset_type, asset_id)
+        if asset is None:
+            raise NotFoundError(_LABEL[data.asset_type])
+        if asset.status != "ready" or await self.repo.has_open_loan(data.asset_type, asset_id):
+            raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
+        if await self.repo.has_pending_request(data.asset_type, asset_id, employee_id):
+            raise AppError("REQUEST_EXISTS", "Pengajuan untuk aset ini masih menunggu persetujuan.", status=409)
+        request_id = await self.repo.insert_request(
+            data.asset_type, asset_id, employee_id, data.purpose.strip(), data.needed_on
+        )
+        return await self.repo.get_request(request_id)
+
+    async def requests(self, user: CurrentUser, *, status: str | None) -> list[Any]:
+        if Permission.MANAGE_ASSETS.value in set(user.permissions):
+            return await self.repo.requests(employee_id=None, status=status)
+        own = await self.repo.employee_of_user(user.user_id)
+        return [] if own is None else await self.repo.requests(employee_id=own, status=status)
+
+    async def cancel_request(self, user: CurrentUser, request_id: UUID) -> Any:
+        employee_id = await self._own_employee(user)
+        req = await self.repo.request_for_update(request_id)
+        if req is None:
+            raise NotFoundError("Pengajuan pinjam aset")
+        if str(req.employee_id) != str(employee_id):
+            raise ForbiddenError("Hanya pemohon yang dapat membatalkan pengajuannya.")
+        if req.status != "PENDING":
+            raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
+        await self.repo.set_request_status(request_id, "CANCELLED", None, None)
+        return await self.repo.get_request(request_id)
+
+    async def review_request(self, user: CurrentUser, request_id: UUID, data: LoanRequestReview) -> Any:
+        reviewer = await self._own_employee(user)
+        req = await self.repo.request_for_update(request_id)
+        if req is None:
+            raise NotFoundError("Pengajuan pinjam aset")
+        if req.status != "PENDING":
+            raise AppError("ALREADY_DECIDED", "Pengajuan ini sudah diputuskan.", status=409)
+        if str(req.employee_id) == str(reviewer):
+            raise ForbiddenError("Pemohon tidak dapat menyetujui pengajuannya sendiri.")
+        note = data.note.strip() if data.note else None
+        assignment_id: UUID | None = None
+        if data.decision == "APPROVED":
+            loan = await self.lend(LoanCreate(
+                asset_type=req.asset_type, tool_id=req.tool_id, vehicle_id=req.vehicle_id,
+                employee_id=req.employee_id,
+            ))
+            assignment_id = loan.assignment_id
+        await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id)
+        return await self.repo.get_request(request_id)
+
+    async def request_return(self, user: CurrentUser, assignment_id: UUID, data: LoanReturnRequest) -> Any:
+        employee_id = await self._own_employee(user)
+        loan = await self.repo.get_loan(assignment_id)
+        if loan is None:
+            raise NotFoundError("Peminjaman aset")
+        if str(loan.employee_id) != str(employee_id):
+            raise ForbiddenError("Hanya pemegang aset yang dapat mengajukan pengembalian.")
+        if loan.returned_at is not None:
+            raise AppError("ALREADY_RETURNED", "Aset ini sudah dikembalikan.", status=409)
+        photo = await self._path(data.photo_file_id, "foto kondisi pengembalian")
+        assert photo is not None
+        note = data.note.strip() if data.note else None
+        await self.repo.request_return(assignment_id, data.condition, note, photo)
         return await self.repo.get_loan(assignment_id)

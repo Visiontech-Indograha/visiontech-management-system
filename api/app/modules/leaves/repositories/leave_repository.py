@@ -194,3 +194,14 @@ class LeaveRepository(BaseRepository):
             """,
             {"id": str(leave_id), "st": status, "rev": str(reviewer_id), "note": note},
         )
+
+    async def cancel_leave(self, leave_id: UUID | str) -> None:
+        """Pembatalan cuti oleh pemohon sendiri."""
+        await self.execute(
+            """
+            UPDATE leave_request
+            SET status = CAST('CANCELLED' AS approval_status_enum), update_at = now()
+            WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {"id": str(leave_id)},
+        )

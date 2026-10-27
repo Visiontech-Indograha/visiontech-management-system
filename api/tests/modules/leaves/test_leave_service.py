@@ -244,3 +244,45 @@ def test_pm_cannot_review_leave_outside_division():
             await service.review(pm_user, uuid4(), LeaveReview(decision="APPROVED", note=None))
 
     asyncio.run(run())
+
+
+def test_owner_cancels_pm_approved_annual_leave_with_refund():
+    """Pemohon membatalkan cuti tahunan yang sudah disetujui PM; kuota dikembalikan."""
+    async def run():
+        user = make_user("EMPLOYEE")
+        leave = MagicMock(
+            employee_id=user.employee_id, status="APPROVED_BY_PM", leave_type="ANNUAL",
+            start_date=date(2026, 5, 4), total_days=3,
+        )
+        repo = AsyncMock()
+        repo.get_leave.return_value = leave
+        await LeaveService(repo).cancel(user, uuid4())
+        repo.cancel_leave.assert_awaited_once()
+        repo.deduct_balance.assert_awaited_once_with(user.employee_id, 2026, -3)
+
+    asyncio.run(run())
+
+
+def test_other_employee_cannot_cancel_leave():
+    """Karyawan lain tidak boleh membatalkan cuti milik orang lain."""
+    async def run():
+        repo = AsyncMock()
+        repo.get_leave.return_value = MagicMock(employee_id=str(uuid4()), status="PENDING")
+        with pytest.raises(ForbiddenError):
+            await LeaveService(repo).cancel(make_user("EMPLOYEE"), uuid4())
+        repo.cancel_leave.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_decided_leave_cannot_be_cancelled():
+    """Cuti yang sudah final (disetujui HR) tidak dapat dibatalkan."""
+    async def run():
+        user = make_user("EMPLOYEE")
+        repo = AsyncMock()
+        repo.get_leave.return_value = MagicMock(employee_id=user.employee_id, status="APPROVED_BY_HR")
+        with pytest.raises(AppError) as exc:
+            await LeaveService(repo).cancel(user, uuid4())
+        assert exc.value.code == "NOT_CANCELLABLE"
+
+    asyncio.run(run())

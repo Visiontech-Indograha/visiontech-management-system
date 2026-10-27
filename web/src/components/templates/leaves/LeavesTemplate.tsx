@@ -1,5 +1,4 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { AttendanceNavTabs } from "@/components/organisms/attendance/AttendanceNavTabs";
 import { LeaveApplyButton } from "@/components/organisms/leaves/LeaveApplyButton";
 import { LeaveApplyDialog } from "@/components/organisms/leaves/LeaveApplyDialog";
 import { LeaveReviewDialog } from "@/components/organisms/leaves/LeaveReviewDialog";
@@ -39,8 +38,6 @@ export function LeavesTemplate({
       description="Pengajuan permohonan cuti tahunan, izin sakit, persetujuan atasan, dan pemantauan kuota tahunan."
       action={<LeaveApplyButton onApply={onApply} />}
     >
-      <AttendanceNavTabs activeTab="leaves" />
-
       <div className="space-y-6">
         <LeaveBalanceCard balanceQuery={balance} />
         <LeaveList

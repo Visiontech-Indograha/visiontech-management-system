@@ -24,6 +24,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     DeviceKeyRequest,
     ExplanationRequest,
     MealAllowanceRow,
+    MyRecapResponse,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -180,6 +181,16 @@ async def meal_allowance_recap(
 ) -> list[MealAllowanceRow]:
     """Rekap uang makan per karyawan dari absensi sah: pengelola absensi semua divisi, PM divisinya."""
     return await controller.handle_meal_allowance(current_user, start_date, end_date, division_id)
+
+
+@router.get("/me/recap", response_model=MyRecapResponse)
+async def my_recap(
+    month: str | None = Query(None, pattern=r"^\d{4}-\d{2}$", description="Bulan YYYY-MM (default: bulan ini WIB)"),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AttendanceController = Depends(),
+) -> MyRecapResponse:
+    """Rekap absensi bulanan milik sendiri: hadir, terlambat, pulang awal, uang makan."""
+    return await controller.handle_my_recap(current_user, month)
 
 
 __all__ = ["router"]

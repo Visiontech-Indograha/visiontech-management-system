@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/assets/assets_screen.dart';
 import '../features/attendance/attendance_screen.dart';
+import '../features/attendance/recap_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/biometric_lock_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/gallery/photo_gallery_screen.dart';
+import '../features/leaves/leaves_screen.dart';
 import '../features/plans/daily_plans_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/records/my_records_screens.dart';
 import 'home_shell.dart';
 import 'splash_screen.dart';
 
@@ -64,6 +68,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/biometric-lock',
         builder: (context, state) => const BiometricLockScreen(),
       ),
+      GoRoute(
+        path: '/leaves',
+        builder: (context, state) => const LeavesScreen(),
+      ),
+      GoRoute(
+        path: '/assets',
+        builder: (context, state) => const AssetsScreen(),
+      ),
+      GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
+      GoRoute(path: '/overtime', builder: (context, state) => const OvertimeHistoryScreen()),
+      GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),
+      GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             HomeShell(navigationShell: navigationShell),

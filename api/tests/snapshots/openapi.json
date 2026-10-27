@@ -2250,6 +2250,151 @@
     "title": "CompletionExportRequest",
     "type": "object"
    },
+   "CorrectionCreate": {
+    "properties": {
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 5,
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "reason"
+    ],
+    "title": "CorrectionCreate",
+    "type": "object"
+   },
+   "CorrectionDecide": {
+    "description": "APPROVE/REJECT untuk permintaan awal; ACCEPT/RETURN untuk hasil revisi. Menolak/mengembalikan wajib catatan.",
+    "properties": {
+     "decision": {
+      "enum": [
+       "APPROVE",
+       "REJECT",
+       "ACCEPT",
+       "RETURN"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "CorrectionDecide",
+    "type": "object"
+   },
+   "CorrectionOut": {
+    "properties": {
+     "correction_id": {
+      "format": "uuid",
+      "title": "Correction Id",
+      "type": "string"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "requested_by_id": {
+      "format": "uuid",
+      "title": "Requested By Id",
+      "type": "string"
+     },
+     "requested_by_name": {
+      "title": "Requested By Name",
+      "type": "string"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "revision_count": {
+      "title": "Revision Count",
+      "type": "integer"
+     },
+     "site_name": {
+      "title": "Site Name",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "REQUESTED",
+       "REVISING",
+       "IN_REVIEW",
+       "ACCEPTED",
+       "REJECTED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "correction_id",
+     "daily_plan_id",
+     "work_date",
+     "site_name",
+     "team_name",
+     "requested_by_id",
+     "requested_by_name",
+     "reason",
+     "status",
+     "revision_count",
+     "create_at"
+    ],
+    "title": "CorrectionOut",
+    "type": "object"
+   },
    "DailyFormOptions": {
     "properties": {
      "divisions": {
@@ -5727,6 +5872,36 @@
     "title": "LeaveReview",
     "type": "object"
    },
+   "LeaveTypeOption": {
+    "properties": {
+     "code": {
+      "enum": [
+       "ANNUAL",
+       "SICK",
+       "MATERNITY",
+       "UNPAID",
+       "OTHER"
+      ],
+      "title": "Code",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "uses_quota": {
+      "title": "Uses Quota",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "code",
+     "label",
+     "uses_quota"
+    ],
+    "title": "LeaveTypeOption",
+    "type": "object"
+   },
    "LineEditIn": {
     "description": "Ubah satu baris BoM (ketua tim saat draf, PM saat meninjau).",
     "properties": {
@@ -5974,6 +6149,57 @@
       "title": "Loaned At",
       "type": "string"
      },
+     "return_condition": {
+      "anyOf": [
+       {
+        "enum": [
+         "ready",
+         "damaged",
+         "lost"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Condition"
+     },
+     "return_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return File Id"
+     },
+     "return_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Note"
+     },
+     "return_requested_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Requested At"
+     },
      "returned_at": {
       "anyOf": [
        {
@@ -6013,6 +6239,215 @@
     "title": "LoanOut",
     "type": "object"
    },
+   "LoanRequestCreate": {
+    "description": "Karyawan mengajukan pinjam aset; employee_id selalu diambil dari akun yang login.",
+    "properties": {
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     },
+     "needed_on": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Needed On"
+     },
+     "purpose": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Purpose",
+      "type": "string"
+     },
+     "tool_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tool Id"
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     }
+    },
+    "required": [
+     "asset_type",
+     "purpose"
+    ],
+    "title": "LoanRequestCreate",
+    "type": "object"
+   },
+   "LoanRequestOut": {
+    "properties": {
+     "asset_code": {
+      "title": "Asset Code",
+      "type": "string"
+     },
+     "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+     },
+     "asset_name": {
+      "title": "Asset Name",
+      "type": "string"
+     },
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     },
+     "assignment_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignment Id"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_name": {
+      "title": "Employee Name",
+      "type": "string"
+     },
+     "needed_on": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Needed On"
+     },
+     "purpose": {
+      "title": "Purpose",
+      "type": "string"
+     },
+     "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "status": {
+      "enum": [
+       "PENDING",
+       "APPROVED",
+       "REJECTED",
+       "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "request_id",
+     "asset_type",
+     "asset_id",
+     "asset_name",
+     "asset_code",
+     "employee_id",
+     "employee_name",
+     "purpose",
+     "status",
+     "create_at"
+    ],
+    "title": "LoanRequestOut",
+    "type": "object"
+   },
+   "LoanRequestReview": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "APPROVED",
+       "REJECTED"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "LoanRequestReview",
+    "type": "object"
+   },
    "LoanReturn": {
     "properties": {
      "condition": {
@@ -6027,6 +6462,43 @@
      }
     },
     "title": "LoanReturn",
+    "type": "object"
+   },
+   "LoanReturnRequest": {
+    "description": "Pengajuan pengembalian oleh pemegang aset: kondisi, catatan, dan foto kondisi.",
+    "properties": {
+     "condition": {
+      "default": "ready",
+      "enum": [
+       "ready",
+       "damaged",
+       "lost"
+      ],
+      "title": "Condition",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "photo_file_id": {
+      "format": "uuid",
+      "title": "Photo File Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "photo_file_id"
+    ],
+    "title": "LoanReturnRequest",
     "type": "object"
    },
    "MealAllowanceRow": {
@@ -6445,6 +6917,121 @@
      "check_ins_today"
     ],
     "title": "MissingCheckInResponse",
+    "type": "object"
+   },
+   "MyRecapItem": {
+    "properties": {
+     "check_in_at": {
+      "format": "date-time",
+      "title": "Check In At",
+      "type": "string"
+     },
+     "check_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out At"
+     },
+     "city_zone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Zone"
+     },
+     "is_early_leave": {
+      "title": "Is Early Leave",
+      "type": "boolean"
+     },
+     "is_late": {
+      "title": "Is Late",
+      "type": "boolean"
+     },
+     "is_pending": {
+      "title": "Is Pending",
+      "type": "boolean"
+     },
+     "is_valid": {
+      "title": "Is Valid",
+      "type": "boolean"
+     },
+     "meal_allowance_amount": {
+      "default": 0,
+      "title": "Meal Allowance Amount",
+      "type": "number"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_date",
+     "check_in_at",
+     "is_late",
+     "is_early_leave",
+     "is_valid",
+     "is_pending"
+    ],
+    "title": "MyRecapItem",
+    "type": "object"
+   },
+   "MyRecapResponse": {
+    "description": "Rekap absensi bulanan milik sendiri (HP karyawan).",
+    "properties": {
+     "days_present": {
+      "title": "Days Present",
+      "type": "integer"
+     },
+     "early_leave_days": {
+      "title": "Early Leave Days",
+      "type": "integer"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MyRecapItem"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "late_days": {
+      "title": "Late Days",
+      "type": "integer"
+     },
+     "meal_allowance_total": {
+      "title": "Meal Allowance Total",
+      "type": "number"
+     },
+     "month": {
+      "title": "Month",
+      "type": "string"
+     },
+     "pending_days": {
+      "title": "Pending Days",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "month",
+     "days_present",
+     "late_days",
+     "early_leave_days",
+     "pending_days",
+     "meal_allowance_total",
+     "items"
+    ],
+    "title": "MyRecapResponse",
     "type": "object"
    },
    "NeedsReviewResponse": {
@@ -13118,6 +13705,218 @@
     ]
    }
   },
+  "/api/v1/assets/loan-requests": {
+   "get": {
+    "description": "Pengajuan pinjam aset. Pengelola aset melihat semua; karyawan hanya miliknya.",
+    "operationId": "list_loan_requests_api_v1_assets_loan_requests_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/LoanRequestOut"
+         },
+         "title": "Response List Loan Requests Api V1 Assets Loan Requests Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Loan Requests",
+    "tags": [
+     "Assets"
+    ]
+   },
+   "post": {
+    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.",
+    "operationId": "request_loan_api_v1_assets_loan_requests_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanRequestCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Loan",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
+  "/api/v1/assets/loan-requests/{request_id}/cancel": {
+   "post": {
+    "description": "Pemohon membatalkan pengajuan yang masih menunggu.",
+    "operationId": "cancel_loan_request_api_v1_assets_loan_requests__request_id__cancel_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "request_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Request Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Cancel Loan Request",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
+  "/api/v1/assets/loan-requests/{request_id}/review": {
+   "post": {
+    "description": "HR/GA menyetujui (langsung serah terima) atau menolak pengajuan.",
+    "operationId": "review_loan_request_api_v1_assets_loan_requests__request_id__review_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "request_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Request Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanRequestReview"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Review Loan Request",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
   "/api/v1/assets/loans": {
    "get": {
     "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.",
@@ -13304,6 +14103,65 @@
      }
     ],
     "summary": "Return Asset",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
+  "/api/v1/assets/loans/{assignment_id}/return-request": {
+   "post": {
+    "description": "Pemegang aset mengajukan pengembalian dengan kondisi dan foto; pengelola yang mengonfirmasi.",
+    "operationId": "request_return_api_v1_assets_loans__assignment_id__return_request_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "assignment_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Assignment Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanReturnRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Return",
     "tags": [
      "Assets"
     ]
@@ -14472,6 +15330,64 @@
      }
     ],
     "summary": "Export Attendance",
+    "tags": [
+     "Attendance"
+    ]
+   }
+  },
+  "/api/v1/attendance/me/recap": {
+   "get": {
+    "description": "Rekap absensi bulanan milik sendiri: hadir, terlambat, pulang awal, uang makan.",
+    "operationId": "my_recap_api_v1_attendance_me_recap_get",
+    "parameters": [
+     {
+      "description": "Bulan YYYY-MM (default: bulan ini WIB)",
+      "in": "query",
+      "name": "month",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "pattern": "^\\d{4}-\\d{2}$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Bulan YYYY-MM (default: bulan ini WIB)",
+       "title": "Month"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyRecapResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "My Recap",
     "tags": [
      "Attendance"
     ]
@@ -18713,15 +19629,21 @@
       }
      },
      {
-      "description": "Tahun kuota cuti",
+      "description": "Tahun kuota cuti (default: tahun berjalan WIB)",
       "in": "query",
       "name": "year",
       "required": false,
       "schema": {
-       "default": 2026,
-       "description": "Tahun kuota cuti",
-       "title": "Year",
-       "type": "integer"
+       "anyOf": [
+        {
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tahun kuota cuti (default: tahun berjalan WIB)",
+       "title": "Year"
       }
      }
     ],
@@ -18753,6 +19675,37 @@
      }
     ],
     "summary": "Get Leave Balance",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/types": {
+   "get": {
+    "description": "Daftar jenis cuti beserta keterangan pemakaian kuota.",
+    "operationId": "list_leave_types_api_v1_leaves_types_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/LeaveTypeOption"
+         },
+         "title": "Response List Leave Types Api V1 Leaves Types Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Leave Types",
     "tags": [
      "Leaves"
     ]
@@ -18802,6 +19755,55 @@
      }
     ],
     "summary": "Get Leave",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/{leave_id}/cancel": {
+   "post": {
+    "description": "Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).",
+    "operationId": "cancel_leave_api_v1_leaves__leave_id__cancel_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "leave_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Leave Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Cancel Leave",
     "tags": [
      "Leaves"
     ]
@@ -19094,6 +20096,37 @@
      }
     ],
     "summary": "Create Stay",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/me": {
+   "get": {
+    "description": "Riwayat dan jadwal hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).",
+    "operationId": "my_stays_api_v1_mess_me_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MessStayOut"
+         },
+         "title": "Response My Stays Api V1 Mess Me Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "My Stays",
     "tags": [
      "Mess"
     ]
@@ -22172,6 +23205,173 @@
     ]
    }
   },
+  "/api/v1/work-plans/corrections": {
+   "get": {
+    "description": "Daftar koreksi laporan: PM/OM divisinya, ketua tim yang diajukannya, admin semua.",
+    "operationId": "correction_inbox_api_v1_work_plans_corrections_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CorrectionOut"
+         },
+         "title": "Response Correction Inbox Api V1 Work Plans Corrections Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Correction Inbox",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/corrections/{correction_id}/decision": {
+   "post": {
+    "description": "PM/OM divisi: setujui/tolak permintaan, atau terima/kembalikan hasil revisi.",
+    "operationId": "decide_correction_api_v1_work_plans_corrections__correction_id__decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "correction_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Correction Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CorrectionDecide"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Decide Correction",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/corrections/{correction_id}/submit": {
+   "post": {
+    "description": "Ketua tim mengirim revisi untuk diperiksa PM.",
+    "operationId": "submit_revision_api_v1_work_plans_corrections__correction_id__submit_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "correction_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Correction Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Submit Revision",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily": {
    "get": {
     "description": "Jadwal dalam rentang tanggal (default: minggu ini, Senin–Minggu). PM/OM: divisinya; lapangan: timnya,\nyang sudah disetujui.",
@@ -22828,6 +24028,116 @@
      }
     ],
     "summary": "Copy Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/corrections": {
+   "get": {
+    "description": "Riwayat koreksi laporan satu jadwal harian.",
+    "operationId": "plan_corrections_api_v1_work_plans_daily__daily_plan_id__corrections_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CorrectionOut"
+         },
+         "title": "Response Plan Corrections Api V1 Work Plans Daily  Daily Plan Id  Corrections Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Plan Corrections",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   },
+   "post": {
+    "description": "Ketua tim meminta koreksi laporan jadwal yang sudah COMPLETED.",
+    "operationId": "request_correction_api_v1_work_plans_daily__daily_plan_id__corrections_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CorrectionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Correction",
     "tags": [
      "Work Plans (Daily-First)"
     ]

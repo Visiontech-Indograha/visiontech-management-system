@@ -17,8 +17,9 @@ from app.modules.leaves.schemas.leave_schema import (
     LeaveCreate,
     LeaveResponse,
     LeaveReview,
+    LeaveTypeOption,
 )
-from app.modules.leaves.services.leave_service import LeaveService
+from app.modules.leaves.services.leave_service import LEAVE_TYPES, LeaveService
 
 
 def _response(row: Any) -> LeaveResponse:
@@ -61,3 +62,9 @@ class LeaveController:
             used_quota=bal.used_quota,
             remaining_quota=bal.remaining_quota,
         )
+
+    async def handle_cancel(self, user: CurrentUser, leave_id: UUID) -> LeaveResponse:
+        return _response(await self.service.cancel(user, leave_id))
+
+    def handle_types(self) -> list[LeaveTypeOption]:
+        return [LeaveTypeOption(code=c, label=lbl, uses_quota=q) for c, lbl, q in LEAVE_TYPES]  # type: ignore[arg-type]

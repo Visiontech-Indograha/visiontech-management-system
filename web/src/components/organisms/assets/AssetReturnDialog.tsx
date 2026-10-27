@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import { errorMessage } from "@/lib/errors";
 import { useReturnLoan, type Loan, type ReturnCondition } from "@/services/assetService";
 import { AssetFormDialog } from "./AssetFormDialog";
@@ -9,7 +10,7 @@ import { AssetFormDialog } from "./AssetFormDialog";
 /** Pengelola aset menerima pengembalian; kondisinya menjadi status aset (siap/rusak/hilang). */
 export function AssetReturnDialog({ loan, onClose }: { loan: Loan; onClose: () => void }) {
   const giveBack = useReturnLoan();
-  const [condition, setCondition] = useState<ReturnCondition>("ready");
+  const [condition, setCondition] = useState<ReturnCondition>(loan.return_condition ?? "ready");
   const [formError, setFormError] = useState<string | null>(null);
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,6 +32,7 @@ export function AssetReturnDialog({ loan, onClose }: { loan: Loan; onClose: () =
       onClose={onClose}
       onSubmit={onSubmit}
     >
+      {loan.return_note && <TextBlock className="text-sm text-mist">Catatan karyawan: {loan.return_note}</TextBlock>}
       <SelectField label="Kondisi saat dikembalikan" value={condition} onChange={(e) => setCondition(e.target.value as ReturnCondition)}>
         <ControlOption value="ready">Baik — siap dipakai lagi</ControlOption>
         <ControlOption value="damaged">Rusak</ControlOption>

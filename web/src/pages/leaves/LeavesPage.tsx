@@ -10,6 +10,7 @@ export function LeavesPage() {
     Boolean(me?.permissions.includes("create:plan")) ||
     me?.role === "PROJECT_MANAGER" ||
     me?.role === "OPERATIONAL_MANAGER" ||
+    me?.role === "ADMIN_HR_GA" ||
     me?.role === "HR" ||
     me?.role === "SUPER_ADMIN";
 

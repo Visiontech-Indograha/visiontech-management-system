@@ -15,6 +15,7 @@ const TARGET_PATH: Record<string, string> = {
   leave: "/leaves",
   asset: "/assets",
   overtime: "/overtime-recap",
+  mess: "/mess",
   plan: "/work-plans",
   correction: "/work-plans",
   attendance: "/attendance",

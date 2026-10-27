@@ -8,9 +8,9 @@ const leave = (status: string) => ({
   leave_type: "ANNUAL", start_date: "2026-10-29", end_date: "2026-10-30", total_days: 2, reason: "Keperluan keluarga",
   status, attachment_path: null, reviewed_by_name: null, review_note: null, create_at: "2026-10-27T10:00:00Z",
 });
-const handler = (status: string) => (c: { url: string; method: string }) => {
+const handler = (status: string) => (c: { url?: string; method?: string }) => {
   if (c.url === "/leaves" && c.method === "get") return { data: [leave(status)] };
-  if (c.url.startsWith("/leaves/balance")) return { data: { total_quota: 12, used_quota: 0, remaining_quota: 12, period_year: 2026 } };
+  if (c.url?.startsWith("/leaves/balance")) return { data: { total_quota: 12, used_quota: 0, remaining_quota: 12, period_year: 2026 } };
 };
 
 describe("Tinjau cuti", () => {

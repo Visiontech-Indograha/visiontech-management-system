@@ -33,6 +33,8 @@ export interface EmployeeFilters {
   status: string;
   page: number;
   division_id?: string;
+  /** Ukuran halaman; pilihan tanpa pencarian memakai ukuran besar agar tidak ada karyawan yang terlewat. */
+  size?: number;
 }
 
 export function useEmployees(f: EmployeeFilters) {
@@ -41,7 +43,7 @@ export function useEmployees(f: EmployeeFilters) {
     queryFn: async () => {
       const params = {
         page: f.page,
-        size: PAGE_SIZE,
+        size: f.size ?? PAGE_SIZE,
         ...(f.status ? { status: f.status } : {}),
         ...(f.division_id ? { division_id: f.division_id } : {}),
         ...(f.q ? { q: f.q } : {}),

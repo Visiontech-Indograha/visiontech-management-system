@@ -65,7 +65,8 @@ class FilesController:
             )
 
         kind = filetype.guess(file_bytes)
-        mime_type = kind.mime if kind else file.content_type
+        # Tipe ditentukan dari isi berkas (magic bytes), bukan klaim klien: header palsu tidak lolos.
+        mime_type = kind.mime if kind else None
         if mime_type not in ALLOWED_MIMES:
             raise HTTPException(
                 status_code=415,
@@ -79,14 +80,15 @@ class FilesController:
             return {"file_id": str(existing_file.id), "message": "File sudah ada (deduplikasi)."}
 
         file_id = str(uuid.uuid4())
-        ext = kind.extension if kind else (file.filename or "bin").rsplit(".", 1)[-1]
+        assert kind is not None
+        ext = kind.extension
         storage_key = f"{current_user.organization_id}/{file_id}.{ext}"
 
         stored_id = await self.service.register(
             current_user,
             file_id=file_id,
             storage_key=storage_key,
-            file_name=file.filename,
+            file_name=(file.filename or "berkas")[:200],
             mime_type=mime_type,
             byte_size=byte_size,
             sha256=file_hash,

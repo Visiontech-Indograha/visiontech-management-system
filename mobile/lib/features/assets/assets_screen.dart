@@ -93,6 +93,14 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
   }
 
   Future<void> _cancel(Map<String, dynamic> request) async {
+    if (!await confirmAction(
+      context,
+      title: 'Batalkan pengajuan?',
+      message: 'Pengajuan pinjam ini akan dibatalkan dan tidak diproses HR/GA.',
+      confirmLabel: 'Batalkan pengajuan',
+    )) {
+      return;
+    }
     try {
       await ref
           .read(syncEngineProvider)
@@ -374,6 +382,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
               ),
             const SizedBox(height: 8),
             TextField(
+            maxLength: 500,
               controller: _purpose,
               maxLines: 2,
               decoration: const InputDecoration(labelText: 'Tujuan penggunaan'),
@@ -494,6 +503,7 @@ class _ReturnSheetState extends ConsumerState<_ReturnSheet> {
             ),
             const SizedBox(height: 8),
             TextField(
+            maxLength: 500,
               controller: _note,
               maxLines: 2,
               decoration: const InputDecoration(

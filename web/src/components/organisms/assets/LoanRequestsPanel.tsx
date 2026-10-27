@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { TextAreaField } from "@/components/molecules/Field";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { errorMessage } from "@/lib/errors";
@@ -14,6 +15,7 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
   const requests = useLoanRequests("PENDING");
   const loans = useLoans(true);
   const [rejecting, setRejecting] = useState<LoanRequest | null>(null);
+  const [approving, setApproving] = useState<LoanRequest | null>(null);
   const review = useReviewLoanRequest();
   const returns = (loans.data ?? []).filter((l) => l.return_requested_at);
   const pending = requests.data ?? [];
@@ -23,6 +25,7 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
     try {
       await review.mutateAsync({ id: r.request_id, decision: "APPROVED" });
       toast.success(`${r.asset_name} diserahkan ke ${r.employee_name}.`);
+      setApproving(null);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -40,7 +43,7 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
                 <TextBlock className="text-mist">{r.purpose}</TextBlock>
               </div>
               <div className="flex gap-2">
-                <ActionButton size="sm" disabled={review.isPending} onClick={() => approve(r)}>
+                <ActionButton size="sm" disabled={review.isPending} onClick={() => setApproving(r)}>
                   Setujui & serahkan
                 </ActionButton>
                 <ActionButton size="sm" variant="outline" disabled={review.isPending} onClick={() => setRejecting(r)}>
@@ -71,6 +74,15 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
         </div>
       )}
       {rejecting && <RejectDialog request={rejecting} onClose={() => setRejecting(null)} />}
+    <ConfirmDialog
+        open={approving !== null}
+        title="Setujui & serahkan aset?"
+        message={approving ? `${approving.asset_name} (${approving.asset_code}) akan diserahkan ke ${approving.employee_name} dan statusnya menjadi dipinjam.` : ""}
+        confirmLabel="Setujui & serahkan"
+        busy={review.isPending}
+        onConfirm={() => approving && approve(approving)}
+        onClose={() => setApproving(null)}
+      />
     </section>
   );
 }

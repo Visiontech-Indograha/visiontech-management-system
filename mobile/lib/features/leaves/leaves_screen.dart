@@ -354,6 +354,7 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
           ),
           const SizedBox(height: 8),
           TextField(
+            maxLength: 1000,
             controller: _reason,
             maxLines: 3,
             decoration: const InputDecoration(labelText: 'Alasan'),

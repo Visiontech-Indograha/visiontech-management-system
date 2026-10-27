@@ -92,8 +92,9 @@ class NotificationRepository(BaseRepository):
             return
         await self.execute(
             "INSERT INTO notification (user_id, kind, title, body, daily_plan_id, target) "
-            "SELECT CAST(u AS uuid), :kind, :title, :body, CAST(:plan AS uuid), :target "
-            "FROM unnest(CAST(:users AS text[])) AS u",
+            "SELECT us.user_id, :kind, :title, :body, CAST(:plan AS uuid), :target "
+            "FROM users us WHERE us.user_id = ANY(CAST(:users AS uuid[])) AND us.delete_at IS NULL "
+            "FOR KEY SHARE OF us",
             {
                 "kind": kind[:40],
                 "title": title[:200],

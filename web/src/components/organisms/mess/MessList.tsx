@@ -1,6 +1,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useState } from "react";
 import type { MessStay } from "@/services/messService";
 import { MessAddButton } from "./MessAddButton";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -19,6 +21,7 @@ export function MessList({
   onAdd: () => void;
   onCheckout: (stay: MessStay) => void;
 }) {
+  const [ending, setEnding] = useState<MessStay | null>(null);
   return (
     <>
       {stays.isPending && (
@@ -69,7 +72,7 @@ export function MessList({
                 variant="outline"
                 size="sm"
                 className="text-danger hover:bg-danger-bg hover:text-danger ml-2 shrink-0"
-                onClick={() => onCheckout(s)}
+                onClick={() => setEnding(s)}
               >
                 <LogOut size={14} className="mr-1" />
                 Selesai Inap
@@ -78,6 +81,17 @@ export function MessList({
           ))}
         </ListBlock>
       )}
+      <ConfirmDialog
+        open={ending !== null}
+        title="Selesaikan inap?"
+        message={ending ? `Inap ${ending.employee_name} di ${ending.mess_name} akan ditandai selesai.` : ""}
+        confirmLabel="Selesai inap"
+        onConfirm={() => {
+          if (ending) onCheckout(ending);
+          setEnding(null);
+        }}
+        onClose={() => setEnding(null)}
+      />
     </>
   );
 }

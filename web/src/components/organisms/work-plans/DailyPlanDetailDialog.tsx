@@ -8,6 +8,7 @@ import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
 import { phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
 import { formatDate } from "@/lib/format";
@@ -23,6 +24,14 @@ import {
   wibDate,
 } from "@/services/dailyPlanService";
 import { DailyItemsPanel } from "./DailyItemsPanel";
+
+const CONFIRM_MESSAGE: Record<DailyAction | "delete", string> = {
+  submit: "Jadwal akan diajukan ke PM untuk disetujui.",
+  approve: "Jadwal akan disetujui dan tim lapangan dapat melihat serta menjalankannya.",
+  start: "Hari kerja akan dimulai. Pastikan tim sudah berada di lokasi.",
+  complete: "Hari kerja akan ditutup. Pastikan laporan harian dan hasil kerja sudah lengkap.",
+  delete: "Jadwal beserta pekerjaannya akan dihapus dan tidak dapat dikembalikan.",
+};
 
 const ACTION_LABEL: Record<DailyAction, string> = {
   submit: "Ajukan ke PM", approve: "Setujui jadwal", start: "Mulai hari kerja", complete: "Tutup hari kerja",
@@ -43,6 +52,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const copy = useCopyDailyPlan();
   const [mode, setMode] = useState<"view" | "reject" | "copy">("view");
   const [error, setError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<DailyAction | "delete" | null>(null);
   const p = detail.data ?? plan;
   const editable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED");
 
@@ -147,7 +157,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
 
         <div className="flex flex-wrap gap-2 border-t border-line pt-3">
           {actions.map((a) => (
-            <ActionButton key={a} size="sm" disabled={transition.isPending} onClick={() => act(a)}>
+            <ActionButton key={a} size="sm" disabled={transition.isPending} onClick={() => setConfirm(a)}>
               {ACTION_LABEL[a]}
             </ActionButton>
           ))}
@@ -161,13 +171,29 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
               size="sm"
               variant="ghost"
               disabled={remove.isPending}
-              onClick={() => run(() => remove.mutateAsync(p.daily_plan_id), "Jadwal dihapus.", true)}
+              onClick={() => setConfirm("delete")}
             >
               Hapus
             </ActionButton>
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm === "delete" ? "Hapus jadwal?" : confirm ? `${ACTION_LABEL[confirm]}?` : ""}
+        message={confirm ? CONFIRM_MESSAGE[confirm] : ""}
+        confirmLabel={confirm === "delete" ? "Hapus" : confirm ? ACTION_LABEL[confirm] : ""}
+        danger={confirm === "delete"}
+        busy={transition.isPending || remove.isPending}
+        onConfirm={async () => {
+          const chosen = confirm;
+          if (!chosen) return;
+          if (chosen === "delete") await run(() => remove.mutateAsync(p.daily_plan_id), "Jadwal dihapus.", true);
+          else await act(chosen);
+          setConfirm(null);
+        }}
+        onClose={() => setConfirm(null)}
+      />
     </VmsDialog>
   );
 }

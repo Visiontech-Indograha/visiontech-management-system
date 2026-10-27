@@ -35,6 +35,10 @@ describe("Jadwal harian", () => {
     fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Setujui jadwal" }));
+    // Aksi penting meminta konfirmasi dulu; belum ada permintaan sebelum dikonfirmasi.
+    const confirm = await screen.findByRole("dialog", { name: "Setujui jadwal?" });
+    expect(calls.some((c) => c.url === "/work-plans/daily/p1/approve")).toBe(false);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Setujui jadwal" }));
     await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily/p1/approve")).toBe(true));
   });
 

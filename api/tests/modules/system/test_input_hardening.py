@@ -61,3 +61,16 @@ def test_date_ranges_reject_end_before_start():
     with pytest.raises(ValidationError, match="Tanggal selesai"):
         PeriodicExportRequest(division_id="11111111-1111-4111-8111-111111111111",
                               start_date="2026-11-10", end_date="2026-11-01")
+
+
+def test_client_schema_rejects_script_in_phone_and_spaces_in_code():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.modules.clients.schemas.client_schema import ClientCreate
+
+    ClientCreate(client_code="PLN-01", name="PT Uji", pic_phone="+62 812-3456-7890")
+    with pytest.raises(ValidationError):
+        ClientCreate(client_code="PLN 01", name="PT Uji")
+    with pytest.raises(ValidationError):
+        ClientCreate(client_code="PLN", name="PT Uji", pic_phone="abc<script>")

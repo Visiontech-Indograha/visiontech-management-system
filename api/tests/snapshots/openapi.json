@@ -2046,6 +2046,7 @@
      "client_code": {
       "maxLength": 30,
       "minLength": 2,
+      "pattern": "^[A-Za-z0-9_-]+$",
       "title": "Client Code",
       "type": "string"
      },
@@ -2071,6 +2072,8 @@
       "anyOf": [
        {
         "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$",
         "type": "string"
        },
        {
@@ -2173,6 +2176,7 @@
        {
         "maxLength": 30,
         "minLength": 2,
+        "pattern": "^[A-Za-z0-9_-]+$",
         "type": "string"
        },
        {
@@ -2210,6 +2214,8 @@
       "anyOf": [
        {
         "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$",
         "type": "string"
        },
        {

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -487,6 +488,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       title: 'Ajukan lembur',
                       subtitle: 'Diputus PM/OM divisi',
                       onTap: _busy ? null : _overtime,
+                    ),
+                  ] else if (plan['status'] == 'APPROVED' || plan['status'] == 'COMPLETED') ...[
+                    const SectionTitle('Lembur'),
+                    Text(
+                      plan['status'] == 'APPROVED'
+                          ? 'Lembur bisa diajukan setelah jadwal dimulai.'
+                          : 'Lembur hanya bisa diajukan saat jadwal sedang berjalan.',
+                      style: VmsTextStyles.bodySm,
                     ),
                   ],
                 ],

@@ -774,6 +774,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   'Absen masuk menunggu pemeriksaan. Absen pulang '
                                   'bisa dilakukan setelah absen masuk disetujui.',
                             )
+                          else if (today['check_out_at'] == null && _wibHour(attendanceClock()) >= 19)
+                            const NoticeBanner(
+                              key: Key('pulang-ditutup'),
+                              icon: Icons.schedule_rounded,
+                              accent: Accent.indigo,
+                              text:
+                                  'Absen pulang mandiri ditutup pukul 19:00 WIB. '
+                                  'Sistem mencatat pulang otomatis, tidak perlu absen lagi.',
+                            )
                           else if (today['check_out_at'] == null)
                             PrimaryAction(
                               label: 'Absen pulang',

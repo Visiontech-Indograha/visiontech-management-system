@@ -2,7 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
-import { parsePage } from "@/hooks/useListControls";
+import { parsePage, useListControls } from "@/hooks/useListControls";
 import { useClientList } from "@/hooks/useClientList";
 import { lastPageOf } from "@/lib/paged";
 
@@ -42,5 +42,25 @@ describe("lastPageOf", () => {
     expect(lastPageOf(undefined)).toBe(1);
     expect(lastPageOf({ total: 0, size: 20 })).toBe(1);
     expect(lastPageOf({ total: 41, size: 20 })).toBe(3);
+  });
+});
+
+describe("pagedView", () => {
+  it("memetakan hasil server ke baris, total, dan halaman terakhir", async () => {
+    const { pagedView } = await import("@/hooks/usePagedList");
+    const { result } = renderHook(
+      () => {
+        const c = useListControls({ size: 20, prefix: "t_" });
+        return pagedView(
+          { data: { items: [{ a: 1 }, { a: 2 }], total: 45, page: 2, size: 20 } } as never,
+          c,
+        );
+      },
+      { wrapper: wrap("/?t_page=2") },
+    );
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.total).toBe(45);
+    expect(result.current.lastPage).toBe(3);
+    expect(result.current.shownPage).toBe(2);
   });
 });

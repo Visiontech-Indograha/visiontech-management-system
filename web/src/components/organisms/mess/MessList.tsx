@@ -2,7 +2,8 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { MessStay } from "@/services/messService";
 import { MessAddButton } from "./MessAddButton";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
@@ -17,18 +18,19 @@ import { wibDate } from "@/services/dailyPlanService";
 import { LogOut, MapPin } from "@/components/molecules/Glyphs";
 
 export function MessList({
-  stays,
+  controls, stays,
   canAdd,
   onAdd,
   onCheckout,
 }: {
-  stays: UseQueryResult<MessStay[]>;
+  controls: ListControls;
+  stays: UseQueryResult<Paged<MessStay>>;
   canAdd: boolean;
   onAdd: () => void;
   onCheckout: (stay: MessStay) => void;
 }) {
   const [ending, setEnding] = useState<MessStay | null>(null);
-  const view = useClientList(stays.data, (s) => [s.employee_name, s.employee_no, s.mess_name, s.city], { prefix: "hunian_" });
+  const view = pagedView(stays, controls);
   const today = wibDate();
   return (
     <>
@@ -44,7 +46,7 @@ export function MessList({
           onRetry={() => stays.refetch()}
         />
       )}
-      {stays.data?.length === 0 && (
+      {stays.data && stays.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
           <TextBlock className="mb-3 text-mist">
             Belum ada karyawan yang tercatat tinggal di mess.
@@ -52,7 +54,7 @@ export function MessList({
           {canAdd && <MessAddButton onAdd={onAdd} />}
         </div>
       )}
-      {stays.data && stays.data.length > 0 && (
+      {stays.data && (stays.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama, NIP, mess, atau kota..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada hunian yang cocok dengan pencarian.</TextBlock>}

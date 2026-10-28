@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useListControls } from "@/hooks/useListControls";
 import { toast } from "sonner";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { SelectField, TextField } from "@/components/molecules/Field";
@@ -12,13 +13,16 @@ import {
   useUploadFile,
   type EmployeeDocument,
 } from "@/services/employeeService";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { Pill } from "@/components/molecules/Pill";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
-import { ControlInput, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlInput, ControlOption, ControlSelect, FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 
@@ -72,6 +76,11 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
   // Hapus dua langkah (tanpa dialog bawaan peramban, R1): klik pertama minta konfirmasi.
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const columns = canManage ? 6 : 5;
+  const statusPick = useListControls({ prefix: "brk_" }).filter("status", Object.keys(STATUS));
+  const view = useClientList(docs.data?.items, (d) => [docLabel(d.doc_type), d.doc_type], {
+    prefix: "brk_",
+    extra: (d) => !statusPick || d.status === statusPick,
+  });
 
   const act = (run: Promise<unknown>, done: string) =>
     run.then(
@@ -86,6 +95,27 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
         {canManage && <ActionButton onClick={() => setEditing(true)}>Tambah berkas</ActionButton>}
       </div>
 
+      <ListToolbar
+        value={view.input}
+        onChange={view.setInput}
+        placeholder="Cari jenis berkas..."
+        active={view.active}
+        onReset={view.reset}
+      >
+        <ControlSelect
+          aria-label="Filter status berkas"
+          className="h-10 rounded-control border border-line bg-surface px-3 text-sm"
+          value={statusPick}
+          onChange={(e) => view.setFilter("status", e.target.value)}
+        >
+          <ControlOption value="">Semua status</ControlOption>
+          {Object.entries(STATUS).map(([k, v]) => (
+            <ControlOption key={k} value={k}>
+              {v.label}
+            </ControlOption>
+          ))}
+        </ControlSelect>
+      </ListToolbar>
       <div className="overflow-x-auto rounded-panel border border-line bg-surface shadow-card">
         <TableBlock className="w-full text-left text-sm">
           <TableBlockHead className="border-b border-line text-mist">
@@ -123,7 +153,14 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
                 </TableBlockCell>
               </TableBlockRow>
             )}
-            {docs.data?.items.map((d) => (
+            {docs.data && docs.data.items.length > 0 && view.total === 0 && (
+              <TableBlockRow>
+                <TableBlockCell colSpan={columns} className="px-4 py-6 text-center text-mist">
+                  Tidak ada berkas yang cocok dengan pencarian atau filter.
+                </TableBlockCell>
+              </TableBlockRow>
+            )}
+            {view.rows.map((d) => (
               <TableBlockRow key={d.id} className="h-11 border-b border-line last:border-0">
                 <TableBlockCell className="px-4 py-2 font-medium">{docLabel(d.doc_type)}</TableBlockCell>
                 <TableBlockCell className="px-4 py-2">{formatDate(d.active_at)}</TableBlockCell>
@@ -181,6 +218,9 @@ export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; 
           </TableBlockBody>
         </TableBlock>
       </div>
+      {view.total > view.rows.length || view.lastPage > 1 ? (
+        <ListPagination total={view.total} noun="berkas" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />
+      ) : null}
 
       {editing && <DocumentDialog employeeId={employeeId} onClose={() => setEditing(false)} />}
       {renewing && <DocumentDialog employeeId={employeeId} renew={renewing} onClose={() => setRenewing(null)} />}

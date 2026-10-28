@@ -5,10 +5,13 @@ import { TeamDetailDialog } from "@/components/organisms/teams/TeamDetailDialog"
 import { TeamFormDialog } from "@/components/organisms/teams/TeamFormDialog";
 import { TeamList } from "@/components/organisms/teams/TeamList";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import type { ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { Team } from "@/services/teamService";
 import { PageTemplate } from "../PageTemplate";
 
 export function TeamsTemplate({
+  controls,
   teams,
   adding,
   selected,
@@ -18,7 +21,8 @@ export function TeamsTemplate({
   onCloseAdd,
   isDeleting = false,
 }: {
-  teams: UseQueryResult<Team[]>;
+  controls: ListControls;
+  teams: UseQueryResult<Paged<Team>>;
   adding: boolean;
   selected: Team | null;
   onAdd: () => void;
@@ -37,7 +41,7 @@ export function TeamsTemplate({
 
   return (
     <PageTemplate title="Tim Lapangan" action={<TeamAddButton onAdd={onAdd} />}>
-      <TeamList teams={teams} onAdd={onAdd} onRemove={(team) => setTeamToDelete(team)} onSelectTeam={onSelect} />
+      <TeamList controls={controls} teams={teams} onAdd={onAdd} onRemove={(team) => setTeamToDelete(team)} onSelectTeam={onSelect} />
       {adding && <TeamFormDialog onClose={onCloseAdd} />}
       {selected && <TeamDetailDialog team={selected} onClose={() => onSelect(null)} />}
       <ConfirmDialog

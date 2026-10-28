@@ -1,3 +1,5 @@
+import type { ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { MessAddButton } from "@/components/organisms/mess/MessAddButton";
 import { MessFormDialog } from "@/components/organisms/mess/MessFormDialog";
@@ -16,8 +18,11 @@ export function MessTemplate({
   onTabChange,
   pendingCount,
   stays,
+  stayControls,
   requests,
+  requestControls,
   places,
+  placeControls,
   canManage,
   adding,
   addingPlace,
@@ -31,9 +36,12 @@ export function MessTemplate({
   tabs: [MessTab, string][];
   onTabChange: (tab: MessTab) => void;
   pendingCount: number;
-  stays: UseQueryResult<MessStay[]>;
-  requests: UseQueryResult<MessStay[]>;
-  places: UseQueryResult<MessPlace[]>;
+  stays: UseQueryResult<Paged<MessStay>>;
+  stayControls: ListControls;
+  requests: UseQueryResult<Paged<MessStay>>;
+  requestControls: ListControls;
+  places: UseQueryResult<Paged<MessPlace>>;
+  placeControls: ListControls;
   canManage: boolean;
   adding: boolean;
   addingPlace: boolean;
@@ -59,15 +67,17 @@ export function MessTemplate({
       />
       {tab === "stays" && (
         <MessList
+          controls={stayControls}
           stays={stays}
           canAdd={canManage}
           onAdd={onAdd}
           onCheckout={onCheckout}
         />
       )}
-      {tab === "requests" && <MessRequestList requests={requests} />}
+      {tab === "requests" && <MessRequestList controls={requestControls} requests={requests} />}
       {tab === "places" && (
         <MessPlaceList
+          controls={placeControls}
           places={places}
           canManage={canManage}
           adding={addingPlace}

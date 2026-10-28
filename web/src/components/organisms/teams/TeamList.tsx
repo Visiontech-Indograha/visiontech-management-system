@@ -7,29 +7,31 @@ import { RetryNotice } from "@/components/molecules/RetryNotice";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { Team } from "@/services/teamService";
 import { TeamAddButton } from "./TeamAddButton";
 
 /** Daftar tim lapangan: divisi, kantor, ketua, jumlah anggota; Detail = anggota + kontak. */
-export function TeamList({ teams, onAdd, onRemove, onSelectTeam }: {
-  teams: UseQueryResult<Team[]>;
+export function TeamList({ controls, teams, onAdd, onRemove, onSelectTeam }: {
+  controls: ListControls;
+  teams: UseQueryResult<Paged<Team>>;
   onAdd: () => void;
   onRemove: (team: Team) => void;
   onSelectTeam: (team: Team) => void;
 }) {
-  const view = useClientList(teams.data, (t) => [t.name, t.leader_name, t.division_name, t.office_name], { prefix: "tim_" });
+  const view = pagedView(teams, controls);
   return (
     <>
       {teams.isPending && <LoadingBar />}
       {teams.isError && <RetryNotice message="Daftar tim tidak dapat dimuat." onRetry={() => teams.refetch()} />}
-      {teams.data?.length === 0 && (
+      {teams.data && teams.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="mb-3 text-mist">Belum ada tim lapangan yang terdaftar.</TextBlock>
           <TeamAddButton onAdd={onAdd} />
         </div>
       )}
-      {teams.data && teams.data.length > 0 && (
+      {teams.data && (teams.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama tim, ketua, divisi, atau kantor..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada tim yang cocok dengan pencarian.</TextBlock>}

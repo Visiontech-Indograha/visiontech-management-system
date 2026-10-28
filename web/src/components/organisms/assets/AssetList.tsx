@@ -14,9 +14,10 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
 import { PhotoStrip } from "@/components/organisms/PhotoStrip";
-import { useClientList } from "@/hooks/useClientList";
+import { useListControls } from "@/hooks/useListControls";
+import { pagedView, usePagedList } from "@/hooks/usePagedList";
 import { formatDate } from "@/lib/format";
-import { useLoans, useTools, useVehicles, type AssetKind, type Loan, type Tool, type Vehicle } from "@/services/assetService";
+import type { AssetKind, Loan, Tool, Vehicle } from "@/services/assetService";
 
 /** Dialog yang dibuka dari kartu aset. */
 export type AssetAction =
@@ -53,23 +54,26 @@ function TabButton({ active, onClick, label, count }: { active: boolean; onClick
 
 export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (action: AssetAction) => void }) {
   const [tab, setTab] = useState<Tab>("VEHICLE");
-  const vehicles = useVehicles();
-  const tools = useTools();
-  const loans = useLoans(true);
-  const vView = useClientList(vehicles.data, (v) => [v.name, v.number_plate, v.office_name, v.division_name, v.holder_name], { prefix: "kdr_" });
-  const tView = useClientList(tools.data, (t) => [t.name, t.tool_code, t.office_name, t.division_name, t.holder_name], { prefix: "alt_" });
-  const lView = useClientList(loans.data, (l) => [l.asset_name, l.asset_code, l.employee_name], { prefix: "pjm_" });
+  const vc = useListControls({ prefix: "kdr_" });
+  const tc = useListControls({ prefix: "alt_" });
+  const lc = useListControls({ prefix: "pjm_" });
+  const vehicles = usePagedList<Vehicle>(["assets", "vehicles"], "/assets/vehicles", vc);
+  const tools = usePagedList<Tool>(["assets", "tools"], "/assets/tools", tc);
+  const loans = usePagedList<Loan>(["assets", "loans"], "/assets/loans", lc, { open: true });
+  const vView = pagedView(vehicles, vc);
+  const tView = pagedView(tools, tc);
+  const lView = pagedView(loans, lc);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 border-b border-line pb-3">
-        <TabButton active={tab === "VEHICLE"} onClick={() => setTab("VEHICLE")} label="Kendaraan" count={vehicles.data?.length} />
-        <TabButton active={tab === "TOOL"} onClick={() => setTab("TOOL")} label="Alat" count={tools.data?.length} />
-        <TabButton active={tab === "LOANS"} onClick={() => setTab("LOANS")} label="Sedang dipinjam" count={loans.data?.length} />
+        <TabButton active={tab === "VEHICLE"} onClick={() => setTab("VEHICLE")} label="Kendaraan" count={vView.active ? undefined : vehicles.data?.total} />
+        <TabButton active={tab === "TOOL"} onClick={() => setTab("TOOL")} label="Alat" count={tView.active ? undefined : tools.data?.total} />
+        <TabButton active={tab === "LOANS"} onClick={() => setTab("LOANS")} label="Sedang dipinjam" count={lView.active ? undefined : loans.data?.total} />
       </div>
 
       {tab === "VEHICLE" && (
-        <QueryState query={vehicles} errorText="Daftar kendaraan tidak dapat dimuat." empty={vehicles.data?.length === 0} emptyText="Belum ada kendaraan.">
+        <QueryState query={vehicles} errorText="Daftar kendaraan tidak dapat dimuat." empty={vehicles.data?.total === 0 && !vView.active} emptyText="Belum ada kendaraan.">
           <ListToolbar value={vView.input} onChange={vView.setInput} placeholder="Cari nama, plat nomor, kantor, atau pemegang..." active={vView.active} onReset={vView.reset} />
           {vView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -98,7 +102,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
       )}
 
       {tab === "TOOL" && (
-        <QueryState query={tools} errorText="Daftar alat tidak dapat dimuat." empty={tools.data?.length === 0} emptyText="Belum ada alat.">
+        <QueryState query={tools} errorText="Daftar alat tidak dapat dimuat." empty={tools.data?.total === 0 && !tView.active} emptyText="Belum ada alat.">
           <ListToolbar value={tView.input} onChange={tView.setInput} placeholder="Cari nama, kode alat, kantor, atau pemegang..." active={tView.active} onReset={tView.reset} />
           {tView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -123,7 +127,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
       )}
 
       {tab === "LOANS" && (
-        <QueryState query={loans} errorText="Daftar peminjaman tidak dapat dimuat." empty={loans.data?.length === 0} emptyText="Tidak ada aset yang sedang dipinjam.">
+        <QueryState query={loans} errorText="Daftar peminjaman tidak dapat dimuat." empty={loans.data?.total === 0 && !lView.active} emptyText="Tidak ada aset yang sedang dipinjam.">
           <ListToolbar value={lView.input} onChange={lView.setInput} placeholder="Cari aset, kode, atau peminjam..." active={lView.active} onReset={lView.reset} />
           {lView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="divide-y divide-line rounded-panel border border-line bg-surface shadow-card">

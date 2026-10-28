@@ -1,6 +1,7 @@
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
@@ -29,14 +30,15 @@ function ExamplePhoto({ fileId, label }: { fileId: string; label: string }) {
 }
 
 /** Kartu jenis pekerjaan + slot fotonya; keadaan memuat, galat (+ coba lagi), kosong (+ tambah), berhasil. */
-export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
-  types: UseQueryResult<WorkType[]>;
+export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
+  controls: ListControls;
+  types: UseQueryResult<Paged<WorkType>>;
   onAdd: () => void;
   onEdit: (type: WorkType) => void;
   onDeactivate: (type: WorkType) => void;
 }) {
   const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
-  const view = useClientList(types.data, (t) => [t.name, t.division_name], { prefix: "jns_" });
+  const view = pagedView(types, controls);
   return (
     <>
       {types.isPending && (
@@ -53,13 +55,13 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
           </ActionButton>
         </div>
       )}
-      {types.data?.length === 0 && (
+      {types.data && types.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="mb-3 text-mist">Belum ada jenis pekerjaan. Tambahkan jenis beserta template foto laporannya.</TextBlock>
           <WorkTypeAddButton onAdd={onAdd} />
         </div>
       )}
-      {types.data && types.data.length > 0 && (
+      {types.data && (types.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari jenis pekerjaan atau divisi..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}

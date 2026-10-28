@@ -12313,7 +12313,14 @@ export interface operations {
     };
     list_places_api_v1_mess_places_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12327,6 +12334,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessPlaceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -13747,6 +13763,12 @@ export interface operations {
                 page?: number;
                 size?: number;
                 entity_type?: string | null;
+                /** @description Awalan aksi, tabel, atau nama pelaku */
+                q?: string | null;
+                /** @description Mulai tanggal (inklusif) */
+                date_from?: string | null;
+                /** @description Sampai tanggal (inklusif) */
+                date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -14515,6 +14537,12 @@ export interface operations {
         parameters: {
             query?: {
                 for_attendance?: boolean;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -15061,7 +15089,7 @@ export interface operations {
                 scope?: string;
                 page?: number;
                 size?: number;
-                /** @description Nama atau NIP karyawan diawali kata kunci */
+                /** @description Nama atau NIP karyawan mengandung kata kunci */
                 q?: string | null;
             };
             header?: never;
@@ -16701,6 +16729,12 @@ export interface operations {
             query?: {
                 all?: boolean;
                 division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;

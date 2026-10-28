@@ -1,6 +1,7 @@
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -18,9 +19,10 @@ import { type MessStay, useDecideMessStay } from "@/services/messService";
 
 /** Pengajuan hunian yang menunggu: PM divisi / OM / HR menyetujui atau menolak (penolakan wajib beralasan). */
 export function MessRequestList({
-  requests,
+  controls, requests,
 }: {
-  requests: UseQueryResult<MessStay[]>;
+  controls: ListControls;
+  requests: UseQueryResult<Paged<MessStay>>;
 }) {
   const decide = useDecideMessStay();
   const [approving, setApproving] = useState<MessStay | null>(null);
@@ -66,7 +68,7 @@ export function MessRequestList({
     setNoteError(null);
   };
 
-  const view = useClientList(requests.data, (r) => [r.employee_name, r.employee_no, r.mess_name, r.city], { prefix: "req_" });
+  const view = pagedView(requests, controls);
   return (
     <>
       {requests.isPending && <LoadingBar className="h-24" />}
@@ -76,14 +78,14 @@ export function MessRequestList({
           onRetry={() => requests.refetch()}
         />
       )}
-      {requests.data?.length === 0 && (
+      {requests.data && requests.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="text-mist">
             Tidak ada pengajuan mess yang menunggu.
           </TextBlock>
         </div>
       )}
-      {requests.data && requests.data.length > 0 && (
+      {requests.data && (requests.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama, NIP, atau mess..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}

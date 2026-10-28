@@ -11,7 +11,7 @@ export interface Paged<T> {
 /** Ambil daftar dengan `q`/`page`/`size`; tanpa header total (server lama) total = jumlah baris yang diterima. */
 export async function getPaged<T>(
   url: string,
-  params: Record<string, string | number | undefined>,
+  params: Record<string, string | number | boolean | undefined>,
 ): Promise<Paged<T>> {
   const res = await api.get<T[]>(url, { params });
   const header = Number(res.headers?.["x-total-count"]);

@@ -640,7 +640,8 @@ class AttendanceSessionRepository(BaseRepository):
             "date_to": date_to,
             "status": status_filter,
             "scope": scope,
-            "q": escape_like(q) + "%" if q else None,  # awalan nama/NIP (indeks-friendly, docs/12 §1a)
+            # mengandung kata: pengecualian pemilik (KNOWN di test_sql_rules)
+            "q": f"%{escape_like(q)}%" if q else None,
             "limit": limit,
             "offset": offset,
         }

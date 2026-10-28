@@ -4,12 +4,13 @@ import {
   MessTemplate,
   type MessTab,
 } from "@/components/templates/mess/MessTemplate";
+import { useListControls } from "@/hooks/useListControls";
+import { usePagedList } from "@/hooks/usePagedList";
 import { errorMessage } from "@/lib/errors";
 import {
+  type MessPlace,
   type MessStay,
   useCheckoutMessStay,
-  useMessPlaces,
-  useMessStays,
 } from "@/services/messService";
 import { useSession } from "@/stores/sessionStore";
 
@@ -17,9 +18,12 @@ export function MessPage() {
   const { me } = useSession();
   const canManage = Boolean(me?.permissions.includes("manage:mess"));
   const canReview = Boolean(me?.permissions.includes("review:mess"));
-  const stays = useMessStays({ status: "APPROVED" });
-  const requests = useMessStays({ status: "REQUESTED" });
-  const places = useMessPlaces();
+  const stayControls = useListControls({ prefix: "hunian_" });
+  const requestControls = useListControls({ prefix: "req_" });
+  const placeControls = useListControls({ prefix: "msp_" });
+  const stays = usePagedList<MessStay>(["mess-stays"], "/mess", stayControls, { status: "APPROVED" });
+  const requests = usePagedList<MessStay>(["mess-stays"], "/mess", requestControls, { status: "REQUESTED" });
+  const places = usePagedList<MessPlace>(["mess-places"], "/mess/places", placeControls);
   const checkout = useCheckoutMessStay();
   const [tab, setTab] = useState<MessTab>("stays");
   const [adding, setAdding] = useState(false);
@@ -43,10 +47,13 @@ export function MessPage() {
       tab={tab}
       tabs={tabs}
       onTabChange={setTab}
-      pendingCount={requests.data?.length ?? 0}
+      pendingCount={requests.data?.total ?? 0}
       stays={stays}
+      stayControls={stayControls}
       requests={requests}
+      requestControls={requestControls}
       places={places}
+      placeControls={placeControls}
       canManage={canManage}
       adding={adding}
       addingPlace={addingPlace}

@@ -19,11 +19,18 @@ class AuditService:
         self.repo = repo
 
     async def list_events(
-        self, org_id: UUID | str, page: int, size: int, entity_type: str | None
+        self,
+        org_id: UUID | str,
+        page: int,
+        size: int,
+        entity_type: str | None,
+        q: str | None = None,
+        date_from: Any = None,
+        date_to: Any = None,
     ) -> AuditEventListResponse:
         """Halaman `page` (mulai 1) berisi `size` kejadian, terbaru lebih dulu."""
-        total = await self.repo.count(org_id, entity_type)
-        rows = await self.repo.list_page(org_id, entity_type, size, (page - 1) * size)
+        total = await self.repo.count(org_id, entity_type, q, date_from, date_to)
+        rows = await self.repo.list_page(org_id, entity_type, size, (page - 1) * size, q, date_from, date_to)
         items = [
             AuditEventResponse(
                 id=r.id,

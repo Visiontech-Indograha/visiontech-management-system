@@ -1,6 +1,7 @@
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { Site } from "@/services/siteService";
 import { SiteAddButton } from "./SiteAddButton";
@@ -12,12 +13,13 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
 
 /** Daftar lokasi kerja dengan keadaan memuat, galat (+ coba lagi), kosong (+ tambah), dan berhasil. */
-export function SiteList({ sites, onAdd, onRemove }: {
-  sites: UseQueryResult<Site[]>;
+export function SiteList({ controls, sites, onAdd, onRemove }: {
+  controls: ListControls;
+  sites: UseQueryResult<Paged<Site>>;
   onAdd: () => void;
   onRemove: (site: Site) => void;
 }) {
-  const view = useClientList(sites.data, (s) => [s.name, s.address], { prefix: "lok_" });
+  const view = pagedView(sites, controls);
   return (
     <>
       {sites.isPending && (
@@ -29,13 +31,13 @@ export function SiteList({ sites, onAdd, onRemove }: {
       {sites.isError && (
         <RetryNotice message="Lokasi kerja tidak dapat dimuat." onRetry={() => sites.refetch()} />
       )}
-      {sites.data?.length === 0 && (
+      {sites.data && sites.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
           <TextBlock className="mb-3 text-mist">Belum ada lokasi kerja. Tambahkan lokasi agar absensi bisa memeriksa radius.</TextBlock>
           <SiteAddButton onAdd={onAdd} />
         </div>
       )}
-      {sites.data && sites.data.length > 0 && (
+      {sites.data && (sites.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama atau alamat lokasi..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}

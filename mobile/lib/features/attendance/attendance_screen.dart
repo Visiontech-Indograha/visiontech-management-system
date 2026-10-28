@@ -832,7 +832,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       ),
                     ),
                   ),
-                  _QueueSummaryCard(summary: _summary),
+                  _QueueSummaryCard(summary: _summary, onReturn: _loadSummary),
                   const SectionTitle('Riwayat'),
                   if (_loading)
                     const Padding(
@@ -924,9 +924,12 @@ DateTime Function() attendanceClock = DateTime.now;
 
 /// Kartu "Menunggu tindakan Anda": hanya baris berisi (>0); yang punya layar di HP bisa diketuk.
 class _QueueSummaryCard extends StatelessWidget {
-  const _QueueSummaryCard({required this.summary});
+  const _QueueSummaryCard({required this.summary, required this.onReturn});
 
   final Map<String, int> summary;
+
+  /// Dipanggil setelah kembali dari layar tujuan, agar angka tidak basi.
+  final Future<void> Function() onReturn;
 
   static const _rows = <(String, String, String?)>[
     ('leaves_to_review', 'Cuti menunggu keputusan', '/leaves'),
@@ -956,7 +959,12 @@ class _QueueSummaryCard extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(r.$2),
                 trailing: Badge(label: Text('${summary[r.$1]}')),
-                onTap: r.$3 == null ? null : () => context.push(r.$3!),
+                onTap: r.$3 == null
+                    ? null
+                    : () async {
+                        await context.push(r.$3!);
+                        await onReturn();
+                      },
               ),
           ],
         ),

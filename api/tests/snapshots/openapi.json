@@ -3327,6 +3327,7 @@
      "obstacles": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -3354,6 +3355,7 @@
      },
      "summary": {
       "description": "Ringkasan hasil kerja harian",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Summary",
       "type": "string"

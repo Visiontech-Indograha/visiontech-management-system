@@ -36,6 +36,22 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: refreshNotifier,
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Halaman tidak ditemukan')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Halaman yang dituju tidak ada atau sudah tidak berlaku.', textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(onPressed: () => context.go('/'), child: const Text('Ke Beranda')),
+            ],
+          ),
+        ),
+      ),
+    ),
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final isLoginRoute = state.matchedLocation == '/login';

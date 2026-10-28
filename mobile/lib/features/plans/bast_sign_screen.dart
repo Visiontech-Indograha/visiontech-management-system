@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
@@ -238,6 +238,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                   const SectionTitle('Ringkasan'),
                   TextField(
                     controller: _summary,
+                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
                     readOnly: locked,
                     maxLines: 4,
                     decoration: const InputDecoration(
@@ -247,6 +248,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: _obstacles,
+                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
                     readOnly: locked,
                     maxLines: 2,
                     decoration: const InputDecoration(labelText: 'Kendala'),

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
@@ -455,18 +456,21 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
         children: [
           TextField(
             controller: _location,
+            inputFormatters: [LengthLimitingTextInputFormatter(500)],
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Lokasi', hintText: 'mis. Lab Office Duri'),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _purpose,
+            inputFormatters: [LengthLimitingTextInputFormatter(255)],
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Tujuan', hintText: 'mis. Assesment pemasangan ACS'),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _narrative,
+            inputFormatters: [LengthLimitingTextInputFormatter(4000)],
             enabled: _editable,
             maxLines: 4,
             decoration: const InputDecoration(

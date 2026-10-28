@@ -17669,6 +17669,7 @@
     "properties": {
      "summary": {
       "type": "string",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Summary",
       "description": "Ringkasan hasil kerja harian"
@@ -17676,7 +17677,8 @@
      "obstacles": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"

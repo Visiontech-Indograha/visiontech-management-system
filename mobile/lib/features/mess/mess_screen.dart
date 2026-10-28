@@ -289,10 +289,23 @@ class _PlacePickerSheetState extends ConsumerState<_PlacePickerSheet> {
   List<Map<String, dynamic>> _places = [];
   bool _loading = true;
   String? _error;
+  final _query = ListQuery();
+
+  List<Map<String, dynamic>> get _filtered =>
+      _query.filter<Map<String, dynamic>>(_places, (p) => [p['name'], p['city'], p['address']]);
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _query.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -336,6 +349,7 @@ class _PlacePickerSheetState extends ConsumerState<_PlacePickerSheet> {
             const SizedBox(height: 4),
             Text('Ketuk mess untuk memilih tanggal inap.', style: VmsTextStyles.bodySm),
             const SizedBox(height: 12),
+            VmsSearchBar(query: _query, hint: 'Cari nama mess atau kota...'),
             Expanded(
               child: _loading
                   ? const Center(child: CircularProgressIndicator())
@@ -347,11 +361,18 @@ class _PlacePickerSheetState extends ConsumerState<_PlacePickerSheet> {
                   ? const Center(child: Text('Belum ada mess terdaftar. Hubungi HR/GA.'))
                   : ListView.separated(
                       padding: const EdgeInsets.only(bottom: 16),
-                      itemCount: _places.length,
+                      itemCount: _query.visible(_filtered).length,
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, i) => _PlaceCard(place: _places[i], onTap: () => _open(_places[i])),
+                      itemBuilder: (_, i) {
+                        final p = _query.visible(_filtered)[i];
+                        return _PlaceCard(place: p, onTap: () => _open(p));
+                      },
                     ),
             ),
+            if (!_loading && _places.isNotEmpty)
+              _filtered.isEmpty
+                  ? VmsNoMatch(query: _query)
+                  : VmsLoadMore(query: _query, total: _filtered.length, noun: 'mess'),
           ],
         ),
       ),

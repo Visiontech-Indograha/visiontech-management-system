@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
@@ -10,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'survey_map_screen.dart';
 import 'survey_point_screen.dart' show SurveyPointScreen, pickSurveyMaterial;
@@ -454,23 +454,23 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
+          VmsTextField(
             controller: _location,
-            inputFormatters: [LengthLimitingTextInputFormatter(500)],
+            maxLength: 500,
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Lokasi', hintText: 'mis. Lab Office Duri'),
           ),
           const SizedBox(height: 8),
-          TextField(
+          VmsTextField(
             controller: _purpose,
-            inputFormatters: [LengthLimitingTextInputFormatter(255)],
+            maxLength: 255,
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Tujuan', hintText: 'mis. Assesment pemasangan ACS'),
           ),
           const SizedBox(height: 8),
-          TextField(
+          VmsTextField(
             controller: _narrative,
-            inputFormatters: [LengthLimitingTextInputFormatter(4000)],
+            maxLength: 4000,
             enabled: _editable,
             maxLines: 4,
             decoration: const InputDecoration(

@@ -106,3 +106,21 @@ lalu membandingkan jumlah baris per tabel, versi alembic, tabel ber-RLS, dan fun
 kontainer sementara selalu dihapus; keluaran hanya nama tabel & angka. Jalankan tiap bulan dan setelah perubahan
 besar skema. Catatan: berkas di MinIO (foto/dokumen/PDF) belum ikut dicadangkan, dan cadangan DB masih di server
 yang sama (lihat docs/06 P9-5).
+
+## Alur pengembangan beta → produksi (ringkas)
+
+`feature/*` → PR ke `development` (CI api/web/mobile + gitleaks wajib hijau) → merge ke `beta` (server beta deploy otomatis;
+uji nyata web + APK beta dari `apk.yml`) → PR `beta` → `prod` (satu persetujuan, CI hijau) → server prod deploy
+(backup → migrasi → cek siap pakai → Discord). Hotfix: `hotfix/*` dari `prod`, PR langsung ke `prod`, lalu back-merge ke
+`beta`/`development`. Migrasi DB selalu kompatibel mundur (tambah dulu, pakai, baru hapus) dan diuji di beta sebelum prod.
+
+## Pemantauan dan pemeliharaan
+
+- `deploy/healthcheck.sh` (cron 5 menit; alert Discord hanya saat berubah): kontainer berkebijakan restart yang mati,
+  /health /ready web proxy, jangkauan API→MinIO, disk/RAM/swap, umur backup lokal dan luar-server.
+- `deploy/uptime-kuma.compose.yml`: pemantau ketersediaan (hanya Tailscale/lokal).
+- `deploy/backup-offsite.sh`: salinan backup ke mesin lain via rsync + SSH (butuh `offsite.env`).
+- `deploy/hardening-server.sh --cek|--ya`: SSH, firewall, fail2ban, pembaruan otomatis (perlu sudo, dijalankan pemilik).
+- Anti-loop: deploy yang gagal untuk commit yang sama baru dicoba lagi setelah `VMS_DEPLOY_RETRY_AFTER` detik (bawaan 900);
+  penanda `.last-failed`. Salin `autodeploy.sh` terbaru ke server (lihat bagian "Memasang perubahan skrip").
+- Panduan operasional harian: [`docs/RUNBOOK-PRODUKSI.md`](../docs/RUNBOOK-PRODUKSI.md).

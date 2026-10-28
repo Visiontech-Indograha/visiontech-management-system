@@ -130,9 +130,9 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: safeListPadding(context),
+          padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Layanan', title: 'Kendaraan & Alat'),
+            const HeroHeader(eyebrow: 'Layanan', title: 'Kendaraan & Alat', horizontal: 4),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(32),

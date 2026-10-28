@@ -480,6 +480,25 @@ class VmsApi {
   // --- Mess, dokumen, koreksi laporan -------------------------------------------
   Future<List<Map<String, dynamic>>> myMess() async => _list((await _dio.get('$_p/mess/me')).data);
 
+  Future<List<Map<String, dynamic>>> messPlaces() async => _list((await _dio.get('$_p/mess/places')).data);
+
+  Future<Map<String, dynamic>> requestMess({
+    required String messId,
+    required String start,
+    required String end,
+    String note = '',
+  }) async => _map(
+    (await _dio.post(
+      '$_p/mess/requests',
+      data: {'mess_id': messId, 'stay_start_date': start, 'stay_end_date': end, 'note': note.isEmpty ? null : note},
+    )).data,
+  );
+
+  Future<Map<String, dynamic>> cancelMess(String stayId) async =>
+      _map((await _dio.post('$_p/mess/$stayId/cancel')).data);
+
+  Future<Map<String, dynamic>> endMess(String stayId) async => _map((await _dio.post('$_p/mess/$stayId/end')).data);
+
   Future<List<Map<String, dynamic>>> myDocuments(String employeeId) async =>
       _list(((await _dio.get('$_p/employees/$employeeId/documents')).data as Map)['items']);
 

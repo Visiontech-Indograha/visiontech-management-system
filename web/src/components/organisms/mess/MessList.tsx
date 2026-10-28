@@ -91,7 +91,7 @@ export function MessList({
                       : " · Sedang menginap"}
                 </TextBlock>
               </div>
-              {s.stay_start_date <= today && s.stay_end_date >= today && (
+              {canAdd && s.stay_start_date <= today && s.stay_end_date >= today && (
                 <ActionButton
                   variant="outline"
                   size="sm"

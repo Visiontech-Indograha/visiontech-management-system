@@ -37,6 +37,9 @@ class Accent {
   static const yellow = Accent(Color(0xFFA16207), Color(0xFFFEF9C3));
 }
 
+/// Gutter kiri/kanan isi daftar agar kartu/teks tidak menempel ke tepi layar.
+const double kListGutter = 16;
+
 /// Safe zone (R-14): padding daftar yang menjauhkan konten dari area sistem — tepi bawah (bilah
 /// gestur/navigasi yang disembunyikan), lekuk layar & notch di kiri/kanan. Atas diurus header/appBar.
 EdgeInsets safeListPadding(BuildContext context, {double bottomGap = 24}) {
@@ -58,8 +61,11 @@ class HeroHeader extends StatelessWidget {
     this.trailing,
     this.bottom,
     this.onBack,
+    this.horizontal = 20,
   });
 
+  /// Jarak kiri/kanan header; 4 bila daftar induk sudah memberi gutter 16 (lihat [kListGutter]).
+  final double horizontal;
   final String title;
   final String? eyebrow;
   final String? subtitle;
@@ -75,7 +81,7 @@ class HeroHeader extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, top + 10, 20, 8),
+        padding: EdgeInsets.fromLTRB(horizontal, top + 10, horizontal, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

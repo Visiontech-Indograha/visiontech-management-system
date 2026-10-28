@@ -583,6 +583,7 @@ class AttendanceSessionService:
         page: int,
         size: int,
         scope: str = "all",
+        q: str | None = None,
     ) -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
@@ -600,6 +601,7 @@ class AttendanceSessionService:
             date_to=date_to,
             status=status,
             scope=scope,
+            q=q,
             limit=size,
             offset=(page - 1) * size,
         )

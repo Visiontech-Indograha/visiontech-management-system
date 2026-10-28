@@ -41,6 +41,7 @@ def create_app() -> FastAPI:
         allow_credentials=bool(origins),
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Total-Count"],
     )
 
     # Daftarkan middleware RequestID

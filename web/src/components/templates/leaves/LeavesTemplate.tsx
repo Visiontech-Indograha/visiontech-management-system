@@ -4,6 +4,7 @@ import { LeaveApplyDialog } from "@/components/organisms/leaves/LeaveApplyDialog
 import { LeaveReviewDialog } from "@/components/organisms/leaves/LeaveReviewDialog";
 import { LeaveBalanceCard } from "@/components/organisms/leaves/LeaveBalanceCard";
 import { LeaveList } from "@/components/organisms/leaves/LeaveList";
+import type { Paged } from "@/lib/paged";
 import type { LeaveBalance, LeaveRequest } from "@/services/leaveService";
 import { PageTemplate } from "../PageTemplate";
 
@@ -12,6 +13,12 @@ export function LeavesTemplate({
   balance,
   statusFilter,
   onStatusFilterChange,
+  q,
+  onQChange,
+  page,
+  onPageChange,
+  filtersActive,
+  onResetFilters,
   canReview,
   canFinalReview,
   applying,
@@ -21,10 +28,16 @@ export function LeavesTemplate({
   onCloseApply,
   onCloseReview,
 }: {
-  leaves: UseQueryResult<LeaveRequest[]>;
+  leaves: UseQueryResult<Paged<LeaveRequest>>;
   balance: UseQueryResult<LeaveBalance>;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
+  q: string;
+  onQChange: (q: string) => void;
+  page: number;
+  onPageChange: (page: number) => void;
+  filtersActive: boolean;
+  onResetFilters: () => void;
   canReview: boolean;
   canFinalReview: boolean;
   applying: boolean;
@@ -46,6 +59,12 @@ export function LeavesTemplate({
           leaves={leaves}
           statusFilter={statusFilter}
           onStatusFilterChange={onStatusFilterChange}
+          q={q}
+          onQChange={onQChange}
+          page={page}
+          onPageChange={onPageChange}
+          filtersActive={filtersActive}
+          onResetFilters={onResetFilters}
           canReview={canReview}
           canFinalReview={canFinalReview}
           onApply={onApply}

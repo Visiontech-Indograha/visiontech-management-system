@@ -17,7 +17,7 @@ export function AttendancePage() {
   const hasTeam = canReview || sees;
   const teamLabel = sees ? "Semua karyawan" : "Absensi anggota";
   const [f, setF] = useState<AttendanceFilters>({
-    status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", page: 1, scope: hasTeam ? "team" : "",
+    status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", q: "", page: 1, scope: hasTeam ? "team" : "",
   });
   const list = useAttendance(f);
   const [open, setOpen] = useState<{ kind: "review" | "explain"; item: Attendance } | null>(null);

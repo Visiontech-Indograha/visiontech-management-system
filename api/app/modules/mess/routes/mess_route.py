@@ -7,9 +7,10 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import get_current_user, require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
@@ -72,6 +73,8 @@ async def delete_place(
 
 @router.get("", response_model=list[MessStayOut])
 async def list_stays(
+    response: Response,
+    params: ListParams = Depends(),
     employee_id: UUID | None = Query(None, description="Filter berdasarkan ID karyawan"),
     start: date | None = Query(None, description="Hunian yang beririsan sejak tanggal ini"),
     end: date | None = Query(None, description="Hunian yang beririsan sampai tanggal ini"),
@@ -80,16 +83,21 @@ async def list_stays(
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
     """Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan."""
-    return await controller.handle_list_stays(current_user, employee_id, start, end, status)
+    rows = await controller.handle_list_stays(current_user, employee_id, start, end, status)
+    hay = lambda r: (r.employee_name, r.employee_no, r.mess_name, r.city, r.request_note)  # noqa: E731
+    return list(apply_list(rows, params, response, hay))
 
 
 @router.get("/me", response_model=list[MessStayOut])
 async def my_stays(
+    response: Response,
+    params: ListParams = Depends(),
     current_user: CurrentUser = Depends(get_current_user),
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
     """Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini)."""
-    return await controller.handle_my_stays(current_user)
+    rows = await controller.handle_my_stays(current_user)
+    return list(apply_list(rows, params, response, lambda r: (r.mess_name, r.city, r.address, r.request_note)))
 
 
 @router.post("/requests", response_model=MessStayOut, status_code=201)

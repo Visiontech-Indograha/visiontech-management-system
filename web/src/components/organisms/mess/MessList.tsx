@@ -1,5 +1,8 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import type { MessStay } from "@/services/messService";
 import { MessAddButton } from "./MessAddButton";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
@@ -25,6 +28,7 @@ export function MessList({
   onCheckout: (stay: MessStay) => void;
 }) {
   const [ending, setEnding] = useState<MessStay | null>(null);
+  const view = useClientList(stays.data, (s) => [s.employee_name, s.employee_no, s.mess_name, s.city], { prefix: "hunian_" });
   const today = wibDate();
   return (
     <>
@@ -49,8 +53,11 @@ export function MessList({
         </div>
       )}
       {stays.data && stays.data.length > 0 && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama, NIP, mess, atau kota..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada hunian yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {stays.data.map((s) => (
+          {view.rows.map((s) => (
             <ListEntry
               key={s.mess_stay_id}
               className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4"
@@ -102,6 +109,8 @@ export function MessList({
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="hunian" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
       <ConfirmDialog
         open={ending !== null}

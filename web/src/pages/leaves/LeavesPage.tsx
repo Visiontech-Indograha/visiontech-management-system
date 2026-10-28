@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useListControls } from "@/hooks/useListControls";
 import { LeavesTemplate } from "@/components/templates/leaves/LeavesTemplate";
 import { useLeaves, useLeaveBalance, type LeaveRequest } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
+
+const LEAVE_STATUSES = ["PENDING", "APPROVED_BY_PM", "APPROVED_BY_HR", "REJECTED", "CANCELLED"] as const;
 
 export function LeavesPage() {
   const { me } = useSession();
@@ -17,7 +20,8 @@ export function LeavesPage() {
   // Persetujuan kedua (setelah PM) hanya oleh HR/GA atau admin.
   const canFinalReview = me?.role === "ADMIN_HR_GA" || me?.role === "HR" || me?.role === "SUPER_ADMIN";
 
-  const [statusFilter, setStatusFilter] = useState("");
+  const controls = useListControls({ size: 20 });
+  const statusFilter = controls.filter("status", LEAVE_STATUSES);
   const [applying, setApplying] = useState(false);
   const [reviewing, setReviewing] = useState<LeaveRequest | null>(null);
 
@@ -28,6 +32,9 @@ export function LeavesPage() {
     employee_id: canReview ? undefined : (me?.employee_id || undefined),
     status: statusFilter || undefined,
     year: currentYear,
+    q: controls.search || undefined,
+    page: controls.page,
+    size: controls.size,
   });
 
   const balanceQuery = useLeaveBalance(me?.employee_id ?? "", currentYear);
@@ -37,7 +44,13 @@ export function LeavesPage() {
       leaves={leavesQuery}
       balance={balanceQuery}
       statusFilter={statusFilter}
-      onStatusFilterChange={setStatusFilter}
+      onStatusFilterChange={(v) => controls.setFilter("status", v)}
+      q={controls.input}
+      onQChange={controls.setInput}
+      page={controls.page}
+      onPageChange={controls.setPage}
+      filtersActive={controls.active}
+      onResetFilters={controls.reset}
       canReview={canReview}
       canFinalReview={canFinalReview}
       applying={applying}

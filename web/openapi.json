@@ -5038,6 +5038,24 @@
     ],
     "parameters": [
      {
+      "name": "active",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Hanya tim aktif (true) atau nonaktif (false)",
+       "title": "Active"
+      },
+      "description": "Hanya tim aktif (true) atau nonaktif (false)"
+     },
+     {
       "name": "division_id",
       "in": "query",
       "required": false,
@@ -5055,6 +5073,65 @@
        "title": "Division Id"
       },
       "description": "Filter berdasarkan ID divisi"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -5686,6 +5763,65 @@
        ],
        "title": "Status"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -5769,27 +5905,98 @@
     "summary": "My Stays",
     "description": "Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).",
     "operationId": "my_stays_api_v1_mess_me_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
     "responses": {
      "200": {
       "description": "Successful Response",
       "content": {
        "application/json": {
         "schema": {
+         "type": "array",
          "items": {
           "$ref": "#/components/schemas/MessStayOut"
          },
-         "type": "array",
          "title": "Response My Stays Api V1 Mess Me Get"
         }
        }
       }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/mess/requests": {
@@ -6204,7 +6411,7 @@
      "Leaves"
     ],
     "summary": "List Leaves",
-    "description": "Mengambil riwayat atau daftar permohonan cuti.",
+    "description": "Mengambil riwayat atau daftar permohonan cuti. Cari `q`: nama, NIP, divisi, alasan.",
     "operationId": "list_leaves_api_v1_leaves_get",
     "security": [
      {
@@ -6238,7 +6445,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "maxLength": 30
         },
         {
          "type": "null"
@@ -6256,7 +6464,9 @@
       "schema": {
        "anyOf": [
         {
-         "type": "integer"
+         "type": "integer",
+         "maximum": 2100,
+         "minimum": 2000
         },
         {
          "type": "null"
@@ -6266,6 +6476,122 @@
        "title": "Year"
       },
       "description": "Tahun cuti"
+     },
+     {
+      "name": "leave_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 30
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter jenis cuti",
+       "title": "Leave Type"
+      },
+      "description": "Filter jenis cuti"
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Cuti yang berakhir pada/setelah tanggal ini",
+       "title": "Date From"
+      },
+      "description": "Cuti yang berakhir pada/setelah tanggal ini"
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Cuti yang mulai pada/sebelum tanggal ini",
+       "title": "Date To"
+      },
+      "description": "Cuti yang mulai pada/sebelum tanggal ini"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -6580,6 +6906,65 @@
        ],
        "title": "Status"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -8766,6 +9151,84 @@
        "format": "uuid",
        "title": "Emp Id"
       }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 30
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter status dokumen",
+       "title": "Status"
+      },
+      "description": "Filter status dokumen"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -10035,6 +10498,25 @@
        "default": 50,
        "title": "Size"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nama atau NIP karyawan diawali kata kunci",
+       "title": "Q"
+      },
+      "description": "Nama atau NIP karyawan diawali kata kunci"
      }
     ],
     "responses": {
@@ -10979,6 +11461,65 @@
        ],
        "title": "Status"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -11277,6 +11818,65 @@
        ],
        "title": "Status"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -11806,6 +12406,65 @@
        ],
        "title": "Daily Plan Id"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -12324,6 +12983,25 @@
     ],
     "parameters": [
      {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 30
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter status lembur",
+       "title": "Status"
+      },
+      "description": "Filter status lembur"
+     },
+     {
       "name": "daily_plan_id",
       "in": "query",
       "required": false,
@@ -12360,6 +13038,65 @@
        "title": "Work Plan Id"
       },
       "description": "Alias daily_plan_id"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -20724,6 +21461,18 @@
        }
       ],
       "title": "City Zone"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
      }
     },
     "type": "object",

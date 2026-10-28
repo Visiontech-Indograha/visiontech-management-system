@@ -12,7 +12,7 @@ import math
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 from app.shared.attendance_sql import IS_LATE, IS_LATE_A
 
 
@@ -627,6 +627,7 @@ class AttendanceSessionRepository(BaseRepository):
         limit: int,
         offset: int,
         scope: str = "all",
+        q: str | None = None,
     ) -> tuple[list[Any], int]:
         """Mengambil daftar absensi berpaginasi dengan informasi can_review."""
         status_filter = status
@@ -639,6 +640,7 @@ class AttendanceSessionRepository(BaseRepository):
             "date_to": date_to,
             "status": status_filter,
             "scope": scope,
+            "q": escape_like(q) + "%" if q else None,  # awalan nama/NIP (indeks-friendly, docs/12 §1a)
             "limit": limit,
             "offset": offset,
         }
@@ -672,6 +674,7 @@ class AttendanceSessionRepository(BaseRepository):
                     )
                 )
             )""",
+            "(CAST(:q AS text) IS NULL OR e.full_name ILIKE CAST(:q AS text) OR e.employee_no ILIKE CAST(:q AS text))",
             "(CAST(:date_from AS date) IS NULL OR a.attendance_date >= CAST(:date_from AS date))",
             "(CAST(:date_to AS date) IS NULL OR a.attendance_date <= CAST(:date_to AS date))",
             """(

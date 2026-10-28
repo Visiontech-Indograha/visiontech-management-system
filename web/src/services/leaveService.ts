@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { getPaged, type Paged } from "@/lib/paged";
 
 export interface LeaveRequest {
   leave_id: string;
@@ -45,8 +46,18 @@ export interface LeaveReviewInput {
   note?: string;
 }
 
-export async function listLeaves(params?: { employee_id?: string; status?: string; year?: number }): Promise<LeaveRequest[]> {
-  return (await api.get<LeaveRequest[]>("/leaves", { params })).data;
+export interface LeaveListParams {
+  employee_id?: string;
+  status?: string;
+  year?: number;
+  leave_type?: string;
+  q?: string;
+  page?: number;
+  size?: number;
+}
+
+export async function listLeaves(params: LeaveListParams = {}): Promise<Paged<LeaveRequest>> {
+  return getPaged<LeaveRequest>("/leaves", { ...params });
 }
 
 export async function getLeave(leaveId: string): Promise<LeaveRequest> {
@@ -65,10 +76,11 @@ export async function getLeaveBalance(employeeId: string, year = new Date().getF
   return (await api.get<LeaveBalance>(`/leaves/balances/${employeeId}`, { params: { year } })).data;
 }
 
-export const useLeaves = (params?: { employee_id?: string; status?: string; year?: number }) =>
+export const useLeaves = (params?: LeaveListParams) =>
   useQuery({
     queryKey: ["leaves", params],
     queryFn: () => listLeaves(params),
+    placeholderData: (prev) => prev,
   });
 
 export const useLeaveBalance = (employeeId: string, year = new Date().getFullYear()) =>

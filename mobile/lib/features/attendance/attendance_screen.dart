@@ -21,6 +21,7 @@ import '../auth/auth_state.dart';
 import '../face/face_enroll_gate.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
+import 'nearest_site.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -138,7 +139,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             _sites.any((s) => s['id'] == _siteId) &&
             (runningSites.isEmpty || runningSites.contains(_siteId));
         if (!keep) {
-          _siteId = _sites.isNotEmpty ? _sites.first['id'] as String : null;
+          // Tanpa tugas berjalan: pilih lokasi terdekat dari titik GPS terakhir yang segar (bila ada).
+          final fix = runningSites.isEmpty ? LocationWarmer.instance.freshFix() : null;
+          final near = fix == null ? null : nearestSiteId(_sites, fix.latitude, fix.longitude);
+          _siteId = near ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
         }
       });
       await _syncReminders();

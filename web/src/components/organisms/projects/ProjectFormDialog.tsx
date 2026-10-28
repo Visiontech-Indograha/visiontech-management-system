@@ -42,7 +42,7 @@ export function ProjectFormDialog({
     register,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ProjectInput>({
     defaultValues: {
       client_id: project?.client_id ?? "",
@@ -91,7 +91,7 @@ export function ProjectFormDialog({
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={project ? "Ubah data proyek" : "Daftarkan proyek baru"}
       onClose={onClose}

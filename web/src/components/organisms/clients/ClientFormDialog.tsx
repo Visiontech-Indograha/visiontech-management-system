@@ -24,7 +24,7 @@ export function ClientFormDialog({
     register,
     handleSubmit,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ClientInput>({
     defaultValues: {
       client_code: client?.client_code ?? "",
@@ -53,7 +53,7 @@ export function ClientFormDialog({
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={client ? "Ubah data klien" : "Tambah klien baru"}
       onClose={onClose}

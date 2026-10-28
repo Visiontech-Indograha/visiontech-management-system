@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { SelectField, TextAreaField } from "@/components/molecules/Field";
 import type { components } from "@/lib/apiTypes";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { faceResultLabel, formatDateTime, formatDistance } from "@/lib/format";
 import { reviewSchema, type ReviewValues } from "@/schemas/attendanceSchemas";
 import { useAttendanceAction, type Attendance, reviewAttendance } from "@/services/attendanceService";
@@ -20,6 +20,7 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ReviewValues>({ resolver: zodResolver(reviewSchema), defaultValues: { decision: "APPROVE", note: "" } });
   const onSubmit = handleSubmit(async (v) => {
@@ -29,7 +30,7 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
       toast.success(v.decision === "APPROVE" ? "Absensi disetujui." : "Absensi ditolak.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
   return (

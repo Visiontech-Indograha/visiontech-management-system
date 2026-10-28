@@ -42,7 +42,7 @@ export function LeaveApplyDialog({
     handleSubmit,
     control,
     setError,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<LeaveCreateInput>({
     defaultValues: {
       leave_type: "ANNUAL",
@@ -99,7 +99,7 @@ export function LeaveApplyDialog({
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Ajukan Cuti / Izin Kerja"
       onClose={onClose}

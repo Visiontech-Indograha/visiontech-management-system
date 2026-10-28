@@ -8,7 +8,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import {
   type MessPlace,
   useCreateMessPlace,
@@ -56,7 +56,8 @@ export function MessPlaceFormDialog({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<PlaceValues, unknown, PlaceOutput>({
     resolver: zodResolver(placeSchema),
     defaultValues: {
@@ -79,12 +80,12 @@ export function MessPlaceFormDialog({
       );
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={place ? "Ubah Mess" : "Tambah Mess"}
       onClose={onClose}

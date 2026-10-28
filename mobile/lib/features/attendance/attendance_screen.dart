@@ -101,11 +101,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           DateFormat('yyyy-MM-dd').format(
               DateTime.now().toUtc().add(const Duration(hours: 7)));
       final plans = await engine.fetchList('daily_today', () => engine.api.dailyPlans(start: today, end: today));
-      try {
-        final fs = await engine.api.faceStatus();
-        _faceEnrolled = fs['enrolled'] == true;
-      } catch (_) {
-        _faceEnrolled = false;
+      if (!NetworkHint.probablyOffline) {
+        try {
+          final fs = await engine.api.faceStatus();
+          _faceEnrolled = fs['enrolled'] == true;
+        } catch (_) {
+          _faceEnrolled = false;
+        }
       }
       final daySites = [
         for (final p in plans.items)
@@ -715,7 +717,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               ),
                               const SizedBox(height: 12),
                             ],
-                            if (_sites.isEmpty) ...[
+                            if (_sites.isEmpty && _loading) ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                            ] else if (_sites.isEmpty) ...[
                               const NoticeBanner(
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,

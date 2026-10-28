@@ -15089,7 +15089,7 @@ export interface operations {
                 scope?: string;
                 page?: number;
                 size?: number;
-                /** @description Nama atau NIP karyawan mengandung kata kunci */
+                /** @description Nama atau NIP karyawan diawali kata kunci */
                 q?: string | null;
             };
             header?: never;

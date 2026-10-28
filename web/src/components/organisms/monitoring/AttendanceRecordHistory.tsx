@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { formatDate, formatDateTime, formatTime } from "@/lib/format";
 import type { AttendanceRecap } from "@/services/monitoringService";
@@ -14,7 +15,12 @@ function checkOutLabel(workDate: string, checkOut: string | null | undefined): s
 }
 
 /** Riwayat jam masuk & keluar per absen (kartu di ponsel, tabel di desktop), termasuk kategori dalam/luar kota. */
-export function AttendanceRecordHistory({ records }: { records: AttendanceRecap["records"] }) {
+export function AttendanceRecordHistory({ records: all }: { records: AttendanceRecap["records"] }) {
+  // Pencarian nama pada rekap (?abs_q=) berlaku juga untuk riwayat di bawahnya.
+  const [params] = useSearchParams();
+  const needle = (params.get("abs_q") ?? "").trim().toLowerCase();
+  const records = needle ? all.filter((r) => r.full_name.toLowerCase().includes(needle)) : all;
+  if (records.length === 0) return null;
   return (
         <section aria-label="Riwayat absensi" className="mt-8">
           <TextBlock as="h2" className="mb-3 text-lg font-semibold">Riwayat absensi</TextBlock>

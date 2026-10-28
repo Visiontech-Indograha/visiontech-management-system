@@ -1,4 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import { QueryState } from "@/components/molecules/QueryState";
 import type { AttendanceRecap } from "@/services/monitoringService";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -17,6 +20,7 @@ const COLS: [string, Count][] = [
 /** Rekap kehadiran per karyawan (kartu di ponsel, tabel di desktop) dengan keadaan memuat/galat/kosong. */
 export function AttendanceRecapSummary({ recap }: { recap: UseQueryResult<AttendanceRecap> }) {
   const rows = recap.data?.employees ?? [];
+  const view = useClientList(recap.data?.employees, (r) => [r.full_name], { prefix: "abs_" });
   return (
       <QueryState
         query={recap}
@@ -24,8 +28,10 @@ export function AttendanceRecapSummary({ recap }: { recap: UseQueryResult<Attend
         empty={rows.length === 0}
         emptyText="Belum ada catatan kehadiran pada bulan ini."
       >
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama karyawan..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="mb-3 text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:hidden">
-          {rows.map((r) => (
+          {view.rows.map((r) => (
             <ListEntry key={r.employee_id} className="rounded-panel border border-line bg-surface shadow-card p-4">
               <TextBlock className="mb-2 font-medium">{r.full_name}</TextBlock>
               <ListBlock as="dl" className="grid grid-cols-2 gap-1 text-sm">
@@ -52,7 +58,7 @@ export function AttendanceRecapSummary({ recap }: { recap: UseQueryResult<Attend
               </TableBlockRow>
             </TableBlockHead>
             <TableBlockBody>
-              {rows.map((r) => (
+              {view.rows.map((r) => (
                 <TableBlockRow key={r.employee_id} className="h-11 border-b border-line last:border-0">
                   <TableBlockCell className="px-4 py-2 font-medium">{r.full_name}</TableBlockCell>
                   {COLS.map(([, k]) => (
@@ -65,6 +71,7 @@ export function AttendanceRecapSummary({ recap }: { recap: UseQueryResult<Attend
             </TableBlockBody>
           </TableBlock>
         </div>
+        {view.total > 0 && <ListPagination total={view.total} noun="karyawan" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
       </QueryState>
   );
 }

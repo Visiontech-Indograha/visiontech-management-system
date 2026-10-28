@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like, safe_columns
 
 _SELECT = """
     SELECT c.client_id, c.client_code, c.name, c.pic_name, c.pic_phone, c.address, c.status,
@@ -23,7 +23,7 @@ class ClientRepository(BaseRepository):
                    OR c.client_code ILIKE '%' || CAST(:q AS varchar) || '%')
             ORDER BY c.name
             """,
-            {"q": q, "active": active_only},
+            {"q": escape_like(q), "active": active_only},
         ))
 
     async def get(self, client_id: UUID | str) -> Any:
@@ -47,7 +47,7 @@ class ClientRepository(BaseRepository):
 
     async def update(self, client_id: UUID, fields: dict[str, Any]) -> Any:
         if fields:
-            sets = ", ".join(f"{k} = :{k}" for k in fields)
+            sets = ", ".join(f"{k} = :{k}" for k in safe_columns(fields))
             await self.execute(f"UPDATE client SET {sets}, update_at = now() WHERE client_id = CAST(:id AS uuid)",
                                {**fields, "id": str(client_id)})
         return await self.get(client_id)

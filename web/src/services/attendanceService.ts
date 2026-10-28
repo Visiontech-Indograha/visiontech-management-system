@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export type Attendance = components["schemas"]["AttendanceResponse"];
 export type AttendanceList = components["schemas"]["AttendanceListResponse"];
@@ -10,6 +11,8 @@ export interface AttendanceFilters {
   status: string;
   from: string;
   to: string;
+  /** Cari nama/NIP (awalan). */
+  q: string;
   page: number;
   /** mine = absensi pribadi, team = absensi anggota/umum, kosong = bawaan lama (tanpa pemisahan). */
   scope: "mine" | "team" | "";
@@ -17,8 +20,9 @@ export interface AttendanceFilters {
 
 /** GET /attendance — cakupan data ditentukan API (R-33); data lama tetap tampil saat berpindah halaman. */
 export function useAttendance(f: AttendanceFilters) {
+  const q = useDebouncedValue(f.q.trim(), 300);
   return useQuery({
-    queryKey: ["attendance", f],
+    queryKey: ["attendance", { ...f, q }],
     queryFn: async () =>
       (
         await api.get<AttendanceList>("/attendance", {
@@ -29,6 +33,7 @@ export function useAttendance(f: AttendanceFilters) {
             ...(f.status ? { status: f.status } : {}),
             ...(f.from ? { from: f.from } : {}),
             ...(f.to ? { to: f.to } : {}),
+            ...(q ? { q } : {}),
           },
         })
       ).data,

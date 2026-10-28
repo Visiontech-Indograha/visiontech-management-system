@@ -12,7 +12,7 @@ import math
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 from app.shared.attendance_sql import IS_LATE, IS_LATE_A
 
 
@@ -78,7 +78,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -142,12 +143,15 @@ class AttendanceSessionRepository(BaseRepository):
         close_time: Any,
         explanation: str,
     ) -> list[Any]:
-        """Menutup otomatis sesi absensi yang belum ditutup pada jam penutupan harian."""
+        """Menutup otomatis sesi absensi yang belum ditutup pada jam penutupan harian.
+
+        Jam pulang = jam tutup pada TANGGAL ABSEN itu sendiri (WIB), bukan hari ini: sesi lupa ditutup
+        sejak kemarin tidak boleh tercatat bekerja puluhan jam."""
         return list(
             await self.fetchall(
                 """
                 UPDATE attendance
-                   SET clock_out_at = :close_time,
+                   SET clock_out_at = (attendance_date + CAST(:close_clock AS time)) AT TIME ZONE 'Asia/Jakarta',
                        out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || :explanation,
                        update_at = NOW()
                  WHERE (NULLIF(:org, '') IS NULL OR office_id = CAST(NULLIF(:org, '') AS uuid))
@@ -158,9 +162,21 @@ class AttendanceSessionRepository(BaseRepository):
                    AND delete_at IS NULL
                 RETURNING attendance_id AS id, employee_id, 'Kantor' AS site_label
                 """,
-                {"org": str(org_id), "work_date": work_date, "close_time": close_time, "explanation": explanation},
+                {"org": str(org_id), "work_date": work_date, "close_clock": close_time, "explanation": explanation},
             )
         )
+
+    async def file_uploader(self, file_id: UUID | str) -> Any:
+        """Akun pengunggah berkas (None bila tidak tercatat)."""
+        row = await self.fetchone(
+            "SELECT uploaded_by FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
+        )
+        return row.uploaded_by if row else None
+
+    async def lock_employee(self, employee_id: UUID | str) -> None:
+        """Kunci per karyawan sampai transaksi selesai: dua absen masuk bersamaan (ketuk ganda, sinkron
+        offline + online) diproses berurutan sehingga cek "sudah absen" tidak terlewati."""
+        await self.execute("SELECT pg_advisory_xact_lock(hashtext(:emp))", {"emp": f"attendance:{employee_id}"})
 
     async def active_on(self, employee_id: UUID | str, work_date: Any) -> bool:
         """Mengecek apakah ada sesi absensi aktif untuk karyawan tertentu pada tanggal tersebut."""
@@ -373,7 +389,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -442,7 +459,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -463,15 +481,18 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi (OM, PM, Superadmin)."""
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, dan PM divisi karyawan itu saja."""
         rows = await self.fetchall(
             """
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
             FROM users u
-            WHERE u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
-              AND u.employee_id IS NOT NULL
+            WHERE u.employee_id IS NOT NULL
               AND u.employee_id <> CAST(:emp AS uuid)
               AND u.delete_at IS NULL
+              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
+                   OR (u.system_role = 'PROJECT_MANAGER' AND EXISTS (
+                        SELECT 1 FROM employee e JOIN division d ON d.division_id = e.division_id
+                        WHERE e.employee_id = CAST(:emp AS uuid) AND d.pm_id = u.employee_id)))
             """,
             {"emp": str(employee_id)},
         )
@@ -517,7 +538,8 @@ class AttendanceSessionRepository(BaseRepository):
                       clock_in_at AS check_in_at, clock_out_at AS check_out_at,
                       distance_to_target_m::float AS distance_m,
                       ({IS_LATE}) AS is_late,
-                      (clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out) AS is_early_leave,
+                      (clock_out_at IS NOT NULL
+                       AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out) AS is_early_leave,
                       CASE
                           WHEN om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                           WHEN om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -548,7 +570,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -584,7 +607,7 @@ class AttendanceSessionRepository(BaseRepository):
                    AND EXISTS (
                        SELECT 1 FROM users
                        WHERE user_id = CAST(:viewer AS uuid)
-                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
+                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
                    )
                 """,
                 {"viewer": str(viewer_user_id), "emp": str(employee_id)},
@@ -604,6 +627,7 @@ class AttendanceSessionRepository(BaseRepository):
         limit: int,
         offset: int,
         scope: str = "all",
+        q: str | None = None,
     ) -> tuple[list[Any], int]:
         """Mengambil daftar absensi berpaginasi dengan informasi can_review."""
         status_filter = status
@@ -616,6 +640,7 @@ class AttendanceSessionRepository(BaseRepository):
             "date_to": date_to,
             "status": status_filter,
             "scope": scope,
+            "q": f"{escape_like(q)}%" if q else None,
             "limit": limit,
             "offset": offset,
         }
@@ -649,6 +674,7 @@ class AttendanceSessionRepository(BaseRepository):
                     )
                 )
             )""",
+            "(CAST(:q AS text) IS NULL OR e.full_name ILIKE CAST(:q AS text) OR e.employee_no ILIKE CAST(:q AS text))",
             "(CAST(:date_from AS date) IS NULL OR a.attendance_date >= CAST(:date_from AS date))",
             "(CAST(:date_to AS date) IS NULL OR a.attendance_date <= CAST(:date_to AS date))",
             """(
@@ -675,7 +701,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.clock_out_at AS check_out_at,
                    a.distance_to_target_m::float AS distance_m,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CASE
                        WHEN a.om_approval_status = 'AUTO_VALID' THEN 'AUTO_VALID'
                        WHEN a.om_approval_status = 'APPROVED_BY_OM' THEN 'APPROVED'
@@ -688,6 +715,8 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    a.out_of_radius_note AS review_note,
                    e.full_name AS employee_name,
+                   (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+                       AS employee_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,
@@ -794,7 +823,8 @@ class AttendanceSessionRepository(BaseRepository):
                            ELSE 'NEEDS_REVIEW'
                        END AS status,
                        ({IS_LATE_A}) AS is_late,
-                       (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                       (a.clock_out_at IS NOT NULL
+                        AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                        NULL::float AS check_out_distance_m,
                        FALSE AS check_out_outside,
                        a.city_zone_status::text AS city_category,
@@ -891,6 +921,30 @@ class AttendanceSessionRepository(BaseRepository):
         """
         val = await self.scalar(sql, {"eid": str(employee_id), "wdate": work_date})
         return val is not None
+
+    async def my_recap_rows(self, employee_id: UUID | str, start: Any, end: Any) -> list[Any]:
+        """Absensi satu karyawan dalam rentang tanggal (WIB) untuk rekap pribadi."""
+        return list(
+            await self.fetchall(
+                f"""
+                SELECT a.attendance_date AS work_date, a.clock_in_at AS check_in_at, a.clock_out_at AS check_out_at,
+                       ({IS_LATE_A}) AS is_late,
+                       (a.clock_out_at IS NOT NULL
+                        AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
+                       a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM', 'APPROVED') AS is_valid,
+                       a.om_approval_status = 'PENDING_OM' AS is_pending,
+                       a.meal_allowance_amount::float AS meal_allowance_amount,
+                       a.city_zone_status AS city_zone,
+                       (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
+                           AS selfie_file_id
+                FROM attendance a
+                WHERE a.employee_id = CAST(:emp AS uuid) AND a.delete_at IS NULL
+                  AND a.attendance_date BETWEEN :start AND :end
+                ORDER BY a.attendance_date DESC
+                """,
+                {"emp": str(employee_id), "start": start, "end": end},
+            )
+        )
 
 
 CRUDAttendanceSession = AttendanceSessionRepository

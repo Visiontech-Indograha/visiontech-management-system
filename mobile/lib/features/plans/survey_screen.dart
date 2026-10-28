@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'survey_map_screen.dart';
 import 'survey_point_screen.dart' show SurveyPointScreen, pickSurveyMaterial;
@@ -178,6 +180,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_infoDirty) {
       if (!await _saveInfo(quiet: true)) return;
     }
@@ -451,20 +454,23 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
+          VmsTextField(
             controller: _location,
+            maxLength: 500,
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Lokasi', hintText: 'mis. Lab Office Duri'),
           ),
           const SizedBox(height: 8),
-          TextField(
+          VmsTextField(
             controller: _purpose,
+            maxLength: 255,
             enabled: _editable,
             decoration: const InputDecoration(labelText: 'Tujuan', hintText: 'mis. Assesment pemasangan ACS'),
           ),
           const SizedBox(height: 8),
-          TextField(
+          VmsTextField(
             controller: _narrative,
+            maxLength: 4000,
             enabled: _editable,
             maxLines: 4,
             decoration: const InputDecoration(
@@ -697,16 +703,7 @@ class _Thumb extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final Widget image = FutureBuilder<String>(
-      future: ref.read(syncEngineProvider).api.fileUrl(fileId, variant: 'thumb'),
-      builder: (context, snap) => snap.hasData
-          ? Image.network(
-              snap.data!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-            )
-          : const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
-    );
+    final Widget image = VmsNetworkImage(fileId: fileId);
     return Stack(
       children: [
         Container(

@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import sys
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -107,9 +107,16 @@ class AttendanceSessionService:
             raise AppError("WRONG_ATTENDANCE_CHANNEL", WRONG_CHANNEL[channel], status=403)
         return row
 
-    async def ensure_check_in_refs(self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None) -> None:
-        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan)."""
+    async def ensure_check_in_refs(
+        self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None, *, user_id: str | None = None
+    ) -> None:
+        """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan),
+        dan swafoto harus diunggah oleh akun yang absen itu sendiri (bukan foto orang lain)."""
         await ensure_same_org(self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id])
+        if user_id and selfie_file_id:
+            uploader = await self.repo.file_uploader(selfie_file_id)
+            if uploader is not None and str(uploader) != str(user_id):
+                raise AppError("SELFIE_NOT_OWNED", "Swafoto harus diunggah dari akun Anda sendiri.", status=422)
 
     async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
@@ -170,6 +177,30 @@ class AttendanceSessionService:
         if (end - start).days > 62:
             raise ValidationError("Rentang rekap paling lama 62 hari.")
         return await self.repo.meal_allowance_recap(start, end, division_id)
+
+    async def my_recap(self, user: Any, month: str | None) -> dict[str, Any]:
+        """Rekap absensi bulanan milik sendiri: hari hadir, terlambat, pulang awal, uang makan (hanya absensi sah)."""
+        worker = await self.repo.attendance_mode_of(user.user_id)
+        if worker is None:
+            raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
+        today = jakarta_now().date()
+        try:
+            year, mon = (today.year, today.month) if not month else (int(month[:4]), int(month[5:7]))
+            first = date(year, mon, 1)
+        except (ValueError, IndexError) as exc:
+            raise ValidationError("Bulan harus berformat YYYY-MM.") from exc
+        last = (date(year + (mon == 12), mon % 12 + 1, 1)) - timedelta(days=1)
+        rows = await self.repo.my_recap_rows(worker.employee_id, first, last)
+        valid = [r for r in rows if r.is_valid]
+        return {
+            "month": f"{year:04d}-{mon:02d}",
+            "days_present": len(rows),
+            "late_days": sum(1 for r in rows if r.is_late),
+            "early_leave_days": sum(1 for r in rows if r.is_early_leave),
+            "pending_days": sum(1 for r in rows if r.is_pending),
+            "meal_allowance_total": float(sum(r.meal_allowance_amount or 0 for r in valid)),
+            "items": rows,
+        }
 
     async def _require_enrolled(self, user_id: str, worker: Any, channel: str, online: bool) -> None:
         """T3: absen HP (online) ditolak bila wajah belum terdaftar dan saklar FACE_ENROLLMENT_REQUIRED menyala.
@@ -318,6 +349,7 @@ class AttendanceSessionService:
 
         # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
         # menunggu pemeriksaan tidak mengunci hari baru (R-33).
+        await self.repo.lock_employee(employee_id)
         if await self.repo.active_on(employee_id, today):
             raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409)
         opened = await self.repo.open_session(employee_id)
@@ -551,6 +583,7 @@ class AttendanceSessionService:
         page: int,
         size: int,
         scope: str = "all",
+        q: str | None = None,
     ) -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
@@ -568,6 +601,7 @@ class AttendanceSessionService:
             date_to=date_to,
             status=status,
             scope=scope,
+            q=q,
             limit=size,
             offset=(page - 1) * size,
         )

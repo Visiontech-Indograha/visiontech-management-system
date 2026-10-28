@@ -9,10 +9,12 @@ import {
   Layers,
   MapPin,
   Package,
+  PenTool,
   ShieldCheck,
   UserCheck,
 } from "@/components/molecules/Glyphs";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { ActionButton } from "@/components/molecules/ActionButton";
 import {
   TabsBlock,
   TabsBlockList,
@@ -22,8 +24,11 @@ import {
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { useWorkCompletion } from "@/services/workCompletionService";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
+import { photoRefs } from "@/lib/photoRefs";
 import { WorkCompletionBomTable } from "./WorkCompletionBomTable";
 import { WorkCompletionExportPanel } from "./WorkCompletionExportPanel";
+import { PmSignatureDialog } from "./PmSignatureDialog";
 
 interface WorkCompletionDetailModalProps {
   completionId: string | null;
@@ -37,6 +42,7 @@ export function WorkCompletionDetailModal({
   canManage,
 }: WorkCompletionDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>("ringkasan");
+  const [isSignDialogOpen, setIsSignDialogOpen] = useState(false);
 
   const { data: order, isPending, isError } = useWorkCompletion(completionId || "");
 
@@ -191,6 +197,15 @@ export function WorkCompletionDetailModal({
                     </TextBlock>
                   </div>
                 )}
+
+                {photoRefs(order.realization_photos_json).length > 0 && (
+                  <div className="rounded-control border border-line p-3 bg-hover/20">
+                    <TextBlock className="text-xs font-semibold text-mist uppercase tracking-wider mb-2">
+                      Foto hasil pekerjaan
+                    </TextBlock>
+                    <PhotoStrip photos={photoRefs(order.realization_photos_json)} alt="Foto hasil pekerjaan" />
+                  </div>
+                )}
               </TabsBlockContent>
 
               {/* TAB 2: BILL OF MATERIALS */}
@@ -257,14 +272,34 @@ export function WorkCompletionDetailModal({
                         </TextBlock>
                       </div>
                     ) : (
-                      <div className="rounded bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
-                        <div className="flex items-center gap-1.5 font-semibold mb-0.5">
-                          <Clock className="h-4 w-4" />
-                          <TextBlock as="span">Menunggu Validasi PM</TextBlock>
+                      <div className="space-y-2.5">
+                        <div className="rounded bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-300">
+                          <div className="flex items-center gap-1.5 font-semibold mb-0.5">
+                            <Clock className="h-4 w-4" />
+                            <TextBlock as="span">
+                              {order.leader_signed_at
+                                ? "Menunggu Tanda Tangan PM"
+                                : "Menunggu Pengesahan Lapangan Lebih Dulu"}
+                            </TextBlock>
+                          </div>
+                          <TextBlock>
+                            {order.leader_signed_at
+                              ? "Ketua tim telah mengesahkan laporan. PM dapat memeriksa hasil kerja dan menandatangani BAST."
+                              : "Ketua tim harus menandatangani berita acara lebih dulu sebelum PM dapat memvalidasi."}
+                          </TextBlock>
                         </div>
-                        <TextBlock>
-                          PM memeriksa jumlah hasil kerja dan material terpakai sebelum menyetujui serah terima.
-                        </TextBlock>
+                        {order.leader_signed_at && canManage && (
+                          <ActionButton
+                            type="button"
+                            variant="default"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => setIsSignDialogOpen(true)}
+                          >
+                            <PenTool className="mr-1.5 h-4 w-4" />
+                            <TextBlock as="span">Tandatangani BAST (Project Manager)</TextBlock>
+                          </ActionButton>
+                        )}
                       </div>
                     )}
                   </div>
@@ -290,6 +325,14 @@ export function WorkCompletionDetailModal({
               </TabsBlockContent>
             </TabsBlock>
           </div>
+        )}
+        {order && (
+          <PmSignatureDialog
+            open={isSignDialogOpen}
+            completionId={order.completion_id}
+            projectTitle={order.project_title}
+            onClose={() => setIsSignDialogOpen(false)}
+          />
         )}
       </div>
     </VmsDialog>

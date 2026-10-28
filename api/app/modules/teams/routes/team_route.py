@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.teams.controllers.team_controller import TeamController
@@ -27,12 +28,24 @@ _MANAGE = Depends(require_permission(Permission.MANAGE_TEAMS))
 
 @router.get("", response_model=list[TeamListItem])
 async def list_teams(
+    response: Response,
+    params: ListParams = Depends(),
+    active: bool | None = Query(None, description="Hanya tim aktif (true) atau nonaktif (false)"),
     division_id: UUID | None = Query(None, description="Filter berdasarkan ID divisi"),
     current_user: CurrentUser = _VIEW,
     controller: TeamController = Depends(),
 ) -> list[TeamListItem]:
     """Mengambil daftar seluruh tim operasional."""
-    return await controller.handle_list_teams(current_user, division_id)
+    rows = await controller.handle_list_teams(current_user, division_id)
+    return list(
+        apply_list(
+            rows,
+            params,
+            response,
+            lambda r: (r.name, r.leader_name, r.division_name, r.office_name),
+            extra=lambda r: active is None or r.status == active,
+        )
+    )
 
 
 @router.get("/{team_id}", response_model=TeamDetail)

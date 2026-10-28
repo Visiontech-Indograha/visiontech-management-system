@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -62,22 +63,32 @@ class AuthController extends Notifier<AuthState> {
     // tidak boleh bisa melewati batas ini.
     if (await _enforceSessionPolicy()) return;
 
+    // Batas total probe ini 6 dtk (termasuk waktu menyambung): tanpa sinyal kita ingin cepat jatuh ke profil
+    // cache, bukan menahan splash selama timeout sambung global (15 dtk).
+    // Pembatalan Dio tidak memutus proses menyambung yang sedang berjalan, jadi batasnya dipasang di level Dart.
+    final probeCancel = CancelToken();
+    const probeLimit = Duration(seconds: 6);
     try {
       final response = await ref
           .read(apiClientProvider)
           .dio
-          .get(
-            '/api/v1/auth/me',
-            // Timeout pendek khusus probe ini: saat benar-benar tidak ada
-            // sinyal, kita ingin cepat jatuh ke profil cache, bukan menahan
-            // splash screen selama timeout global.
-            options: Options(receiveTimeout: const Duration(seconds: 5)),
+          .get('/api/v1/auth/me', cancelToken: probeCancel, options: Options(receiveTimeout: probeLimit))
+          .timeout(
+            probeLimit,
+            onTimeout: () {
+              probeCancel.cancel('probe lambat');
+              throw DioException.connectionTimeout(
+                timeout: probeLimit,
+                requestOptions: RequestOptions(path: '/api/v1/auth/me'),
+              );
+            },
           );
       await tokenStorage.saveCachedProfile(jsonEncode(response.data));
       final user = AuthUser.fromJson(response.data as Map<String, dynamic>);
       state = await _stateForRestoredUser(user);
     } on DioException catch (e) {
       if (isNetworkFailure(e)) {
+        NetworkHint.markOffline();
         // TIDAK ADA SINYAL -- ini BUKAN alasan untuk logout paksa. Token yang
         // tersimpan mungkin masih sah; pakai profil hasil login/restore
         // terakhir supaya user tetap bisa bekerja (cek-in dkk tetap diqueue).
@@ -232,11 +243,27 @@ class AuthController extends Notifier<AuthState> {
       }
 
       final meResponse = await apiClient.dio.get('/api/v1/auth/me');
+      final me = AuthUser.fromJson(meResponse.data as Map<String, dynamic>);
+      // Masuk lewat "Masuk dengan Password" tidak menghapus antrean offline
+      // (milik orang yang sama biasanya). Bila ternyata akun BERBEDA dari
+      // pemilik profil cache, antrean itu milik orang lain: buang sebelum
+      // tersinkron atas nama akun baru.
+      final previous = await tokenStorage.readCachedProfile();
+      if (previous != null) {
+        String? previousId;
+        try {
+          previousId = (jsonDecode(previous) as Map<String, dynamic>)['user_id']
+              as String?;
+        } catch (_) {
+          previousId = null;
+        }
+        if (previousId != me.id) {
+          await ref.read(appDatabaseProvider).wipeAllLocalData();
+        }
+      }
       await tokenStorage.saveCachedProfile(jsonEncode(meResponse.data));
       _justLoggedIn = true;
-      state = AuthAuthenticated(
-        AuthUser.fromJson(meResponse.data as Map<String, dynamic>),
-      );
+      state = AuthAuthenticated(me);
     } on DioException catch (e) {
       state = AuthUnauthenticated(
         error: _extractErrorMessage(e),

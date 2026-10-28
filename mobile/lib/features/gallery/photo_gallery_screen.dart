@@ -6,7 +6,9 @@ import 'package:intl/intl.dart';
 import '../../core/gallery_save.dart';
 import '../../core/local_storage.dart';
 import '../../core/photo_capture.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 
 final _stamp = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 
@@ -28,10 +30,29 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
   List<File> _files = [];
   bool _loading = true;
   String? _error;
+  final _query = ListQuery(pageSize: 60);
+
+  List<File> get _filtered => _query.filter<File>(
+    _files,
+    (f) => [f.uri.pathSegments.last],
+    chipTest: (f, chip) {
+      final days = chip == 'today' ? 1 : 7;
+      return DateTime.now().difference(f.lastModifiedSync()).inDays < days;
+    },
+  );
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _query.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -149,7 +170,10 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             icon: const Icon(Icons.add_a_photo_rounded),
             label: const Text('Ambil foto'),
           ),
-    appBar: VmsTopBar(onBack: widget.asTab ? null : () => Navigator.of(context).maybePop()),
+    appBar: VmsTopBar(
+      onBack: widget.asTab ? null : () => Navigator.of(context).maybePop(),
+      trailing: widget.asTab ? const NotificationBell() : null,
+    ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : _error != null
@@ -162,7 +186,24 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
             title: 'Belum ada foto laporan',
             message: 'Ketuk "Ambil foto" atau foto lewat kamera aplikasi; hasilnya tersimpan di sini.',
           )
-        : RefreshIndicator(
+        : Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                child: VmsSearchBar(
+                  query: _query,
+                  hint: 'Cari nama berkas foto...',
+                  chips: const [
+                    VmsFilterOption('', 'Semua'),
+                    VmsFilterOption('today', 'Hari ini'),
+                    VmsFilterOption('week', '7 hari'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _filtered.isEmpty
+                    ? VmsNoMatch(query: _query)
+                    : RefreshIndicator(
             onRefresh: _load,
             child: GridView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -172,16 +213,27 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
               ),
-              itemCount: _files.length,
-              itemBuilder: (_, i) => InkWell(
-                key: Key('gallery-photo-$i'),
-                onTap: () => _open(_files[i]),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(_files[i], fit: BoxFit.cover, cacheWidth: 300),
-                ),
-              ),
+              itemCount: _query.visible(_filtered).length,
+              itemBuilder: (_, i) {
+                final f = _query.visible(_filtered)[i];
+                return InkWell(
+                  key: Key('gallery-photo-$i'),
+                  onTap: () => _open(f),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(f, fit: BoxFit.cover, cacheWidth: 300),
+                  ),
+                );
+              },
             ),
+          ),
+              ),
+              if (_filtered.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 72),
+                  child: VmsLoadMore(query: _query, total: _filtered.length, noun: 'foto'),
+                ),
+            ],
           ),
   );
 }

@@ -1,0 +1,3 @@
+"""
+Paket skema modul home.
+"""

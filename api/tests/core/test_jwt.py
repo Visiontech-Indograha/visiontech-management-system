@@ -131,3 +131,16 @@ def test_file_access_ticket_accepts_rotated_kid_for_same_signing_key():
 
     claims = verify_file_access_ticket(token, "file-1")
     assert claims is not None and claims["sub"] == "user-1"
+
+
+def test_file_access_ticket_is_stable_within_a_window_and_unique_per_subject():
+    from app.core.security import create_file_access_ticket, verify_file_access_ticket
+
+    first = create_file_access_ticket("user-1", "file-1", "org-1", "thumb")
+    again = create_file_access_ticket("user-1", "file-1", "org-1", "thumb")
+    assert first == again  # URL sama → peramban dapat men-cache gambar
+    assert create_file_access_ticket("user-2", "file-1", "org-1", "thumb") != first
+    assert create_file_access_ticket("user-1", "file-2", "org-1", "thumb") != first
+    assert create_file_access_ticket("user-1", "file-1", "org-1", "view") != first
+    claims = verify_file_access_ticket(first, "file-1")
+    assert claims is not None and claims["sub"] == "user-1"

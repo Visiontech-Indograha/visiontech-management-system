@@ -45,7 +45,7 @@ class DefaultMaterialIn(BaseModel):
     default_qty: float = Field(default=1.0, ge=0.0)
     unit: str = Field(default="Unit", max_length=50)
     category: str | None = Field(None, max_length=100)
-    description: str | None = None
+    description: str | None = Field(None, max_length=2000)
     sort_order: int = 0
 
 
@@ -56,7 +56,7 @@ class DefaultMaterialUpdate(BaseModel):
     default_qty: float | None = Field(None, ge=0.0)
     unit: str | None = Field(None, max_length=50)
     category: str | None = Field(None, max_length=100)
-    description: str | None = None
+    description: str | None = Field(None, max_length=2000)
     sort_order: int | None = None
 
 

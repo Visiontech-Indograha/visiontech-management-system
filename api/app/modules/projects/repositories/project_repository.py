@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like, safe_columns
 
 _SELECT = """
     SELECT p.project_id, p.client_id, c.name AS client_name, p.office_id, o.name AS office_name,
@@ -46,7 +46,7 @@ class ProjectRepository(BaseRepository):
             ORDER BY (p.status = 'ONGOING') DESC, p.start_date DESC
             """,
             {"all": see_all, "emp": employee_id, "div": str(division_id) if division_id else None,
-             "client": str(client_id) if client_id else None, "status": status, "q": q},
+             "client": str(client_id) if client_id else None, "status": status, "q": escape_like(q)},
         ))
 
     async def get(self, project_id: UUID | str, *, see_all: bool = True, employee_id: str | None = None) -> Any:
@@ -101,7 +101,7 @@ class ProjectRepository(BaseRepository):
     async def update(self, project_id: UUID, fields: dict[str, Any]) -> Any:
         uuids = {"client_id", "office_id", "pm_id"}
         if fields:
-            sets = ", ".join(f"{k} = CAST(:{k} AS uuid)" if k in uuids else f"{k} = :{k}" for k in fields)
+            sets = ", ".join(f"{k} = CAST(:{k} AS uuid)" if k in uuids else f"{k} = :{k}" for k in safe_columns(fields))
             await self.execute(
                 f"UPDATE project SET {sets}, update_at = now() WHERE project_id = CAST(:id AS uuid)",
                 {**{k: (str(v) if k in uuids else v) for k, v in fields.items()}, "id": str(project_id)},

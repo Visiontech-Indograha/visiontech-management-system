@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { FilePreview } from "@/components/molecules/FilePreview";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { useSaveWorkType, useWorkTypes, type WorkType } from "@/services/workTypeService";
@@ -35,7 +35,8 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<WorkTypeValues>({
     resolver: zodResolver(workTypeSchema),
     defaultValues: {
@@ -81,7 +82,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
       const id = await uploadForm(form);
       setValue(`photos.${i}.example_file_id`, id, { shouldDirty: true });
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     } finally {
       setUploading(null);
     }
@@ -111,12 +112,12 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
       toast.success(type ? "Jenis pekerjaan disimpan." : "Jenis pekerjaan ditambahkan.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={type ? "Ubah jenis pekerjaan" : "Tambah jenis pekerjaan"}
       onClose={onClose}

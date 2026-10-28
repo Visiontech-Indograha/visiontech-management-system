@@ -32,7 +32,9 @@ LOCK_MINUTES = 15
 LoginState = namedtuple("LoginState", ["failures", "locked_until", "retry_after_seconds"])
 SessionIssueResult = namedtuple("SessionIssueResult", ["session_id", "family_id", "refresh_token", "expires_at"])
 SessionRotateResult = namedtuple(
-    "SessionRotateResult", ["session_id", "user_id", "refresh_token", "expires_at", "reused", "family_created_at"]
+    "SessionRotateResult",
+    ["session_id", "user_id", "refresh_token", "expires_at", "reused", "family_created_at", "family_id"],
+    defaults=(None,),
 )
 
 
@@ -164,10 +166,13 @@ class AuthSessionRepository(BaseRepository):
         token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
         row = await self.fetchone(
             """
-            SELECT session_id, user_id, token_family_id, platform,
-                   device_name, is_revoked, expires_at, create_at, delete_at
-            FROM user_sessions
-            WHERE refresh_token_hash = :hash
+            SELECT s.session_id, s.user_id, s.token_family_id, s.platform,
+                   s.device_name, s.is_revoked, s.expires_at, s.delete_at,
+                   (SELECT min(f.create_at) FROM user_sessions f
+                    WHERE f.token_family_id = s.token_family_id) AS family_created_at
+            FROM user_sessions s
+            WHERE s.refresh_token_hash = :hash
+            FOR UPDATE OF s
             """,
             {"hash": token_hash},
         )
@@ -176,7 +181,13 @@ class AuthSessionRepository(BaseRepository):
                 session_id=None, user_id=None, refresh_token=None, expires_at=None, reused=False, family_created_at=None
             )
 
-        if row.is_revoked or row.delete_at is not None or row.expires_at < utcnow():
+        # Kedaluwarsa wajar: tolak tanpa mencabut seluruh keluarga sesi — itu bukan tanda pencurian.
+        if not row.is_revoked and row.delete_at is None and row.expires_at < utcnow():
+            return SessionRotateResult(
+                session_id=None, user_id=None, refresh_token=None, expires_at=None, reused=False, family_created_at=None
+            )
+
+        if row.is_revoked or row.delete_at is not None:
             await self.execute(
                 "UPDATE user_sessions SET is_revoked = TRUE, update_at = now() WHERE token_family_id = :fid",
                 {"fid": row.token_family_id},
@@ -187,7 +198,7 @@ class AuthSessionRepository(BaseRepository):
                 refresh_token=None,
                 expires_at=None,
                 reused=True,
-                family_created_at=row.create_at,
+                family_created_at=row.family_created_at,
             )
 
         await self.execute(
@@ -228,7 +239,8 @@ class AuthSessionRepository(BaseRepository):
             refresh_token=new_raw_token,
             expires_at=new_expires_at,
             reused=False,
-            family_created_at=row.create_at,
+            family_created_at=row.family_created_at,
+            family_id=row.token_family_id,
         )
 
     async def count_active_devices(self, user_id: UUID | str) -> int:

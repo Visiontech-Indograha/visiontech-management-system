@@ -24,3 +24,14 @@ export function useExpiringDocuments(enabled: boolean) {
   });
 }
 
+
+export type HomeSummary = components["schemas"]["HomeSummary"];
+/** Ringkasan antrean per peran (GET /home/summary); disegarkan tiap 60 dtk dan saat jendela aktif kembali. */
+export function useHomeSummary(enabled = true) {
+  return useQuery({
+    queryKey: ["home", "summary"],
+    enabled,
+    refetchInterval: 60_000,
+    queryFn: async () => (await api.get<HomeSummary>("/home/summary")).data,
+  });
+}

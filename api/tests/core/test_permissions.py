@@ -17,18 +17,18 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     # OM membawahi divisi & PM: kelola master kantor dan divisi, lihat & tinjau semua absensi.
     SystemRole.OPERATIONAL_MANAGER: {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
-        P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS, P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES,
+        P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES,
         P.MANAGE_DIVISIONS,
     },
     # Lokasi proyek PM ada di jadwal harian (bukan master kantor) — tanpa MANAGE_SITES.
     SystemRole.PROJECT_MANAGER: {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE, P.MANAGE_TEAMS, P.VIEW_TEAMS,
-        P.VIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
+        P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     },
     # Admin HR/GA = HR + aset + mess + proses keluar (FINANCE/ASSET V1 digabung ke sini).
     SystemRole.ADMIN_HR_GA: {
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS, P.MANAGE_MESS,
-        P.VIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+        P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
     },
     # Ketua/anggota tim mendapat wewenangnya dari keanggotaan tim, bukan peran global.
     SystemRole.TEAM_LEADER: set(),

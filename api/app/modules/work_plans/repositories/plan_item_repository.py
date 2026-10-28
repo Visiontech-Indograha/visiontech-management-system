@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, safe_columns
 
 _SELECT = """
     SELECT i.item_id, i.daily_plan_id, wpd.work_date, i.work_type_id, wt.name AS work_type_name, i.title,
@@ -188,7 +188,7 @@ class PlanItemRepository(BaseRepository):
         casts = {"work_type_id": "uuid", "completion_id": "uuid", "depends_on_item_id": "uuid", "start_time": "time",
                  "end_time": "time", "site_lat": "numeric", "site_lng": "numeric", "assigned_employee_ids": "jsonb",
                  "target_qty": "numeric"}
-        sets = ", ".join(f"{k} = CAST(:{k} AS {casts[k]})" if k in casts else f"{k} = :{k}" for k in sent)
+        sets = ", ".join(f"{k} = CAST(:{k} AS {casts[k]})" if k in casts else f"{k} = :{k}" for k in safe_columns(sent))
         await self.execute(
             f"UPDATE work_plan_item SET {sets}, update_at = now() WHERE item_id = CAST(:id AS uuid)",
             {**_params({k: fields[k] for k in sent}), "id": str(item_id)},

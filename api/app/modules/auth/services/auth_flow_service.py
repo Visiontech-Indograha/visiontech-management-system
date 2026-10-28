@@ -87,6 +87,10 @@ class AuthFlowService:
             division_id=profile.division_id,
         )
 
+    async def full_name(self, user_id: str) -> str | None:
+        """Nama lengkap karyawan pemilik akun (None bila akun belum tertaut)."""
+        return await self.users.full_name(user_id)
+
     async def profile_photo_file_id(self, user_id: str) -> str | None:
         """ID berkas foto profil karyawan milik pengguna (None bila belum ada)."""
         return await self.users.profile_photo_file_id(user_id)

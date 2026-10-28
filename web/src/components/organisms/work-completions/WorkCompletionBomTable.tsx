@@ -17,6 +17,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import {
   useWorkCompletionBom,
   useCreateWorkCompletionBom,
@@ -59,6 +60,7 @@ export function WorkCompletionBomTable({
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WorkCompletionBom | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<WorkCompletionBom | null>(null);
 
   const addForm = useForm<AddMaterialFormValues>({
     defaultValues: {
@@ -130,17 +132,7 @@ export function WorkCompletionBomTable({
     }
   };
 
-  const handleDelete = async (item: WorkCompletionBom) => {
-    try {
-      await deleteBom.mutateAsync({
-        bomId: item.bom_id,
-        completionId,
-      });
-      toast.success(`Material '${item.material_name}' berhasil dihapus.`);
-    } catch {
-      toast.error("Gagal menghapus material.");
-    }
-  };
+
 
   const handleSyncFromWorkTypes = async () => {
     try {
@@ -313,7 +305,7 @@ export function WorkCompletionBomTable({
                           <ActionButton
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(item)}
+                            onClick={() => setItemToDelete(item)}
                             aria-label="Hapus Material"
                           >
                             <Trash2 className="h-4 w-4 text-danger" />
@@ -340,29 +332,34 @@ export function WorkCompletionBomTable({
             <TextField
               label="Nama Material"
               placeholder="misal: Kabel Fiber Optic Drop Core"
+              maxLength={255}
               {...addForm.register("material_name", { required: "Nama material wajib diisi." })}
             />
             <div className="grid grid-cols-2 gap-3">
               <TextField
                 label="Kode Material (Opsional)"
                 placeholder="misal: FO-001"
+                maxLength={50}
                 {...addForm.register("material_code")}
               />
               <TextField
                 label="Kategori"
                 placeholder="misal: Kabel, Pipa, Konektor"
+                maxLength={100}
                 {...addForm.register("category")}
               />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Estimasi Kebutuhan"
                 {...addForm.register("estimated_qty", { required: true })}
               />
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Jumlah terpakai"
                 {...addForm.register("actual_qty")}
@@ -370,6 +367,7 @@ export function WorkCompletionBomTable({
               <TextField
                 label="Satuan"
                 placeholder="Meter, Unit, Batang"
+                maxLength={50}
                 {...addForm.register("unit", { required: true })}
               />
             </div>
@@ -401,12 +399,14 @@ export function WorkCompletionBomTable({
             <div className="grid grid-cols-2 gap-3">
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label="Estimasi Kebutuhan"
                 {...editForm.register("estimated_qty", { required: true })}
               />
               <TextField
                 type="number"
+                min={0}
                 step="any"
                 label={`Jumlah terpakai (${editingItem.unit})`}
                 {...editForm.register("actual_qty", { required: true })}
@@ -428,6 +428,29 @@ export function WorkCompletionBomTable({
           </FormBlock>
         </VmsDialog>
       )}
+      <ConfirmDialog
+        open={itemToDelete !== null}
+        title="Hapus Material BOM?"
+        message={`Apakah Anda yakin ingin menghapus material "${itemToDelete?.material_name ?? ""}" dari daftar pemakaian riil proyek ini?`}
+        confirmLabel="Hapus Material"
+        danger
+        busy={deleteBom.isPending}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          try {
+            await deleteBom.mutateAsync({
+              bomId: itemToDelete.bom_id,
+              completionId,
+            });
+            toast.success(`Material '${itemToDelete.material_name}' berhasil dihapus.`);
+          } catch {
+            toast.error("Gagal menghapus material.");
+          } finally {
+            setItemToDelete(null);
+          }
+        }}
+        onClose={() => setItemToDelete(null)}
+      />
     </div>
   );
 }

@@ -14,7 +14,18 @@ enum UserRole {
   const UserRole(this.wireValue);
   final String wireValue;
 
-  static UserRole fromWire(String value) {
+  /// Peran Master Schema V2 (`users.system_role`) yang dikirim `/auth/me`.
+  static const _v2 = {
+    'OPERATIONAL_MANAGER': UserRole.ops,
+    'PROJECT_MANAGER': UserRole.pm,
+    'ADMIN_HR_GA': UserRole.hr,
+    'TEAM_LEADER': UserRole.leader,
+    'EMPLOYEE': UserRole.member,
+  };
+
+  static UserRole fromWire(String? value) {
+    final v2 = _v2[value];
+    if (v2 != null) return v2;
     return UserRole.values.firstWhere(
       (r) => r.wireValue == value,
       orElse: () => UserRole.member,
@@ -30,6 +41,7 @@ class AuthUser {
     required this.employeeId,
     this.attendanceMode = 'FIELD',
     this.photoFileId,
+    this.fullName,
   });
 
   final String id;
@@ -47,6 +59,15 @@ class AuthUser {
   /// diambil lewat `GET /files/{id}/url` (lihat VmsApi.fileUrl).
   final String? photoFileId;
 
+  /// Nama lengkap karyawan (dari `/auth/me`); null bila akun belum tertaut ke karyawan.
+  final String? fullName;
+
+  /// Nama untuk tampilan: nama lengkap, atau bagian depan email bila belum ada.
+  String get displayName {
+    final n = fullName?.trim();
+    return (n != null && n.isNotEmpty) ? n : username.split('@').first;
+  }
+
   /// Administrator (pemilik sistem) boleh absen dari HP maupun web, jadi tidak diarahkan ke web saja.
   bool get absensiLewatWeb =>
       attendanceMode == 'OFFICE' && role != UserRole.admin && role != UserRole.superAdmin;
@@ -55,12 +76,13 @@ class AuthUser {
   /// attendance_mode, photo_file_id.
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     return AuthUser(
-      id: json['user_id'] as String,
-      username: json['email'] as String,
-      role: UserRole.fromWire(json['role'] as String),
+      id: (json['user_id'] as String?) ?? '',
+      username: (json['email'] as String?) ?? '',
+      role: UserRole.fromWire(json['role'] as String?),
       employeeId: (json['employee_id'] as String?) ?? '',
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,
+      fullName: json['full_name'] as String?,
     );
   }
 }

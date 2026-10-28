@@ -154,6 +154,8 @@ class Settings(BaseSettings):
 
     # "production" menyalakan penjaga di bawah; nilai lain (development/test) memakai bawaan lokal.
     APP_ENV: str = "development"
+    # Origin web yang boleh memanggil API dengan cookie (dipisah koma). Kosong = semua origin TANPA credentials.
+    CORS_ORIGINS: str = ""
     # Seed media & order contoh saat startup (demo/uji). Bawaan MATI: bila aktif, foto kosong/bukan /uploads/
     # ditimpa gambar contoh — jangan pernah diaktifkan di data sungguhan.
     SEED_DEMO_MEDIA: bool = False

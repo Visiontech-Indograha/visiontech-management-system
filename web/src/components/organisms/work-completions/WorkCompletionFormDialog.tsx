@@ -226,6 +226,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
               label="Nama Klien / Perusahaan"
               placeholder="misal: PT Pertamina EP, PT PLN Persero"
               error={errors.client_name?.message}
+              maxLength={150}
               {...register("client_name", { required: "Nama klien wajib diisi." })}
             />
 
@@ -233,6 +234,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
               label="Judul Pekerjaan / Proyek"
               placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
               error={errors.project_title?.message}
+              maxLength={255}
               {...register("project_title", { required: "Judul proyek wajib diisi." })}
             />
           </>
@@ -242,6 +244,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
               label="Nama Klien / Perusahaan"
               placeholder="misal: PT Pertamina EP, PT PLN Persero"
               error={errors.client_name?.message}
+              maxLength={150}
               {...register("client_name", { required: "Nama klien wajib diisi." })}
             />
 
@@ -249,6 +252,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
               label="Judul Pekerjaan / Proyek"
               placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
               error={errors.project_title?.message}
+              maxLength={255}
               {...register("project_title", { required: "Judul proyek wajib diisi." })}
             />
           </>
@@ -258,6 +262,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
           <TextField
             label="Nomor surat perintah kerja (SPK / PO)"
             placeholder="misal: PO-2026-PTM-001"
+            maxLength={50}
             {...register("order_number")}
           />
           <SelectField
@@ -282,6 +287,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
           <TextField
             label="Satuan Unit"
             placeholder="misal: Titik, Unit, Meter, Gardu"
+            maxLength={50}
             {...register("unit_measure")}
           />
         </div>

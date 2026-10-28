@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -5,7 +7,9 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 
 import '../../core/providers.dart';
+import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 import 'daily_plan_screen.dart' show DailyPlanScreen, phaseLabel;
 import 'survey_screen.dart' show MySurveysSection, openReportFile;
 
@@ -30,6 +34,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   String? _only; // filter jenis pekerjaan; null = semua
   bool _loading = true;
   String? _error;
+  DateTime? _cachedAt;
 
   @override
   void initState() {
@@ -37,17 +42,22 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     _load();
   }
 
+  int _loadSeq = 0;
+
   Future<void> _load() async {
+    final seq = ++_loadSeq; // respons minggu lama tidak boleh menimpa minggu yang sedang dilihat
     setState(() => _loading = true);
     try {
       final engine = ref.read(syncEngineProvider);
       final start = isoDate(_monday), end = isoDate(_monday.add(const Duration(days: 6)));
-      final plans = (await engine.fetchList('daily_$start', () => engine.api.dailyPlans(start: start, end: end))).items;
-      if (mounted) setState(() => (_plans = plans, _error = null));
+      final res = await engine.fetchList('daily_$start', () => engine.api.dailyPlans(start: start, end: end));
+      final plans = res.items;
+      if (mounted && seq == _loadSeq) setState(() => (_plans = plans, _error = null, _cachedAt = SyncEngine.neverCached(res.cachedAt) ? null : res.cachedAt));
+      if (seq == _loadSeq) unawaited(engine.prefetchPlanDetails(plans));
     } catch (e) {
-      if (mounted) setState(() => _error = apiErrorMessage(e));
+      if (mounted && seq == _loadSeq) setState(() => _error = apiErrorMessage(e));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted && seq == _loadSeq) setState(() => _loading = false);
     }
   }
 
@@ -90,6 +100,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     final thisWeek = _monday == mondayOf(DateTime.now());
     final shown = _plans.where((p) => _only == null || (p['phases'] as List? ?? const []).contains(_only)).toList();
     return Scaffold(
+      appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
@@ -172,6 +183,11 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_cachedAt != null && _error == null)
+              NoticeBanner(
+                icon: Icons.cloud_off_rounded,
+                text: 'Offline — data terakhir ${DateFormat('d MMM HH:mm', 'id_ID').format(_cachedAt!)}; status bisa belum terbaru',
+              ),
             if (_loading && _plans.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(32),

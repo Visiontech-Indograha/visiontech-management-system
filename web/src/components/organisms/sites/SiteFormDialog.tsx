@@ -30,7 +30,8 @@ const siteSchema = z.object({
   radius_m: z
     .string()
     .trim()
-    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 10, { message: "Radius minimal 10 meter." }),
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 10, { message: "Radius minimal 10 meter." })
+    .refine((v) => Number(v) <= 5000, { message: "Radius maksimal 5000 meter." }),
 });
 type SiteValues = z.infer<typeof siteSchema>;
 

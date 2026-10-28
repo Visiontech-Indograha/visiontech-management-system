@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/stores/sessionStore";
@@ -8,7 +8,7 @@ import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDistance } from "@/lib/format";
 
 /** Jam sekarang di WIB (aturan jam absen server), bukan zona waktu perangkat. */
 const wibHour = (d = new Date()) =>
@@ -135,6 +135,35 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   // Bawaan: lokasi yang namanya memuat "kantor", selain itu lokasi pertama; pilihan pengguna didahulukan.
   const siteId = picked || (sites.data?.find((s) => /kantor/i.test(s.name)) ?? sites.data?.[0])?.id || "";
 
+  // Otomatis: bila izin lokasi SUDAH diberikan, pilih lokasi kerja terdekat (tanpa memunculkan permintaan izin).
+  useEffect(() => {
+    const list = sites.data;
+    if (picked || !list?.length || !("geolocation" in navigator) || !navigator.permissions) return;
+    let cancelled = false;
+    void navigator.permissions
+      .query({ name: "geolocation" })
+      .then((st) => {
+        if (st.state !== "granted" || cancelled) return;
+        navigator.geolocation.getCurrentPosition(
+          (p) => {
+            if (cancelled) return;
+            const here = { lat: p.coords.latitude, lng: p.coords.longitude };
+            const nearest = list
+              .filter((x) => x.location)
+              .map((x) => ({ id: x.id, d: distanceM(here, x.location) }))
+              .sort((x, y) => x.d - y.d)[0];
+            if (nearest) setPicked(nearest.id);
+          },
+          () => undefined,
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [sites.data, picked]);
+
   const rec = today.data?.rec ?? null;
   const rejected = today.data?.rejected ?? [];
   const locked = !rec && rejected.length >= MAX_ATTEMPTS_PER_DAY;
@@ -229,7 +258,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       setAskExplanation(false);
       toast.success(
         a.status === "NEEDS_REVIEW"
-          ? `Absen masuk tercatat, tetapi ${Math.round(a.distance_m)} m dari lokasi — menunggu pemeriksaan.`
+          ? `Absen masuk tercatat, tetapi ${formatDistance(a.distance_m)} dari lokasi — menunggu pemeriksaan.`
           : "Absen masuk tercatat.",
       );
       await refresh();
@@ -368,7 +397,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             <div>
               <TextBlock as="dt" className="inline text-mist">Lokasi: </TextBlock>
               <TextBlock as="dd" className="inline">
-                {rec.site_label} · {Math.round(rec.distance_m)} m{rec.is_late ? " · terlambat" : ""}
+                {rec.site_label} · {formatDistance(rec.distance_m)}{rec.is_late ? " · terlambat" : ""}
                 {rec.is_early_leave ? " · pulang cepat" : ""}
               </TextBlock>
             </div>

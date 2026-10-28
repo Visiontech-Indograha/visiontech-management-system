@@ -65,3 +65,10 @@ def test_team_members_carry_the_photo_id(client, world: World, fake_storage):
     team = client.get(f"/teams/{world.team_id}", headers=world.headers(client, "pm")).json()
     mine = [m for m in team["members"] if m["employee_id"] == world.employees["member"]]
     assert mine and mine[0]["photo_file_id"] == file_id
+
+
+def test_every_role_can_set_its_own_photo(client, world: World, fake_storage):
+    for who in ("member", "leader", "pm", "hr", "admin"):
+        file_id = _upload(client, world, who)
+        changed = client.put("/employees/me/photo", headers=world.headers(client, who), json={"file_id": file_id})
+        assert changed.status_code == 200, (who, changed.text)

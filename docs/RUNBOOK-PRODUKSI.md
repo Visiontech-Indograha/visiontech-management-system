@@ -19,7 +19,7 @@ Normal: `/health` dan `/ready` 200, `localhost:8080/api/v1/auth/me` 401, semua k
 | "Tunggu API tersambung ke MinIO" gagal | `vms_minio_prod` mati / tidak terhubung ke jaringan `visiontech_vms_network` | `docker start vms_minio_prod`; bila `docker inspect -f '{{json .NetworkSettings.Networks}}'` kosong: `docker network connect --alias minio visiontech_vms_network vms_minio_prod` |
 | `/ready` 503 | DB mati / kredensial | `docker logs vms_db_prod`, `docker logs vms_api` |
 | Disk ≥ 80% | Citra/log menumpuk | `docker image prune -f`, `docker builder prune -f`, periksa `logs/` dan `backups/` |
-| RAM tipis / swap tinggi | Terlalu banyak layanan (face beta, DB/MinIO uji) | `bash scripts/saklar-wajah.sh` (matikan wajah beta), hentikan `vms_db_test` / `vms_minio_test` bila tak dipakai |
+| RAM tipis / swap tinggi | Terlalu banyak layanan (face beta, DB/MinIO uji) | Beta tanpa wajah: `bash scripts/saklar-wajah.sh off ~/deploy/vms-beta/api.env`, restart `vms_beta_api`, lalu `docker stop vms_beta_face` (hemat ±260 MB; nyalakan lagi bila menguji wajah). Hentikan `vms_db_test` / `vms_minio_test` bila tak dipakai. Pasang batas memori: `deploy/compose.limits.yml` |
 
 ## 3. Rollback
 `autodeploy.sh` mengambil `origin/prod`. Untuk kembali ke versi sebelumnya: di GitHub **revert** merge PR bermasalah pada `prod` (PR baru `prod`), tunggu deploy otomatis. Jangan `git reset` di `src/` server.

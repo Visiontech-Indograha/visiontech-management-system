@@ -20,6 +20,7 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeUpdate,
     MyPhotoIn,
     MyPhotoOut,
+    NextEmployeeNo,
 )
 from app.modules.employees.services.employee_service import EmployeeService
 
@@ -37,6 +38,9 @@ class EmployeeController:
 
     async def detail(self, employee_id: UUID) -> EmployeeDetail:
         return EmployeeDetail(**await self.service.detail(employee_id))
+
+    async def next_no(self) -> NextEmployeeNo:
+        return NextEmployeeNo(employee_no=await self.service.next_employee_no())
 
     async def create(self, data: EmployeeCreate) -> EmployeeDetail:
         return EmployeeDetail(**await self.service.create(data))

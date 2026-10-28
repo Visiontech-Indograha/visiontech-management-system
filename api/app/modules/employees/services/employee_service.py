@@ -9,6 +9,7 @@ Karyawan V2 (Milestone 10).
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 from uuid import UUID
 
@@ -83,6 +84,16 @@ class EmployeeService:
                     raise ValidationError("Foto belum diunggah atau bukan gambar.")
                 out["photo_path"] = key
         return out
+
+    async def next_employee_no(self) -> str:
+        """Usulan nomor berikutnya: awalan dan lebar angka dari karyawan terbaru, angka = maksimum awalan itu + 1."""
+        nos = await self.repo.recent_employee_nos()
+        parsed = [m for m in (re.fullmatch(r"(.*?)(\d+)", n) for n in nos) if m]
+        if not parsed:
+            return "EMP-001"
+        prefix, digits = parsed[0].group(1), parsed[0].group(2)
+        highest = max(int(m.group(2)) for m in parsed if m.group(1) == prefix)
+        return f"{prefix}{highest + 1:0{len(digits)}d}"
 
     async def create(self, data: EmployeeCreate) -> dict[str, Any]:
         fields = await self._validate(data.model_dump(exclude={"address"}))

@@ -235,3 +235,13 @@ export function useAccountAction(employeeId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
   });
 }
+
+/** Usulan nomor karyawan berikutnya (GET /employees/next-no); hanya saat formulir tambah dibuka. */
+export function useNextEmployeeNo() {
+  return useQuery({
+    queryKey: ["employees", "next-no"],
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => (await api.get<S["NextEmployeeNo"]>("/employees/next-no")).data.employee_no,
+  });
+}

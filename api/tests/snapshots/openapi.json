@@ -7556,6 +7556,21 @@
     "title": "NeedsReviewResponse",
     "type": "object"
    },
+   "NextEmployeeNo": {
+    "properties": {
+     "employee_no": {
+      "description": "Usulan nomor karyawan berikutnya (boleh diubah)",
+      "maxLength": 50,
+      "title": "Employee No",
+      "type": "string"
+     }
+    },
+    "required": [
+     "employee_no"
+    ],
+    "title": "NextEmployeeNo",
+    "type": "object"
+   },
    "NotificationList": {
     "properties": {
      "items": {
@@ -17952,6 +17967,33 @@
      }
     ],
     "summary": "Set My Photo",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/next-no": {
+   "get": {
+    "description": "Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya.",
+    "operationId": "next_employee_no_api_v1_employees_next_no_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NextEmployeeNo"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Usulan nomor karyawan berikutnya",
     "tags": [
      "Employees"
     ]

@@ -47,3 +47,17 @@ def test_dynamic_update_rejects_non_identifier_column_names() -> None:
     assert safe_columns(["name", "update_at"]) == ["name", "update_at"]
     with pytest.raises(ValueError):
         safe_columns(["name = 'x'; DROP TABLE users; --"])
+
+
+def test_date_ranges_reject_end_before_start():
+    import pytest
+    from pydantic import ValidationError
+
+    from app.modules.exports.schemas.export_schema import PeriodicExportRequest
+    from app.modules.leaves.schemas.leave_schema import LeaveCreate
+
+    with pytest.raises(ValidationError, match="Tanggal selesai"):
+        LeaveCreate(leave_type="ANNUAL", start_date="2026-11-10", end_date="2026-11-01", reason="Keperluan")
+    with pytest.raises(ValidationError, match="Tanggal selesai"):
+        PeriodicExportRequest(division_id="11111111-1111-4111-8111-111111111111",
+                              start_date="2026-11-10", end_date="2026-11-01")

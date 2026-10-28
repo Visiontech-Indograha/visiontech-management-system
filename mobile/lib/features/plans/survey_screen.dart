@@ -178,6 +178,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_infoDirty) {
       if (!await _saveInfo(quiet: true)) return;
     }

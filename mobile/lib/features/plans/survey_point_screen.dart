@@ -228,6 +228,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     if (_name.text.trim().length < 2) return _snack('Isi nama titik dulu (langkah 1).');
     if (_typeId == null) return _snack('Pilih jenis titik dulu (langkah 1).');
     if (_photos.isEmpty) return _snack('Ambil minimal satu foto (langkah 2).');

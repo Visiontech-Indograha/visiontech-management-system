@@ -654,6 +654,7 @@ class _ReturnSheetState extends ConsumerState<_ReturnSheet> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_photo == null) {
       setState(() => _error = 'Foto kondisi wajib diambil dengan kamera.');
       return;

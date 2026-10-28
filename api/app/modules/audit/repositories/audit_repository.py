@@ -28,7 +28,7 @@ _FILTER = """
 def _params(entity_type: str | None, q: str | None, date_from: Any, date_to: Any) -> dict[str, Any]:
     return {
         "entity_type": entity_type,
-        "q": escape_like(q) + "%" if q else None,
+        "q": f"{escape_like(q)}%" if q else None,
         "date_from": date_from,
         "date_to": date_to,
     }

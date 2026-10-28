@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 class OfflineOperation(BaseModel):
     client_op_id: UUID
-    op_type: str
+    op_type: str = Field(max_length=50)
     payload: dict[str, Any]
     client_created_at: datetime
 

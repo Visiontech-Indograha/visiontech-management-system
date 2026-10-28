@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
@@ -215,10 +215,10 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Kebutuhan lain'),
-        content: TextField(
+        content: VmsTextField(
           controller: ctrl,
           autofocus: true,
-          inputFormatters: [LengthLimitingTextInputFormatter(255)],
+          maxLength: 255,
           decoration: const InputDecoration(labelText: 'mis. Crane, izin kerja panas'),
         ),
         actions: [
@@ -323,10 +323,10 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                   onSelectionChanged: _edit ? (v) => setState(() => _status = v.first) : null,
                 ),
                 const SizedBox(height: 12),
-                TextField(
+                VmsTextField(
                   key: const Key('survey-point-name'),
                   controller: _name,
-                  inputFormatters: [LengthLimitingTextInputFormatter(150)],
+                  maxLength: 150,
                   enabled: _edit,
                   decoration: InputDecoration(
                     hintText: _cctv ? 'mis. Titik Pemasangan CCTV 03' : 'mis. Pintu akses Samping (perlu dipasang ACS)',
@@ -370,9 +370,9 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                         : null,
                   ),
                 if (_edit)
-                  TextField(
+                  VmsTextField(
                     controller: _newRemark,
-                    inputFormatters: [LengthLimitingTextInputFormatter(255)],
+                    maxLength: 255,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _addRemark(),
                     decoration: InputDecoration(
@@ -464,15 +464,15 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                         ),
                     ],
                   ),
-                  TextField(
+                  VmsTextField(
                     controller: _uplink,
-                    inputFormatters: [LengthLimitingTextInputFormatter(150)],
+                    maxLength: 150,
                     enabled: _edit,
                     decoration: const InputDecoration(labelText: 'Uplink switch', hintText: 'mis. Control Room'),
                   ),
-                  TextField(
+                  VmsTextField(
                     controller: _foRemark,
-                    inputFormatters: [LengthLimitingTextInputFormatter(255)],
+                    maxLength: 255,
                     enabled: _edit,
                     decoration: const InputDecoration(
                       labelText: 'Keterangan kabel',

@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show PhotoOrigin, pickReportPhoto;
 import 'survey_screen.dart' show openReportFile;
@@ -36,6 +37,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
   Uint8List? _savedSignature;
   String? _error;
   bool _busy = false;
+  bool _picking = false; // cegah kamera terbuka dua kali bila tombol diketuk beruntun
 
   @override
   void initState() {
@@ -236,9 +238,9 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                 ...[
                   // Setelah disetujui PM tetap tampil (hanya baca) agar hasil kerja bisa dilihat ulang.
                   const SectionTitle('Ringkasan'),
-                  TextField(
+                  VmsTextField(
                     controller: _summary,
-                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
+                    maxLength: 2000,
                     readOnly: locked,
                     maxLines: 4,
                     decoration: const InputDecoration(
@@ -246,9 +248,9 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
+                  VmsTextField(
                     controller: _obstacles,
-                    inputFormatters: [LengthLimitingTextInputFormatter(2000)],
+                    maxLength: 2000,
                     readOnly: locked,
                     maxLines: 2,
                     decoration: const InputDecoration(labelText: 'Kendala'),
@@ -272,17 +274,22 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                       if (!locked)
                         IconButton.filledTonal(
                           tooltip: 'Tambah foto',
-                          onPressed: () async {
-                            final p = await pickReportPhoto(
-                              context: context,
-                              slot: 'Foto hasil kerja',
-                              origin: PhotoOrigin.camera,
-                              onError: _snack,
-                            );
-                            if (p != null && mounted) {
-                              setState(() => _photoPaths.add(p.path));
-                            }
-                          },
+                          onPressed: _picking
+                              ? null
+                              : () async {
+                                  setState(() => _picking = true);
+                                  final p = await pickReportPhoto(
+                                    context: context,
+                                    slot: 'Foto hasil kerja',
+                                    origin: PhotoOrigin.camera,
+                                    onError: _snack,
+                                  );
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _picking = false;
+                                    if (p != null) _photoPaths.add(p.path);
+                                  });
+                                },
                           icon: const Icon(Icons.add_a_photo_rounded),
                         ),
                     ],

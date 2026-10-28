@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.offboarding.controllers.offboarding_controller import OffboardingController
@@ -31,12 +32,16 @@ _MANAGE = Depends(require_permission(Permission.MANAGE_OFFBOARDING))
 
 @router.get("", response_model=list[OffboardingListItem])
 async def list_offboardings(
+    response: Response,
+    params: ListParams = Depends(),
     status: OffboardingStatus | None = None,
     current_user: CurrentUser = _VIEW,
     controller: OffboardingController = Depends(),
 ) -> list[OffboardingListItem]:
     """Daftar offboarding (PM hanya karyawan divisinya)."""
-    return await controller.list_all(current_user, status.value if status else None)
+    rows = await controller.list_all(current_user, status.value if status else None)
+    hay = lambda r: (r.employee_name, r.employee_no, r.division_name, r.reason_type)  # noqa: E731
+    return list(apply_list(rows, params, response, hay))
 
 
 @router.get("/pkwt-expiring", response_model=list[PkwtExpiringRow])

@@ -1688,7 +1688,7 @@ export interface paths {
         };
         /**
          * List Leaves
-         * @description Mengambil riwayat atau daftar permohonan cuti.
+         * @description Mengambil riwayat atau daftar permohonan cuti. Cari `q`: nama, NIP, divisi, alasan.
          */
         get: operations["list_leaves_api_v1_leaves_get"];
         put?: never;
@@ -6648,6 +6648,8 @@ export interface components {
             meal_allowance_amount: number;
             /** City Zone */
             city_zone?: string | null;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
         };
         /**
          * MyRecapResponse
@@ -12069,8 +12071,16 @@ export interface operations {
     list_teams_api_v1_teams_get: {
         parameters: {
             query?: {
+                /** @description Hanya tim aktif (true) atau nonaktif (false) */
+                active?: boolean | null;
                 /** @description Filter berdasarkan ID divisi */
                 division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -12432,6 +12442,12 @@ export interface operations {
                 /** @description Hunian yang beririsan sampai tanggal ini */
                 end?: string | null;
                 status?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -12494,7 +12510,14 @@ export interface operations {
     };
     my_stays_api_v1_mess_me_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12508,6 +12531,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MessStayOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -12750,6 +12782,18 @@ export interface operations {
                 status?: string | null;
                 /** @description Tahun cuti */
                 year?: number | null;
+                /** @description Filter jenis cuti */
+                leave_type?: string | null;
+                /** @description Cuti yang berakhir pada/setelah tanggal ini */
+                date_from?: string | null;
+                /** @description Cuti yang mulai pada/sebelum tanggal ini */
+                date_to?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -12965,6 +13009,12 @@ export interface operations {
         parameters: {
             query?: {
                 status?: components["schemas"]["OffboardingStatus"] | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -14269,7 +14319,16 @@ export interface operations {
     };
     get_employee_documents_api_v1_employees__emp_id__documents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter status dokumen */
+                status?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
             header?: never;
             path: {
                 emp_id: string;
@@ -15002,6 +15061,8 @@ export interface operations {
                 scope?: string;
                 page?: number;
                 size?: number;
+                /** @description Nama atau NIP karyawan diawali kata kunci */
+                q?: string | null;
             };
             header?: never;
             path?: never;
@@ -15575,6 +15636,12 @@ export interface operations {
             query?: {
                 office_id?: string | null;
                 status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -15743,6 +15810,12 @@ export interface operations {
             query?: {
                 office_id?: string | null;
                 status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -16044,6 +16117,12 @@ export interface operations {
                 open?: boolean;
                 employee_id?: string | null;
                 daily_plan_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -16338,10 +16417,18 @@ export interface operations {
     list_overtime_api_v1_overtime_get: {
         parameters: {
             query?: {
+                /** @description Filter status lembur */
+                status?: string | null;
                 /** @description ID jadwal harian */
                 daily_plan_id?: string | null;
                 /** @description Alias daily_plan_id */
                 work_plan_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;

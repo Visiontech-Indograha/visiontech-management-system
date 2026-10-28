@@ -7,13 +7,13 @@ const STATUSES = ["NEEDS_REVIEW", "AUTO_VALID", "APPROVED", "REJECTED"];
 const selectCls = "h-11 w-full rounded-control border border-line bg-surface px-3 text-sm";
 
 
-/** Saring absensi: status + rentang tanggal. Mengubah saringan kembali ke halaman 1 (diatur Page). */
+/** Saring absensi: status, rentang tanggal, dan cari nama/NIP. Mengubah saringan kembali ke halaman 1 (diatur Page). */
 export function AttendanceFilter({ filters: f, onChange: set }: {
   filters: AttendanceFilters;
   onChange: (patch: Partial<AttendanceFilters>) => void;
 }) {
   return (
-      <div className="mb-4 grid gap-x-3 md:grid-cols-3">
+      <div className="mb-4 grid gap-x-3 md:grid-cols-4">
         <div className="mb-4 space-y-1.5">
           <ControlLabel htmlFor="att-status" className="text-sm font-medium">
             Status
@@ -27,6 +27,15 @@ export function AttendanceFilter({ filters: f, onChange: set }: {
             ))}
           </ControlSelect>
         </div>
+        <TextField
+          label="Cari nama / NIP"
+          type="search"
+          maxLength={100}
+          autoComplete="off"
+          placeholder="Awal nama atau NIP"
+          value={f.q}
+          onChange={(e) => set({ q: e.target.value })}
+        />
         <TextField label="Dari tanggal" type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} />
         <TextField label="Sampai tanggal" type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} />
       </div>

@@ -11,7 +11,10 @@ import { Pill } from "@/components/molecules/Pill";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
 import { PhotoStrip } from "@/components/organisms/PhotoStrip";
+import { useClientList } from "@/hooks/useClientList";
 import { formatDate } from "@/lib/format";
 import { useLoans, useTools, useVehicles, type AssetKind, type Loan, type Tool, type Vehicle } from "@/services/assetService";
 
@@ -53,6 +56,9 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
   const vehicles = useVehicles();
   const tools = useTools();
   const loans = useLoans(true);
+  const vView = useClientList(vehicles.data, (v) => [v.name, v.number_plate, v.office_name, v.division_name, v.holder_name], { prefix: "kdr_" });
+  const tView = useClientList(tools.data, (t) => [t.name, t.tool_code, t.office_name, t.division_name, t.holder_name], { prefix: "alt_" });
+  const lView = useClientList(loans.data, (l) => [l.asset_name, l.asset_code, l.employee_name], { prefix: "pjm_" });
 
   return (
     <div className="space-y-4">
@@ -64,8 +70,10 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
 
       {tab === "VEHICLE" && (
         <QueryState query={vehicles} errorText="Daftar kendaraan tidak dapat dimuat." empty={vehicles.data?.length === 0} emptyText="Belum ada kendaraan.">
+          <ListToolbar value={vView.input} onChange={vView.setInput} placeholder="Cari nama, plat nomor, kantor, atau pemegang..." active={vView.active} onReset={vView.reset} />
+          {vView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {vehicles.data?.map((v) => (
+            {vView.rows.map((v) => (
               <ListEntry key={v.vehicle_id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4 shadow-card">
                 <div className="flex items-center justify-between gap-2">
                   <TextBlock as="span" className="font-mono text-sm">{v.number_plate}</TextBlock>
@@ -85,13 +93,16 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
               </ListEntry>
             ))}
           </ListBlock>
+          {vView.total > 0 && <ListPagination total={vView.total} noun="kendaraan" page={vView.shownPage} shownPage={vView.shownPage} lastPage={vView.lastPage} onPageChange={vView.setPage} />}
         </QueryState>
       )}
 
       {tab === "TOOL" && (
         <QueryState query={tools} errorText="Daftar alat tidak dapat dimuat." empty={tools.data?.length === 0} emptyText="Belum ada alat.">
+          <ListToolbar value={tView.input} onChange={tView.setInput} placeholder="Cari nama, kode alat, kantor, atau pemegang..." active={tView.active} onReset={tView.reset} />
+          {tView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {tools.data?.map((t) => (
+            {tView.rows.map((t) => (
               <ListEntry key={t.tool_id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface p-4 shadow-card">
                 <div className="flex items-center justify-between gap-2">
                   <TextBlock as="span" className="font-mono text-sm">{t.tool_code}</TextBlock>
@@ -107,13 +118,16 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
               </ListEntry>
             ))}
           </ListBlock>
+          {tView.total > 0 && <ListPagination total={tView.total} noun="alat" page={tView.shownPage} shownPage={tView.shownPage} lastPage={tView.lastPage} onPageChange={tView.setPage} />}
         </QueryState>
       )}
 
       {tab === "LOANS" && (
         <QueryState query={loans} errorText="Daftar peminjaman tidak dapat dimuat." empty={loans.data?.length === 0} emptyText="Tidak ada aset yang sedang dipinjam.">
+          <ListToolbar value={lView.input} onChange={lView.setInput} placeholder="Cari aset, kode, atau peminjam..." active={lView.active} onReset={lView.reset} />
+          {lView.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
           <ListBlock className="divide-y divide-line rounded-panel border border-line bg-surface shadow-card">
-            {loans.data?.map((l) => (
+            {lView.rows.map((l) => (
               <ListEntry key={l.assignment_id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <TextBlock className="font-medium">{l.asset_name} · {l.asset_code}</TextBlock>
@@ -132,6 +146,7 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
               </ListEntry>
             ))}
           </ListBlock>
+          {lView.total > 0 && <ListPagination total={lView.total} noun="peminjaman" page={lView.shownPage} shownPage={lView.shownPage} lastPage={lView.lastPage} onPageChange={lView.setPage} />}
         </QueryState>
       )}
     </div>

@@ -65,6 +65,7 @@ class AttendanceController:
         scope: str = "all",
         page: int = 1,
         size: int = 50,
+        q: str | None = None,
     ) -> AttendanceListResponse:
         """Mengambil daftar riwayat absensi berdasarkan filter dan kewenangan pengguna."""
         rows, total = await self.session_service.list_attendance(
@@ -78,6 +79,7 @@ class AttendanceController:
             scope=scope,
             page=page,
             size=size,
+            q=q,
         )
         today, required_out, pending, pending_plan = await self.session_service.day_hints(
             current_user.organization_id, current_user.employee_id

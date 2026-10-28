@@ -5,6 +5,9 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import type { Team } from "@/services/teamService";
 import { TeamAddButton } from "./TeamAddButton";
 
@@ -15,6 +18,7 @@ export function TeamList({ teams, onAdd, onRemove, onSelectTeam }: {
   onRemove: (team: Team) => void;
   onSelectTeam: (team: Team) => void;
 }) {
+  const view = useClientList(teams.data, (t) => [t.name, t.leader_name, t.division_name, t.office_name], { prefix: "tim_" });
   return (
     <>
       {teams.isPending && <LoadingBar />}
@@ -26,8 +30,11 @@ export function TeamList({ teams, onAdd, onRemove, onSelectTeam }: {
         </div>
       )}
       {teams.data && teams.data.length > 0 && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama tim, ketua, divisi, atau kantor..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada tim yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {teams.data.map((t) => (
+          {view.rows.map((t) => (
             <ListEntry key={t.team_id} className="flex items-start gap-3 rounded-panel border border-line bg-surface p-4 shadow-card">
               <User className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
@@ -47,6 +54,8 @@ export function TeamList({ teams, onAdd, onRemove, onSelectTeam }: {
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="tim" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
     </>
   );

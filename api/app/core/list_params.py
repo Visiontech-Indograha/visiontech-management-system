@@ -8,12 +8,21 @@ from __future__ import annotations
 
 import unicodedata
 from collections.abc import Callable, Iterable, Sequence
+from datetime import date
 from typing import Any
 
-from fastapi import Query, Response
+from fastapi import HTTPException, Query, Response
 
 MAX_PAGE_SIZE = 100
 TOTAL_HEADER = "X-Total-Count"
+
+
+def check_date_range(
+    start: date | None, end: date | None, *, start_name: str = "date_from", end_name: str = "date_to"
+) -> None:
+    """Tolak rentang tanggal terbalik (mulai setelah akhir) dengan 422."""
+    if start and end and start > end:
+        raise HTTPException(status_code=422, detail=f"{start_name} tidak boleh setelah {end_name}")
 
 
 class ListParams:

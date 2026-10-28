@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.deps import get_current_user, require_permission
-from app.core.list_params import ListParams, apply_list
+from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
@@ -86,6 +86,7 @@ async def list_stays(
     controller: MessController = Depends(),
 ) -> list[MessStayOut]:
     """Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan."""
+    check_date_range(start, end, start_name="start", end_name="end")
     rows = await controller.handle_list_stays(current_user, employee_id, start, end, status)
     hay = lambda r: (r.employee_name, r.employee_no, r.mess_name, r.city, r.request_note)  # noqa: E731
     return list(apply_list(rows, params, response, hay))

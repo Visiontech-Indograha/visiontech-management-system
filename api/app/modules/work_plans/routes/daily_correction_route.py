@@ -20,7 +20,9 @@ _LOGIN = Depends(get_current_user)
 
 @router.get("/corrections", response_model=list[CorrectionOut])
 async def correction_inbox(
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: str | None = Query(
+        None, alias="status", pattern="^(REQUESTED|REVISING|IN_REVIEW|ACCEPTED|REJECTED)$"
+    ),
     current_user: CurrentUser = _LOGIN,
     controller: DailyCorrectionController = Depends(),
 ) -> list[CorrectionOut]:

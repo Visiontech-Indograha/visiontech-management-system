@@ -14191,6 +14191,7 @@
       "schema": {
        "anyOf": [
         {
+         "pattern": "^(PENDING|APPROVED|REJECTED|CANCELLED)$",
          "type": "string"
         },
         {
@@ -15705,6 +15706,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 30,
          "type": "string"
         },
         {
@@ -20608,6 +20610,8 @@
       "schema": {
        "anyOf": [
         {
+         "maximum": 2100,
+         "minimum": 2000,
          "type": "integer"
         },
         {
@@ -24113,6 +24117,7 @@
       "schema": {
        "anyOf": [
         {
+         "pattern": "^(DRAFT|PENDING|PLANNED|ONGOING|IN_PROGRESS|WAITING_ACC|ACCEPTED|REWORK|COMPLETED|CANCELLED|URGENT)$",
          "type": "string"
         },
         {
@@ -24131,6 +24136,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 100,
          "type": "string"
         },
         {
@@ -25070,6 +25076,7 @@
       "schema": {
        "anyOf": [
         {
+         "pattern": "^(REQUESTED|REVISING|IN_REVIEW|ACCEPTED|REJECTED)$",
          "type": "string"
         },
         {

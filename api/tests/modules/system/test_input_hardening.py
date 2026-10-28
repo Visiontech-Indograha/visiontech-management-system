@@ -74,3 +74,24 @@ def test_client_schema_rejects_script_in_phone_and_spaces_in_code():
         ClientCreate(client_code="PLN 01", name="PT Uji")
     with pytest.raises(ValidationError):
         ClientCreate(client_code="PLN", name="PT Uji", pic_phone="abc<script>")
+
+
+_BAD_QUERIES = [
+    "/attendance?from=2026-10-10&to=2026-10-01",
+    "/attendance?status=" + "x" * 31,
+    "/mess/stays?start=2026-10-10&end=2026-10-01",
+    "/leaves?date_from=2026-10-10&date_to=2026-10-01",
+    "/audit-events?date_from=2026-10-10&date_to=2026-10-01",
+    "/assets/loan-requests?status=BUKAN_STATUS",
+    "/work-completions?order_status=NGAWUR",
+    "/work-completions?search=" + "a" * 101,
+    "/leaves/balances/00000000-0000-0000-0000-000000000000?year=1800",
+    "/leaves?page=0",
+    "/leaves?size=101",
+]
+
+
+def test_query_params_out_of_bounds_are_rejected(client, world: World) -> None:
+    headers = world.headers(client, "admin")
+    for url in _BAD_QUERIES:
+        assert client.get(url, headers=headers).status_code == 422, url

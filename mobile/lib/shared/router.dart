@@ -11,6 +11,7 @@ import '../features/auth/biometric_lock_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/gallery/photo_gallery_screen.dart';
 import '../features/leaves/leaves_screen.dart';
+import '../features/mess/mess_screen.dart';
 import '../features/plans/daily_plans_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/records/my_records_screens.dart';

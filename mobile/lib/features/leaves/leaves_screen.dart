@@ -129,9 +129,9 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: safeListPadding(context),
+          padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Layanan', title: 'Cuti & Izin'),
+            const HeroHeader(eyebrow: 'Layanan', title: 'Cuti & Izin', horizontal: 4),
             if (_balance != null) _balanceCard(_balance!),
             if (_loading)
               const Padding(

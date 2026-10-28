@@ -90,9 +90,9 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: safeListPadding(context),
+          padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Absensi', title: 'Rekap Bulanan'),
+            const HeroHeader(eyebrow: 'Absensi', title: 'Rekap Bulanan', horizontal: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

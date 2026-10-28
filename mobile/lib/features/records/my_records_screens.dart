@@ -95,9 +95,9 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
       body: RefreshIndicator(
         onRefresh: _reload,
         child: ListView(
-          padding: safeListPadding(context),
+          padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            HeroHeader(eyebrow: 'Layanan', title: widget.title),
+            HeroHeader(eyebrow: 'Layanan', title: widget.title, horizontal: 4),
             if (_loading)
               const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator())),
             if (_error != null)
@@ -144,36 +144,6 @@ class OvertimeHistoryScreen extends StatelessWidget {
           Chip(label: Text(overtimeStatusLabel(o['status'] as String))),
           if ((o['review_note'] as String?)?.isNotEmpty == true)
             Text('Catatan: ${o['review_note']}', style: VmsTextStyles.bodySm),
-        ],
-      ),
-    ),
-  );
-}
-
-/// Hunian mess milik sendiri.
-class MessScreen extends StatelessWidget {
-  const MessScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => _ListScreen(
-    title: 'Mess',
-    empty: 'Belum ada hunian mess yang tercatat.',
-    load: (ref) => ref.read(syncEngineProvider).api.myMess(),
-    builder: (m) => SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${m['mess_name']} · ${m['city']}',
-            style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(m['address'] as String? ?? '', style: VmsTextStyles.bodySm),
-          const SizedBox(height: 4),
-          Text(
-            '${_fmt(m['stay_start_date'])} - ${_fmt(m['stay_end_date'])}',
-            style: VmsTextStyles.bodySm,
-          ),
         ],
       ),
     ),

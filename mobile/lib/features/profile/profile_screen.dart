@@ -328,7 +328,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: VmsTopBar(
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
-          children: [const NotificationBell(), const SizedBox(width: 8), _avatar(name, 44)],
+          children: [const NotificationBell(), const SizedBox(width: 8), _avatar(name, 44, editable: true)],
         ),
       ),
       body: ListView(

@@ -124,10 +124,20 @@ class EmployeeRepository(BaseRepository):
         return key
 
     async def uploaded_image_key(self, file_id: UUID, user_id: UUID | str) -> str | None:
-        """storage_key gambar yang DIUNGGAH pengguna ini (foto profil sendiri tak boleh menunjuk berkas orang lain)."""
+        """
+        storage_key gambar yang boleh dijadikan foto sendiri: unggahan pengguna ini, atau gambar yang sudah menjadi foto
+        profil karyawan lain. Unggahan dideduplikasi per kantor (SHA-256): gambar yang sama persis dari akun kedua
+        mengembalikan baris milik pengunggah pertama, dan foto profil memang sudah terlihat oleh pemegang `view:users`,
+        jadi memakainya tidak membuka akses baru. Berkas selfie/dokumen orang lain tetap tidak bisa dipakai.
+        """
         key: str | None = await self.scalar(
-            "SELECT storage_key FROM file_object WHERE id = CAST(:id AS uuid) AND mime_type LIKE 'image/%' "
-            "AND uploaded_by = CAST(:uid AS uuid)",
+            """
+            SELECT f.storage_key FROM file_object f
+            WHERE f.id = CAST(:id AS uuid) AND f.mime_type LIKE 'image/%'
+              AND (f.uploaded_by = CAST(:uid AS uuid)
+                   OR EXISTS (SELECT 1 FROM employee e
+                              WHERE e.profile_photo_path = f.storage_key OR e.photo_path = f.storage_key))
+            """,
             {"id": str(file_id), "uid": str(user_id)},
         )
         return key

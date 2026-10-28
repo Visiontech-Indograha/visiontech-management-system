@@ -13,6 +13,7 @@ import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
 import 'item_progress_screen.dart';
+import 'overtime_hours.dart';
 import 'survey_screen.dart';
 
 const phaseLabel = {
@@ -253,7 +254,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   }
 
   Future<void> _overtime() async {
-    final hours = TextEditingController();
+    final suggested = _plan == null
+        ? null
+        : suggestedOvertimeHours(
+            workDate: '${_plan!['work_date']}',
+            clockOutTime: '${_plan!['clock_out_time']}',
+            nowUtc: DateTime.now().toUtc(),
+          );
+    final hours = TextEditingController(text: suggested == null ? '' : '$suggested');
     final reason = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -266,7 +274,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
             maxLength: 12,
               controller: hours,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Jam lembur (maks. 12)'),
+              decoration: InputDecoration(
+                labelText: 'Jam lembur (maks. 12)',
+                helperText: suggested == null ? null : 'Terisi otomatis dari jam pulang jadwal; bisa diubah.',
+              ),
             ),
             TextField(
             maxLength: 500,

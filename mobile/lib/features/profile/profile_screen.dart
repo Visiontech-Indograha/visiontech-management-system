@@ -253,7 +253,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _syncResultMessage = null;
     });
     try {
-      final summary = await ref.read(syncEngineProvider).syncAll();
+      final summary = await ref.read(syncEngineProvider).syncAll(manual: true);
       ref.read(syncTickProvider.notifier).bump();
       await _loadSyncInfo();
       setState(() {

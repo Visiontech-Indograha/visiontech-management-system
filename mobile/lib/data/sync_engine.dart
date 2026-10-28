@@ -338,8 +338,10 @@ class SyncEngine {
 
   // --- Dipakai banner, profil & layar antrean -----------------------------
 
-  Future<SyncSummary> syncAll() async {
-    NetworkHint.markOnline(); // sinkron manual selalu mencoba jaringan
+  /// [manual] = tombol sinkron buatan user: selalu mencoba jaringan. Pemicu otomatis (konektivitas/startup)
+  /// tidak mereset status offline, supaya layar yang baru dibuka tetap langsung dari cache.
+  Future<SyncSummary> syncAll({bool manual = false}) async {
+    if (manual) NetworkHint.markOnline();
     final push = <String>[];
     final pull = <String>[];
     try {

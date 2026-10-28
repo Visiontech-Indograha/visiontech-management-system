@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import PlainTextResponse
 
 from app.api.deps import get_current_user, require_permission
+from app.core.list_params import check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.attendance.controllers.attendance_controller import AttendanceController
@@ -38,7 +39,7 @@ async def list_attendance(
     employee_id: UUID | None = None,
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
-    status: str | None = None,
+    status: str | None = Query(None, max_length=30),
     scope: str = Query("all", pattern="^(all|mine|team)$"),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
@@ -50,6 +51,7 @@ async def list_attendance(
     Dok 05 §3.5 · R-33: Finance & OPS seluruh organisasi; PM miliknya + bawahan lapangan di unitnya;
     lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
     """
+    check_date_range(date_from, date_to, start_name="from", end_name="to")
     return await controller.handle_list_attendance(
         current_user,
         employee_id=employee_id,

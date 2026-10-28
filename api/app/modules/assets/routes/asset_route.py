@@ -210,7 +210,7 @@ async def return_asset(
 # ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────
 @router.get("/loan-requests", response_model=list[LoanRequestOut])
 async def list_loan_requests(
-    status_filter: str | None = Query(None, alias="status"),
+    status_filter: str | None = Query(None, alias="status", pattern="^(PENDING|APPROVED|REJECTED|CANCELLED)$"),
     current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
 ) -> list[LoanRequestOut]:

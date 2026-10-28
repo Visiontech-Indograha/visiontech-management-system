@@ -39,8 +39,12 @@ router = APIRouter(prefix="/work-completions", tags=["Work Completions (Order Kl
 @router.get("", response_model=WorkCompletionListOut, summary="Daftar Order Proyek Klien")
 async def list_work_completions(
     division_id: UUID | None = Query(None, description="Filter divisi"),
-    order_status: str | None = Query(None, description="Filter status (PENDING, ONGOING, URGENT, COMPLETED)"),
-    search: str | None = Query(None, description="Pencarian nama klien, judul proyek, atau nomor SPK"),
+    order_status: str | None = Query(
+        None,
+        pattern="^(DRAFT|PENDING|PLANNED|ONGOING|IN_PROGRESS|WAITING_ACC|ACCEPTED|REWORK|COMPLETED|CANCELLED|URGENT)$",
+        description="Filter status (PENDING, ONGOING, URGENT, COMPLETED)",
+    ),
+    search: str | None = Query(None, max_length=100, description="Pencarian nama klien, judul proyek, atau nomor SPK"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     current_user: CurrentUser = Depends(get_current_user),

@@ -64,16 +64,23 @@ class LeaveRepository(BaseRepository):
             {"emp": str(employee_id), "year": year},
         )
 
-    async def deduct_balance(self, employee_id: UUID | str, year: int, days: int) -> None:
-        """Tambah used_quota pada leave_balance."""
-        await self.execute(
+    async def deduct_balance(self, employee_id: UUID | str, year: int, days: int) -> bool:
+        """
+        Ubah used_quota secara atomik (satu UPDATE mengunci barisnya, jadi dua persetujuan bersamaan tidak
+        melewati batas). Pemotongan (days > 0) ditolak bila sisa kuota kurang; pengembalian (days < 0) tidak
+        pernah membuat used_quota negatif. Mengembalikan False bila tak ada baris yang berubah.
+        """
+        row = await self.fetchone(
             """
             UPDATE leave_balance
-            SET used_quota = used_quota + :days, update_at = now()
+            SET used_quota = GREATEST(used_quota + :days, 0), update_at = now()
             WHERE employee_id = CAST(:emp AS uuid) AND period_year = :year AND delete_at IS NULL
+              AND (:days <= 0 OR total_quota - used_quota >= :days)
+            RETURNING balance_id
             """,
             {"emp": str(employee_id), "year": year, "days": days},
         )
+        return row is not None
 
     async def has_overlapping_leave(
         self, employee_id: UUID | str, start_date: date, end_date: date
@@ -128,10 +135,11 @@ class LeaveRepository(BaseRepository):
         )
         return leave_id
 
-    async def get_leave(self, leave_id: UUID | str) -> Any:
-        """Mengambil detail satu permohonan cuti."""
+    async def get_leave(self, leave_id: UUID | str, *, for_update: bool = False) -> Any:
+        """Mengambil detail satu permohonan cuti; `for_update` mengunci barisnya sampai transaksi selesai."""
         return await self.fetchone(
-            _LEAVE_SELECT + " WHERE lr.leave_id = CAST(:id AS uuid) AND lr.delete_at IS NULL",
+            _LEAVE_SELECT + " WHERE lr.leave_id = CAST(:id AS uuid) AND lr.delete_at IS NULL"
+            + (" FOR UPDATE OF lr" if for_update else ""),
             {"id": str(leave_id)},
         )
 

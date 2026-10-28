@@ -104,7 +104,8 @@ class LeaveService:
         if user.employee_id is None:
             raise ForbiddenError("Akun peninjau cuti wajib tertaut ke data karyawan.")
 
-        leave = await self.repo.get_leave(leave_id)
+        # Dikunci agar dua peninjau bersamaan tidak sama-sama membaca PENDING lalu memotong kuota dua kali.
+        leave = await self.repo.get_leave(leave_id, for_update=True)
         if leave is None:
             raise NotFoundError("Permohonan cuti")
 
@@ -140,7 +141,12 @@ class LeaveService:
         if leave.leave_type == "ANNUAL":
             if data.decision == "APPROVED" and leave.status == "PENDING":
                 # Pemotongan pertama kali (baik oleh PM maupun langsung oleh HR)
-                await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, leave.total_days)
+                if not await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, leave.total_days):
+                    raise AppError(
+                        "QUOTA_EXCEEDED",
+                        "Sisa kuota cuti tahunan karyawan tidak mencukupi untuk menyetujui pengajuan ini.",
+                        status=422,
+                    )
             elif data.decision == "REJECTED" and leave.status == "APPROVED_BY_PM":
                 # Pengembalian kuota karena sebelumnya sudah dipotong saat disetujui PM
                 await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)

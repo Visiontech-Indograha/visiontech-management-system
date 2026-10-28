@@ -67,6 +67,9 @@ describe("Jadwal harian", () => {
     const dialog = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
     expect(within(dialog).getByLabelText("Tim")).toHaveValue("t2");
     expect(within(dialog).getByLabelText("Tanggal")).toHaveValue(todayIso);
+    // Lokasi dipilih lewat peta (cari alamat / klik peta), bukan mengetik koordinat sendirian.
+    expect(within(dialog).getByLabelText("Cari alamat atau nama tempat")).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: "Cari koordinat" })).toBeNull();
   });
 
   it("pekerja lapangan tidak melihat tombol buat/persetujuan", async () => {

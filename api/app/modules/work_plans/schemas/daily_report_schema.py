@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field
 
 
 class DailyReportCreate(BaseModel):
-    summary: str = Field(..., min_length=3, description="Ringkasan hasil kerja harian")
-    obstacles: str | None = Field(None, description="Kendala atau hambatan di lapangan jika ada")
+    summary: str = Field(..., min_length=3, max_length=2000, description="Ringkasan hasil kerja harian")
+    obstacles: str | None = Field(None, max_length=2000, description="Kendala atau hambatan di lapangan jika ada")
     photos_json: list[dict[str, Any] | str] = Field(default_factory=list, description="Foto dokumentasi hasil kerja")
 
 

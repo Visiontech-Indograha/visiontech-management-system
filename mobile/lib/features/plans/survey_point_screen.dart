@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/error_message.dart';
@@ -217,6 +218,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
         content: TextField(
           controller: ctrl,
           autofocus: true,
+          inputFormatters: [LengthLimitingTextInputFormatter(255)],
           decoration: const InputDecoration(labelText: 'mis. Crane, izin kerja panas'),
         ),
         actions: [
@@ -324,6 +326,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                 TextField(
                   key: const Key('survey-point-name'),
                   controller: _name,
+                  inputFormatters: [LengthLimitingTextInputFormatter(150)],
                   enabled: _edit,
                   decoration: InputDecoration(
                     hintText: _cctv ? 'mis. Titik Pemasangan CCTV 03' : 'mis. Pintu akses Samping (perlu dipasang ACS)',
@@ -369,6 +372,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                 if (_edit)
                   TextField(
                     controller: _newRemark,
+                    inputFormatters: [LengthLimitingTextInputFormatter(255)],
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _addRemark(),
                     decoration: InputDecoration(
@@ -462,11 +466,13 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                   ),
                   TextField(
                     controller: _uplink,
+                    inputFormatters: [LengthLimitingTextInputFormatter(150)],
                     enabled: _edit,
                     decoration: const InputDecoration(labelText: 'Uplink switch', hintText: 'mis. Control Room'),
                   ),
                   TextField(
                     controller: _foRemark,
+                    inputFormatters: [LengthLimitingTextInputFormatter(255)],
                     enabled: _edit,
                     decoration: const InputDecoration(
                       labelText: 'Keterangan kabel',

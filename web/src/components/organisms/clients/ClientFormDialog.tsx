@@ -7,7 +7,7 @@ import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useSaveClient, type Client, type ClientInput } from "@/services/clientService";
 
 export function ClientFormDialog({
@@ -23,6 +23,7 @@ export function ClientFormDialog({
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ClientInput>({
     defaultValues: {
@@ -47,7 +48,7 @@ export function ClientFormDialog({
       toast.success(client ? "Data klien diperbarui." : "Klien baru berhasil ditambahkan.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   };
 

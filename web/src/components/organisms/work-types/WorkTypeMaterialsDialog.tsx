@@ -184,17 +184,20 @@ export function WorkTypeMaterialsDialog({
               <TextField
                 label="Nama Material"
                 placeholder="misal: Kabel Fiber Optic Drop Core"
+                maxLength={255}
                 {...register("material_name", { required: true })}
               />
               <div className="grid grid-cols-2 gap-2">
                 <TextField
                   label="Kode (Opsional)"
                   placeholder="misal: FO-DROP-01"
+                  maxLength={50}
                   {...register("material_code")}
                 />
                 <TextField
                   label="Kategori"
                   placeholder="misal: Kabel, Pipa, Tiang"
+                  maxLength={100}
                   {...register("category")}
                 />
               </div>
@@ -209,6 +212,7 @@ export function WorkTypeMaterialsDialog({
                 <TextField
                   label="Satuan"
                   placeholder="Meter, Unit, Batang"
+                  maxLength={50}
                   {...register("unit", { required: true })}
                 />
               </div>

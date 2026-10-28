@@ -11,7 +11,7 @@ import { useClients } from "@/services/clientService";
 import { useOffices, useUserDivisions } from "@/services/employeeService";
 import { useSaveProject, type Project, type ProjectInput, type ProjectStatus } from "@/services/projectService";
 import { useSession } from "@/stores/sessionStore";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 
 export function ProjectFormDialog({
   project,
@@ -41,6 +41,7 @@ export function ProjectFormDialog({
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ProjectInput>({
     defaultValues: {
@@ -81,6 +82,10 @@ export function ProjectFormDialog({
       toast.success(project ? "Data proyek berhasil diperbarui." : "Proyek baru berhasil didaftarkan.");
       onClose();
     } catch (err) {
+      if (applyFieldErrors(err, setError)) {
+        setFormError("Periksa kolom yang ditandai.");
+        return;
+      }
       setFormError(errorMessage(err, "Gagal menyimpan data proyek. Pastikan nomor SPK unik dan seluruh kolom wajib terisi."));
     }
   };
@@ -158,6 +163,7 @@ export function ProjectFormDialog({
             label="Nomor Kontrak / SPK"
             placeholder="cth. SPK/VT/TELKOM/2026/001"
             error={errors.spk_number?.message}
+            maxLength={100}
             {...register("spk_number", { required: "Nomor SPK wajib diisi." })}
           />
 
@@ -165,6 +171,7 @@ export function ProjectFormDialog({
             label="Judul Proyek / Pekerjaan"
             placeholder="cth. Penarikan Kabel Feeder FTTx Riau Segmen 1"
             error={errors.project_title?.message}
+            maxLength={255}
             {...register("project_title", { required: "Judul proyek wajib diisi." })}
           />
         </div>
@@ -186,6 +193,7 @@ export function ProjectFormDialog({
             label="Satuan Ukuran"
             placeholder="cth. Titik, Meter, Tiang, Site"
             error={errors.unit_measure?.message}
+            maxLength={50}
             {...register("unit_measure", { required: "Satuan ukuran wajib diisi." })}
           />
 

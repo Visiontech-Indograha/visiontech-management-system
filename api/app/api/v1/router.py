@@ -15,6 +15,7 @@ from app.modules.documents.routes import documents_router, expiry_router
 from app.modules.employees.routes import router as employees_router
 from app.modules.exports.routes import router as exports_router
 from app.modules.face.routes import router as face_router
+from app.modules.home.routes import home_router
 from app.modules.image_requirements.routes import router as image_requirements_router
 from app.modules.job_positions.routes import router as job_positions_router
 from app.modules.leaves.routes import leaves_router
@@ -86,6 +87,7 @@ api_router.include_router(plan_assets_router)
 api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
+api_router.include_router(home_router)
 api_router.include_router(events_router)
 api_router.include_router(work_types_router)
 api_router.include_router(app_releases_router)

@@ -5086,6 +5086,83 @@
     "title": "HTTPValidationError",
     "type": "object"
    },
+   "HomeSummary": {
+    "description": "Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null.",
+    "properties": {
+     "attendance_to_review": {
+      "default": 0,
+      "description": "Absensi berstatus perlu review",
+      "minimum": 0.0,
+      "title": "Attendance To Review",
+      "type": "integer"
+     },
+     "corrections_to_review": {
+      "default": 0,
+      "description": "Koreksi laporan harian menunggu tinjauan",
+      "minimum": 0.0,
+      "title": "Corrections To Review",
+      "type": "integer"
+     },
+     "leaves_to_review": {
+      "default": 0,
+      "description": "Cuti menunggu keputusan pengguna",
+      "minimum": 0.0,
+      "title": "Leaves To Review",
+      "type": "integer"
+     },
+     "loan_requests_to_review": {
+      "default": 0,
+      "description": "Pengajuan pinjam aset menunggu",
+      "minimum": 0.0,
+      "title": "Loan Requests To Review",
+      "type": "integer"
+     },
+     "mess_to_review": {
+      "default": 0,
+      "description": "Pengajuan hunian mess menunggu",
+      "minimum": 0.0,
+      "title": "Mess To Review",
+      "type": "integer"
+     },
+     "my_leaves_pending": {
+      "default": 0,
+      "description": "Cuti milik sendiri yang belum diputuskan",
+      "minimum": 0.0,
+      "title": "My Leaves Pending",
+      "type": "integer"
+     },
+     "notifications_unread": {
+      "default": 0,
+      "description": "Notifikasi belum dibaca",
+      "minimum": 0.0,
+      "title": "Notifications Unread",
+      "type": "integer"
+     },
+     "offboarding_open": {
+      "default": 0,
+      "description": "Proses offboarding yang belum selesai",
+      "minimum": 0.0,
+      "title": "Offboarding Open",
+      "type": "integer"
+     },
+     "overtime_to_review": {
+      "default": 0,
+      "description": "Lembur menunggu PM",
+      "minimum": 0.0,
+      "title": "Overtime To Review",
+      "type": "integer"
+     },
+     "total_to_review": {
+      "default": 0,
+      "description": "Jumlah semua yang menunggu tindakan pengguna",
+      "minimum": 0.0,
+      "title": "Total To Review",
+      "type": "integer"
+     }
+    },
+    "title": "HomeSummary",
+    "type": "object"
+   },
    "ImageRequirementCreate": {
     "properties": {
      "description": {
@@ -19874,6 +19951,33 @@
     "summary": "Get File Url",
     "tags": [
      "Files"
+    ]
+   }
+  },
+  "/api/v1/home/summary": {
+   "get": {
+    "description": "Jumlah pekerjaan yang menunggu tindakan pengguna (cuti, absensi, lembur, mess, aset, koreksi, offboarding).",
+    "operationId": "home_summary_api_v1_home_summary_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HomeSummary"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ringkasan Beranda sesuai peran",
+    "tags": [
+     "Home"
     ]
    }
   },

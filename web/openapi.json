@@ -13639,6 +13639,33 @@
     }
    }
   },
+  "/api/v1/home/summary": {
+   "get": {
+    "tags": [
+     "Home"
+    ],
+    "summary": "Ringkasan Beranda sesuai peran",
+    "description": "Jumlah pekerjaan yang menunggu tindakan pengguna (cuti, absensi, lembur, mess, aset, koreksi, offboarding).",
+    "operationId": "home_summary_api_v1_home_summary_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HomeSummary"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/events": {
    "get": {
     "tags": [
@@ -19428,6 +19455,83 @@
     },
     "type": "object",
     "title": "HTTPValidationError"
+   },
+   "HomeSummary": {
+    "properties": {
+     "leaves_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Leaves To Review",
+      "description": "Cuti menunggu keputusan pengguna",
+      "default": 0
+     },
+     "attendance_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Attendance To Review",
+      "description": "Absensi berstatus perlu review",
+      "default": 0
+     },
+     "overtime_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Overtime To Review",
+      "description": "Lembur menunggu PM",
+      "default": 0
+     },
+     "mess_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Mess To Review",
+      "description": "Pengajuan hunian mess menunggu",
+      "default": 0
+     },
+     "loan_requests_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Loan Requests To Review",
+      "description": "Pengajuan pinjam aset menunggu",
+      "default": 0
+     },
+     "corrections_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Corrections To Review",
+      "description": "Koreksi laporan harian menunggu tinjauan",
+      "default": 0
+     },
+     "offboarding_open": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Offboarding Open",
+      "description": "Proses offboarding yang belum selesai",
+      "default": 0
+     },
+     "my_leaves_pending": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "My Leaves Pending",
+      "description": "Cuti milik sendiri yang belum diputuskan",
+      "default": 0
+     },
+     "notifications_unread": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Notifications Unread",
+      "description": "Notifikasi belum dibaca",
+      "default": 0
+     },
+     "total_to_review": {
+      "type": "integer",
+      "minimum": 0.0,
+      "title": "Total To Review",
+      "description": "Jumlah semua yang menunggu tindakan pengguna",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "title": "HomeSummary",
+    "description": "Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null."
    },
    "ImageRequirementCreate": {
     "properties": {

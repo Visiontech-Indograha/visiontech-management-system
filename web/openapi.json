@@ -15340,6 +15340,7 @@
       "type": "string",
       "maxLength": 30,
       "minLength": 2,
+      "pattern": "^[A-Za-z0-9_-]+$",
       "title": "Client Code"
      },
      "name": {
@@ -15364,7 +15365,9 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 30
+        "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$"
        },
        {
         "type": "null"
@@ -15466,7 +15469,8 @@
        {
         "type": "string",
         "maxLength": 30,
-        "minLength": 2
+        "minLength": 2,
+        "pattern": "^[A-Za-z0-9_-]+$"
        },
        {
         "type": "null"
@@ -15503,7 +15507,9 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 30
+        "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$"
        },
        {
         "type": "null"

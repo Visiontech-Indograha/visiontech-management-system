@@ -21,7 +21,7 @@ export function ProjectFormDialog({
 }) {
   const save = useSaveProject(project?.project_id);
   const { me } = useSession();
-  const { data: clients } = useClients(true);
+  const { data: clients, isSuccess: clientsLoaded } = useClients(true);
   const { data: offices } = useOffices();
   const { data: divisions } = useUserDivisions();
 
@@ -146,6 +146,11 @@ export function ProjectFormDialog({
             ))}
           </SelectField>
         </div>
+        {clientsLoaded && (clients ?? []).length === 0 && (
+          <TextBlock className="text-xs text-warning">
+            Belum ada klien terdaftar. Tambahkan dulu di tab “Master Klien”.
+          </TextBlock>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <TextField

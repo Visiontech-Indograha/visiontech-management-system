@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -39,6 +40,13 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
   Map<String, dynamic>? _balance;
   bool _loading = true;
   String? _error;
+  final _query = ListQuery();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   String get _employeeId {
     final s = ref.read(authControllerProvider);
@@ -148,7 +156,43 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
                 padding: EdgeInsets.all(32),
                 child: Center(child: Text('Belum ada pengajuan cuti.')),
               ),
-            for (final l in _items) _leaveCard(l),
+            if (_items.isNotEmpty) ...[
+              VmsSearchBar(
+                query: _query,
+                hint: 'Cari alasan, jenis, atau status...',
+                chips: const [
+                  VmsFilterOption('', 'Semua'),
+                  VmsFilterOption('wait', 'Menunggu'),
+                  VmsFilterOption('ok', 'Disetujui'),
+                  VmsFilterOption('no', 'Ditolak/Batal'),
+                ],
+              ),
+              ListenableBuilder(
+                listenable: _query,
+                builder: (context, _) {
+                  final all = _query.filter<Map<String, dynamic>>(
+                    _items,
+                    (l) => [l['reason'], l['leave_type'], leaveStatusLabel('${l['status']}'), l['start_date']],
+                    chipTest: (l, chip) {
+                      final st = '${l['status']}';
+                      return switch (chip) {
+                        'wait' => st == 'PENDING' || st == 'APPROVED_BY_PM',
+                        'ok' => st == 'APPROVED_BY_HR' || st == 'APPROVED_BY_FINANCE',
+                        'no' => st == 'REJECTED' || st == 'CANCELLED',
+                        _ => true,
+                      };
+                    },
+                  );
+                  return Column(
+                    children: [
+                      if (all.isEmpty) VmsNoMatch(query: _query),
+                      for (final l in _query.visible(all)) _leaveCard(l),
+                      VmsLoadMore(query: _query, total: all.length, noun: 'pengajuan'),
+                    ],
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

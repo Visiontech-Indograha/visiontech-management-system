@@ -6,6 +6,7 @@ import '../../core/error_message.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 
@@ -256,10 +257,23 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
   List<Map<String, dynamic>> _assets = [];
   bool _loadingAssets = true;
   String? _error;
+  final _query = ListQuery(pageSize: 40);
+
+  List<Map<String, dynamic>> get _filtered =>
+      _query.filter<Map<String, dynamic>>(_assets, (a) => [a['name'], a['tool_code'], a['number_plate'], a['office_name']]);
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _query.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadAssets();
   }
 
@@ -329,10 +343,12 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
               selected: {_kind},
               onSelectionChanged: (s) {
                 setState(() => _kind = s.first);
+                _query.reset();
                 _loadAssets();
               },
             ),
             const SizedBox(height: 12),
+            VmsSearchBar(query: _query, hint: 'Cari nama, kode, atau plat nomor...'),
             Expanded(
               child: _loadingAssets
                   ? const Center(child: CircularProgressIndicator())
@@ -356,14 +372,17 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
                             crossAxisSpacing: 12,
                             childAspectRatio: 0.82,
                           ),
-                      itemCount: _assets.length,
-                      itemBuilder: (_, i) => _AssetCard(
-                        asset: _assets[i],
-                        kind: _kind,
-                        onTap: () => _open(_assets[i]),
-                      ),
+                      itemCount: _query.visible(_filtered).length,
+                      itemBuilder: (_, i) {
+                        final a = _query.visible(_filtered)[i];
+                        return _AssetCard(asset: a, kind: _kind, onTap: () => _open(a));
+                      },
                     ),
             ),
+            if (!_loadingAssets && _assets.isNotEmpty)
+              _filtered.isEmpty
+                  ? VmsNoMatch(query: _query)
+                  : VmsLoadMore(query: _query, total: _filtered.length, noun: 'aset'),
           ],
         ),
       ),

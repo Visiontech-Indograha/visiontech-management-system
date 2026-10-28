@@ -7,6 +7,7 @@ import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/l
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
@@ -111,6 +112,9 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   }}
                 />
               </div>
+              {a.selfie_file_id && (a.can_review || a.employee_id === meEmployeeId) && (
+                <PhotoStrip photos={[{ file_id: a.selfie_file_id }]} alt="Swafoto absen" />
+              )}
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
                   {a.can_review ? (

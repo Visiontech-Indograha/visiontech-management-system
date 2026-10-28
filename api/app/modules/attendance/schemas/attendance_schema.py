@@ -224,6 +224,7 @@ class MyRecapItem(BaseModel):
     is_pending: bool
     meal_allowance_amount: float = 0
     city_zone: str | None = None
+    selfie_file_id: UUID | None = None
 
 
 class MyRecapResponse(BaseModel):

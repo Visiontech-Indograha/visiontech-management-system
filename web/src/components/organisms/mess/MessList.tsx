@@ -6,11 +6,12 @@ import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
 import { formatDate } from "@/lib/format";
 import { wibDate } from "@/services/dailyPlanService";
-import { CalendarClock, LogOut, MapPin } from "@/components/molecules/Glyphs";
+import { LogOut, MapPin } from "@/components/molecules/Glyphs";
 
 export function MessList({
   stays,
@@ -54,11 +55,7 @@ export function MessList({
               key={s.mess_stay_id}
               className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4"
             >
-              <CalendarClock
-                className="mt-0.5 shrink-0 text-primary"
-                size={20}
-                aria-hidden
-              />
+              <UserAvatar name={s.employee_name} fileId={s.employee_photo_file_id} size="sm" />
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <TextBlock className="font-semibold text-ink">

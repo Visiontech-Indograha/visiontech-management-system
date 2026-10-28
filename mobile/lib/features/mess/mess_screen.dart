@@ -88,6 +88,26 @@ class _MessScreenState extends ConsumerState<MessScreen> {
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// "Ajukan lagi": buka dialog tanggal untuk mess yang sama, catatan sebelumnya terisi (bisa diubah).
+  Future<void> _repeat(Map<String, dynamic> stay) async {
+    try {
+      final places = await ref.read(syncEngineProvider).api.messPlaces();
+      final place = places.where((p) => p['id'] == stay['mess_id']).firstOrNull;
+      if (place == null) return _snack('Mess ini sudah tidak tersedia. Pilih mess lain lewat "Ajukan mess".');
+      if (!mounted) return;
+      final sent = await showDialog<bool>(
+        context: context,
+        builder: (_) => _RequestDialog(place: place, initialNote: stay['request_note'] as String?),
+      );
+      if (sent == true) {
+        _snack('Pengajuan terkirim. Menunggu persetujuan PM/OM.');
+        await _reload();
+      }
+    } catch (e) {
+      _snack(apiErrorMessage(e));
+    }
+  }
+
   Future<void> _newRequest() async {
     final sent = await showModalBottomSheet<bool>(
       context: context,
@@ -201,6 +221,7 @@ class _MessScreenState extends ConsumerState<MessScreen> {
                             action: messStayAction(s, now),
                             onCancel: () => _cancel(s),
                             onEnd: () => _end(s),
+                            onRepeat: s['mess_id'] == null || s['status'] == 'REQUESTED' ? null : () => _repeat(s),
                           ),
                         ),
                       VmsLoadMore(query: _query, total: all.length, noun: 'hunian'),
@@ -217,11 +238,18 @@ class _MessScreenState extends ConsumerState<MessScreen> {
 }
 
 class _StayCard extends StatelessWidget {
-  const _StayCard({required this.stay, required this.action, required this.onCancel, required this.onEnd});
+  const _StayCard({
+    required this.stay,
+    required this.action,
+    required this.onCancel,
+    required this.onEnd,
+    this.onRepeat,
+  });
   final Map<String, dynamic> stay;
   final String? action;
   final VoidCallback onCancel;
   final VoidCallback onEnd;
+  final VoidCallback? onRepeat;
 
   @override
   Widget build(BuildContext context) {
@@ -271,6 +299,15 @@ class _StayCard extends StatelessWidget {
               ),
             ),
           ],
+          if (onRepeat != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onRepeat,
+                icon: const Icon(Icons.replay_rounded, size: 18),
+                label: const Text('Ajukan lagi'),
+              ),
+            ),
         ],
       ),
     );
@@ -431,15 +468,16 @@ class _PlaceCard extends StatelessWidget {
 }
 
 class _RequestDialog extends ConsumerStatefulWidget {
-  const _RequestDialog({required this.place});
+  const _RequestDialog({required this.place, this.initialNote});
   final Map<String, dynamic> place;
+  final String? initialNote;
 
   @override
   ConsumerState<_RequestDialog> createState() => _RequestDialogState();
 }
 
 class _RequestDialogState extends ConsumerState<_RequestDialog> {
-  final _note = TextEditingController();
+  late final _note = TextEditingController(text: widget.initialNote);
   DateTimeRange? _range;
   bool _busy = false;
   String? _error;

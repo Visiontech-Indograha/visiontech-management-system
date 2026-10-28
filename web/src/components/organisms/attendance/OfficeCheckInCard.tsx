@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useSession } from "@/stores/sessionStore";
@@ -134,6 +134,35 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   const [selfieFor, setSelfieFor] = useState<{ pos: BrowserPosition; siteName: string; info: string } | null>(null);
   // Bawaan: lokasi yang namanya memuat "kantor", selain itu lokasi pertama; pilihan pengguna didahulukan.
   const siteId = picked || (sites.data?.find((s) => /kantor/i.test(s.name)) ?? sites.data?.[0])?.id || "";
+
+  // Otomatis: bila izin lokasi SUDAH diberikan, pilih lokasi kerja terdekat (tanpa memunculkan permintaan izin).
+  useEffect(() => {
+    const list = sites.data;
+    if (picked || !list?.length || !("geolocation" in navigator) || !navigator.permissions) return;
+    let cancelled = false;
+    void navigator.permissions
+      .query({ name: "geolocation" })
+      .then((st) => {
+        if (st.state !== "granted" || cancelled) return;
+        navigator.geolocation.getCurrentPosition(
+          (p) => {
+            if (cancelled) return;
+            const here = { lat: p.coords.latitude, lng: p.coords.longitude };
+            const nearest = list
+              .filter((x) => x.location)
+              .map((x) => ({ id: x.id, d: distanceM(here, x.location) }))
+              .sort((x, y) => x.d - y.d)[0];
+            if (nearest) setPicked(nearest.id);
+          },
+          () => undefined,
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 },
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [sites.data, picked]);
 
   const rec = today.data?.rec ?? null;
   const rejected = today.data?.rejected ?? [];

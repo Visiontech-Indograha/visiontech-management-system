@@ -1,4 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { formatDate } from "@/lib/format";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
@@ -7,16 +9,11 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { Calendar, CheckCircle2, Clock, XCircle } from "@/components/molecules/Glyphs";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { lastPageOf, type Paged } from "@/lib/paged";
 import { LeaveApplyButton } from "./LeaveApplyButton";
-import type { LeaveRequest } from "@/services/leaveService";
-
-const LEAVE_TYPE_LABEL: Record<string, string> = {
-  ANNUAL: "Cuti Tahunan",
-  SICK: "Izin Sakit",
-  MATERNITY: "Cuti Melahirkan",
-  UNPAID: "Cuti di Luar Tanggungan",
-  OTHER: "Izin Khusus",
-};
+import { LEAVE_TYPE_LABEL, type LeaveRequest } from "@/services/leaveService";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Menunggu Persetujuan", className: "bg-amber-500/15 text-amber-600 font-medium" },
@@ -31,20 +28,40 @@ export function LeaveList({
   leaves,
   statusFilter,
   onStatusFilterChange,
+  q,
+  onQChange,
+  page,
+  onPageChange,
+  filtersActive,
+  onResetFilters,
   canReview,
+  canFinalReview,
   onApply,
   onReview,
 }: {
-  leaves: UseQueryResult<LeaveRequest[]>;
+  leaves: UseQueryResult<Paged<LeaveRequest>>;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
+  q: string;
+  onQChange: (q: string) => void;
+  page: number;
+  onPageChange: (page: number) => void;
+  filtersActive: boolean;
+  onResetFilters: () => void;
   canReview: boolean;
+  canFinalReview: boolean;
   onApply: () => void;
   onReview: (leave: LeaveRequest) => void;
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <ListToolbar
+        value={q}
+        onChange={onQChange}
+        placeholder="Cari nama, NIP, divisi, atau alasan..."
+        active={filtersActive}
+        onReset={onResetFilters}
+      >
         <div className="w-full sm:w-60">
           <SelectField
             label=""
@@ -59,7 +76,7 @@ export function LeaveList({
             <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
           </SelectField>
         </div>
-      </div>
+      </ListToolbar>
 
       {leaves.isPending && (
         <div aria-hidden className="grid gap-3 md:grid-cols-2">
@@ -75,22 +92,22 @@ export function LeaveList({
         />
       )}
 
-      {leaves.data?.length === 0 && (
+      {leaves.data?.items.length === 0 && (
         <div className="rounded-panel border border-line bg-surface p-8 text-center shadow-card">
           <Calendar className="mx-auto mb-3 text-mist" size={36} />
-          <TextBlock className="mb-2 font-medium">Belum ada riwayat permohonan cuti</TextBlock>
+          <TextBlock className="mb-2 font-medium">{filtersActive ? "Tidak ada hasil" : "Belum ada riwayat permohonan cuti"}</TextBlock>
           <TextBlock className="mb-4 text-sm text-mist">
-            {statusFilter
-              ? "Tidak ada permohonan cuti dengan status ini."
+            {filtersActive
+              ? "Tidak ada permohonan cuti yang cocok dengan pencarian atau filter."
               : "Ajukan permohonan cuti tahunan atau izin sakit saat berhalangan hadir."}
           </TextBlock>
-          {!statusFilter && <LeaveApplyButton onApply={onApply} />}
+          {!filtersActive && <LeaveApplyButton onApply={onApply} />}
         </div>
       )}
 
-      {leaves.data && leaves.data.length > 0 && (
+      {leaves.data && leaves.data.items.length > 0 && (
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {leaves.data.map((l) => {
+          {leaves.data.items.map((l) => {
             const statusBadge = STATUS_BADGE[l.status] ?? {
               label: l.status,
               className: "bg-hover text-mist",
@@ -113,7 +130,10 @@ export function LeaveList({
                           {statusBadge.label}
                         </TextBlock>
                       </div>
-                      <TextBlock className="font-semibold text-foreground mt-1.5">{l.employee_name}</TextBlock>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <UserAvatar name={l.employee_name} fileId={l.employee_photo_file_id} size="sm" />
+                        <TextBlock className="font-semibold text-foreground">{l.employee_name}</TextBlock>
+                      </div>
                       {l.division_name && (
                         <TextBlock as="span" className="text-xs text-mist">{l.division_name}</TextBlock>
                       )}
@@ -124,7 +144,7 @@ export function LeaveList({
                     <div className="flex items-center gap-1.5">
                       <Clock size={13} className="shrink-0" />
                       <TextBlock as="span">
-                        {String(l.start_date).slice(0, 10)} s/d {String(l.end_date).slice(0, 10)} (
+                        {formatDate(String(l.start_date))} s/d {formatDate(String(l.end_date))} (
                         <TextBlock as="strong" className="text-foreground">{l.total_days} hari</TextBlock>)
                       </TextBlock>
                     </div>
@@ -153,9 +173,9 @@ export function LeaveList({
 
                 <div className="mt-4 pt-3 border-t border-line flex items-center justify-between text-xs">
                   <TextBlock as="span" className="text-mist">
-                    Diajukan {String(l.create_at).slice(0, 10)}
+                    Diajukan {formatDate(String(l.create_at))}
                   </TextBlock>
-                  {canReview && isPending && (
+                  {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
                     <ActionButton
                       variant="outline"
                       size="sm"
@@ -170,6 +190,17 @@ export function LeaveList({
             );
           })}
         </ListBlock>
+      )}
+
+      {leaves.data && leaves.data.total > 0 && (
+        <ListPagination
+          total={leaves.data.total}
+          noun="pengajuan"
+          page={page}
+          shownPage={page}
+          lastPage={lastPageOf(leaves.data)}
+          onPageChange={onPageChange}
+        />
       )}
     </div>
   );

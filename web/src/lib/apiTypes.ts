@@ -734,6 +734,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/teams/{team_id}/weekly-presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Team Weekly Presentation
+         * @description Rekapitulasi presentasi laporan harian selama satu minggu untuk setiap tim pada pertemuan hari Sabtu.
+         */
+        get: operations["get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Correction Inbox
+         * @description Daftar koreksi laporan: PM/OM divisinya, ketua tim yang diajukannya, admin semua.
+         */
+        get: operations["correction_inbox_api_v1_work_plans_corrections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/{daily_plan_id}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan Corrections
+         * @description Riwayat koreksi laporan satu jadwal harian.
+         */
+        get: operations["plan_corrections_api_v1_work_plans_daily__daily_plan_id__corrections_get"];
+        put?: never;
+        /**
+         * Request Correction
+         * @description Ketua tim meminta koreksi laporan jadwal yang sudah COMPLETED.
+         */
+        post: operations["request_correction_api_v1_work_plans_daily__daily_plan_id__corrections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/corrections/{correction_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Correction
+         * @description PM/OM divisi: setujui/tolak permintaan, atau terima/kembalikan hasil revisi.
+         */
+        post: operations["decide_correction_api_v1_work_plans_corrections__correction_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/corrections/{correction_id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Revision
+         * @description Ketua tim mengirim revisi untuk diperiksa PM.
+         */
+        post: operations["submit_revision_api_v1_work_plans_corrections__correction_id__submit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/{daily_plan_id}/items": {
         parameters: {
             query?: never;
@@ -1375,6 +1479,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mess/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Places
+         * @description Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login.
+         */
+        get: operations["list_places_api_v1_mess_places_get"];
+        put?: never;
+        /**
+         * Create Place
+         * @description Menambah mess ke daftar master.
+         */
+        post: operations["create_place_api_v1_mess_places_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/places/{mess_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Place
+         * @description Memperbarui data mess di master.
+         */
+        put: operations["update_place_api_v1_mess_places__mess_id__put"];
+        post?: never;
+        /**
+         * Delete Place
+         * @description Menghapus mess dari daftar (ditolak bila masih dihuni / ada pengajuan aktif).
+         */
+        delete: operations["delete_place_api_v1_mess_places__mess_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mess": {
         parameters: {
             query?: never;
@@ -1384,15 +1536,55 @@ export interface paths {
         };
         /**
          * List Stays
-         * @description Mengambil daftar riwayat dan jadwal hunian mess karyawan.
+         * @description Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan.
          */
         get: operations["list_stays_api_v1_mess_get"];
         put?: never;
         /**
          * Create Stay
-         * @description Mencatat hunian mess karyawan baru.
+         * @description HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
          */
         post: operations["create_stay_api_v1_mess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Stays
+         * @description Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).
+         */
+        get: operations["my_stays_api_v1_mess_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Stay
+         * @description Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+         */
+        post: operations["request_stay_api_v1_mess_requests_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1413,7 +1605,7 @@ export interface paths {
         get: operations["get_stay_api_v1_mess__mess_stay_id__get"];
         /**
          * Update Stay
-         * @description Memperbarui informasi hunian mess karyawan.
+         * @description Mengubah periode hunian.
          */
         put: operations["update_stay_api_v1_mess__mess_stay_id__put"];
         post?: never;
@@ -1422,6 +1614,190 @@ export interface paths {
          * @description Menghapus data hunian mess karyawan.
          */
         delete: operations["delete_stay_api_v1_mess__mess_stay_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide Stay
+         * @description PM divisi / OM / HR menyetujui atau menolak pengajuan hunian (penolakan wajib beralasan).
+         */
+        post: operations["decide_stay_api_v1_mess__mess_stay_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Stay
+         * @description Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai.
+         */
+        post: operations["cancel_stay_api_v1_mess__mess_stay_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Stay
+         * @description Penghuni (atau HR/GA) menyelesaikan hunian yang sedang berjalan; riwayat tetap tersimpan.
+         */
+        post: operations["end_stay_api_v1_mess__mess_stay_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leaves
+         * @description Mengambil riwayat atau daftar permohonan cuti. Cari `q`: nama, NIP, divisi, alasan.
+         */
+        get: operations["list_leaves_api_v1_leaves_get"];
+        put?: never;
+        /**
+         * Apply Leave
+         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).
+         */
+        post: operations["apply_leave_api_v1_leaves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/balances/{employee_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Leave Balance
+         * @description Mengambil kuota dan sisa cuti tahunan karyawan.
+         */
+        get: operations["get_leave_balance_api_v1_leaves_balances__employee_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Leave Types
+         * @description Daftar jenis cuti beserta keterangan pemakaian kuota.
+         */
+        get: operations["list_leave_types_api_v1_leaves_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/{leave_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Leave
+         * @description Detail permohonan cuti.
+         */
+        get: operations["get_leave_api_v1_leaves__leave_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/{leave_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Leave
+         * @description Persetujuan atau penolakan cuti oleh PM atau HR/OM/Super Admin.
+         */
+        post: operations["review_leave_api_v1_leaves__leave_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/leaves/{leave_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Leave
+         * @description Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).
+         */
+        post: operations["cancel_leave_api_v1_leaves__leave_id__cancel_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2026,6 +2402,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/employees/next-no": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usulan nomor karyawan berikutnya
+         * @description Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya.
+         */
+        get: operations["next_employee_no_api_v1_employees_next_no_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/employees/{employee_id}": {
         parameters: {
             query?: never;
@@ -2049,6 +2445,26 @@ export interface paths {
          * @description Hapus permanen karyawan beserta akun loginnya — hanya SUPER_ADMIN, dan hanya yang sudah diarsipkan.
          */
         delete: operations["delete_employee_api_v1_employees__employee_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/me/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set My Photo
+         * @description Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini.
+         */
+        put: operations["set_my_photo_api_v1_employees_me_photo_put"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2693,6 +3109,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/me/recap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Recap
+         * @description Rekap absensi bulanan milik sendiri: hadir, terlambat, pulang awal, uang makan.
+         */
+        get: operations["my_recap_api_v1_attendance_me_recap_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/face/policy": {
         parameters: {
             query?: never;
@@ -3063,6 +3499,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/loan-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Loan Requests
+         * @description Pengajuan pinjam aset. Pengelola aset melihat semua; karyawan hanya miliknya.
+         */
+        get: operations["list_loan_requests_api_v1_assets_loan_requests_get"];
+        put?: never;
+        /**
+         * Request Loan
+         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.
+         */
+        post: operations["request_loan_api_v1_assets_loan_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/loan-requests/{request_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Loan Request
+         * @description Pemohon membatalkan pengajuan yang masih menunggu.
+         */
+        post: operations["cancel_loan_request_api_v1_assets_loan_requests__request_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/loan-requests/{request_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Loan Request
+         * @description HR/GA menyetujui (langsung serah terima) atau menolak pengajuan.
+         */
+        post: operations["review_loan_request_api_v1_assets_loan_requests__request_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/loans/{assignment_id}/return-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Return
+         * @description Pemegang aset mengajukan pengembalian dengan kondisi dan foto; pengelola yang mengonfirmasi.
+         */
+        post: operations["request_return_api_v1_assets_loans__assignment_id__return_request_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/{daily_plan_id}/assets": {
         parameters: {
             query?: never;
@@ -3234,6 +3754,26 @@ export interface paths {
          *     Return: Jumlah notifikasi yang berhasil diperbarui (idealnya 1)
          */
         post: operations["read_one_api_v1_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/home/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ringkasan Beranda sesuai peran
+         * @description Jumlah pekerjaan yang menunggu tindakan pengguna (cuti, absensi, lembur, mess, aset, koreksi, offboarding).
+         */
+        get: operations["home_summary_api_v1_home_summary_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3736,6 +4276,8 @@ export interface components {
             review_note?: string | null;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Can Review
              * @default false
@@ -3911,6 +4453,8 @@ export interface components {
             division_id?: string | null;
             /** Photo File Id */
             photo_file_id?: string | null;
+            /** Full Name */
+            full_name?: string | null;
         };
         /** BackupCreate */
         BackupCreate: {
@@ -4067,7 +4611,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
             /** Target Qty */
             target_qty: string;
             /** Completed Qty */
@@ -4245,6 +4789,71 @@ export interface components {
              * @enum {string}
              */
             template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES";
+        };
+        /** CorrectionCreate */
+        CorrectionCreate: {
+            /** Reason */
+            reason: string;
+        };
+        /**
+         * CorrectionDecide
+         * @description APPROVE/REJECT untuk permintaan awal; ACCEPT/RETURN untuk hasil revisi. Menolak/mengembalikan wajib catatan.
+         */
+        CorrectionDecide: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVE" | "REJECT" | "ACCEPT" | "RETURN";
+            /** Note */
+            note?: string | null;
+        };
+        /** CorrectionOut */
+        CorrectionOut: {
+            /**
+             * Correction Id
+             * Format: uuid
+             */
+            correction_id: string;
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Site Name */
+            site_name: string;
+            /** Team Name */
+            team_name: string;
+            /**
+             * Requested By Id
+             * Format: uuid
+             */
+            requested_by_id: string;
+            /** Requested By Name */
+            requested_by_name: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "REQUESTED" | "REVISING" | "IN_REVIEW" | "ACCEPTED" | "REJECTED";
+            /** Review Note */
+            review_note?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Revision Count */
+            revision_count: number;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
         };
         /** DailyFormOptions */
         DailyFormOptions: {
@@ -5228,6 +5837,72 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * HomeSummary
+         * @description Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null.
+         */
+        HomeSummary: {
+            /**
+             * Leaves To Review
+             * @description Cuti menunggu keputusan pengguna
+             * @default 0
+             */
+            leaves_to_review: number;
+            /**
+             * Attendance To Review
+             * @description Absensi berstatus perlu review
+             * @default 0
+             */
+            attendance_to_review: number;
+            /**
+             * Overtime To Review
+             * @description Lembur menunggu PM
+             * @default 0
+             */
+            overtime_to_review: number;
+            /**
+             * Mess To Review
+             * @description Pengajuan hunian mess menunggu
+             * @default 0
+             */
+            mess_to_review: number;
+            /**
+             * Loan Requests To Review
+             * @description Pengajuan pinjam aset menunggu
+             * @default 0
+             */
+            loan_requests_to_review: number;
+            /**
+             * Corrections To Review
+             * @description Koreksi laporan harian menunggu tinjauan
+             * @default 0
+             */
+            corrections_to_review: number;
+            /**
+             * Offboarding Open
+             * @description Proses offboarding yang belum selesai
+             * @default 0
+             */
+            offboarding_open: number;
+            /**
+             * My Leaves Pending
+             * @description Cuti milik sendiri yang belum diputuskan
+             * @default 0
+             */
+            my_leaves_pending: number;
+            /**
+             * Notifications Unread
+             * @description Notifikasi belum dibaca
+             * @default 0
+             */
+            notifications_unread: number;
+            /**
+             * Total To Review
+             * @description Jumlah semua yang menunggu tindakan pengguna
+             * @default 0
+             */
+            total_to_review: number;
+        };
         /** ImageRequirementCreate */
         ImageRequirementCreate: {
             /**
@@ -5420,6 +6095,135 @@ export interface components {
             /** Status */
             status?: boolean | null;
         };
+        /** LeaveBalanceResponse */
+        LeaveBalanceResponse: {
+            /**
+             * Balance Id
+             * Format: uuid
+             */
+            balance_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
+            /** Period Year */
+            period_year: number;
+            /** Total Quota */
+            total_quota: number;
+            /** Used Quota */
+            used_quota: number;
+            /** Remaining Quota */
+            remaining_quota: number;
+        };
+        /** LeaveCreate */
+        LeaveCreate: {
+            /** Employee Id */
+            employee_id?: string | null;
+            /**
+             * Leave Type
+             * @enum {string}
+             */
+            leave_type: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Reason */
+            reason: string;
+            /** Attachment File Id */
+            attachment_file_id?: string | null;
+        };
+        /** LeaveResponse */
+        LeaveResponse: {
+            /**
+             * Leave Id
+             * Format: uuid
+             */
+            leave_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
+            /** Employee No */
+            employee_no?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Leave Type
+             * @enum {string}
+             */
+            leave_type: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            /** Total Days */
+            total_days: number;
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED_BY_PM" | "APPROVED_BY_HR" | "APPROVED_BY_FINANCE" | "REJECTED" | "CANCELLED";
+            /** Attachment Path */
+            attachment_path?: string | null;
+            /** Reviewed By Name */
+            reviewed_by_name?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Rejection Note */
+            rejection_note?: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** LeaveReview */
+        LeaveReview: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED";
+            /** Note */
+            note?: string | null;
+        };
+        /** LeaveTypeOption */
+        LeaveTypeOption: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
+            /** Label */
+            label: string;
+            /** Uses Quota */
+            uses_quota: boolean;
+        };
         /**
          * LineEditIn
          * @description Ubah satu baris BoM (ketua tim saat draf, PM saat meninjau).
@@ -5517,6 +6321,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Work Date */
@@ -5535,6 +6341,94 @@ export interface components {
             returned_at?: string | null;
             /** Handover File Id */
             handover_file_id?: string | null;
+            /** Return Requested At */
+            return_requested_at?: string | null;
+            /** Return Condition */
+            return_condition?: ("ready" | "damaged" | "lost") | null;
+            /** Return Note */
+            return_note?: string | null;
+            /** Return File Id */
+            return_file_id?: string | null;
+        };
+        /**
+         * LoanRequestCreate
+         * @description Karyawan mengajukan pinjam aset; employee_id selalu diambil dari akun yang login.
+         */
+        LoanRequestCreate: {
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /** Tool Id */
+            tool_id?: string | null;
+            /** Vehicle Id */
+            vehicle_id?: string | null;
+            /** Purpose */
+            purpose: string;
+            /** Needed On */
+            needed_on?: string | null;
+        };
+        /** LoanRequestOut */
+        LoanRequestOut: {
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Asset Name */
+            asset_name: string;
+            /** Asset Code */
+            asset_code: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
+            /** Purpose */
+            purpose: string;
+            /** Needed On */
+            needed_on?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+            /** Review Note */
+            review_note?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+            /** Assignment Id */
+            assignment_id?: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** LoanRequestReview */
+        LoanRequestReview: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "APPROVED" | "REJECTED";
+            /** Note */
+            note?: string | null;
         };
         /** LoanReturn */
         LoanReturn: {
@@ -5544,6 +6438,25 @@ export interface components {
              * @enum {string}
              */
             condition: "ready" | "damaged" | "lost";
+        };
+        /**
+         * LoanReturnRequest
+         * @description Pengajuan pengembalian oleh pemegang aset: kondisi, catatan, dan foto kondisi.
+         */
+        LoanReturnRequest: {
+            /**
+             * Condition
+             * @default ready
+             * @enum {string}
+             */
+            condition: "ready" | "damaged" | "lost";
+            /** Note */
+            note?: string | null;
+            /**
+             * Photo File Id
+             * Format: uuid
+             */
+            photo_file_id: string;
         };
         /**
          * MealAllowanceRow
@@ -5601,6 +6514,8 @@ export interface components {
             phone_number?: string | null;
             /** System Role */
             system_role?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
             /** Is Active */
             is_active: boolean;
             /**
@@ -5609,8 +6524,15 @@ export interface components {
              */
             create_at: string;
         };
-        /** MessStayCreate */
-        MessStayCreate: {
+        /** MessDecision */
+        MessDecision: {
+            /** Approve */
+            approve: boolean;
+            /** Note */
+            note?: string | null;
+        };
+        /** MessPlaceIn */
+        MessPlaceIn: {
             /** Mess Name */
             mess_name: string;
             /** City */
@@ -5618,14 +6540,70 @@ export interface components {
             /** Address */
             address: string;
             /** Latitude */
-            latitude: number | string;
+            latitude?: number | string | null;
             /** Longitude */
-            longitude: number | string;
+            longitude?: number | string | null;
+            /**
+             * Capacity
+             * @description Jumlah penghuni maksimum; kosong = tak dibatasi
+             */
+            capacity?: number | null;
+        };
+        /** MessPlaceOut */
+        MessPlaceOut: {
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
+            /** Mess Name */
+            mess_name: string;
+            /** City */
+            city: string;
+            /** Address */
+            address: string;
+            /** Latitude */
+            latitude?: string | null;
+            /** Longitude */
+            longitude?: string | null;
+            /** Capacity */
+            capacity?: number | null;
+            /**
+             * Occupied
+             * @default 0
+             */
+            occupied: number;
+        };
+        /** MessPlaceUpdate */
+        MessPlaceUpdate: {
+            /** Mess Name */
+            mess_name?: string | null;
+            /** City */
+            city?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Latitude */
+            latitude?: number | string | null;
+            /** Longitude */
+            longitude?: number | string | null;
+            /** Capacity */
+            capacity?: number | null;
+        };
+        /**
+         * MessStayCreate
+         * @description Pencatatan langsung oleh HR/GA: karyawan + mess dari master, langsung disetujui.
+         */
+        MessStayCreate: {
             /**
              * Employee Id
              * Format: uuid
              */
             employee_id: string;
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
             /**
              * Stay Start Date
              * Format: date
@@ -5644,6 +6622,8 @@ export interface components {
              * Format: uuid
              */
             mess_stay_id: string;
+            /** Mess Id */
+            mess_id?: string | null;
             /** Mess Name */
             mess_name: string;
             /** City */
@@ -5651,9 +6631,9 @@ export interface components {
             /** Address */
             address: string;
             /** Latitude */
-            latitude: string;
+            latitude?: string | null;
             /** Longitude */
-            longitude: string;
+            longitude?: string | null;
             /**
              * Employee Id
              * Format: uuid
@@ -5661,6 +6641,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /**
@@ -5674,23 +6656,47 @@ export interface components {
              */
             stay_end_date: string;
             /**
+             * Status
+             * @default APPROVED
+             */
+            status: string;
+            /** Request Note */
+            request_note?: string | null;
+            /** Decision Note */
+            decision_note?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+            /**
              * Create At
              * Format: date-time
              */
             create_at: string;
         };
+        /**
+         * MessStayRequest
+         * @description Pengajuan hunian oleh karyawan sendiri; diputus PM/OM/HR.
+         */
+        MessStayRequest: {
+            /**
+             * Mess Id
+             * Format: uuid
+             */
+            mess_id: string;
+            /**
+             * Stay Start Date
+             * Format: date
+             */
+            stay_start_date: string;
+            /**
+             * Stay End Date
+             * Format: date
+             */
+            stay_end_date: string;
+            /** Note */
+            note?: string | null;
+        };
         /** MessStayUpdate */
         MessStayUpdate: {
-            /** Mess Name */
-            mess_name?: string | null;
-            /** City */
-            city?: string | null;
-            /** Address */
-            address?: string | null;
-            /** Latitude */
-            latitude?: number | string | null;
-            /** Longitude */
-            longitude?: number | string | null;
             /** Stay Start Date */
             stay_start_date?: string | null;
             /** Stay End Date */
@@ -5707,6 +6713,71 @@ export interface components {
             check_ins_today: number;
         };
         /**
+         * MyPhotoIn
+         * @description Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto.
+         */
+        MyPhotoIn: {
+            /** File Id */
+            file_id?: string | null;
+        };
+        /** MyPhotoOut */
+        MyPhotoOut: {
+            /** Photo File Id */
+            photo_file_id?: string | null;
+        };
+        /** MyRecapItem */
+        MyRecapItem: {
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /**
+             * Check In At
+             * Format: date-time
+             */
+            check_in_at: string;
+            /** Check Out At */
+            check_out_at?: string | null;
+            /** Is Late */
+            is_late: boolean;
+            /** Is Early Leave */
+            is_early_leave: boolean;
+            /** Is Valid */
+            is_valid: boolean;
+            /** Is Pending */
+            is_pending: boolean;
+            /**
+             * Meal Allowance Amount
+             * @default 0
+             */
+            meal_allowance_amount: number;
+            /** City Zone */
+            city_zone?: string | null;
+            /** Selfie File Id */
+            selfie_file_id?: string | null;
+        };
+        /**
+         * MyRecapResponse
+         * @description Rekap absensi bulanan milik sendiri (HP karyawan).
+         */
+        MyRecapResponse: {
+            /** Month */
+            month: string;
+            /** Days Present */
+            days_present: number;
+            /** Late Days */
+            late_days: number;
+            /** Early Leave Days */
+            early_leave_days: number;
+            /** Pending Days */
+            pending_days: number;
+            /** Meal Allowance Total */
+            meal_allowance_total: number;
+            /** Items */
+            items: components["schemas"]["MyRecapItem"][];
+        };
+        /**
          * NeedsReviewResponse
          * @description Schema for review alerts.
          */
@@ -5717,6 +6788,14 @@ export interface components {
             needs_review_today: number;
             /** Daily Average */
             daily_average: number;
+        };
+        /** NextEmployeeNo */
+        NextEmployeeNo: {
+            /**
+             * Employee No
+             * @description Usulan nomor karyawan berikutnya (boleh diubah)
+             */
+            employee_no: string;
         };
         /** NotificationList */
         NotificationList: {
@@ -5740,6 +6819,8 @@ export interface components {
             body: string;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
+            /** Target */
+            target?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -5788,6 +6869,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /** Division Name */
@@ -5848,6 +6931,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /** Division Name */
@@ -6185,6 +7270,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Period Month
              * Format: date
@@ -6216,6 +7303,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Work Date
              * Format: date
@@ -6448,7 +7537,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
             /**
              * Rollover Approval Status
              * @enum {string}
@@ -7538,6 +8627,30 @@ export interface components {
             /** Photo File Id */
             photo_file_id?: string | null;
         };
+        /** WeeklyPresentationOut */
+        WeeklyPresentationOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /** Week Start */
+            week_start: string;
+            /** Week End */
+            week_end: string;
+            /** Total Plans */
+            total_plans: number;
+            /** Completed Plans */
+            completed_plans: number;
+            /** Daily Reports */
+            daily_reports?: components["schemas"]["DailyReportOut"][];
+            /** Presentation Notes */
+            presentation_notes?: string | null;
+            /** Pm Feedback */
+            pm_feedback?: string | null;
+        };
         /**
          * WorkCompletionAccDecision
          * @description Schema keputusan ACC Client oleh PM.
@@ -7987,7 +9100,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT" | "PREPARATION" | "DISMANTLE" | "COMMISSIONING" | "TROUBLESHOOTING";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
         };
@@ -8019,7 +9132,7 @@ export interface components {
              * @default WORK
              * @enum {string}
              */
-            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT";
+            kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT" | "PREPARATION" | "DISMANTLE" | "COMMISSIONING" | "TROUBLESHOOTING";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
             /** Follow Up Name */
@@ -9575,6 +10688,203 @@ export interface operations {
             };
         };
     };
+    get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get: {
+        parameters: {
+            query: {
+                /** @description Tanggal pertemuan evaluasi hari Sabtu */
+                meeting_date: string;
+            };
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyPresentationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correction_inbox_api_v1_work_plans_corrections_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_corrections_api_v1_work_plans_daily__daily_plan_id__corrections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_correction_api_v1_work_plans_daily__daily_plan_id__corrections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_correction_api_v1_work_plans_corrections__correction_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                correction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionDecide"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_revision_api_v1_work_plans_corrections__correction_id__submit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                correction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CorrectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_items_api_v1_work_plans_daily__daily_plan_id__items_get: {
         parameters: {
             query?: never;
@@ -10875,8 +12185,16 @@ export interface operations {
     list_teams_api_v1_teams_get: {
         parameters: {
             query?: {
+                /** @description Hanya tim aktif (true) atau nonaktif (false) */
+                active?: boolean | null;
                 /** @description Filter berdasarkan ID divisi */
                 division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -11107,6 +12425,143 @@ export interface operations {
             };
         };
     };
+    list_places_api_v1_mess_places_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_place_api_v1_mess_places_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessPlaceIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_place_api_v1_mess_places__mess_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessPlaceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessPlaceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_place_api_v1_mess_places__mess_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_stays_api_v1_mess_get: {
         parameters: {
             query?: {
@@ -11116,6 +12571,13 @@ export interface operations {
                 start?: string | null;
                 /** @description Hunian yang beririsan sampai tanggal ini */
                 end?: string | null;
+                status?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -11153,6 +12615,75 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MessStayCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_stays_api_v1_mess_me_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_stay_api_v1_mess_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessStayRequest"];
             };
         };
         responses: {
@@ -11275,10 +12806,345 @@ export interface operations {
             };
         };
     };
+    decide_stay_api_v1_mess__mess_stay_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_stay_api_v1_mess__mess_stay_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_stay_api_v1_mess__mess_stay_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessStayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_leaves_api_v1_leaves_get: {
+        parameters: {
+            query?: {
+                /** @description Filter per karyawan */
+                employee_id?: string | null;
+                /** @description Filter status cuti */
+                status?: string | null;
+                /** @description Tahun cuti */
+                year?: number | null;
+                /** @description Filter jenis cuti */
+                leave_type?: string | null;
+                /** @description Cuti yang berakhir pada/setelah tanggal ini */
+                date_from?: string | null;
+                /** @description Cuti yang mulai pada/sebelum tanggal ini */
+                date_to?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_leave_api_v1_leaves_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_leave_balance_api_v1_leaves_balances__employee_id__get: {
+        parameters: {
+            query?: {
+                /** @description Tahun kuota cuti (default: tahun berjalan WIB) */
+                year?: number | null;
+            };
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveBalanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_leave_types_api_v1_leaves_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveTypeOption"][];
+                };
+            };
+        };
+    };
+    get_leave_api_v1_leaves__leave_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_leave_api_v1_leaves__leave_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeaveReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_leave_api_v1_leaves__leave_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                leave_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeaveResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_offboardings_api_v1_offboarding_get: {
         parameters: {
             query?: {
                 status?: components["schemas"]["OffboardingStatus"] | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -12011,6 +13877,12 @@ export interface operations {
                 page?: number;
                 size?: number;
                 entity_type?: string | null;
+                /** @description Awalan aksi, tabel, atau nama pelaku */
+                q?: string | null;
+                /** @description Mulai tanggal (inklusif) */
+                date_from?: string | null;
+                /** @description Sampai tanggal (inklusif) */
+                date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -12076,7 +13948,7 @@ export interface operations {
     get_file_content_api_v1_files__file_id__get: {
         parameters: {
             query?: {
-                variant?: string;
+                variant?: "thumb" | "view" | "full";
                 download?: boolean;
                 token?: string | null;
             };
@@ -12111,7 +13983,7 @@ export interface operations {
     get_file_url_api_v1_files__file_id__url_get: {
         parameters: {
             query?: {
-                variant?: string;
+                variant?: "thumb" | "view" | "full";
             };
             header?: never;
             path: {
@@ -12278,6 +14150,26 @@ export interface operations {
             };
         };
     };
+    next_employee_no_api_v1_employees_next_no_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NextEmployeeNo"];
+                };
+            };
+        };
+    };
     get_employee_api_v1_employees__employee_id__get: {
         parameters: {
             query?: never;
@@ -12364,6 +14256,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_my_photo_api_v1_employees_me_photo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyPhotoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPhotoOut"];
                 };
             };
             /** @description Validation Error */
@@ -12550,7 +14475,16 @@ export interface operations {
     };
     get_employee_documents_api_v1_employees__emp_id__documents_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Filter status dokumen */
+                status?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
             header?: never;
             path: {
                 emp_id: string;
@@ -12737,6 +14671,12 @@ export interface operations {
         parameters: {
             query?: {
                 for_attendance?: boolean;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -13283,6 +15223,8 @@ export interface operations {
                 scope?: string;
                 page?: number;
                 size?: number;
+                /** @description Nama atau NIP karyawan diawali kata kunci */
+                q?: string | null;
             };
             header?: never;
             path?: never;
@@ -13653,6 +15595,38 @@ export interface operations {
             };
         };
     };
+    my_recap_api_v1_attendance_me_recap_get: {
+        parameters: {
+            query?: {
+                /** @description Bulan YYYY-MM (default: bulan ini WIB) */
+                month?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyRecapResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_face_policy_api_v1_face_policy_get: {
         parameters: {
             query?: never;
@@ -13824,6 +15798,12 @@ export interface operations {
             query?: {
                 office_id?: string | null;
                 status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -13992,6 +15972,12 @@ export interface operations {
             query?: {
                 office_id?: string | null;
                 status?: ("ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension") | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -14293,6 +16279,12 @@ export interface operations {
                 open?: boolean;
                 employee_id?: string | null;
                 daily_plan_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -14388,6 +16380,171 @@ export interface operations {
             };
         };
     };
+    list_loan_requests_api_v1_assets_loan_requests_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanRequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_loan_api_v1_assets_loan_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanRequestCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_loan_request_api_v1_assets_loan_requests__request_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_loan_request_api_v1_assets_loan_requests__request_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanRequestReview"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_return_api_v1_assets_loans__assignment_id__return_request_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoanReturnRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_plan_assets_api_v1_work_plans_daily__daily_plan_id__assets_get: {
         parameters: {
             query?: never;
@@ -14422,10 +16579,18 @@ export interface operations {
     list_overtime_api_v1_overtime_get: {
         parameters: {
             query?: {
+                /** @description Filter status lembur */
+                status?: string | null;
                 /** @description ID jadwal harian */
                 daily_plan_id?: string | null;
                 /** @description Alias daily_plan_id */
                 work_plan_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -14673,6 +16838,26 @@ export interface operations {
             };
         };
     };
+    home_summary_api_v1_home_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeSummary"];
+                };
+            };
+        };
+    };
     events_api_v1_events_get: {
         parameters: {
             query?: never;
@@ -14698,6 +16883,12 @@ export interface operations {
             query?: {
                 all?: boolean;
                 division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;

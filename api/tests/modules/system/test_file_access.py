@@ -7,7 +7,6 @@ lampiran jadwal harian mengikuti siapa yang melihat jadwal itu (daily-first).
 from __future__ import annotations
 
 import io
-import uuid
 from urllib.parse import urlsplit
 
 import pytest
@@ -134,7 +133,7 @@ def test_file_ticket_url_serves_image_and_full_variant_downloads_as_attachment(
     assert pdf_response.headers["content-disposition"].startswith("attachment;")
 
 
-@pytest.mark.parametrize("file_id", [str(uuid.uuid4()), "bukan-uuid"])
+@pytest.mark.parametrize("file_id", ["3f2b8c1e-7a4d-4e6b-9c15-0d2a8e9b7f31", "bukan-uuid"])  # tetap: xdist
 def test_unknown_or_malformed_file_id_never_crashes(client, world, file_id):
     assert _status(client, world, "admin", file_id) in (404, 422)
 

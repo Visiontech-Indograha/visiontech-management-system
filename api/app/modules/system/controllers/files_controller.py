@@ -24,6 +24,8 @@ from app.modules.system.services.system_service import FileService
 from app.shared.content_disposition import content_disposition
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
+# Selaras jendela tiket (security.FILE_TICKET_WINDOW_SECONDS = 1800 s); sedikit di bawahnya.
+IMAGE_CACHE_CONTROL = "private, max-age=1500"
 ALLOWED_MIMES = [
     "image/jpeg",
     "image/png",
@@ -65,7 +67,8 @@ class FilesController:
             )
 
         kind = filetype.guess(file_bytes)
-        mime_type = kind.mime if kind else file.content_type
+        # Tipe ditentukan dari isi berkas (magic bytes), bukan klaim klien: header palsu tidak lolos.
+        mime_type = kind.mime if kind else None
         if mime_type not in ALLOWED_MIMES:
             raise HTTPException(
                 status_code=415,
@@ -79,14 +82,15 @@ class FilesController:
             return {"file_id": str(existing_file.id), "message": "File sudah ada (deduplikasi)."}
 
         file_id = str(uuid.uuid4())
-        ext = kind.extension if kind else (file.filename or "bin").rsplit(".", 1)[-1]
+        assert kind is not None
+        ext = kind.extension
         storage_key = f"{current_user.organization_id}/{file_id}.{ext}"
 
         stored_id = await self.service.register(
             current_user,
             file_id=file_id,
             storage_key=storage_key,
-            file_name=file.filename,
+            file_name=(file.filename or "berkas")[:200],
             mime_type=mime_type,
             byte_size=byte_size,
             sha256=file_hash,
@@ -154,12 +158,17 @@ class FilesController:
             if data:
                 file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
                 disp_type = "attachment" if download else "inline"
+                # Gambar biasa (foto profil, aset, bukti kerja) boleh di-cache peramban; unduhan, dokumen pribadi, dan
+                # swafoto absensi (sensitif) tetap tanpa cache. Isi berkas per id tidak berubah, URL stabil per jendela.
+                sensitive = bool(getattr(file_obj, "personal_document", False) or getattr(file_obj, "selfie", False))
+                cacheable = is_image and not download and not sensitive
+                cache_control = IMAGE_CACHE_CONTROL if cacheable else "private, no-cache, no-store, must-revalidate"
                 return Response(
                     content=data,
                     media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
                     headers={
                         "Content-Disposition": content_disposition(disp_type, str(file_name)),
-                        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+                        "Cache-Control": cache_control,
                     },
                 )
 
@@ -189,4 +198,4 @@ class FilesController:
         return {"url": url, "mime_type": file_obj.mime_type}
 
 
-__all__ = ["ALLOWED_MIMES", "MAX_FILE_SIZE", "FilesController"]
+__all__ = ["ALLOWED_MIMES", "IMAGE_CACHE_CONTROL", "MAX_FILE_SIZE", "FilesController"]

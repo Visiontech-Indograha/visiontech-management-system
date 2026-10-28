@@ -10,6 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import daily_access, get_current_user, require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_types.controllers.work_type_controller import WorkTypeController
@@ -30,6 +31,8 @@ _VIEW = Depends(daily_access(DailyNeed.VIEW))
 
 @router.get("/work-types", response_model=list[WorkTypeOut])
 async def list_work_types(
+    response: Response,
+    params: ListParams = Depends(),
     all: bool = False,
     division_id: UUID | None = Query(None),
     current_user: CurrentUser = Depends(get_current_user),
@@ -51,7 +54,8 @@ async def list_work_types(
     else:
         targets = [division_id] if division_id else None
 
-    return await controller.handle_list_types(current_user.organization_id, include_inactive, targets)
+    rows = await controller.handle_list_types(current_user.organization_id, include_inactive, targets)
+    return list(apply_list(rows, params, response, lambda t: (t.name, t.division_name, t.description)))
 
 
 @router.post("/work-types", response_model=WorkTypeOut, status_code=status.HTTP_201_CREATED)

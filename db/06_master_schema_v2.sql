@@ -10,48 +10,63 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
 -- BAGIAN 1: PEMBUATAN TIPE ENUMERASI (ENUM)
+-- Idempoten: dijalankan ulang pada DB berisi tidak menghapus kolom enum (dulu DROP TYPE ... CASCADE).
 -- ============================================================================
-DROP TYPE IF EXISTS system_role_enum CASCADE;
-CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+DO $$ BEGIN
+    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS client_platform_enum CASCADE;
-CREATE TYPE client_platform_enum AS ENUM ('web_react', 'android_flutter', 'system_cron');
+DO $$ BEGIN
+    CREATE TYPE client_platform_enum AS ENUM ('web_react', 'android_flutter', 'system_cron');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS offboarding_status_enum CASCADE;
-CREATE TYPE offboarding_status_enum AS ENUM ('active', 'in_process', 'offboarded');
+DO $$ BEGIN
+    CREATE TYPE offboarding_status_enum AS ENUM ('active', 'in_process', 'offboarded');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS offboarding_reason_enum CASCADE;
-CREATE TYPE offboarding_reason_enum AS ENUM ('PKWT_EXPIRED', 'RESIGN', 'TERMINATED', 'RETIRED');
+DO $$ BEGIN
+    CREATE TYPE offboarding_reason_enum AS ENUM ('PKWT_EXPIRED', 'RESIGN', 'TERMINATED', 'RETIRED');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS doc_status_enum CASCADE;
-CREATE TYPE doc_status_enum AS ENUM ('active', 'not_active', 'extended');
+DO $$ BEGIN
+    CREATE TYPE doc_status_enum AS ENUM ('active', 'not_active', 'extended');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS vehicle_type_enum CASCADE;
-CREATE TYPE vehicle_type_enum AS ENUM ('Motorcycle', 'Car', 'Truck');
+DO $$ BEGIN
+    CREATE TYPE vehicle_type_enum AS ENUM ('Motorcycle', 'Car', 'Truck');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS asset_status_enum CASCADE;
-CREATE TYPE asset_status_enum AS ENUM ('ready', 'allocated', 'loaned', 'damaged', 'lost', 'pension');
+DO $$ BEGIN
+    CREATE TYPE asset_status_enum AS ENUM ('ready', 'allocated', 'loaned', 'damaged', 'lost', 'pension');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS vehicle_file_type_enum CASCADE;
-CREATE TYPE vehicle_file_type_enum AS ENUM ('STNK', 'BPKB', 'KIR');
+DO $$ BEGIN
+    CREATE TYPE vehicle_file_type_enum AS ENUM ('STNK', 'BPKB', 'KIR');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS inspection_type_enum CASCADE;
-CREATE TYPE inspection_type_enum AS ENUM ('day', 'month', 'year', 'repair', 'profile');
+DO $$ BEGIN
+    CREATE TYPE inspection_type_enum AS ENUM ('day', 'month', 'year', 'repair', 'profile');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS tool_ownership_enum CASCADE;
-CREATE TYPE tool_ownership_enum AS ENUM ('PERSONAL_LOAN', 'SHARED_TOOL');
+DO $$ BEGIN
+    CREATE TYPE tool_ownership_enum AS ENUM ('PERSONAL_LOAN', 'SHARED_TOOL');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS tool_category_enum CASCADE;
-CREATE TYPE tool_category_enum AS ENUM ('BAJU', 'LAPTOP', 'SEPATU', 'BOR', 'TANGGA', 'LAINNYA');
+DO $$ BEGIN
+    CREATE TYPE tool_category_enum AS ENUM ('BAJU', 'LAPTOP', 'SEPATU', 'BOR', 'TANGGA', 'LAINNYA');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS city_zone_enum CASCADE;
-CREATE TYPE city_zone_enum AS ENUM ('DALAM_KOTA', 'LUAR_KOTA');
+DO $$ BEGIN
+    CREATE TYPE city_zone_enum AS ENUM ('DALAM_KOTA', 'LUAR_KOTA');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS rollover_approval_enum CASCADE;
-CREATE TYPE rollover_approval_enum AS ENUM ('NONE', 'WAITING_PM', 'APPROVED_BY_PM', 'REJECTED_BY_PM');
+DO $$ BEGIN
+    CREATE TYPE rollover_approval_enum AS ENUM ('NONE', 'WAITING_PM', 'APPROVED_BY_PM', 'REJECTED_BY_PM');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DROP TYPE IF EXISTS export_format_enum CASCADE;
-CREATE TYPE export_format_enum AS ENUM ('WORD_DOCX', 'PPTX', 'PDF', 'EXCEL_XLSX');
+DO $$ BEGIN
+    CREATE TYPE export_format_enum AS ENUM ('WORD_DOCX', 'PPTX', 'PDF', 'EXCEL_XLSX');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ============================================================================
 -- BAGIAN 2: DDL TABEL (26 ENTITAS TERINTEGRASI DENGAN SOFT DELETE)
@@ -119,7 +134,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_active ON users (email) WHERE d
 -- 4. Tabel user_sessions (JWT Hybrid Session untuk React Web & Flutter Android)
 CREATE TABLE IF NOT EXISTS user_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(user_id),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     token_family_id UUID NOT NULL,
     refresh_token_hash CHAR(64) NOT NULL,
     platform client_platform_enum NOT NULL,
@@ -369,20 +384,42 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     delete_at TIMESTAMPTZ NULL
 );
 
--- 18. Tabel company_mess_stay (Mencatat Lokasi Mess & Riwayat Inap Berbasis Tanggal Riil)
-CREATE TABLE IF NOT EXISTS company_mess_stay (
-    mess_stay_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    mess_name VARCHAR(100) NOT NULL,
+-- 18a. Tabel company_mess (master lokasi mess; dipilih saat hunian diajukan/dicatat)
+CREATE TABLE IF NOT EXISTS company_mess (
+    mess_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mess_name VARCHAR(150) NOT NULL,
     city VARCHAR(100) NOT NULL,
     address TEXT NOT NULL,
-    latitude NUMERIC(10,7) NOT NULL,
-    longitude NUMERIC(10,7) NOT NULL,
-    employee_id UUID NOT NULL REFERENCES employee(employee_id),
-    stay_start_date DATE NOT NULL,
-    stay_end_date DATE NOT NULL,
+    latitude NUMERIC(10,7) NULL,
+    longitude NUMERIC(10,7) NULL,
+    capacity INTEGER NULL CHECK (capacity IS NULL OR capacity > 0),
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
+);
+
+-- 18. Tabel company_mess_stay (Riwayat Inap Berbasis Tanggal Riil; REQUESTED → APPROVED/REJECTED oleh PM/OM/HR)
+CREATE TABLE IF NOT EXISTS company_mess_stay (
+    mess_stay_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    mess_id UUID NULL REFERENCES company_mess(mess_id),
+    mess_name VARCHAR(150) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    address TEXT NOT NULL,
+    latitude NUMERIC(10,7) NULL,
+    longitude NUMERIC(10,7) NULL,
+    employee_id UUID NOT NULL REFERENCES employee(employee_id),
+    stay_start_date DATE NOT NULL,
+    stay_end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'APPROVED',
+    requested_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    request_note TEXT NULL,
+    decided_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    decided_at TIMESTAMPTZ NULL,
+    decision_note TEXT NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL,
+    CONSTRAINT ck_mess_stay_status CHECK (status IN ('REQUESTED','APPROVED','REJECTED','CANCELLED'))
 );
 
 -- 20. Tabel asset_assignment (Peminjaman Alat Pribadi, Alat Umum & Kendaraan - Konfirmasi 3A, 3B, 1A)
@@ -397,10 +434,70 @@ CREATE TABLE IF NOT EXISTS asset_assignment (
     loaned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     returned_at TIMESTAMPTZ NULL, -- Jika NULL berarti belum dikembalikan (menahan proses Offboarding 1A)
     handover_photo_path VARCHAR(255) NULL,
+    return_requested_at TIMESTAMPTZ NULL, -- Karyawan mengajukan pengembalian; pengelola mengonfirmasi (returned_at)
+    return_condition VARCHAR(20) NULL,
+    return_note TEXT NULL,
+    return_photo_path VARCHAR(255) NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
+
+-- 20b. Tabel asset_loan_request (Karyawan mengajukan pinjam aset, HR/GA menyetujui -> asset_assignment)
+CREATE TABLE IF NOT EXISTS asset_loan_request (
+    request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_type VARCHAR(20) NOT NULL,
+    tool_id UUID NULL REFERENCES tool(tool_id),
+    vehicle_id UUID NULL REFERENCES vehicle(vehicle_id),
+    employee_id UUID NOT NULL REFERENCES employee(employee_id),
+    purpose TEXT NOT NULL,
+    needed_on DATE NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
+        CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED')),
+    review_note TEXT NULL,
+    reviewed_by_id UUID NULL REFERENCES employee(employee_id),
+    reviewed_at TIMESTAMPTZ NULL,
+    assignment_id UUID NULL REFERENCES asset_assignment(assignment_id),
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL
+);
+CREATE INDEX IF NOT EXISTS idx_asset_loan_request_employee ON asset_loan_request (employee_id, status);
+
+-- 17b. Tabel daily_report_correction (Koreksi laporan harian: ketua mengajukan, PM menyetujui/mengembalikan)
+CREATE TABLE IF NOT EXISTS daily_report_correction (
+    correction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    daily_plan_id UUID NOT NULL REFERENCES work_plan_daily(daily_plan_id),
+    requested_by_id UUID NOT NULL REFERENCES employee(employee_id),
+    reason TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'REQUESTED'
+        CHECK (status IN ('REQUESTED', 'REVISING', 'IN_REVIEW', 'ACCEPTED', 'REJECTED')),
+    review_note TEXT NULL,
+    reviewed_by_id UUID NULL REFERENCES employee(employee_id),
+    reviewed_at TIMESTAMPTZ NULL,
+    revision_count INT NOT NULL DEFAULT 0,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_daily_report_correction_open ON daily_report_correction (daily_plan_id)
+    WHERE status IN ('REQUESTED', 'REVISING', 'IN_REVIEW') AND delete_at IS NULL;
+
+-- 17c. Tabel notification (kotak masuk notifikasi pengguna; realtime lewat SSE, riwayat tersimpan di sini)
+CREATE TABLE IF NOT EXISTS notification (
+    notification_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    kind VARCHAR(40) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    daily_plan_id UUID NULL,
+    target VARCHAR(40) NULL,
+    read_at TIMESTAMPTZ NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, create_at DESC);
+CREATE INDEX IF NOT EXISTS ix_notification_user_unread ON notification (user_id) WHERE read_at IS NULL;
+
 
 -- 21. Tabel employee_offboarding (Konfirmasi 1A: Prosedur Offboarding PKWT & Pengembalian Barang)
 CREATE TABLE IF NOT EXISTS employee_offboarding (
@@ -453,7 +550,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     is_within_attendance_radius BOOLEAN NOT NULL,
     out_of_radius_photo_path VARCHAR(255) NULL,
     out_of_radius_note TEXT NULL,
-    om_approval_status VARCHAR(25) NOT NULL DEFAULT 'AUTO_VALID', -- 'AUTO_VALID', 'PENDING_OM', 'APPROVED', 'REJECTED'
+    om_approval_status VARCHAR(25) NOT NULL DEFAULT 'AUTO_VALID', -- 'AUTO_VALID', 'PENDING_OM', 'APPROVED_BY_OM', 'REJECTED_BY_OM' (CHECK di alembic v2_0004)
     distance_from_main_office_m INT NOT NULL,
     city_zone_status city_zone_enum NOT NULL,
     meal_allowance_amount NUMERIC(12,2) NOT NULL,
@@ -653,6 +750,8 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_file_vehicle ON vehicle_file (vehicle_id)
 CREATE INDEX IF NOT EXISTS idx_vehicle_inspection_vehicle ON vehicle_inspection (vehicle_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_division ON work_plan_daily (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_team ON work_plan_daily (team_id) WHERE delete_at IS NULL;
+-- Satu jadwal per tim per tanggal (v2_0009)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_work_plan_daily_team_day ON work_plan_daily (team_id, work_date) WHERE delete_at IS NULL AND team_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_date ON work_plan_daily (work_date) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_daily ON work_plan_item (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_phase ON work_plan_item (task_phase) WHERE delete_at IS NULL;

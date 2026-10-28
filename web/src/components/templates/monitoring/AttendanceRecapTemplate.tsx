@@ -13,7 +13,7 @@ export function AttendanceRecapTemplate({ month, onMonthChange, recap }: {
 }) {
   const records = recap.data?.records ?? [];
   return (
-    <PageTemplate title="Rekap absensi">
+    <PageTemplate title="Rekap bulanan">
       <div className="md:max-w-xs">
         <MonthFilterField value={month || recap.data?.month || ""} onChange={onMonthChange} hint="Kosong = bulan berjalan." />
       </div>

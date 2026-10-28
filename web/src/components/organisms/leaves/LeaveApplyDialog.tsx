@@ -7,7 +7,8 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
+import { uploadFiles } from "@/services/uploadService";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
 
@@ -33,12 +34,15 @@ export function LeaveApplyDialog({
   const mutation = useLeaveMutation();
   const { me } = useSession();
   const [formError, setFormError] = useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<LeaveCreateInput>({
     defaultValues: {
       leave_type: "ANNUAL",
@@ -66,31 +70,45 @@ export function LeaveApplyDialog({
     }
 
     try {
+      let attachment_file_id: string | undefined = undefined;
+      if (values.leave_type === "SICK" && attachmentFile) {
+        setIsUploading(true);
+        const [uploadedId] = await uploadFiles([attachmentFile]);
+        attachment_file_id = uploadedId;
+      }
+
       await mutation.mutateAsync({
         employee_id: me?.employee_id || undefined,
         leave_type: values.leave_type,
         start_date: values.start_date,
         end_date: values.end_date,
         reason: values.reason.trim(),
+        attachment_file_id,
       });
       toast.success("Permohonan cuti / izin berhasil diajukan dan menunggu persetujuan.");
       onClose();
     } catch (err) {
+      if (applyFieldErrors(err, setError)) {
+        setFormError("Periksa kolom yang ditandai.");
+        return;
+      }
       setFormError(errorMessage(err, "Gagal mengajukan permohonan cuti. Periksa kuota cuti tahunan atau tanggal yang bentrok."));
+    } finally {
+      setIsUploading(false);
     }
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Ajukan Cuti / Izin Kerja"
       onClose={onClose}
       footer={
         <DialogActions
           onCancel={onClose}
-          busy={isSubmitting}
+          busy={isSubmitting || isUploading}
           formId="leave-apply-form"
-          submitLabel="Kirim Pengajuan"
+          submitLabel={isUploading ? "Mengunggah berkas..." : "Kirim Pengajuan"}
         />
       }
     >
@@ -124,7 +142,11 @@ export function LeaveApplyDialog({
             label="Tanggal Selesai"
             type="date"
             error={errors.end_date?.message}
-            {...register("end_date", { required: "Tanggal selesai wajib diisi." })}
+            min={startDate || undefined}
+            {...register("end_date", {
+              required: "Tanggal selesai wajib diisi.",
+              validate: (v) => !startDate || v >= startDate || "Tanggal selesai tidak boleh sebelum tanggal mulai.",
+            })}
           />
         </div>
 
@@ -141,6 +163,23 @@ export function LeaveApplyDialog({
           </div>
         )}
 
+        {leaveType === "SICK" && (
+          <div className="space-y-1.5 rounded-control border border-line bg-hover/20 p-3">
+            <TextField
+              label="Surat Keterangan Dokter (Opsional / Disarankan)"
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setAttachmentFile(file ?? null);
+              }}
+            />
+            <TextBlock className="text-2xs text-mist">
+              Format: JPG, PNG, atau PDF (maks. 10 MB). Lampirkan surat dokter untuk mempercepat verifikasi oleh HR/GA.
+            </TextBlock>
+          </div>
+        )}
+
         <TextAreaField
           label="Alasan Pengajuan"
           placeholder="Jelaskan alasan atau keperluan permohonan cuti..."
@@ -149,6 +188,7 @@ export function LeaveApplyDialog({
           {...register("reason", {
             required: "Alasan pengajuan cuti wajib diisi.",
             minLength: { value: 5, message: "Minimal 5 karakter alasan." },
+            maxLength: { value: 1000, message: "Maksimal 1000 karakter." },
           })}
         />
       </FormBlock>

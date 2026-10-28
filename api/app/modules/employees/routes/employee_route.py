@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.deps import require_permission
+from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.employees.controllers.employee_controller import EmployeeController
@@ -22,6 +22,9 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeListResponse,
     EmployeeOut,
     EmployeeUpdate,
+    MyPhotoIn,
+    MyPhotoOut,
+    NextEmployeeNo,
 )
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
@@ -63,6 +66,15 @@ async def list_employees(
     return result.model_copy(update={"items": [_private_hidden(e, current_user) for e in result.items]})
 
 
+@router.get("/next-no", response_model=NextEmployeeNo, summary="Usulan nomor karyawan berikutnya")
+async def next_employee_no(
+    current_user: CurrentUser = _MANAGE,
+    controller: EmployeeController = Depends(),
+) -> NextEmployeeNo:
+    """Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya."""
+    return await controller.next_no()
+
+
 @router.get("/{employee_id}", response_model=EmployeeDetail)
 async def get_employee(
     employee_id: UUID,
@@ -81,6 +93,16 @@ async def create_employee(
 ) -> EmployeeDetail:
     """Karyawan baru (akun login dibuat terpisah lewat /employees/{id}/account)."""
     return await controller.create(data)
+
+
+@router.put("/me/photo", response_model=MyPhotoOut)
+async def set_my_photo(
+    data: MyPhotoIn,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: EmployeeController = Depends(),
+) -> MyPhotoOut:
+    """Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini."""
+    return await controller.set_my_photo(current_user, data)
 
 
 @router.put("/{employee_id}", response_model=EmployeeDetail)

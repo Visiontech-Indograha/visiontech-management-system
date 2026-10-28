@@ -1,13 +1,47 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../data/sync_engine.dart' show OfflineOp;
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
-import 'photo_slots.dart' show PhotoOrigin, pickReportPhoto;
+import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
+
+/// Alasan hasil kerja belum boleh disimpan, atau null bila valid. Jumlah tidak boleh melebihi target; menandai
+/// selesai (jumlah = target) mewajibkan semua foto wajib terisi.
+String? progressProblem({
+  required num qty,
+  required num target,
+  required int mandatorySlots,
+  required int filledMandatory,
+}) {
+  if (target > 0 && qty > target) {
+    return 'Jumlah melebihi target (${qtyText(target)}). Periksa kembali.';
+  }
+  if (target > 0 && qty >= target && filledMandatory < mandatorySlots) {
+    return 'Foto wajib belum lengkap ($filledMandatory/$mandatorySlots). Lengkapi sebelum menandai selesai.';
+  }
+  return null;
+}
+
+/// Unggah dengan percobaan ulang untuk gangguan jaringan (maks. 3 kali, jeda 2 dan 4 detik). Galat dari server
+/// (4xx/5xx) tidak diulang karena hasilnya akan sama.
+Future<T> retryUpload<T>(Future<T> Function() action, {Duration step = const Duration(seconds: 2)}) async {
+  for (var attempt = 1; ; attempt++) {
+    try {
+      return await action();
+    } on DioException catch (e) {
+      if (!isNetworkFailure(e) || attempt >= 3) rethrow;
+      await Future<void>.delayed(step * attempt);
+    }
+  }
+}
 
 /// Satu foto realisasi: berkas server (`fileId`) atau berkas lokal yang belum diunggah (`path`).
 class _Photo {
@@ -21,9 +55,18 @@ class _Photo {
 /// Progres satu titik (Milestone 6): jumlah realisasi + foto per syarat foto jenis pekerjaan. Server menolak DONE
 /// bila foto wajib belum lengkap atau prasyarat belum selesai. Ketua tim bisa meminta item digeser ke hari lain.
 class ItemProgressScreen extends ConsumerStatefulWidget {
-  const ItemProgressScreen({super.key, required this.itemId, required this.dayStatus, required this.isLeader});
+  const ItemProgressScreen({
+    super.key,
+    required this.itemId,
+    required this.dayStatus,
+    required this.isLeader,
+    this.initialItem,
+  });
 
   final String itemId;
+
+  /// Data item dari daftar jadwal — dipakai bila server tak terjangkau (mis. di area tanpa sinyal).
+  final Map<String, dynamic>? initialItem;
   final String dayStatus;
   final bool isLeader;
 
@@ -70,13 +113,25 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         _photos
           ..clear()
           ..addAll([
-            for (final p in (item['realization_photos_json'] as List? ?? const []).cast<Map>())
-              _Photo(fileId: '${p['file_id']}', requirementId: p['requirement_id'] as String?),
+            for (final p in photoRefsOf(item['realization_photos_json']))
+              _Photo(fileId: p.fileId, requirementId: p.requirementId),
           ]);
         _error = null;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = apiErrorMessage(e));
+      if (!mounted) return;
+      final fallback = widget.initialItem;
+      if (fallback != null && _item == null) {
+        setState(() {
+          _item = fallback;
+          _qty.text = qtyText(fallback['completed_qty']);
+          _notes.text = '${fallback['notes'] ?? ''}';
+          _error = null;
+        });
+        _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+        return;
+      }
+      setState(() => _error = apiErrorMessage(e));
     }
   }
 
@@ -89,24 +144,59 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
     if (qty == null || qty < 0) return _snack('Isi jumlah yang sudah selesai dengan angka.');
+    final problem = progressProblem(
+      qty: qty,
+      target: num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0,
+      mandatorySlots: _slots.where((s) => s['is_mandatory'] == true).length,
+      filledMandatory: _slots
+          .where((s) => s['is_mandatory'] == true)
+          .where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id']))
+          .length,
+    );
+    if (problem != null) return _snack(problem, error: true);
     setState(() => _busy = true);
     try {
-      final api = ref.read(syncEngineProvider).api;
-      for (final p in _photos.where((p) => p.fileId == null)) {
-        p.fileId = await api.uploadFile(File(p.path!));
+      final engine = ref.read(syncEngineProvider);
+      final api = engine.api;
+      final notes = _notes.text.trim().isEmpty ? null : _notes.text.trim();
+      try {
+        // Foto yang sudah terunggah tidak diunggah ulang bila simpan diulang setelah gagal di tengah jalan.
+        for (final p in _photos.where((p) => p.fileId == null)) {
+          p.fileId = await retryUpload(() => api.uploadFile(File(p.path!)));
+        }
+        await api.updateProgress(
+          widget.itemId,
+          completedQty: qty,
+          photos: [
+            for (final p in _photos) {'file_id': p.fileId, 'requirement_id': p.requirementId},
+          ],
+          notes: notes,
+        );
+        _snack('Hasil kerja tersimpan.');
+        await _load();
+      } on DioException catch (e) {
+        if (!isNetworkFailure(e)) rethrow;
+        // Tidak ada koneksi: simpan di antrean HP (foto ikut), dikirim otomatis saat online.
+        final local = _photos.where((p) => p.fileId == null).toList();
+        await engine.submit(
+          OfflineOp.planItemProgress,
+          {
+            'item_id': widget.itemId,
+            'completed_qty': qty,
+            'notes': notes,
+            'photos': [
+              for (final p in _photos.where((p) => p.fileId != null))
+                {'file_id': p.fileId, 'requirement_id': p.requirementId},
+            ],
+            'new_photo_requirements': [for (final p in local) p.requirementId],
+          },
+          localFiles: [for (final p in local) p.path!],
+        );
+        _snack('Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
       }
-      await api.updateProgress(
-        widget.itemId,
-        completedQty: qty,
-        photos: [
-          for (final p in _photos) {'file_id': p.fileId, 'requirement_id': p.requirementId},
-        ],
-        notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      );
-      _snack('Hasil kerja tersimpan.');
-      await _load();
     } catch (e) {
       _snack(apiErrorMessage(e), error: true);
     } finally {
@@ -121,13 +211,25 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Minta pindah ke hari lain'),
         content: TextField(
+            maxLength: 500,
           controller: reason,
           maxLines: 3,
           decoration: const InputDecoration(labelText: 'Alasan (hujan, izin kerja, material, ...)'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke PM')),
+          FilledButton(
+            onPressed: () {
+              if (reason.text.trim().length < 3) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alasan penundaan minimal 3 karakter.')),
+                );
+                return;
+              }
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Kirim ke PM'),
+          ),
         ],
       ),
     );
@@ -184,6 +286,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         ? 'PARTIAL'
         : 'TODO';
     final stateAccent = statusStyle(state).accent;
+    final overTarget = target > 0 && qty > target;
+    final barColor = overTarget ? theme.colorScheme.error : stateAccent.strong;
     final mandatory = _slots.where((s) => s['is_mandatory'] == true).toList();
     final filled = mandatory.where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id'])).length;
     final waiting = item['depends_on_title'] != null && item['depends_on_done'] != true;
@@ -310,6 +414,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     ),
                     Expanded(
                       child: TextField(
+            maxLength: 12,
                         controller: _qty,
                         enabled: _editable,
                         textAlign: TextAlign.center,
@@ -335,15 +440,17 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     child: LinearProgressIndicator(
                       value: v,
                       minHeight: 8,
-                      color: stateAccent.strong,
-                      backgroundColor: stateAccent.soft,
+                      color: barColor,
+                      backgroundColor: overTarget ? theme.colorScheme.errorContainer : stateAccent.soft,
                     ),
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${statusStyle(state).label} · ${(pct * 100).round()}%',
-                  style: theme.textTheme.bodySmall?.copyWith(color: stateAccent.strong, fontWeight: FontWeight.w700),
+                  overTarget
+                      ? 'Melebihi target (${qtyText(target)})'
+                      : '${statusStyle(state).label} · ${(pct * 100).round()}%',
+                  style: theme.textTheme.bodySmall?.copyWith(color: barColor, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -352,6 +459,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           // Langkah 3 — catatan
           const _Step(number: 3, title: 'Catatan (boleh kosong)', done: false, optional: true),
           TextField(
+            maxLength: 1000,
             controller: _notes,
             enabled: _editable,
             maxLines: 3,
@@ -411,6 +519,12 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
               padding: const EdgeInsets.only(top: 4, left: 28),
               child: Text('${slot['description']}', style: theme.textTheme.bodySmall),
             ),
+          // Foto contoh dari PM: `path_image` berisi id berkas bila ada contoh (selain itu path placeholder).
+          if (RegExp(r'^[0-9a-f-]{36}$').hasMatch('${slot['path_image']}'))
+            Padding(
+              padding: const EdgeInsets.only(left: 28),
+              child: ExampleThumb(fileId: '${slot['path_image']}', label: '${slot['name']}'),
+            ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -445,18 +559,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         clipBehavior: Clip.antiAlias,
         child: p.path != null
             ? Image.file(File(p.path!), fit: BoxFit.cover)
-            : FutureBuilder<String>(
-                future: ref.read(syncEngineProvider).api.fileUrl(p.fileId!, variant: 'thumb'),
-                builder: (_, s) => s.hasData
-                    ? Image.network(
-                        s.data!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(Icons.cloud_done_rounded),
-                      )
-                    : const Center(
-                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-              ),
+            : VmsNetworkImage(fileId: p.fileId!, fallback: const Icon(Icons.cloud_done_rounded)),
       ),
       if (_editable)
         Positioned(
@@ -573,4 +676,19 @@ class _AddTile extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Foto bukti tersimpan sebagai objek `{file_id, requirement_id}` (baru) atau string id berkas (lama);
+/// keduanya dibaca agar semua foto di server tampil dan data rusak tidak membuat layar error.
+List<({String fileId, String? requirementId})> photoRefsOf(Object? raw) {
+  if (raw is! List) return const [];
+  final refs = <({String fileId, String? requirementId})>[];
+  for (final e in raw) {
+    if (e is String && e.isNotEmpty) {
+      refs.add((fileId: e, requirementId: null));
+    } else if (e is Map && e['file_id'] is String && (e['file_id'] as String).isNotEmpty) {
+      refs.add((fileId: e['file_id'] as String, requirementId: e['requirement_id'] as String?));
+    }
+  }
+  return refs;
 }

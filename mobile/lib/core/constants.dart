@@ -12,7 +12,7 @@ class ApiConfig {
     defaultValue: 'http://127.0.0.1:8000',
   );
 
-  static const Duration connectTimeout = Duration(seconds: 15);
+  static const Duration connectTimeout = Duration(seconds: 7);
   static const Duration receiveTimeout = Duration(seconds: 20);
   // Tanpa ini, upload foto di jaringan lambat/lag bisa "menggantung" tanpa
   // batas waktu (Dio tidak punya default sendTimeout) -- lebih longgar dari

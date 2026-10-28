@@ -14,6 +14,10 @@ from pydantic import BaseModel, Field, model_validator
 OffboardingStatus = Literal["active", "in_process", "offboarded"]
 
 
+class NextEmployeeNo(BaseModel):
+    employee_no: str = Field(max_length=50, description="Usulan nomor karyawan berikutnya (boleh diubah)")
+
+
 class AddressIn(BaseModel):
     address_line: str = Field(min_length=3, max_length=255)
     city: str = Field(min_length=2, max_length=100)
@@ -95,6 +99,16 @@ class EmployeeUpdate(BaseModel):
     photo_file_id: UUID | None = None
 
 
+class MyPhotoIn(BaseModel):
+    """Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto."""
+
+    file_id: UUID | None = None
+
+
+class MyPhotoOut(BaseModel):
+    photo_file_id: UUID | None = None
+
+
 __all__ = [
     "AddressIn",
     "AddressOut",
@@ -103,5 +117,7 @@ __all__ = [
     "EmployeeListResponse",
     "EmployeeOut",
     "EmployeeUpdate",
+    "MyPhotoIn",
+    "MyPhotoOut",
     "OffboardingStatus",
 ]

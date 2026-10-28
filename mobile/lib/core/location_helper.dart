@@ -83,6 +83,18 @@ class LocationWarmer {
 
   StreamSubscription<Position>? _sub;
   Position? _last;
+  final _fixes = StreamController<Position>.broadcast();
+
+  /// Titik segar & akurat sekarang, atau titik pertama berikutnya (maks [timeout]); null bila tak ada.
+  Future<Position?> waitForFix({Duration timeout = const Duration(seconds: 8)}) async {
+    final now = freshFix();
+    if (now != null) return now;
+    try {
+      return await _fixes.stream.firstWhere((p) => p.accuracy <= maxGpsAccuracyM).timeout(timeout);
+    } on TimeoutException {
+      return null;
+    }
+  }
 
   /// Titik terakhir yang masih segar & cukup akurat; null → ambil baru.
   Position? freshFix() {
@@ -115,7 +127,10 @@ class LocationWarmer {
             )
           : const LocationSettings(accuracy: LocationAccuracy.high);
       _sub = Geolocator.getPositionStream(locationSettings: settings).listen(
-        (p) => _last = p,
+        (p) {
+          _last = p;
+          if (!_fixes.isClosed) _fixes.add(p);
+        },
         onError: (_) => stop(),
         cancelOnError: true,
       );

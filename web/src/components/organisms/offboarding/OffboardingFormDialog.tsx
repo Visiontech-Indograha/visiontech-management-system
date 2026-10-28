@@ -19,7 +19,7 @@ export function OffboardingFormDialog({ employee, onClose }: {
   onClose: () => void;
 }) {
   const create = useCreateOffboarding();
-  const employees = useEmployees({ status: "active", page: 1 });
+  const employees = useEmployees({ status: "active", page: 1, size: 100 });
   const [employeeId, setEmployeeId] = useState(employee?.id ?? "");
   const [reason, setReason] = useState<OffboardingCreate["reason_type"]>("PKWT_EXPIRED");
   const [effective, setEffective] = useState("");

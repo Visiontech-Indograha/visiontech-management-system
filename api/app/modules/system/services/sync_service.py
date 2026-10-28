@@ -22,9 +22,11 @@ from app.core.security import CurrentUser
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
 from app.modules.work_plans.schemas.daily_report_schema import DailyReportCreate
+from app.modules.work_plans.schemas.plan_item_schema import ProgressIn
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
+from app.modules.work_plans.services.plan_item_service import PlanItemService
 
-OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT")
+OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT", "PLAN_ITEM_PROGRESS")
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 INVALID = "Data operasi tidak valid."
 
@@ -76,6 +78,17 @@ class SyncService:
             )
             service = DailyPlanService(self.db)
             await service.submit_daily_report(user, daily_plan_id, report)
+        elif op_type == "PLAN_ITEM_PROGRESS":
+            # Foto yang sudah terunggah (`photos`) + foto baru yang diunggah HP saat sinkron: id berkas datang di
+            # `evidence_file_ids` berurutan dengan `new_photo_requirements` (slot foto tiap berkas).
+            photos = list(p.get("photos") or [])
+            new_files = p.get("evidence_file_ids") or []
+            new_slots = p.get("new_photo_requirements") or []
+            photos += [{"file_id": f, "requirement_id": r} for f, r in zip(new_files, new_slots, strict=False)]
+            data = ProgressIn(
+                completed_qty=p["completed_qty"], photos=photos, notes=p.get("notes"),
+            )
+            await PlanItemService(self.db).progress(user, UUID(str(p["item_id"])), data)
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

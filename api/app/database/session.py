@@ -37,7 +37,12 @@ def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:
     """
     engine_kwargs: dict[str, Any] = {
         "echo": False,
-        "connect_args": {"server_settings": {"search_path": SEARCH_PATH}},
+        "connect_args": {
+            "server_settings": {
+                "search_path": SEARCH_PATH,
+                "timezone": "Asia/Jakarta",
+            }
+        },
     }
     # Parameter pool_size & max_overflow hanya untuk queue pool (bukan NullPool pada uji coba)
     poolclass = kwargs.get("poolclass")

@@ -6,12 +6,15 @@ import 'package:intl/intl.dart';
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
+import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
 import 'item_progress_screen.dart';
+import 'overtime_hours.dart';
 import 'survey_screen.dart';
 
 const phaseLabel = {
@@ -37,12 +40,39 @@ class DailyPlanScreen extends ConsumerStatefulWidget {
   ConsumerState<DailyPlanScreen> createState() => _DailyPlanScreenState();
 }
 
+/// Koreksi yang masih berjalan dari riwayat koreksi satu jadwal (terbaru dulu); null bila tidak ada.
+Map<String, dynamic>? openCorrectionOf(List<Map<String, dynamic>> corrections) {
+  for (final c in corrections) {
+    if (const {'REQUESTED', 'REVISING', 'IN_REVIEW'}.contains(c['status'])) return c;
+  }
+  return null;
+}
+
+String correctionStateTitle(String status) => switch (status) {
+  'REQUESTED' => 'Koreksi menunggu keputusan PM',
+  'REVISING' => 'PM meminta revisi laporan',
+  'IN_REVIEW' => 'Revisi menunggu pemeriksaan PM',
+  _ => status,
+};
+
+String correctionStateSubtitle(Map<String, dynamic> correction) {
+  final note = (correction['review_note'] as String?)?.trim();
+  return switch (correction['status']) {
+    'REVISING' => note == null || note.isEmpty
+        ? 'Perbarui laporan dan hasil kerja, lalu kirim revisi'
+        : 'Catatan PM: $note',
+    'REQUESTED' => 'Alasan: ${correction['reason']}',
+    _ => 'Anda akan diberi tahu setelah PM memutuskan',
+  };
+}
+
 class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   Map<String, dynamic>? _plan;
   Map<String, dynamic>? _dailyReport;
   String? _error;
   bool _busy = false;
   bool _reportPending = false;
+  List<Map<String, dynamic>> _corrections = const [];
 
   String get _me {
     final auth = ref.read(authControllerProvider);
@@ -66,6 +96,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       );
       var report = _dailyReport;
       try {
+        if (NetworkHint.probablyOffline) {
+          // baru gagal jaringan: langsung ke cache laporan (tanpa menunggu timeout lagi)
+          throw DioException(requestOptions: RequestOptions());
+        }
         report = await engine.api.dailyReport(widget.dailyPlanId);
         await engine.cachePut('daily_report_${widget.dailyPlanId}', report);
         _reportPending = false;
@@ -80,13 +114,61 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           if (cached.data is Map) report = Map<String, dynamic>.from(cached.data as Map);
         }
       }
-      if (mounted) setState(() => (_plan = plan, _dailyReport = report, _error = null));
+      var corrections = _corrections;
+      if (plan['leader_employee_id'] == _me && !NetworkHint.probablyOffline) {
+        try {
+          corrections = await engine.api.planCorrections(widget.dailyPlanId);
+        } on DioException {
+          // riwayat koreksi hanya tambahan; layar tetap tampil tanpanya
+        }
+      }
+      if (mounted) {
+        setState(() => (_plan = plan, _dailyReport = report, _corrections = corrections, _error = null));
+      }
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     }
   }
 
   void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
+
+  /// Koreksi yang masih berjalan (diminta, direvisi, atau menunggu pemeriksaan PM); null bila tidak ada.
+  Map<String, dynamic>? get _openCorrection =>
+      openCorrectionOf(_corrections);
+
+  Future<void> _requestCorrection() async {
+    final reason = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ajukan koreksi laporan'),
+        content: TextField(
+            maxLength: 500,
+          controller: reason,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Apa yang perlu diperbaiki? (min. 5 karakter)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke PM')),
+        ],
+      ),
+    );
+    final text = reason.text.trim();
+    disposeAfterDialog([reason]);
+    if (ok != true) return;
+    if (text.length < 5) return _snack('Tulis alasan koreksi minimal 5 karakter.', error: true);
+    await _run(
+      () => ref.read(syncEngineProvider).api.requestCorrection(widget.dailyPlanId, text),
+      'Permintaan koreksi dikirim ke PM.',
+    );
+  }
+
+  /// Waktu kirim laporan untuk manusia (waktu HP), bukan string ISO mentah dari server.
+  String _sentAt(dynamic iso) {
+    final at = iso is String ? DateTime.tryParse(iso)?.toLocal() : null;
+    return at == null ? '-' : DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(at);
+  }
 
   Future<void> _dailyReportForm() async {
     final summary = TextEditingController(text: _dailyReport?['summary'] as String? ?? '');
@@ -99,12 +181,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
+            maxLength: 1000,
               controller: summary,
               minLines: 2,
               maxLines: 4,
               decoration: const InputDecoration(labelText: 'Ringkasan hasil kerja *'),
             ),
             TextField(
+            maxLength: 1000,
               controller: obstacles,
               minLines: 1,
               maxLines: 3,
@@ -128,8 +212,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ],
       ),
     );
-    summary.dispose();
-    obstacles.dispose();
+    disposeAfterDialog([summary, obstacles]);
     if (report == null || !mounted) return;
 
     setState(() => _busy = true);
@@ -172,7 +255,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   }
 
   Future<void> _overtime() async {
-    final hours = TextEditingController();
+    final suggested = _plan == null
+        ? null
+        : suggestedOvertimeHours(
+            workDate: '${_plan!['work_date']}',
+            clockOutTime: '${_plan!['clock_out_time']}',
+            nowUtc: DateTime.now().toUtc(),
+          );
+    final hours = TextEditingController(text: suggested == null ? '' : '$suggested');
     final reason = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
@@ -181,12 +271,17 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
+            VmsTextField(
+              maxLength: 5,
               controller: hours,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Jam lembur (maks. 12)'),
+              decoration: InputDecoration(
+                labelText: 'Jam lembur (maks. 12)',
+                helperText: suggested == null ? null : 'Dari jam pulang jadwal; bisa diubah',
+              ),
             ),
-            TextField(
+            VmsTextField(
+              maxLength: 500,
               controller: reason,
               decoration: const InputDecoration(labelText: 'Alasan'),
             ),
@@ -201,13 +296,24 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     if (ok != true) return;
     final h = num.tryParse(hours.text.replaceAll(',', '.'));
     if (h == null) return _snack('Isi jam lembur dengan angka.');
-    await _run(
-      () => ref
-          .read(syncEngineProvider)
-          .api
-          .requestOvertime(dayId: widget.dailyPlanId, hours: h, reason: reason.text.trim()),
-      'Pengajuan lembur terkirim ke PM.',
-    );
+    if (h <= 0 || h > 12) return _snack('Jam lembur harus antara 0.5 hingga 12 jam.');
+    if (reason.text.trim().length < 3) return _snack('Alasan lembur minimal 3 karakter.');
+    // Lewat antrean sinkronisasi: tanpa sinyal, pengajuan tersimpan dan dikirim otomatis saat online.
+    setState(() => _busy = true);
+    try {
+      final applied = await ref.read(syncEngineProvider).submit(
+        OfflineOp.overtimeReport,
+        {'daily_plan_id': widget.dailyPlanId, 'hours': h, 'reason': reason.text.trim()},
+      );
+      _snack(applied
+          ? 'Pengajuan lembur terkirim ke PM.'
+          : 'Pengajuan lembur disimpan dan menunggu koneksi untuk dikirim.');
+      if (applied) await _load();
+    } catch (e) {
+      _snack(apiErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   /// Tugas survei (fase SURVEY, menempel pada order) dibuka di layar survei berformat baku (docs/37).
@@ -230,6 +336,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           itemId: item['item_id'] as String,
           dayStatus: '${_plan!['status']}',
           isLeader: _isLeader,
+          initialItem: item,
         ),
       ),
     );
@@ -310,6 +417,50 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ),
                     ),
                   ],
+                  if (_isLeader && plan['status'] == 'COMPLETED' && _openCorrection == null) ...[
+                    const SizedBox(height: 12),
+                    _Tile(
+                      icon: Icons.edit_note_rounded,
+                      title: 'Ajukan koreksi laporan',
+                      subtitle: 'Perbaikan laporan harus disetujui PM',
+                      onTap: _busy ? null : _requestCorrection,
+                    ),
+                  ],
+                  if (_isLeader && _openCorrection != null) ...[
+                    const SizedBox(height: 12),
+                    _Tile(
+                      icon: Icons.rule_rounded,
+                      title: correctionStateTitle(_openCorrection!['status'] as String),
+                      subtitle: correctionStateSubtitle(_openCorrection!),
+                      onTap: null,
+                    ),
+                    if (_openCorrection!['status'] == 'REVISING') ...[
+                      const SizedBox(height: 12),
+                      PrimaryAction(
+                        label: 'Kirim revisi ke PM',
+                        icon: Icons.send_rounded,
+                        busy: _busy,
+                        onTap: _dailyReport == null
+                            ? null
+                            : () async {
+                                if (!await confirmAction(
+                                  context,
+                                  title: 'Kirim revisi ke PM?',
+                                  message: 'PM akan memeriksa laporan dan hasil kerja yang sudah Anda perbarui.',
+                                  confirmLabel: 'Kirim revisi',
+                                )) {
+                                  return;
+                                }
+                                await _run(
+                                  () => ref.read(syncEngineProvider).api.submitCorrection(
+                                    _openCorrection!['correction_id'] as String,
+                                  ),
+                                  'Revisi dikirim ke PM.',
+                                );
+                              },
+                      ),
+                    ],
+                  ],
                   if (_isLeader && plan['status'] == 'ONGOING') ...[
                     const SizedBox(height: 12),
                     _Tile(
@@ -319,18 +470,29 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           ? 'Menunggu koneksi untuk dikirim'
                           : _dailyReport == null
                               ? 'Wajib sebelum hari kerja ditutup atau absen pulang'
-                              : 'Terkirim · ${_dailyReport!['submitted_at']}',
+                              : 'Terkirim · ${_sentAt(_dailyReport!['submitted_at'])}',
                       onTap: _busy ? null : _dailyReportForm,
                     ),
                     const SizedBox(height: 12),
+                    if (_openCorrection == null)
                     PrimaryAction(
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: _dailyReport == null || _reportPending ? null : () => _run(
-                        () => ref.read(syncEngineProvider).api.completeDay(widget.dailyPlanId),
-                        'Hari kerja ditutup.',
-                      ),
+                      onTap: _dailyReport == null || _reportPending ? null : () async {
+                        if (!await confirmAction(
+                          context,
+                          title: 'Selesaikan hari kerja?',
+                          message: 'Hasil kerja dikunci. Perubahan setelahnya perlu persetujuan PM lewat koreksi laporan.',
+                          confirmLabel: 'Selesaikan',
+                        )) {
+                          return;
+                        }
+                        await _run(
+                          () => ref.read(syncEngineProvider).api.completeDay(widget.dailyPlanId),
+                          'Hari kerja ditutup.',
+                        );
+                      },
                     ),
                   ],
                   const SectionTitle('Daftar pekerjaan hari ini'),
@@ -354,6 +516,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       title: 'Ajukan lembur',
                       subtitle: 'Diputus PM/OM divisi',
                       onTap: _busy ? null : _overtime,
+                    ),
+                  ] else if (plan['status'] == 'APPROVED' || plan['status'] == 'COMPLETED') ...[
+                    const SectionTitle('Lembur'),
+                    Text(
+                      plan['status'] == 'APPROVED'
+                          ? 'Lembur bisa diajukan setelah jadwal dimulai.'
+                          : 'Lembur hanya bisa diajukan saat jadwal sedang berjalan.',
+                      style: VmsTextStyles.bodySm,
                     ),
                   ],
                 ],

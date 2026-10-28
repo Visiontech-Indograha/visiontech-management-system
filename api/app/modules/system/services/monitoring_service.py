@@ -102,7 +102,7 @@ class MonitoringService:
         # R-33: Finance & OPS semua; PM hanya bawahan lapangan di unitnya; selain itu milik sendiri.
         if Permission.VIEW_ALL_ATTENDANCE.value in user.permissions:
             scope = "all"
-        elif "PM" in user.roles:
+        elif {"PM", "PROJECT_MANAGER"} & set(user.roles):
             scope = "subordinates"
         else:
             scope = "own"

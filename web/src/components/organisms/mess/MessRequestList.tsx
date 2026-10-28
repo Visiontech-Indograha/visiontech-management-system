@@ -1,3 +1,6 @@
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -63,6 +66,7 @@ export function MessRequestList({
     setNoteError(null);
   };
 
+  const view = useClientList(requests.data, (r) => [r.employee_name, r.employee_no, r.mess_name, r.city], { prefix: "req_" });
   return (
     <>
       {requests.isPending && <LoadingBar className="h-24" />}
@@ -80,8 +84,11 @@ export function MessRequestList({
         </div>
       )}
       {requests.data && requests.data.length > 0 && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama, NIP, atau mess..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {requests.data.map((r) => (
+          {view.rows.map((r) => (
             <ListEntry
               key={r.mess_stay_id}
               className="space-y-2 rounded-panel border border-line bg-surface p-4 shadow-card"
@@ -122,6 +129,8 @@ export function MessRequestList({
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="pengajuan" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
       <ConfirmDialog
         open={approving !== null}

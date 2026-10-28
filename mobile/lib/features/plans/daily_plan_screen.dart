@@ -8,6 +8,7 @@ import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -270,17 +271,17 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-            maxLength: 12,
+            VmsTextField(
+              maxLength: 5,
               controller: hours,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: 'Jam lembur (maks. 12)',
-                helperText: suggested == null ? null : 'Terisi otomatis dari jam pulang jadwal; bisa diubah.',
+                helperText: suggested == null ? null : 'Dari jam pulang jadwal; bisa diubah',
               ),
             ),
-            TextField(
-            maxLength: 500,
+            VmsTextField(
+              maxLength: 500,
               controller: reason,
               decoration: const InputDecoration(labelText: 'Alasan'),
             ),

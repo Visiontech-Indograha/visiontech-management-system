@@ -24,6 +24,7 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeUpdate,
     MyPhotoIn,
     MyPhotoOut,
+    NextEmployeeNo,
 )
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
@@ -63,6 +64,15 @@ async def list_employees(
     result = await controller.list(page=page, size=size, status=employee_status, division_id=division_id,
                                    office_id=office_id, position_id=position_id, q=q)
     return result.model_copy(update={"items": [_private_hidden(e, current_user) for e in result.items]})
+
+
+@router.get("/next-no", response_model=NextEmployeeNo, summary="Usulan nomor karyawan berikutnya")
+async def next_employee_no(
+    current_user: CurrentUser = _MANAGE,
+    controller: EmployeeController = Depends(),
+) -> NextEmployeeNo:
+    """Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya."""
+    return await controller.next_no()
 
 
 @router.get("/{employee_id}", response_model=EmployeeDetail)

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
-import { useCreateEmployee } from "@/services/employeeService";
+import { useCreateEmployee, useNextEmployeeNo } from "@/services/employeeService";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { ControlInput, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -42,6 +42,8 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
     handleSubmit,
     control,
     setError,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
@@ -58,6 +60,11 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
       postal_code: "",
     },
   });
+  const nextNo = useNextEmployeeNo();
+  useEffect(() => {
+    // Isi otomatis (tetap bisa diubah); jangan menimpa ketikan pengguna.
+    if (nextNo.data && !getValues("employee_no")) setValue("employee_no", nextNo.data, { shouldDirty: false });
+  }, [nextNo.data, getValues, setValue]);
 
   const fullNameValue = useWatch({ control, name: "full_name" });
 

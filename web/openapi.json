@@ -8763,6 +8763,33 @@
     }
    }
   },
+  "/api/v1/employees/next-no": {
+   "get": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Usulan nomor karyawan berikutnya",
+    "description": "Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya.",
+    "operationId": "next_employee_no_api_v1_employees_next_no_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NextEmployeeNo"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/employees/{employee_id}": {
    "get": {
     "tags": [
@@ -21925,6 +21952,21 @@
     ],
     "title": "NeedsReviewResponse",
     "description": "Schema for review alerts."
+   },
+   "NextEmployeeNo": {
+    "properties": {
+     "employee_no": {
+      "type": "string",
+      "maxLength": 50,
+      "title": "Employee No",
+      "description": "Usulan nomor karyawan berikutnya (boleh diubah)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_no"
+    ],
+    "title": "NextEmployeeNo"
    },
    "NotificationList": {
     "properties": {

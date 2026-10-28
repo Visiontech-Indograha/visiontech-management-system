@@ -14,6 +14,10 @@ from pydantic import BaseModel, Field, model_validator
 OffboardingStatus = Literal["active", "in_process", "offboarded"]
 
 
+class NextEmployeeNo(BaseModel):
+    employee_no: str = Field(max_length=50, description="Usulan nomor karyawan berikutnya (boleh diubah)")
+
+
 class AddressIn(BaseModel):
     address_line: str = Field(min_length=3, max_length=255)
     city: str = Field(min_length=2, max_length=100)

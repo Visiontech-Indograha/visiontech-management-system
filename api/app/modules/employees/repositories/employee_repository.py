@@ -92,6 +92,13 @@ class EmployeeRepository(BaseRepository):
         ))
 
     # ── Validasi referensi ────────────────────────────────────────────────────
+    async def recent_employee_nos(self, limit: int = 300) -> list[str]:
+        """Nomor karyawan terbaru (termasuk yang diarsipkan, agar nomor tidak dipakai ulang)."""
+        rows = await self.fetchall(
+            "SELECT employee_no FROM employee ORDER BY create_at DESC LIMIT :n", {"n": limit}
+        )
+        return [str(r.employee_no) for r in rows]
+
     async def employee_no_taken(self, employee_no: str, exclude: UUID | None = None) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_no = :no AND delete_at IS NULL "

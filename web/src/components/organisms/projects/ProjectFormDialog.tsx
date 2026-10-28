@@ -193,10 +193,10 @@ export function ProjectFormDialog({
             error={errors.status?.message}
             {...register("status")}
           >
-            <ControlOption value="ONGOING">ONGOING (Berjalan)</ControlOption>
-            <ControlOption value="DRAFT">DRAFT (Persiapan)</ControlOption>
-            <ControlOption value="COMPLETED">COMPLETED (Selesai)</ControlOption>
-            <ControlOption value="CANCELLED">CANCELLED (Dibatalkan)</ControlOption>
+            <ControlOption value="ONGOING">Berjalan</ControlOption>
+            <ControlOption value="DRAFT">Persiapan</ControlOption>
+            <ControlOption value="COMPLETED">Selesai</ControlOption>
+            <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
           </SelectField>
         </div>
 

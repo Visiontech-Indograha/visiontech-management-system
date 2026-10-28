@@ -58,6 +58,17 @@ NEW=$(git -C src rev-parse "origin/$BRANCH")
 OLD=$(cat "$LAST_FILE" 2>/dev/null || echo "")
 [ "$NEW" = "$OLD" ] && exit 0
 
+# Anti-loop: commit yang SAMA baru saja gagal dideploy → jeda dulu (bawaan 15 menit), bukan membangun ulang dan
+# membuat ulang kontainer tiap menit (insiden 2026-10-23..28: ±650 deploy/hari saat MinIO mati, produksi putus-sambung).
+FAILED_FILE="$BASE/.last-failed"
+RETRY_AFTER="${VMS_DEPLOY_RETRY_AFTER:-900}"
+if [ -f "$FAILED_FILE" ]; then
+  read -r FAILED_SHA FAILED_AT < "$FAILED_FILE" || true
+  if [ "${FAILED_SHA:-}" = "$NEW" ] && [ $(( $(date +%s) - ${FAILED_AT:-0} )) -lt "$RETRY_AFTER" ]; then
+    exit 0
+  fi
+fi
+
 STAMP=$(date +%Y%m%d-%H%M%S)
 LOG="$LOGDIR/deploy-$STAMP.log"
 SHORT=${NEW:0:8}
@@ -196,6 +207,7 @@ $(tail -20 "$LOG" | cut -c1-150)
 \`\`\`
 📎 Log lengkap terlampir." "$LOG"
   rm -f "$STAGES"
+  echo "$NEW $(date +%s)" > "$FAILED_FILE"   # lihat anti-loop di atas
   exit 1
 }
 
@@ -256,6 +268,7 @@ case $RC in
 esac
 
 echo "$NEW" > "$LAST_FILE"
+rm -f "$FAILED_FILE"
 TOOK=$(( $(date +%s) - T0 ))
 MIG=$(grep -E "^migrasi V2:" "$LOG" | tail -1)
 HEALTH=$(grep -E '^api=' "$LOG" | tail -1)

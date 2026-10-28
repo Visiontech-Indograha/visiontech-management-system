@@ -69,6 +69,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 
   Map<String, int> _summary = const {};
+  bool _siteManual = false; // pengguna memilih lokasi sendiri → jangan diganti otomatis
+
+  /// Tanpa tugas berjalan: setelah titik GPS pertama tiba, pindah ke lokasi terdekat (bila pengguna belum memilih).
+  Future<void> _autoPickNearest() async {
+    if (_siteManual || _runningSites.isNotEmpty || _sites.length < 2) return;
+    final fix = await LocationWarmer.instance.waitForFix();
+    if (fix == null || !mounted || _siteManual) return;
+    final near = nearestSiteId(_sites, fix.latitude, fix.longitude);
+    if (near != null && near != _siteId) setState(() => _siteId = near);
+  }
 
   /// Ringkasan antrean (best-effort): gagal/offline → kartu disembunyikan, tidak mengganggu absensi.
   Future<void> _loadSummary() async {
@@ -157,6 +167,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           _siteId = near ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
         }
       });
+      unawaited(_autoPickNearest());
       await _syncReminders();
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
@@ -753,7 +764,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: Icons.place_rounded,
                                 value: _siteId,
                                 options: [for (final s in _sites) VmsOption(s['id'] as String, s['name'] as String)],
-                                onChanged: (v) => setState(() => _siteId = v),
+                                onChanged: (v) => setState(() {
+                                  _siteManual = true;
+                                  _siteId = v;
+                                }),
                               ),
                               const SizedBox(height: 14),
                               // Ada jadwal tugas hari ini tetapi memilih lokasi lain (mis. kantor): hanya peringatan,

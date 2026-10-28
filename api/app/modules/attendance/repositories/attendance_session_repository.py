@@ -481,15 +481,18 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi (OM, PM, Superadmin)."""
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, dan PM divisi karyawan itu saja."""
         rows = await self.fetchall(
             """
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
             FROM users u
-            WHERE u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
-              AND u.employee_id IS NOT NULL
+            WHERE u.employee_id IS NOT NULL
               AND u.employee_id <> CAST(:emp AS uuid)
               AND u.delete_at IS NULL
+              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
+                   OR (u.system_role = 'PROJECT_MANAGER' AND EXISTS (
+                        SELECT 1 FROM employee e JOIN division d ON d.division_id = e.division_id
+                        WHERE e.employee_id = CAST(:emp AS uuid) AND d.pm_id = u.employee_id)))
             """,
             {"emp": str(employee_id)},
         )

@@ -321,6 +321,14 @@ class WorkCompletionService:
         signed = await self.crud.get_completion(completion_id)
         if not signed:
             raise NotFoundError("Order Proyek Klien")
+        if as_leader:
+            from app.modules.notifications.services.notification_service import NotificationService
+
+            what = signed.get("project_title") or signed.get("order_number") or "order proyek"
+            await NotificationService(self.crud.db).notify_division_managers(
+                current_user.employee_id, "BAST_LEADER_SIGNED", "BAST menunggu tanda tangan PM",
+                f"Ketua tim sudah menandatangani berita acara {what}.", target="work-completion",
+            )
         if not as_leader:
             leader_png = storage.get_image_bytes(signed["leader_signature_path"] or "")
             signed["signature_hash"] = completion_fingerprint(signed, leader_png, png)

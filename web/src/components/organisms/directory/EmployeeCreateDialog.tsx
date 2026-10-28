@@ -107,6 +107,11 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
         photo_file_id = await uploadForm(form);
       }
 
+      const anyAddressField = !!(v.address_line || v.city || v.postal_code);
+      if (anyAddressField && (!v.address_line || !v.city || !v.postal_code)) {
+        setFormError("Jika mengisi alamat, seluruh kolom (jalan, kota, dan kode pos) wajib diisi lengkap.");
+        return;
+      }
       const hasAddress = !!(v.address_line && v.city && v.postal_code);
       const created = await create.mutateAsync({
         employee_no: v.employee_no,

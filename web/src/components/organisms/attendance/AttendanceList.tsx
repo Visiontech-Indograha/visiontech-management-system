@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryState } from "@/components/molecules/QueryState";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/lib/format";
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
@@ -26,11 +27,14 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
           {data?.items.map((a) => (
             <ListEntry key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
-                  <TextBlock className="text-sm text-mist">
-                    {formatDate(a.work_date)} · {a.site_label}
-                  </TextBlock>
+                <div className="flex items-center gap-3">
+                  <UserAvatar name={a.employee_name} fileId={a.employee_photo_file_id} size="sm" />
+                  <div>
+                    <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
+                    <TextBlock className="text-sm text-mist">
+                      {formatDate(a.work_date)} · {a.site_label}
+                    </TextBlock>
+                  </div>
                 </div>
                 <StatusBadge status={a.status} />
               </div>

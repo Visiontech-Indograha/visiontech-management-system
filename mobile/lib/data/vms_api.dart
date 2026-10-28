@@ -619,6 +619,11 @@ class VmsApi {
     return (res.data as Map)['file_id'] as String;
   }
 
+  /// Mengganti (atau menghapus bila null) foto profil sendiri dengan berkas hasil unggah.
+  Future<void> setMyPhoto(String? fileId) async {
+    await _dio.put('$_p/employees/me/photo', data: {'file_id': fileId});
+  }
+
   /// `POST /sync/operations` (M12) — hasil per operasi: APPLIED | REJECTED | CONFLICT | PENDING.
   Future<List<Map<String, dynamic>>> syncOperations(
     String deviceId,

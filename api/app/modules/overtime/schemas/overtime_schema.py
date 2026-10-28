@@ -42,6 +42,7 @@ class OvertimeResponse(BaseModel):
     daily_plan_id: UUID | None
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     work_date: date
     hours: float
     reason: str = Field(max_length=1000)
@@ -60,6 +61,7 @@ class OvertimeRecapRow(BaseModel):
     """
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     period_month: date
     approved_entries: int
     pending_entries: int

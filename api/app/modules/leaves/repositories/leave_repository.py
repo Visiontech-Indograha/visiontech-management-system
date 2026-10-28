@@ -14,6 +14,8 @@ from app.core.repository import BaseRepository
 
 _LEAVE_SELECT = """
     SELECT lr.leave_id, lr.employee_id, e.full_name AS employee_name, e.employee_no,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id,
            d.name AS division_name, lr.leave_type::text AS leave_type, lr.start_date,
            lr.end_date, lr.total_days, lr.reason, lr.status::text AS status,
            lr.attachment_path,

@@ -44,6 +44,7 @@ class LeaveResponse(BaseModel):
     leave_id: UUID
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     employee_no: str | None = None
     division_name: str | None = None
     leave_type: LeaveType
@@ -63,6 +64,7 @@ class LeaveBalanceResponse(BaseModel):
     balance_id: UUID
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     period_year: int
     total_quota: int
     used_quota: int

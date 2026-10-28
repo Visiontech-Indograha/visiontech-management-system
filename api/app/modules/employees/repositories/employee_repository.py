@@ -123,6 +123,23 @@ class EmployeeRepository(BaseRepository):
         )
         return key
 
+    async def uploaded_image_key(self, file_id: UUID, user_id: UUID | str) -> str | None:
+        """storage_key gambar yang DIUNGGAH pengguna ini (foto profil sendiri tak boleh menunjuk berkas orang lain)."""
+        key: str | None = await self.scalar(
+            "SELECT storage_key FROM file_object WHERE id = CAST(:id AS uuid) AND mime_type LIKE 'image/%' "
+            "AND uploaded_by = CAST(:uid AS uuid)",
+            {"id": str(file_id), "uid": str(user_id)},
+        )
+        return key
+
+    async def profile_photo_file_id(self, employee_id: UUID) -> UUID | None:
+        photo_id: UUID | None = await self.scalar(
+            "SELECT f.id FROM file_object f JOIN employee e ON e.profile_photo_path = f.storage_key "
+            "WHERE e.employee_id = CAST(:id AS uuid)",
+            {"id": str(employee_id)},
+        )
+        return photo_id
+
     # ── Tulis ─────────────────────────────────────────────────────────────────
     async def insert(self, data: dict[str, Any]) -> UUID:
         new_id: UUID = await self.scalar(

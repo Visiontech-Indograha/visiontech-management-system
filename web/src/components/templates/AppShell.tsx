@@ -43,7 +43,7 @@ export function AppShell() {
         />
         <SidebarNav items={items} collapsed={collapsed} onNavigate={() => setDrawerOpen(false)} />
         {me && (
-          <SidebarProfile email={me.email} roleLabel={roleLabel} collapsed={collapsed} onLogout={() => void logout()} />
+          <SidebarProfile email={me.email} name={me.full_name} photoFileId={me.photo_file_id} roleLabel={roleLabel} collapsed={collapsed} onLogout={() => void logout()} />
         )}
       </aside>
 

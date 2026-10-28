@@ -54,9 +54,18 @@ class _Photo {
 /// Progres satu titik (Milestone 6): jumlah realisasi + foto per syarat foto jenis pekerjaan. Server menolak DONE
 /// bila foto wajib belum lengkap atau prasyarat belum selesai. Ketua tim bisa meminta item digeser ke hari lain.
 class ItemProgressScreen extends ConsumerStatefulWidget {
-  const ItemProgressScreen({super.key, required this.itemId, required this.dayStatus, required this.isLeader});
+  const ItemProgressScreen({
+    super.key,
+    required this.itemId,
+    required this.dayStatus,
+    required this.isLeader,
+    this.initialItem,
+  });
 
   final String itemId;
+
+  /// Data item dari daftar jadwal — dipakai bila server tak terjangkau (mis. di area tanpa sinyal).
+  final Map<String, dynamic>? initialItem;
   final String dayStatus;
   final bool isLeader;
 
@@ -109,7 +118,19 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         _error = null;
       });
     } catch (e) {
-      if (mounted) setState(() => _error = apiErrorMessage(e));
+      if (!mounted) return;
+      final fallback = widget.initialItem;
+      if (fallback != null && _item == null) {
+        setState(() {
+          _item = fallback;
+          _qty.text = qtyText(fallback['completed_qty']);
+          _notes.text = '${fallback['notes'] ?? ''}';
+          _error = null;
+        });
+        _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+        return;
+      }
+      setState(() => _error = apiErrorMessage(e));
     }
   }
 
@@ -196,7 +217,18 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke PM')),
+          FilledButton(
+            onPressed: () {
+              if (reason.text.trim().length < 3) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Alasan penundaan minimal 3 karakter.')),
+                );
+                return;
+              }
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Kirim ke PM'),
+          ),
         ],
       ),
     );

@@ -6,6 +6,7 @@ export interface LeaveRequest {
   employee_id: string;
   employee_name: string;
   employee_no?: string;
+  employee_photo_file_id?: string | null;
   division_name?: string;
   leave_type: "ANNUAL" | "SICK" | "MATERNITY" | "UNPAID" | "OTHER";
   start_date: string;

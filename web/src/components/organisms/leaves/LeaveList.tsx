@@ -1,5 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { formatDate } from "@/lib/format";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
@@ -108,7 +109,10 @@ export function LeaveList({
                           {statusBadge.label}
                         </TextBlock>
                       </div>
-                      <TextBlock className="font-semibold text-foreground mt-1.5">{l.employee_name}</TextBlock>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <UserAvatar name={l.employee_name} fileId={l.employee_photo_file_id} size="sm" />
+                        <TextBlock className="font-semibold text-foreground">{l.employee_name}</TextBlock>
+                      </div>
                       {l.division_name && (
                         <TextBlock as="span" className="text-xs text-mist">{l.division_name}</TextBlock>
                       )}

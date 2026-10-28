@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { ContactLinks } from "@/components/molecules/ContactLinks";
 import { SelectField, TextField } from "@/components/molecules/Field";
@@ -46,6 +47,7 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
             const leader = m.employee_id === team.leader_employee_id;
             return (
               <ListEntry key={m.member_id} className="flex flex-wrap items-center gap-2 p-3">
+                <UserAvatar name={m.full_name} fileId={m.photo_file_id} size="sm" />
                 <div className="min-w-40 flex-1">
                   <TextBlock className="text-sm font-medium">
                     {m.full_name} {leader && <Pill tone="info">Ketua</Pill>}

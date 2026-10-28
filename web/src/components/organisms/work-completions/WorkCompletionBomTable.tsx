@@ -17,6 +17,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import {
   useWorkCompletionBom,
   useCreateWorkCompletionBom,
@@ -59,6 +60,7 @@ export function WorkCompletionBomTable({
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WorkCompletionBom | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<WorkCompletionBom | null>(null);
 
   const addForm = useForm<AddMaterialFormValues>({
     defaultValues: {
@@ -130,17 +132,7 @@ export function WorkCompletionBomTable({
     }
   };
 
-  const handleDelete = async (item: WorkCompletionBom) => {
-    try {
-      await deleteBom.mutateAsync({
-        bomId: item.bom_id,
-        completionId,
-      });
-      toast.success(`Material '${item.material_name}' berhasil dihapus.`);
-    } catch {
-      toast.error("Gagal menghapus material.");
-    }
-  };
+
 
   const handleSyncFromWorkTypes = async () => {
     try {
@@ -313,7 +305,7 @@ export function WorkCompletionBomTable({
                           <ActionButton
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDelete(item)}
+                            onClick={() => setItemToDelete(item)}
                             aria-label="Hapus Material"
                           >
                             <Trash2 className="h-4 w-4 text-danger" />
@@ -432,6 +424,29 @@ export function WorkCompletionBomTable({
           </FormBlock>
         </VmsDialog>
       )}
+      <ConfirmDialog
+        open={itemToDelete !== null}
+        title="Hapus Material BOM?"
+        message={`Apakah Anda yakin ingin menghapus material "${itemToDelete?.material_name ?? ""}" dari daftar pemakaian riil proyek ini?`}
+        confirmLabel="Hapus Material"
+        danger
+        busy={deleteBom.isPending}
+        onConfirm={async () => {
+          if (!itemToDelete) return;
+          try {
+            await deleteBom.mutateAsync({
+              bomId: itemToDelete.bom_id,
+              completionId,
+            });
+            toast.success(`Material '${itemToDelete.material_name}' berhasil dihapus.`);
+          } catch {
+            toast.error("Gagal menghapus material.");
+          } finally {
+            setItemToDelete(null);
+          }
+        }}
+        onClose={() => setItemToDelete(null)}
+      />
     </div>
   );
 }

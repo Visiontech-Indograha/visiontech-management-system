@@ -13,7 +13,7 @@ export function OvertimeRecapList({ query }: { query: UseQueryResult<OvertimeRec
         {rows.map((r) => (
           <ListEntry key={`${r.employee_id}-${r.period_month}`} className="rounded-panel border border-line bg-surface shadow-card p-4">
             <TextBlock className="font-medium">{r.employee_name}</TextBlock>
-            <TextBlock className="mb-2 text-sm text-mist">{r.period_month.slice(0, 7)}</TextBlock>
+            <TextBlock className="mb-2 text-sm text-mist">{r.period_month ? r.period_month.slice(0, 7) : "-"}</TextBlock>
             <ListBlock as="dl" className="grid grid-cols-3 gap-2 text-sm">
               <div>
                 <TextBlock as="dt" className="text-mist">Jam disetujui</TextBlock>

@@ -13,7 +13,9 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 
 _COLUMNS = """
-    o.overtime_id AS id, o.daily_plan_id, o.employee_id, e.full_name AS employee_name, o.work_date,
+    o.overtime_id AS id, o.daily_plan_id, o.employee_id, e.full_name AS employee_name,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id, o.work_date,
     o.hours::float AS hours, o.reason, o.status, o.reviewed_by_id AS reviewed_by, o.reviewed_at, o.review_note,
     o.create_at AS created_at
 """
@@ -94,6 +96,8 @@ class OvertimeRepository(BaseRepository):
             """
             SELECT CAST(date_trunc('month', o.work_date) AS date) AS period_month, o.employee_id,
                    e.full_name AS employee_name,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id,
                    count(*) FILTER (WHERE o.status = 'APPROVED') AS approved_entries,
                    count(*) FILTER (WHERE o.status = 'PENDING_PM') AS pending_entries,
                    COALESCE(sum(o.hours) FILTER (WHERE o.status = 'APPROVED'), 0)::float AS approved_hours
@@ -105,7 +109,7 @@ class OvertimeRepository(BaseRepository):
               AND (CAST(:month AS date) IS NULL
                    OR CAST(date_trunc('month', o.work_date) AS date) = CAST(:month AS date))
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
-            GROUP BY period_month, o.employee_id, e.full_name
+            GROUP BY period_month, o.employee_id, e.full_name, e.profile_photo_path
             ORDER BY period_month DESC, employee_name
             """,
             {"month": month, "mgr": managed_by},

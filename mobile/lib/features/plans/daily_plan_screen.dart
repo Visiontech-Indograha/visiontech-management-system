@@ -280,6 +280,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     if (ok != true) return;
     final h = num.tryParse(hours.text.replaceAll(',', '.'));
     if (h == null) return _snack('Isi jam lembur dengan angka.');
+    if (h <= 0 || h > 12) return _snack('Jam lembur harus antara 0.5 hingga 12 jam.');
+    if (reason.text.trim().length < 3) return _snack('Alasan lembur minimal 3 karakter.');
     await _run(
       () => ref
           .read(syncEngineProvider)
@@ -309,6 +311,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           itemId: item['item_id'] as String,
           dayStatus: '${_plan!['status']}',
           isLeader: _isLeader,
+          initialItem: item,
         ),
       ),
     );

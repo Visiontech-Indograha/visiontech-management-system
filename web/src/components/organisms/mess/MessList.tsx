@@ -63,7 +63,7 @@ export function MessList({
                 <div className="flex items-center justify-between gap-2">
                   <TextBlock className="font-semibold text-ink">
                     {s.employee_name ||
-                      `Karyawan (${s.employee_no || s.employee_id.slice(0, 8)})`}
+                      `Karyawan (${s.employee_no || (s.employee_id ? s.employee_id.slice(0, 8) : "-")})`}
                   </TextBlock>
                   <TextBlock
                     as="span"

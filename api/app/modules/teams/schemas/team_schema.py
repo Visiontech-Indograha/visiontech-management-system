@@ -22,6 +22,7 @@ class MemberOut(BaseModel):
     employee_no: str | None = None
     phone_number: str | None = None
     system_role: str | None = None
+    photo_file_id: UUID | None = None
     is_active: bool
     create_at: datetime
 

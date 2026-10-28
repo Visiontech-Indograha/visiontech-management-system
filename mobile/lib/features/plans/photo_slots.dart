@@ -34,7 +34,12 @@ Future<PendingPhoto?> pickReportPhoto({
   required void Function(String message) onError,
 }) async {
   if (origin == PhotoOrigin.phoneGallery) {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1280,
+      maxHeight: 1280,
+      imageQuality: 85,
+    );
     return picked == null
         ? null
         : PendingPhoto(path: picked.path, slot: slot, source: 'GALLERY');

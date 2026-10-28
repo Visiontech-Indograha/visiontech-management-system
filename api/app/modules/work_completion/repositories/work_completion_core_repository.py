@@ -54,7 +54,8 @@ class WorkCompletionCoreRepository(BaseRepository):
     async def project_snapshot(self, project_id: UUID | str) -> Any:
         """Data proyek untuk mengisi order: divisi, status, klien, judul, SPK, target."""
         return await self.fetchone(
-            "SELECT p.division_id, p.status, p.pm_id, c.name AS client_name, p.project_title, p.spk_number, "
+            "SELECT p.division_id, p.status, p.pm_id, p.client_id, c.name AS client_name, "
+            "p.project_title, p.spk_number, "
             "p.total_target_qty, p.unit_measure, p.start_date, p.end_date FROM project p "
             "JOIN client c ON c.client_id = p.client_id WHERE p.project_id = CAST(:id AS uuid) AND p.delete_at IS NULL",
             {"id": str(project_id)},

@@ -18,6 +18,8 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeListResponse,
     EmployeeOut,
     EmployeeUpdate,
+    MyPhotoIn,
+    MyPhotoOut,
 )
 from app.modules.employees.services.employee_service import EmployeeService
 
@@ -41,6 +43,9 @@ class EmployeeController:
 
     async def update(self, employee_id: UUID, data: EmployeeUpdate) -> EmployeeDetail:
         return EmployeeDetail(**await self.service.update(employee_id, data))
+
+    async def set_my_photo(self, user: CurrentUser, data: MyPhotoIn) -> MyPhotoOut:
+        return MyPhotoOut(photo_file_id=await self.service.set_own_photo(user, data.file_id))
 
     async def add_address(self, employee_id: UUID, data: AddressIn) -> AddressOut:
         return AddressOut(**dict((await self.service.add_address(employee_id, data))._mapping))

@@ -108,12 +108,16 @@ class AuthUserRepository(BaseRepository):
         return str(name) if name else None
 
     async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
-        """ID berkas foto profil karyawan yang tertaut ke akun ini (URL bertanda tangan diambil klien terpisah)."""
+        """ID berkas (file_object.id) foto profil karyawan milik akun ini; None bila belum ada/bukan unggahan.
+
+        Kolom `profile_photo_path` menyimpan storage_key, bukan id; klien memanggil GET /files/{id}/url dengan id.
+        """
         photo = await self.scalar(
             """
-            SELECT e.profile_photo_path
+            SELECT f.id
             FROM users u
             JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+            JOIN file_object f ON f.storage_key = e.profile_photo_path
             WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
             """,
             {"uid": user_id},

@@ -19,6 +19,10 @@ const TARGET_PATH: Record<string, string> = {
   plan: "/work-plans",
   correction: "/work-plans",
   attendance: "/attendance",
+  completion: "/work-completions",
+  survey: "/surveys",
+  offboarding: "/offboarding",
+  document: "/my-documents",
 };
 
 /** Lonceng notifikasi dalam aplikasi (alur rencana kerja v2): diperiksa tiap 60 detik, klik membuka halaman terkait. */

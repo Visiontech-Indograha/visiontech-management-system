@@ -2430,6 +2430,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/employees/me/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set My Photo
+         * @description Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini.
+         */
+        put: operations["set_my_photo_api_v1_employees_me_photo_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/employees/{employee_id}/addresses": {
         parameters: {
             query?: never;
@@ -4216,6 +4236,8 @@ export interface components {
             review_note?: string | null;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Can Review
              * @default false
@@ -4549,7 +4571,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
             /** Target Qty */
             target_qty: string;
             /** Completed Qty */
@@ -5981,6 +6003,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Period Year */
             period_year: number;
             /** Total Quota */
@@ -6028,6 +6052,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /** Division Name */
@@ -6189,6 +6215,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Work Date */
@@ -6263,6 +6291,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Purpose */
             purpose: string;
             /** Needed On */
@@ -6378,6 +6408,8 @@ export interface components {
             phone_number?: string | null;
             /** System Role */
             system_role?: string | null;
+            /** Photo File Id */
+            photo_file_id?: string | null;
             /** Is Active */
             is_active: boolean;
             /**
@@ -6503,6 +6535,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /**
@@ -6571,6 +6605,19 @@ export interface components {
             alerted: boolean;
             /** Check Ins Today */
             check_ins_today: number;
+        };
+        /**
+         * MyPhotoIn
+         * @description Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto.
+         */
+        MyPhotoIn: {
+            /** File Id */
+            file_id?: string | null;
+        };
+        /** MyPhotoOut */
+        MyPhotoOut: {
+            /** Photo File Id */
+            photo_file_id?: string | null;
         };
         /** MyRecapItem */
         MyRecapItem: {
@@ -6706,6 +6753,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /** Division Name */
@@ -6766,6 +6815,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name?: string | null;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /** Employee No */
             employee_no?: string | null;
             /** Division Name */
@@ -7103,6 +7154,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Period Month
              * Format: date
@@ -7134,6 +7187,8 @@ export interface components {
             employee_id: string;
             /** Employee Name */
             employee_name: string;
+            /** Employee Photo File Id */
+            employee_photo_file_id?: string | null;
             /**
              * Work Date
              * Format: date
@@ -7366,7 +7421,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
+            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
             /**
              * Rollover Approval Status
              * @enum {string}
@@ -13995,6 +14050,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_my_photo_api_v1_employees_me_photo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MyPhotoIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyPhotoOut"];
                 };
             };
             /** @description Validation Error */

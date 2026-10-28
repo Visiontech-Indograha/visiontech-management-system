@@ -332,17 +332,20 @@ export function WorkCompletionBomTable({
             <TextField
               label="Nama Material"
               placeholder="misal: Kabel Fiber Optic Drop Core"
+              maxLength={255}
               {...addForm.register("material_name", { required: "Nama material wajib diisi." })}
             />
             <div className="grid grid-cols-2 gap-3">
               <TextField
                 label="Kode Material (Opsional)"
                 placeholder="misal: FO-001"
+                maxLength={50}
                 {...addForm.register("material_code")}
               />
               <TextField
                 label="Kategori"
                 placeholder="misal: Kabel, Pipa, Konektor"
+                maxLength={100}
                 {...addForm.register("category")}
               />
             </div>
@@ -364,6 +367,7 @@ export function WorkCompletionBomTable({
               <TextField
                 label="Satuan"
                 placeholder="Meter, Unit, Batang"
+                maxLength={50}
                 {...addForm.register("unit", { required: true })}
               />
             </div>

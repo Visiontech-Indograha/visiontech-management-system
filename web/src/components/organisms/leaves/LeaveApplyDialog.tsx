@@ -7,7 +7,7 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { uploadFiles } from "@/services/uploadService";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
@@ -41,6 +41,7 @@ export function LeaveApplyDialog({
     register,
     handleSubmit,
     control,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<LeaveCreateInput>({
     defaultValues: {
@@ -87,6 +88,10 @@ export function LeaveApplyDialog({
       toast.success("Permohonan cuti / izin berhasil diajukan dan menunggu persetujuan.");
       onClose();
     } catch (err) {
+      if (applyFieldErrors(err, setError)) {
+        setFormError("Periksa kolom yang ditandai.");
+        return;
+      }
       setFormError(errorMessage(err, "Gagal mengajukan permohonan cuti. Periksa kuota cuti tahunan atau tanggal yang bentrok."));
     } finally {
       setIsUploading(false);
@@ -137,7 +142,11 @@ export function LeaveApplyDialog({
             label="Tanggal Selesai"
             type="date"
             error={errors.end_date?.message}
-            {...register("end_date", { required: "Tanggal selesai wajib diisi." })}
+            min={startDate || undefined}
+            {...register("end_date", {
+              required: "Tanggal selesai wajib diisi.",
+              validate: (v) => !startDate || v >= startDate || "Tanggal selesai tidak boleh sebelum tanggal mulai.",
+            })}
           />
         </div>
 
@@ -179,6 +188,7 @@ export function LeaveApplyDialog({
           {...register("reason", {
             required: "Alasan pengajuan cuti wajib diisi.",
             minLength: { value: 5, message: "Minimal 5 karakter alasan." },
+            maxLength: { value: 1000, message: "Maksimal 1000 karakter." },
           })}
         />
       </FormBlock>

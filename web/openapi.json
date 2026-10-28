@@ -2632,7 +2632,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(REQUESTED|REVISING|IN_REVIEW|ACCEPTED|REJECTED)$"
         },
         {
          "type": "null"
@@ -3477,7 +3478,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(DRAFT|PENDING|PLANNED|ONGOING|IN_PROGRESS|WAITING_ACC|ACCEPTED|REWORK|COMPLETED|CANCELLED|URGENT)$"
         },
         {
          "type": "null"
@@ -3495,7 +3497,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "maxLength": 100
         },
         {
          "type": "null"
@@ -6724,7 +6727,9 @@
       "schema": {
        "anyOf": [
         {
-         "type": "integer"
+         "type": "integer",
+         "maximum": 2100,
+         "minimum": 2000
         },
         {
          "type": "null"
@@ -10644,7 +10649,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "maxLength": 30
         },
         {
          "type": "null"
@@ -10701,10 +10707,10 @@
          "type": "null"
         }
        ],
-       "description": "Nama atau NIP karyawan mengandung kata kunci",
+       "description": "Nama atau NIP karyawan diawali kata kunci",
        "title": "Q"
       },
-      "description": "Nama atau NIP karyawan mengandung kata kunci"
+      "description": "Nama atau NIP karyawan diawali kata kunci"
      }
     ],
     "responses": {
@@ -12808,7 +12814,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(PENDING|APPROVED|REJECTED|CANCELLED)$"
         },
         {
          "type": "null"

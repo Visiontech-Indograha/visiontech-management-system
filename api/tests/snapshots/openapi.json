@@ -15749,7 +15749,7 @@
       }
      },
      {
-      "description": "Nama atau NIP karyawan mengandung kata kunci",
+      "description": "Nama atau NIP karyawan diawali kata kunci",
       "in": "query",
       "name": "q",
       "required": false,
@@ -15763,7 +15763,7 @@
          "type": "null"
         }
        ],
-       "description": "Nama atau NIP karyawan mengandung kata kunci",
+       "description": "Nama atau NIP karyawan diawali kata kunci",
        "title": "Q"
       }
      }

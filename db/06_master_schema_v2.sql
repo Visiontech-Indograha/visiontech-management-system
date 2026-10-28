@@ -750,6 +750,8 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_file_vehicle ON vehicle_file (vehicle_id)
 CREATE INDEX IF NOT EXISTS idx_vehicle_inspection_vehicle ON vehicle_inspection (vehicle_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_division ON work_plan_daily (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_team ON work_plan_daily (team_id) WHERE delete_at IS NULL;
+-- Satu jadwal per tim per tanggal (v2_0009)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_work_plan_daily_team_day ON work_plan_daily (team_id, work_date) WHERE delete_at IS NULL AND team_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_daily_date ON work_plan_daily (work_date) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_daily ON work_plan_item (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_plan_item_phase ON work_plan_item (task_phase) WHERE delete_at IS NULL;

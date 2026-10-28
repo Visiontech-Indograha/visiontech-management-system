@@ -282,13 +282,22 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     if (h == null) return _snack('Isi jam lembur dengan angka.');
     if (h <= 0 || h > 12) return _snack('Jam lembur harus antara 0.5 hingga 12 jam.');
     if (reason.text.trim().length < 3) return _snack('Alasan lembur minimal 3 karakter.');
-    await _run(
-      () => ref
-          .read(syncEngineProvider)
-          .api
-          .requestOvertime(dayId: widget.dailyPlanId, hours: h, reason: reason.text.trim()),
-      'Pengajuan lembur terkirim ke PM.',
-    );
+    // Lewat antrean sinkronisasi: tanpa sinyal, pengajuan tersimpan dan dikirim otomatis saat online.
+    setState(() => _busy = true);
+    try {
+      final applied = await ref.read(syncEngineProvider).submit(
+        OfflineOp.overtimeReport,
+        {'daily_plan_id': widget.dailyPlanId, 'hours': h, 'reason': reason.text.trim()},
+      );
+      _snack(applied
+          ? 'Pengajuan lembur terkirim ke PM.'
+          : 'Pengajuan lembur disimpan dan menunggu koneksi untuk dikirim.');
+      if (applied) await _load();
+    } catch (e) {
+      _snack(apiErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   /// Tugas survei (fase SURVEY, menempel pada order) dibuka di layar survei berformat baku (docs/37).

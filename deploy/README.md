@@ -124,3 +124,9 @@ uji nyata web + APK beta dari `apk.yml`) → PR `beta` → `prod` (satu persetuj
 - Anti-loop: deploy yang gagal untuk commit yang sama baru dicoba lagi setelah `VMS_DEPLOY_RETRY_AFTER` detik (bawaan 900);
   penanda `.last-failed`. Salin `autodeploy.sh` terbaru ke server (lihat bagian "Memasang perubahan skrip").
 - Panduan operasional harian: [`docs/RUNBOOK-PRODUKSI.md`](../docs/RUNBOOK-PRODUKSI.md).
+
+## Citra via GHCR (opsional, mengurangi beban build di server)
+Workflow `.github/workflows/images.yml` membangun `api` dan `web` di runner GitHub saat `prod` berubah dan mendorongnya ke
+`ghcr.io/visiontech-indograha/vms-{api,web}:<sha>` (+ `latest`). Server belum memakainya. Untuk beralih (tindakan pemilik server):
+buat token `read:packages`, `docker login ghcr.io` di server, ubah `compose.yml` server ke `image: ghcr.io/...:${TAG}` dan ganti
+`docker compose build` di `autodeploy.sh` dengan `docker compose pull`. Uji dulu di beta.

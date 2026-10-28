@@ -14753,7 +14753,8 @@
      "out_of_radius_note": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -17837,7 +17838,8 @@
      "description": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -17998,7 +18000,8 @@
      "description": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -18587,6 +18590,7 @@
     "properties": {
      "doc_type": {
       "type": "string",
+      "maxLength": 50,
       "title": "Doc Type"
      },
      "file_id": {
@@ -19168,6 +19172,7 @@
     "properties": {
      "explanation": {
       "type": "string",
+      "maxLength": 2000,
       "title": "Explanation"
      }
     },
@@ -19440,7 +19445,8 @@
      "description": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -19450,6 +19456,7 @@
      },
      "path_image": {
       "type": "string",
+      "maxLength": 500,
       "title": "Path Image",
       "description": "URL contoh foto/panduan"
      },
@@ -19558,7 +19565,8 @@
      "description": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -19569,7 +19577,8 @@
      "path_image": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 500
        },
        {
         "type": "null"
@@ -22777,6 +22786,7 @@
      },
      "op_type": {
       "type": "string",
+      "maxLength": 50,
       "title": "Op Type"
      },
      "payload": {
@@ -24965,7 +24975,8 @@
      "note": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -26744,7 +26755,8 @@
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -26825,7 +26837,8 @@
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27045,7 +27058,8 @@
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27176,12 +27190,14 @@
      },
      "order_status": {
       "type": "string",
+      "maxLength": 30,
       "title": "Order Status",
       "description": "Status order (PENDING, ONGOING, URGENT, COMPLETED)",
       "default": "ONGOING"
      },
      "priority_level": {
       "type": "string",
+      "maxLength": 20,
       "title": "Priority Level",
       "description": "Prioritas (LOW, NORMAL, HIGH, URGENT)",
       "default": "NORMAL"
@@ -27189,7 +27205,8 @@
      "site_address": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 500
        },
        {
         "type": "null"
@@ -27222,7 +27239,8 @@
      "summary_notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27653,6 +27671,7 @@
     "properties": {
      "description": {
       "type": "string",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Description",
       "description": "Deskripsi permintaan revisi/tambahan klien"
@@ -27768,13 +27787,15 @@
     "properties": {
      "signature_data_url": {
       "type": "string",
+      "maxLength": 700000,
       "title": "Signature Data Url",
       "description": "Base64 PNG tanda tangan digital"
      },
      "summary_notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27785,7 +27806,8 @@
      "obstacles": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27814,13 +27836,15 @@
     "properties": {
      "order_status": {
       "type": "string",
+      "maxLength": 30,
       "title": "Order Status",
       "description": "PENDING, CANCELLED, ONGOING, URGENT, COMPLETED"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -27853,7 +27877,8 @@
      "client_name": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 150
        },
        {
         "type": "null"
@@ -27864,7 +27889,8 @@
      "project_title": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 255
        },
        {
         "type": "null"
@@ -27875,7 +27901,8 @@
      "order_number": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 50
        },
        {
         "type": "null"
@@ -27897,7 +27924,8 @@
      "unit_measure": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 50
        },
        {
         "type": "null"
@@ -27908,7 +27936,8 @@
      "order_status": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 30
        },
        {
         "type": "null"
@@ -27919,7 +27948,8 @@
      "priority_level": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 20
        },
        {
         "type": "null"
@@ -27930,7 +27960,8 @@
      "site_address": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 500
        },
        {
         "type": "null"
@@ -27963,7 +27994,8 @@
      "summary_notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"

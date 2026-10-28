@@ -411,6 +411,7 @@
      "out_of_radius_note": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -3471,6 +3472,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -3619,6 +3621,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -4256,6 +4259,7 @@
       "title": "Active At"
      },
      "doc_type": {
+      "maxLength": 50,
       "title": "Doc Type",
       "type": "string"
      },
@@ -4825,6 +4829,7 @@
     "description": "Schema for supplying an explanation to an attendance record.",
     "properties": {
      "explanation": {
+      "maxLength": 2000,
       "title": "Explanation",
       "type": "string"
      }
@@ -5086,6 +5091,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -5107,6 +5113,7 @@
      },
      "path_image": {
       "description": "URL contoh foto/panduan",
+      "maxLength": 500,
       "title": "Path Image",
       "type": "string"
      },
@@ -5202,6 +5209,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -5237,6 +5245,7 @@
      "path_image": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -8438,6 +8447,7 @@
       "type": "string"
      },
      "op_type": {
+      "maxLength": 50,
       "title": "Op Type",
       "type": "string"
      },
@@ -10623,6 +10633,7 @@
      "note": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12402,6 +12413,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12465,6 +12477,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12679,6 +12692,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12783,6 +12797,7 @@
      "order_status": {
       "default": "ONGOING",
       "description": "Status order (PENDING, ONGOING, URGENT, COMPLETED)",
+      "maxLength": 30,
       "title": "Order Status",
       "type": "string"
      },
@@ -12801,6 +12816,7 @@
      "priority_level": {
       "default": "NORMAL",
       "description": "Prioritas (LOW, NORMAL, HIGH, URGENT)",
+      "maxLength": 20,
       "title": "Priority Level",
       "type": "string"
      },
@@ -12833,6 +12849,7 @@
      "site_address": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -12866,6 +12883,7 @@
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -13317,6 +13335,7 @@
      },
      "description": {
       "description": "Deskripsi permintaan revisi/tambahan klien",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Description",
       "type": "string"
@@ -13427,6 +13446,7 @@
      "obstacles": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -13446,12 +13466,14 @@
      },
      "signature_data_url": {
       "description": "Base64 PNG tanda tangan digital",
+      "maxLength": 700000,
       "title": "Signature Data Url",
       "type": "string"
      },
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -13473,6 +13495,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -13483,6 +13506,7 @@
      },
      "order_status": {
       "description": "PENDING, CANCELLED, ONGOING, URGENT, COMPLETED",
+      "maxLength": 30,
       "title": "Order Status",
       "type": "string"
      }
@@ -13511,6 +13535,7 @@
      "client_name": {
       "anyOf": [
        {
+        "maxLength": 150,
         "type": "string"
        },
        {
@@ -13522,6 +13547,7 @@
      "order_number": {
       "anyOf": [
        {
+        "maxLength": 50,
         "type": "string"
        },
        {
@@ -13533,6 +13559,7 @@
      "order_status": {
       "anyOf": [
        {
+        "maxLength": 30,
         "type": "string"
        },
        {
@@ -13544,6 +13571,7 @@
      "priority_level": {
       "anyOf": [
        {
+        "maxLength": 20,
         "type": "string"
        },
        {
@@ -13555,6 +13583,7 @@
      "project_title": {
       "anyOf": [
        {
+        "maxLength": 255,
         "type": "string"
        },
        {
@@ -13566,6 +13595,7 @@
      "site_address": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -13599,6 +13629,7 @@
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -13621,6 +13652,7 @@
      "unit_measure": {
       "anyOf": [
        {
+        "maxLength": 50,
         "type": "string"
        },
        {

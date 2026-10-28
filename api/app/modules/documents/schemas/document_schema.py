@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 _SIM = re.compile(r"^SIM_?(A|B_?(?:I{1,2}|1|2)|C|D)(_UMUM)?$")
 _SIM_CLASS = {"BI": "B1", "BII": "B2", "B_I": "B1", "B_II": "B2", "B_1": "B1", "B_2": "B2"}
@@ -34,7 +34,7 @@ Urgency = Literal["EXPIRED", "CRITICAL", "WARNING"]
 class EmployeeDocumentCreate(BaseModel):
     """Unggah dokumen: berkas diunggah dulu ke /files, lalu dirujuk lewat `file_id`."""
 
-    doc_type: str
+    doc_type: str = Field(max_length=50)
     file_id: UUID
     active_at: date | None = None  # default: hari ini (WIB)
     expired_at: date | None = None

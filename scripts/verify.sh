@@ -20,6 +20,7 @@ step() { # step <nama> <direktori> <perintah...>
 
 if [ "$what" = api ] || [ "$what" = all ]; then
   step "api ruff" api "../$PY" -m ruff check app tests
+  step "api mypy" api "../$PY" -m mypy
   step "api pytest" api "../$PY" -m pytest -n 4 -q
 fi
 

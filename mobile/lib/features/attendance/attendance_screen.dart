@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
@@ -67,7 +68,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     return auth is AuthAuthenticated ? auth.user.employeeId : '';
   }
 
+  Map<String, int> _summary = const {};
+
+  /// Ringkasan antrean (best-effort): gagal/offline → kartu disembunyikan, tidak mengganggu absensi.
+  Future<void> _loadSummary() async {
+    try {
+      final s = await ref.read(syncEngineProvider).api.homeSummary();
+      if (mounted) setState(() => _summary = s);
+    } catch (_) {}
+  }
+
   Future<void> _load() async {
+    unawaited(_loadSummary());
     setState(() {
       _loading = true;
       _error = null;
@@ -820,6 +832,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       ),
                     ),
                   ),
+                  _QueueSummaryCard(summary: _summary),
                   const SectionTitle('Riwayat'),
                   if (_loading)
                     const Padding(
@@ -907,3 +920,47 @@ int _wibMinutes(DateTime now) {
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.
 DateTime Function() attendanceClock = DateTime.now;
+
+
+/// Kartu "Menunggu tindakan Anda": hanya baris berisi (>0); yang punya layar di HP bisa diketuk.
+class _QueueSummaryCard extends StatelessWidget {
+  const _QueueSummaryCard({required this.summary});
+
+  final Map<String, int> summary;
+
+  static const _rows = <(String, String, String?)>[
+    ('leaves_to_review', 'Cuti menunggu keputusan', '/leaves'),
+    ('mess_to_review', 'Pengajuan mess menunggu', '/mess'),
+    ('loan_requests_to_review', 'Pengajuan pinjam aset menunggu', '/assets'),
+    ('attendance_to_review', 'Absensi perlu diperiksa', null),
+    ('overtime_to_review', 'Lembur menunggu persetujuan', '/overtime'),
+    ('corrections_to_review', 'Koreksi laporan harian menunggu', null),
+    ('my_leaves_pending', 'Cuti saya belum diputuskan', '/leaves'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = [for (final r in _rows) if ((summary[r.$1] ?? 0) > 0) r];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Menunggu tindakan Anda', style: Theme.of(context).textTheme.titleSmall),
+            for (final r in rows)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(r.$2),
+                trailing: Badge(label: Text('${summary[r.$1]}')),
+                onTap: r.$3 == null ? null : () => context.push(r.$3!),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

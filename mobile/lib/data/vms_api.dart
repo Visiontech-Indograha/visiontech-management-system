@@ -185,6 +185,15 @@ class VmsApi {
     );
   }
 
+  /// Ringkasan antrean per peran (GET /home/summary): hitungan menunggu tindakan; kunci tak dikenal diabaikan.
+  Future<Map<String, int>> homeSummary() async {
+    final data = (await _dio.get('$_p/home/summary')).data as Map;
+    return {
+      for (final e in data.entries)
+        if (e.value is num) '${e.key}': (e.value as num).toInt(),
+    };
+  }
+
   Future<void> readNotification(String id) async =>
       _dio.post('$_p/notifications/$id/read');
 

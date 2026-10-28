@@ -108,6 +108,7 @@ class AttendanceResponse(BaseModel):
     # Alasan peninjau bila absensi ditolak
     review_note: str | None = None
     employee_name: str | None = None
+    employee_photo_file_id: UUID | None = None
     # Peminta berwenang meninjau baris ini (R-33, dihitung oleh server)
     can_review: bool = False
     # R-34: Absen offline — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.

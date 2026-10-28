@@ -11,6 +11,7 @@ import { useClients } from "@/services/clientService";
 import { useOffices, useUserDivisions } from "@/services/employeeService";
 import { useSaveProject, type Project, type ProjectInput, type ProjectStatus } from "@/services/projectService";
 import { useSession } from "@/stores/sessionStore";
+import { errorMessage } from "@/lib/errors";
 
 export function ProjectFormDialog({
   project,
@@ -79,8 +80,8 @@ export function ProjectFormDialog({
       });
       toast.success(project ? "Data proyek berhasil diperbarui." : "Proyek baru berhasil didaftarkan.");
       onClose();
-    } catch {
-      setFormError("Gagal menyimpan data proyek. Pastikan nomor SPK unik dan seluruh kolom wajib terisi.");
+    } catch (err) {
+      setFormError(errorMessage(err, "Gagal menyimpan data proyek. Pastikan nomor SPK unik dan seluruh kolom wajib terisi."));
     }
   };
 

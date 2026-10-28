@@ -607,7 +607,7 @@ class AttendanceSessionRepository(BaseRepository):
                    AND EXISTS (
                        SELECT 1 FROM users
                        WHERE user_id = CAST(:viewer AS uuid)
-                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
+                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
                    )
                 """,
                 {"viewer": str(viewer_user_id), "emp": str(employee_id)},
@@ -712,6 +712,8 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    a.out_of_radius_note AS review_note,
                    e.full_name AS employee_name,
+                   (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+                       AS employee_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    (a.face_match_score / 100.0)::float AS face_similarity,

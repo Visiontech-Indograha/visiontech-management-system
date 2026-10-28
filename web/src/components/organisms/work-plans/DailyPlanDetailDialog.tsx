@@ -112,7 +112,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
             {p.site_lat != null && p.site_lng != null && ` (${Number(p.site_lat).toFixed(5)}, ${Number(p.site_lng).toFixed(5)})`}
           </ListPair>
           <ListPair>
-            Jam kerja: {p.clock_in_time.slice(0, 5)}–{p.clock_out_time.slice(0, 5)}
+            Jam kerja: {(p.clock_in_time ?? "08:00").slice(0, 5)}–{(p.clock_out_time ?? "17:00").slice(0, 5)}
             {p.attendance_radius_m != null && ` · radius absen ${p.attendance_radius_m} m`}
           </ListPair>
           <ListPair>

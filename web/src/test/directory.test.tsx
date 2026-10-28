@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { mockApi, renderRoute } from "./utils";
 
 const page = (items: unknown[]) => ({ items, total: items.length, page: 1, size: 25 });
-const employee = (id = "e1") => ({
+const employee = (id = "00000000-0000-4000-8000-0000000000e1") => ({
   employee_id: id,
   employee_no: "VT-001",
   full_name: "Test User",
@@ -31,7 +31,7 @@ const masters = (url: string) => {
 };
 const doc = (overrides: Record<string, unknown> = {}) => ({
   id: "d1",
-  employee_id: "e1",
+  employee_id: "00000000-0000-4000-8000-0000000000e1",
   doc_type: "KTP",
   status: "active",
   active_at: "2024-01-01",
@@ -65,8 +65,8 @@ describe("halaman direktori utama", () => {
   it("membuka detail dari daftar: baris daftar tampil dulu, detail dari GET /employees/{id}", async () => {
     mockApi((c) => {
       if (c.url === "/employees") return { data: page([employee()]) };
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents") return { data: { items: [doc()], total: 1 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents") return { data: { items: [doc()], total: 1 } };
     });
     renderRoute("/directory", { role: "HR" });
     fireEvent.click(await screen.findByRole("link", { name: "Test User" }));
@@ -78,10 +78,10 @@ describe("halaman direktori utama", () => {
 describe("halaman detail karyawan (HR)", () => {
   it("dibuka langsung lewat tautan memuat karyawan dari GET /employees/{id}", async () => {
     mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents") return { data: { items: [], total: 0 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents") return { data: { items: [], total: 0 } };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
     expect(screen.getByText("Email")).toBeInTheDocument();
     expect(screen.getByText("Alamat")).toBeInTheDocument();
@@ -89,9 +89,9 @@ describe("halaman detail karyawan (HR)", () => {
 
   it("rekan kerja tidak melihat email & alamat, hanya catatan", async () => {
     mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
     });
-    renderRoute("/directory/e1", { role: "field" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "field" });
     expect(await screen.findByText("Test User")).toBeInTheDocument();
     expect(screen.queryByText("Email")).toBeNull();
     expect(screen.getByText(/hanya terlihat oleh pemilik serta HR/)).toBeInTheDocument();
@@ -100,10 +100,10 @@ describe("halaman detail karyawan (HR)", () => {
   it("menambah berkas mengirim form ke upload lalu ke documents", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/employees") return { data: page([employee()]) };
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents" && c.method === "get") return { data: { items: [], total: 0 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents" && c.method === "get") return { data: { items: [], total: 0 } };
       if (c.url === "/files/upload" && c.method === "post") return { data: { file_id: "f1", message: "Berkas berhasil diunggah." } };
-      if (c.url === "/employees/e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d2" }) };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d2" }) };
     });
     renderRoute("/directory", { role: "HR" });
     fireEvent.click(await screen.findByRole("link", { name: "Test User" }));
@@ -126,7 +126,7 @@ describe("halaman detail karyawan (HR)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     const posts = calls.filter((c) => c.method === "post");
     expect(posts[0].url).toBe("/files/upload");
-    expect(posts[1].url).toBe("/employees/e1/documents");
+    expect(posts[1].url).toBe("/employees/00000000-0000-4000-8000-0000000000e1/documents");
     expect(posts[1].data).toMatchObject({ doc_type: "KTP", file_id: "f1" });  // V2: berkas tanpa nomor dokumen
   });
 
@@ -134,11 +134,11 @@ describe("halaman detail karyawan (HR)", () => {
     const calls = mockApi((c) => {
       const m = masters(c.url ?? "");
       if (m) return m;
-      if (c.url === "/employees/e1" && c.method === "get") return { data: employee() };
-      if (c.url === "/employees/e1/documents" && c.method === "get") return { data: { items: [], total: 0 } };
-      if (c.url === "/employees/e1" && c.method === "put") return { data: { ...employee(), pkwt_end_date: "2027-01-01" } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1" && c.method === "get") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents" && c.method === "get") return { data: { items: [], total: 0 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1" && c.method === "put") return { data: { ...employee(), pkwt_end_date: "2027-01-01" } };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Ubah data" }));
     const dialog = screen.getByRole("dialog", { name: "Ubah data karyawan" });
     await within(dialog).findByRole("option", { name: "Kantor Pusat" });
@@ -160,10 +160,10 @@ describe("halaman detail karyawan (HR)", () => {
     const calls = mockApi((c) => {
       const m = masters(c.url ?? "");
       if (m) return m;
-      if (c.url === "/employees/e1" && c.method === "get") return { data: employee() };
-      if (c.url === "/employees/e1/documents") return { data: { items: [], total: 0 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1" && c.method === "get") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents") return { data: { items: [], total: 0 } };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Ubah data" }));
     const dialog = screen.getByRole("dialog", { name: "Ubah data karyawan" });
     fireEvent.change(within(dialog).getByLabelText("Nama lengkap"), { target: { value: " " } });
@@ -178,8 +178,8 @@ describe("halaman detail karyawan (HR)", () => {
 describe("berkas karyawan dikelola HR/GA (M3, employee_file)", () => {
   it("HR memperbarui SIM dari daftar: jenis tetap, tanpa nomor/supersedes", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents" && c.method === "get")
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents" && c.method === "get")
         return {
           data: {
             items: [
@@ -190,9 +190,9 @@ describe("berkas karyawan dikelola HR/GA (M3, employee_file)", () => {
           },
         };
       if (c.url === "/files/upload") return { data: { file_id: "f9", message: "ok" } };
-      if (c.url === "/employees/e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d3" }) };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents" && c.method === "post") return { status: 201, data: doc({ id: "d3" }) };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
 
     fireEvent.click(await screen.findByRole("button", { name: "Perbarui SIM A" }));
     expect(screen.queryByRole("button", { name: "Perbarui Medical check-up" })).toBeNull(); // sudah diganti
@@ -204,8 +204,8 @@ describe("berkas karyawan dikelola HR/GA (M3, employee_file)", () => {
     fireEvent.change(fileInput);
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
 
-    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e1/documents")).toBe(true));
-    expect(calls.find((c) => c.method === "post" && c.url === "/employees/e1/documents")!.data).toEqual({
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents")!.data).toEqual({
       doc_type: "SIM_A",
       file_id: "f9",
       active_at: null,
@@ -215,13 +215,13 @@ describe("berkas karyawan dikelola HR/GA (M3, employee_file)", () => {
 
   it("HR menonaktifkan dokumen yang berlaku", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/documents") return { data: { items: [doc()], total: 1 } };
-      if (c.url === "/employees/e1/documents/d1/deactivate") return { data: doc({ status: "not_active" }) };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents") return { data: { items: [doc()], total: 1 } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents/d1/deactivate") return { data: doc({ status: "not_active" }) };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Nonaktifkan" }));
-    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/e1/documents/d1/deactivate")).toBe(true));
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/employees/00000000-0000-4000-8000-0000000000e1/documents/d1/deactivate")).toBe(true));
   });
 });
 
@@ -295,10 +295,10 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
 
   it("Offboarding (M9): memulai proses clearance lewat POST /offboarding, bukan menonaktifkan langsung", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
       if (c.url === "/offboarding" && c.method === "post") return { data: { clearance_items: [{}, {}] } };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     fireEvent.click(await screen.findByRole("button", { name: "Offboarding" }));
     const dialog = screen.getByRole("dialog", { name: "Offboarding Test User" });
     fireEvent.change(within(dialog).getByLabelText("Alasan"), { target: { value: "RESIGN" } });
@@ -308,7 +308,7 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Mulai offboarding" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/offboarding" && c.method === "post")).toBe(true));
     expect(calls.find((c) => c.url === "/offboarding")!.data).toEqual({
-      employee_id: "e1", reason_type: "RESIGN", effective_date: "2026-11-30", notes: null,
+      employee_id: "00000000-0000-4000-8000-0000000000e1", reason_type: "RESIGN", effective_date: "2026-11-30", notes: null,
     });
     expect(calls.some((c) => c.url.endsWith("/offboard"))).toBe(false);
   });
@@ -327,26 +327,26 @@ describe("akun login karyawan (M1-01)", () => {
   it("HR membuat akun; password sementara tampil sekali", async () => {
     let exists = false;
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/account" && c.method === "get")
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "get")
         return { data: exists ? { exists: true, login: "baru@contoh.id", is_active: true, last_login_at: null } : { exists: false } };
-      if (c.url === "/employees/e1/account" && c.method === "post") {
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post") {
         exists = true;
         return { data: { exists: true, login: "baru@contoh.id", is_active: true, temporary_password: "Sementara123" } };
       }
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     expect(await screen.findByText("Karyawan ini belum punya akun login.")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Email login"), { target: { value: "baru@contoh.id" } });
     fireEvent.click(screen.getByRole("button", { name: "Buat akun" }));
     expect(await screen.findByText("Sementara123")).toBeInTheDocument();
-    expect(calls.find((c) => c.url === "/employees/e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id" });
+    expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id" });
   });
 
   it("HR melihat penanda akun terkunci karena gagal login (R-21)", async () => {
     mockApi((c) => {
-      if (c.url === "/employees/e1") return { data: employee() };
-      if (c.url === "/employees/e1/account")
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account")
         return {
           data: {
             exists: true, login: "a@contoh.id", is_active: true, last_login_at: null,
@@ -354,7 +354,7 @@ describe("akun login karyawan (M1-01)", () => {
           },
         };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     expect(await screen.findByTestId("account-locked")).toHaveTextContent("5 kali gagal login");
   });
 });
@@ -362,20 +362,20 @@ describe("akun login karyawan (M1-01)", () => {
 describe("alamat karyawan (1─N, V2)", () => {
   it("HR melihat alamat dan menambah alamat baru", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/employees/e1")
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1")
         return { data: { ...employee(), addresses: [{ address_id: "a1", address_line: "Jl. Mawar 12", city: "Bandung", postal_code: "40111" }] } };
-      if (c.url === "/employees/e1/addresses" && c.method === "post")
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/addresses" && c.method === "post")
         return { status: 201, data: { address_id: "a2", ...(c.data as Record<string, unknown>) } };
     });
-    renderRoute("/directory/e1", { role: "HR" });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
     expect(await screen.findByText("Jl. Mawar 12, Bandung 40111")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Tambah alamat" }));
     fireEvent.change(screen.getByLabelText("Kota"), { target: { value: "Jakarta" } });
     fireEvent.change(screen.getByLabelText("Kode pos"), { target: { value: "10110" } });
     fireEvent.change(screen.getAllByLabelText("Alamat").slice(-1)[0], { target: { value: "Jl. Melati 3" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(calls.some((c) => c.url === "/employees/e1/addresses" && c.method === "post")).toBe(true));
-    expect(calls.find((c) => c.url === "/employees/e1/addresses")!.data).toEqual({
+    await waitFor(() => expect(calls.some((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/addresses" && c.method === "post")).toBe(true));
+    expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/addresses")!.data).toEqual({
       address_line: "Jl. Melati 3", city: "Jakarta", postal_code: "10110",
     });
   });

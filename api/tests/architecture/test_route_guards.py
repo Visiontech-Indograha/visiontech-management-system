@@ -51,6 +51,7 @@ SELF_SERVICE = {
     ("GET", "/work-plans/corrections"): "DailyCorrectionService: PM/OM divisinya, ketua tim miliknya, admin semua (diuji)",
     ("GET", "/work-plans/daily/{daily_plan_id}/corrections"): "DailyCorrectionService: akses lihat jadwal harian (diuji)",
     ("GET", "/mess/me"): "hanya hunian milik akun yang login (employee_id dari token)",
+    ("PUT", "/employees/me/photo"): "pemilik akun mengganti foto sendiri; berkas harus unggahan akun itu (diuji)",
     ("GET", "/mess/places"): "daftar mess untuk dipilih saat mengajukan hunian (data umum, tanpa data pribadi)",
     ("POST", "/mess/requests"): "karyawan mengajukan hunian untuk dirinya sendiri (employee_id dari token, diuji)",
     ("POST", "/mess/{mess_stay_id}/cancel"): "MessService: hanya pemohon atau HR/GA (diuji)",

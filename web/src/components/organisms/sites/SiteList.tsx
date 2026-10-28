@@ -41,7 +41,7 @@ export function SiteList({ sites, onAdd, onRemove }: {
                 <TextBlock className="text-xs text-mist">{s.unit_id ? "Lokasi proyek" : "Lokasi kantor"}</TextBlock>
                 {s.address && <TextBlock className="text-sm text-mist">{s.address}</TextBlock>}
                 <TextBlock className="text-sm text-mist">
-                  {s.location.lat.toFixed(6)}, {s.location.lng.toFixed(6)} · radius {s.radius_m} m
+                  {s.location?.lat != null && s.location?.lng != null ? `${s.location.lat.toFixed(6)}, ${s.location.lng.toFixed(6)}` : "Koordinat belum diatur"} · radius {s.radius_m} m
                 </TextBlock>
               </div>
               {s.can_manage && (

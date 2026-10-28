@@ -17,6 +17,7 @@ export function TeamsPage() {
       onRemove={(team) => void deleteTeam.mutateAsync(team.team_id)}
       onSelect={setSelected}
       onCloseAdd={() => setAdding(false)}
+      isDeleting={deleteTeam.isPending}
     />
   );
 }

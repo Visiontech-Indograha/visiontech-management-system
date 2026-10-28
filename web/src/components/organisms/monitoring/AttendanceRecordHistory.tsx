@@ -9,7 +9,7 @@ import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockH
 function checkOutLabel(workDate: string, checkOut: string | null | undefined): string {
   if (!checkOut) return "belum keluar";
   const outDay = new Date(checkOut).toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" }); // YYYY-MM-DD
-  const sameDay = outDay === workDate.slice(0, 10);
+  const sameDay = Boolean(workDate && outDay === workDate.slice(0, 10));
   return sameDay ? formatTime(checkOut) : formatDateTime(checkOut);
 }
 

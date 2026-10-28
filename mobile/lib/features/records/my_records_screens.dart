@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -214,14 +215,8 @@ class _DocumentFile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const fallback = Center(child: Icon(Icons.description_rounded, size: 36, color: Colors.black38));
-    Widget image(String variant, BoxFit fit) => FutureBuilder<String>(
-      future: ref.read(syncEngineProvider).api.fileUrl(fileId, variant: variant),
-      builder: (_, s) => s.hasData
-          ? Image.network(s.data!, fit: fit, errorBuilder: (_, _, _) => fallback)
-          : s.hasError
-          ? fallback
-          : const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-    );
+    Widget image(String variant, BoxFit fit) =>
+        VmsNetworkImage(fileId: fileId, variant: variant, fit: fit, fallback: fallback);
     return InkWell(
       onTap: () => showDialog<void>(
         context: context,

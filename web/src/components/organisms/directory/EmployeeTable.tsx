@@ -2,6 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { formatDate } from "@/lib/format";
 import type { EmployeeList } from "@/services/employeeService";
 import { EmployeeStatusPill } from "./EmployeeStatusPill";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
@@ -49,10 +50,15 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
             {data?.items.map((e) => (
               <TableBlockRow key={e.employee_id} className="h-11 border-b border-line last:border-0 hover:bg-hover">
                 <TableBlockCell className="px-4 py-2">
-                  <InlineLink to={`/directory/${e.employee_id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
-                    {e.full_name}
-                  </InlineLink>
-                  <div className="text-xs text-mist">{e.employee_no}</div>
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name={e.full_name} fileId={e.photo_file_id} size="sm" />
+                    <div>
+                      <InlineLink to={`/directory/${e.employee_id}`} state={{ employee: e }} className="font-medium text-lens hover:underline">
+                        {e.full_name}
+                      </InlineLink>
+                      <div className="text-xs text-mist">{e.employee_no}</div>
+                    </div>
+                  </div>
                 </TableBlockCell>
                 <TableBlockCell className="px-4 py-2">{e.position_name ?? e.division_name ?? e.office_name ?? "-"}{e.position_name && <div className="text-xs text-mist">{e.division_name ?? e.office_name}</div>}</TableBlockCell>
                 <TableBlockCell className="px-4 py-2">{formatDate(e.join_date)}</TableBlockCell>

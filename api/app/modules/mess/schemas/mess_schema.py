@@ -78,6 +78,7 @@ class MessStayOut(BaseModel):
     longitude: Decimal | None = None
     employee_id: UUID
     employee_name: str | None = None
+    employee_photo_file_id: UUID | None = None
     employee_no: str | None = None
     stay_start_date: date
     stay_end_date: date

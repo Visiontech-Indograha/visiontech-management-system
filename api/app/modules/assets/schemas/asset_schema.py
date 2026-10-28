@@ -207,6 +207,7 @@ class LoanOut(BaseModel):
     asset_code: str
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     daily_plan_id: UUID | None = None
     work_date: date | None = None
     assignment_status: AssetStatus
@@ -262,6 +263,7 @@ class LoanRequestOut(BaseModel):
     asset_code: str
     employee_id: UUID
     employee_name: str
+    employee_photo_file_id: UUID | None = None
     purpose: str
     needed_on: date | None = None
     status: LoanRequestStatus

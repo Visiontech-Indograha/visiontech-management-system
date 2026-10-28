@@ -16,7 +16,9 @@ _ACTIVE = ("REQUESTED", "APPROVED")
 
 _SELECT = """
     SELECT m.mess_stay_id, m.mess_id, m.mess_name, m.city, m.address, m.latitude, m.longitude, m.employee_id,
-           e.full_name AS employee_name, e.employee_no, m.stay_start_date, m.stay_end_date, m.status,
+           e.full_name AS employee_name, e.employee_no,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id, m.stay_start_date, m.stay_end_date, m.status,
            m.request_note, m.decision_note, m.decided_at, m.create_at
     FROM company_mess_stay m
     JOIN employee e ON e.employee_id = m.employee_id

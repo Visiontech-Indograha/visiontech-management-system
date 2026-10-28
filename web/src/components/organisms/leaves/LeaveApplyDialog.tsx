@@ -8,6 +8,7 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { errorMessage } from "@/lib/errors";
+import { uploadFiles } from "@/services/uploadService";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
 
@@ -33,6 +34,8 @@ export function LeaveApplyDialog({
   const mutation = useLeaveMutation();
   const { me } = useSession();
   const [formError, setFormError] = useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
@@ -66,17 +69,27 @@ export function LeaveApplyDialog({
     }
 
     try {
+      let attachment_file_id: string | undefined = undefined;
+      if (values.leave_type === "SICK" && attachmentFile) {
+        setIsUploading(true);
+        const [uploadedId] = await uploadFiles([attachmentFile]);
+        attachment_file_id = uploadedId;
+      }
+
       await mutation.mutateAsync({
         employee_id: me?.employee_id || undefined,
         leave_type: values.leave_type,
         start_date: values.start_date,
         end_date: values.end_date,
         reason: values.reason.trim(),
+        attachment_file_id,
       });
       toast.success("Permohonan cuti / izin berhasil diajukan dan menunggu persetujuan.");
       onClose();
     } catch (err) {
       setFormError(errorMessage(err, "Gagal mengajukan permohonan cuti. Periksa kuota cuti tahunan atau tanggal yang bentrok."));
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -88,9 +101,9 @@ export function LeaveApplyDialog({
       footer={
         <DialogActions
           onCancel={onClose}
-          busy={isSubmitting}
+          busy={isSubmitting || isUploading}
           formId="leave-apply-form"
-          submitLabel="Kirim Pengajuan"
+          submitLabel={isUploading ? "Mengunggah berkas..." : "Kirim Pengajuan"}
         />
       }
     >
@@ -137,6 +150,23 @@ export function LeaveApplyDialog({
               </TextBlock>{" "}
               (tidak termasuk hari Minggu) ·{" "}
               {leaveType === "ANNUAL" ? "(akan dikurangi dari kuota cuti tahunan)" : "(tidak memotong kuota tahunan)"}
+            </TextBlock>
+          </div>
+        )}
+
+        {leaveType === "SICK" && (
+          <div className="space-y-1.5 rounded-control border border-line bg-hover/20 p-3">
+            <TextField
+              label="Surat Keterangan Dokter (Opsional / Disarankan)"
+              type="file"
+              accept=".jpg,.jpeg,.png,.pdf"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setAttachmentFile(file ?? null);
+              }}
+            />
+            <TextBlock className="text-2xs text-mist">
+              Format: JPG, PNG, atau PDF (maks. 10 MB). Lampirkan surat dokter untuk mempercepat verifikasi oleh HR/GA.
             </TextBlock>
           </div>
         )}

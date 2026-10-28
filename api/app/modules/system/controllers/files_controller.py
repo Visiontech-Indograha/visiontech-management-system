@@ -24,6 +24,8 @@ from app.modules.system.services.system_service import FileService
 from app.shared.content_disposition import content_disposition
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
+# Selaras jendela tiket (security.FILE_TICKET_WINDOW_SECONDS = 1800 s); sedikit di bawahnya.
+IMAGE_CACHE_CONTROL = "private, max-age=1500"
 ALLOWED_MIMES = [
     "image/jpeg",
     "image/png",
@@ -156,12 +158,17 @@ class FilesController:
             if data:
                 file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
                 disp_type = "attachment" if download else "inline"
+                # Gambar biasa (foto profil, aset, bukti kerja) boleh di-cache peramban; unduhan, dokumen pribadi, dan
+                # swafoto absensi (sensitif) tetap tanpa cache. Isi berkas per id tidak berubah, URL stabil per jendela.
+                sensitive = bool(getattr(file_obj, "personal_document", False) or getattr(file_obj, "selfie", False))
+                cacheable = is_image and not download and not sensitive
+                cache_control = IMAGE_CACHE_CONTROL if cacheable else "private, no-cache, no-store, must-revalidate"
                 return Response(
                     content=data,
                     media_type="image/webp" if key.endswith(".webp") else file_obj.mime_type,
                     headers={
                         "Content-Disposition": content_disposition(disp_type, str(file_name)),
-                        "Cache-Control": "private, no-cache, no-store, must-revalidate",
+                        "Cache-Control": cache_control,
                     },
                 )
 
@@ -191,4 +198,4 @@ class FilesController:
         return {"url": url, "mime_type": file_obj.mime_type}
 
 
-__all__ = ["ALLOWED_MIMES", "MAX_FILE_SIZE", "FilesController"]
+__all__ = ["ALLOWED_MIMES", "IMAGE_CACHE_CONTROL", "MAX_FILE_SIZE", "FilesController"]

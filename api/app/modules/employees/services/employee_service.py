@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.hard_delete import write_delete_audit
 from app.core.security import CurrentUser
 from app.core.storage import delete_object
@@ -102,6 +102,19 @@ class EmployeeService:
                 raise ValidationError("No. karyawan, nama, kantor, dan tanggal bergabung tidak boleh dikosongkan.")
         await self.repo.update(employee_id, await self._validate(fields, current))
         return await self.detail(employee_id)
+
+    async def set_own_photo(self, user: CurrentUser, file_id: UUID | None) -> UUID | None:
+        """Karyawan mengganti/menghapus foto profilnya sendiri (HR/Super Admin mengubah orang lain lewat PUT /{id})."""
+        if not user.employee_id:
+            raise ForbiddenError("Akun ini tidak tertaut ke data karyawan.")
+        employee_id = UUID(str(user.employee_id))
+        key: str | None = None
+        if file_id is not None:
+            key = await self.repo.uploaded_image_key(file_id, user.user_id)
+            if key is None:
+                raise ValidationError("Foto harus berupa gambar yang Anda unggah sendiri.")
+        await self.repo.update(employee_id, {"photo_path": key})
+        return await self.repo.profile_photo_file_id(employee_id)
 
     # ── Alamat ────────────────────────────────────────────────────────────────
     async def add_address(self, employee_id: UUID, data: AddressIn) -> Any:

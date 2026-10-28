@@ -65,7 +65,9 @@ _VEHICLE_SELECT = f"""
 _LOAN_SELECT = """
     SELECT aa.assignment_id, aa.asset_type, COALESCE(aa.tool_id, aa.vehicle_id) AS asset_id,
            COALESCE(t.name, v.name) AS asset_name, COALESCE(t.tool_code, v.number_plate) AS asset_code,
-           aa.employee_id, e.full_name AS employee_name, aa.daily_plan_id, wpd.work_date,
+           aa.employee_id, e.full_name AS employee_name,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id, aa.daily_plan_id, wpd.work_date,
            aa.assignment_status::text AS assignment_status, aa.loaned_at, aa.returned_at,
            fo.id AS handover_file_id, aa.return_requested_at, aa.return_condition, aa.return_note,
            rfo.id AS return_file_id
@@ -81,7 +83,9 @@ _LOAN_SELECT = """
 _REQUEST_SELECT = """
     SELECT r.request_id, r.asset_type, COALESCE(r.tool_id, r.vehicle_id) AS asset_id,
            COALESCE(t.name, v.name) AS asset_name, COALESCE(t.tool_code, v.number_plate) AS asset_code,
-           r.employee_id, e.full_name AS employee_name, r.purpose, r.needed_on, r.status, r.review_note,
+           r.employee_id, e.full_name AS employee_name,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id, r.purpose, r.needed_on, r.status, r.review_note,
            r.reviewed_at, r.assignment_id, r.create_at
     FROM asset_loan_request r
     JOIN employee e ON e.employee_id = r.employee_id

@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
@@ -44,7 +48,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEnrolling = false;
   Map<String, dynamic>? _faceStatus;
   String? _faceError;
-  Future<String>? _photoUrl;
+  bool _photoChanged = false;
+  bool _photoBusy = false;
+  String? _photoId;
 
   @override
   void initState() {
@@ -52,63 +58,81 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _loadSyncInfo();
     _loadBiometricState();
     _loadFaceState();
-    _loadPhotoUrl();
   }
 
-  /// URL bertanda tangan foto profil (berlaku 5 menit). Berkas dilayani API
-  /// hanya setelah otorisasi, jadi URL harus diambil lewat `fileUrl`, bukan
-  /// dipasang langsung sebagai path.
-  void _loadPhotoUrl() {
+  /// Id berkas foto profil yang tampil: hasil ganti foto di layar ini, selain itu dari `/auth/me`.
+  String? _currentPhotoId() {
+    if (_photoChanged) return _photoId;
     final authState = ref.read(authControllerProvider);
     final user = authState is AuthAuthenticated
         ? authState.user
         : (authState is AuthLocked ? authState.user : null);
-    final id = user?.photoFileId;
-    if (id == null || id.isEmpty) {
-      _photoUrl = null;
-      return;
-    }
-    _photoUrl = ref.read(syncEngineProvider).api.fileUrl(id);
+    return user?.photoFileId;
   }
 
-  /// Avatar bulat: foto profil bila ada, selain itu inisial nama (perilaku lama).
-  Widget _avatar(String name, double size, {TextStyle? textStyle}) {
-    final initials = name.isEmpty ? '?' : name.substring(0, 1).toUpperCase();
-    final fallback = Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: VmsColors.gold,
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        initials,
-        style: (textStyle ?? VmsTextStyles.title).copyWith(
-          color: VmsColors.brand900,
-          fontWeight: FontWeight.w800,
+  /// Avatar bulat: foto profil bila ada, selain itu inisial nama.
+  Widget _avatar(String name, double size, {bool editable = false}) {
+    final avatar = VmsAvatar(name: name, fileId: _currentPhotoId(), radius: size / 2);
+    return editable
+        ? InkWell(customBorder: const CircleBorder(), onTap: _changePhoto, child: avatar)
+        : avatar;
+  }
+
+  Future<void> _changePhoto() async {
+    if (_photoBusy) return;
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil foto'),
+              onTap: () => Navigator.pop(context, 'camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari galeri'),
+              onTap: () => Navigator.pop(context, 'gallery'),
+            ),
+            if (_currentPhotoId() != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Hapus foto'),
+                onTap: () => Navigator.pop(context, 'remove'),
+              ),
+          ],
         ),
       ),
     );
-    if (_photoUrl == null) return fallback;
-    return FutureBuilder<String>(
-      future: _photoUrl,
-      builder: (context, snap) {
-        final url = snap.data;
-        if (url == null || url.isEmpty) return fallback;
-        return ClipOval(
-          child: Image.network(
-            url,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => fallback,
-            loadingBuilder: (_, child, progress) =>
-                progress == null ? child : fallback,
-          ),
+    if (choice == null || !mounted) return;
+    setState(() => _photoBusy = true);
+    try {
+      final api = ref.read(syncEngineProvider).api;
+      String? fileId;
+      if (choice != 'remove') {
+        final picked = await ImagePicker().pickImage(
+          source: choice == 'camera' ? ImageSource.camera : ImageSource.gallery,
+          preferredCameraDevice: CameraDevice.front,
+          maxWidth: 1024,
+          imageQuality: 85,
         );
-      },
-    );
+        if (picked == null) return;
+        fileId = await api.uploadFile(File(picked.path));
+      }
+      await api.setMyPhoto(fileId);
+      if (!mounted) return;
+      setState(() {
+        _photoChanged = true;
+        _photoId = fileId;
+      });
+      showVmsToast(context, fileId == null ? 'Foto profil dihapus.' : 'Foto profil diperbarui.');
+    } catch (e) {
+      if (mounted) showVmsToast(context, apiErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _photoBusy = false);
+    }
   }
 
   Future<void> _loadFaceState() async {
@@ -314,7 +338,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             eyebrow: 'Profil',
             title: name,
             subtitle: user?.username,
-            trailing: _avatar(name, 64),
+            trailing: _avatar(name, 64, editable: true),
             bottom: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(

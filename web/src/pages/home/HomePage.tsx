@@ -26,7 +26,7 @@ export function HomePage() {
   return (
     <HomeTemplate
       today={today}
-      name={me?.full_name?.split(" ")[0] ?? me?.email.split("@")[0]}
+      name={me?.full_name?.split(" ")[0] ?? me?.email?.split("@")[0] ?? "Pengguna"}
       stats={{
         running: { value: running.length, loading: plans.isPending },
         waiting: { value: waiting.length, loading: plans.isPending },

@@ -8401,6 +8401,53 @@
     }
    }
   },
+  "/api/v1/employees/me/photo": {
+   "put": {
+    "tags": [
+     "Employees"
+    ],
+    "summary": "Set My Photo",
+    "description": "Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini.",
+    "operationId": "set_my_photo_api_v1_employees_me_photo_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MyPhotoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyPhotoOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/employees/{employee_id}/addresses": {
    "post": {
     "tags": [
@@ -14142,6 +14189,18 @@
       ],
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "can_review": {
       "type": "boolean",
       "title": "Can Review",
@@ -14978,7 +15037,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status"
      },
@@ -18933,6 +18993,18 @@
       "type": "string",
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "period_year": {
       "type": "integer",
       "title": "Period Year"
@@ -19040,6 +19112,18 @@
      "employee_name": {
       "type": "string",
       "title": "Employee Name"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "employee_no": {
       "anyOf": [
@@ -19435,6 +19519,18 @@
       "type": "string",
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "daily_plan_id": {
       "anyOf": [
        {
@@ -19663,6 +19759,18 @@
      "employee_name": {
       "type": "string",
       "title": "Employee Name"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "purpose": {
       "type": "string",
@@ -19953,6 +20061,18 @@
        }
       ],
       "title": "System Role"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
      },
      "is_active": {
       "type": "boolean",
@@ -20333,6 +20453,18 @@
       ],
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "employee_no": {
       "anyOf": [
        {
@@ -20499,6 +20631,43 @@
     ],
     "title": "MissingCheckInResponse",
     "description": "Schema for missing check-in alerts (moved from attendance cron endpoint)."
+   },
+   "MyPhotoIn": {
+    "properties": {
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     }
+    },
+    "type": "object",
+    "title": "MyPhotoIn",
+    "description": "Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto."
+   },
+   "MyPhotoOut": {
+    "properties": {
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "type": "object",
+    "title": "MyPhotoOut"
    },
    "MyRecapItem": {
     "properties": {
@@ -20827,6 +20996,18 @@
       ],
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "employee_no": {
       "anyOf": [
        {
@@ -20982,6 +21163,18 @@
        }
       ],
       "title": "Employee Name"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "employee_no": {
       "anyOf": [
@@ -21775,6 +21968,18 @@
       "type": "string",
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "period_month": {
       "type": "string",
       "format": "date",
@@ -21832,6 +22037,18 @@
      "employee_name": {
       "type": "string",
       "title": "Employee Name"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "work_date": {
       "type": "string",
@@ -22458,7 +22675,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status"
      },

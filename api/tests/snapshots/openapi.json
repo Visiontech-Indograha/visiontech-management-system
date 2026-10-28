@@ -799,6 +799,18 @@
       ],
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "encouragement_message": {
       "anyOf": [
        {
@@ -1682,7 +1694,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status",
       "type": "string"
@@ -5628,6 +5641,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "period_year": {
       "title": "Period Year",
       "type": "integer"
@@ -5768,6 +5793,18 @@
        }
       ],
       "title": "Employee No"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "end_date": {
       "format": "date",
@@ -6154,6 +6191,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "handover_file_id": {
       "anyOf": [
        {
@@ -6370,6 +6419,18 @@
      "employee_name": {
       "title": "Employee Name",
       "type": "string"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "needed_on": {
       "anyOf": [
@@ -6641,6 +6702,18 @@
        }
       ],
       "title": "Phone Number"
+     },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
      },
      "system_role": {
       "anyOf": [
@@ -7024,6 +7097,18 @@
       ],
       "title": "Employee No"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "latitude": {
       "anyOf": [
        {
@@ -7193,6 +7278,43 @@
      "check_ins_today"
     ],
     "title": "MissingCheckInResponse",
+    "type": "object"
+   },
+   "MyPhotoIn": {
+    "description": "Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto.",
+    "properties": {
+     "file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     }
+    },
+    "title": "MyPhotoIn",
+    "type": "object"
+   },
+   "MyPhotoOut": {
+    "properties": {
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "title": "MyPhotoOut",
     "type": "object"
    },
    "MyRecapItem": {
@@ -7603,6 +7725,18 @@
       ],
       "title": "Employee No"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "is_all_assets_returned": {
       "title": "Is All Assets Returned",
       "type": "boolean"
@@ -7750,6 +7884,18 @@
        }
       ],
       "title": "Employee No"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "is_all_assets_returned": {
       "title": "Is All Assets Returned",
@@ -8479,6 +8625,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "pending_entries": {
       "title": "Pending Entries",
       "type": "integer"
@@ -8528,6 +8686,18 @@
      "employee_name": {
       "title": "Employee Name",
       "type": "string"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "hours": {
       "title": "Hours",
@@ -9262,7 +9432,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status",
       "type": "string"
@@ -17355,6 +17526,53 @@
      }
     ],
     "summary": "Create Employee",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/me/photo": {
+   "put": {
+    "description": "Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini.",
+    "operationId": "set_my_photo_api_v1_employees_me_photo_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MyPhotoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyPhotoOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set My Photo",
     "tags": [
      "Employees"
     ]

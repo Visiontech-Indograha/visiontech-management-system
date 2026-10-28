@@ -60,13 +60,13 @@ describe("Ekspor dokumen order", () => {
 describe("Verifikasi QR (publik)", () => {
   it("tanpa login: dokumen asli menampilkan penanda tangan dan sidik", async () => {
     const calls = mockApi((c) =>
-      c.url === "/verify/work-completions/c-1"
+      c.url === "/verify/work-completions/00000000-0000-4000-8000-0000000000c1"
         ? { data: { completion_id: "c-1", order_number: "PHR-01", client_name: "PHR", project_title: "CCTV",
                     leader_signer_name: "Agus", leader_signed_at: "2026-10-20T02:00:00Z", pm_signer_name: "Dian",
                     pm_signed_at: "2026-10-20T08:00:00Z", signature_hash: HASH, intact: true } }
         : undefined,
     );
-    renderRoute(`/verify/work-completion/c-1?h=${HASH}`, { role: null });
+    renderRoute(`/verify/work-completion/00000000-0000-4000-8000-0000000000c1?h=${HASH}`, { role: null });
     expect(await screen.findByText("Asli & tidak berubah")).toBeInTheDocument();
     expect(screen.getByText(/Agus/)).toBeInTheDocument();
     expect(calls[0]!.params).toEqual({ h: HASH });
@@ -74,7 +74,7 @@ describe("Verifikasi QR (publik)", () => {
 
   it("kode verifikasi salah: tidak memanggil API dan menyatakan tidak terverifikasi", async () => {
     const calls = mockApi(() => undefined);
-    renderRoute("/verify/work-completion/c-1?h=bukan-hash", { role: null });
+    renderRoute("/verify/work-completion/00000000-0000-4000-8000-0000000000c1?h=bukan-hash", { role: null });
     expect(await screen.findByText("Tidak terverifikasi")).toBeInTheDocument();
     expect(calls.some((c) => c.url.startsWith("/verify"))).toBe(false);
   });

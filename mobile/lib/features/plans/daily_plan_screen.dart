@@ -94,6 +94,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       );
       var report = _dailyReport;
       try {
+        if (NetworkHint.probablyOffline) {
+          // baru gagal jaringan: langsung ke cache laporan (tanpa menunggu timeout lagi)
+          throw DioException(requestOptions: RequestOptions());
+        }
         report = await engine.api.dailyReport(widget.dailyPlanId);
         await engine.cachePut('daily_report_${widget.dailyPlanId}', report);
         _reportPending = false;
@@ -109,7 +113,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         }
       }
       var corrections = _corrections;
-      if (plan['leader_employee_id'] == _me) {
+      if (plan['leader_employee_id'] == _me && !NetworkHint.probablyOffline) {
         try {
           corrections = await engine.api.planCorrections(widget.dailyPlanId);
         } on DioException {

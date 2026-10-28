@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -45,6 +47,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
       final start = isoDate(_monday), end = isoDate(_monday.add(const Duration(days: 6)));
       final plans = (await engine.fetchList('daily_$start', () => engine.api.dailyPlans(start: start, end: end))).items;
       if (mounted) setState(() => (_plans = plans, _error = null));
+      unawaited(engine.prefetchPlanDetails(plans));
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     } finally {

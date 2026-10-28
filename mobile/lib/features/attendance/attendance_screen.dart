@@ -150,6 +150,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// Kartu "Absensi hari ini" (O-10). Sesi yang masih terbuka didahulukan: server menolak absen
   /// masuk selama ada sesi terbuka, jadi tombol absen pulang harus tetap muncul lewat tengah malam.
   /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat offline.
+  /// Label tombol pulang; bila sesi yang dibuka berasal dari hari lain, sebut tanggalnya agar tidak membingungkan.
+  String _openSessionLabel(Map<String, dynamic> today) {
+    final day = today['work_date'] as String?;
+    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (day == null || day == current) return 'Absen pulang';
+    return 'Absen pulang (masuk ${DateFormat('d MMM', 'id_ID').format(DateTime.parse(day))})';
+  }
+
   Map<String, dynamic>? get _today {
     // R-34: absen offline yang belum terkirim tampil sebagai absensi hari ini.
     final offIn = _offline.where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true).lastOrNull;
@@ -785,7 +793,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             )
                           else if (today['check_out_at'] == null)
                             PrimaryAction(
-                              label: 'Absen pulang',
+                              label: _openSessionLabel(today),
                               icon: Icons.logout_rounded,
                               gold: true,
                               busy: _busy,

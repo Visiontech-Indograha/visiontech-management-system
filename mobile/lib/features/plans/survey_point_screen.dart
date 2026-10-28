@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/providers.dart';
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
@@ -532,18 +533,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
   Widget _photoTile(_Photo p) {
     final Widget image = p.path != null
         ? Image.file(File(p.path!), fit: BoxFit.cover)
-        : FutureBuilder<String>(
-            future: ref.read(syncEngineProvider).api.fileUrl(p.fileId!, variant: 'thumb'),
-            builder: (context, snap) => snap.hasData
-                ? Image.network(
-                    snap.data!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-                  )
-                : const Center(
-                    child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-          );
+        : VmsNetworkImage(fileId: p.fileId!);
     return Stack(
       children: [
         Container(

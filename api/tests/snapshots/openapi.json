@@ -7368,6 +7368,18 @@
       "title": "Meal Allowance Amount",
       "type": "number"
      },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     },
      "work_date": {
       "format": "date",
       "title": "Work Date",

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 
 final _rupiah = NumberFormat.currency(
@@ -199,13 +200,38 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _day.format(DateTime.parse(i['work_date'] as String)),
-              style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-            ),
-            Text(
-              '${_hour.format(inAt)} - ${outAt == null ? '--.--' : _hour.format(outAt)}',
-              style: VmsTextStyles.bodySm,
+            Row(
+              children: [
+                if (i['selfie_file_id'] != null) ...[
+                  InkWell(
+                    onTap: () => showVmsImageViewer(context, '${i['selfie_file_id']}'),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: VmsNetworkImage(fileId: '${i['selfie_file_id']}'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _day.format(DateTime.parse(i['work_date'] as String)),
+                        style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        '${_hour.format(inAt)} - ${outAt == null ? '--.--' : _hour.format(outAt)}',
+                        style: VmsTextStyles.bodySm,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 6),
             Wrap(

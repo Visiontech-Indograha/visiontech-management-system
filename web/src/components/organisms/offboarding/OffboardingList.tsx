@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { Pill } from "@/components/molecules/Pill";
 import { PlainAction } from "@/components/molecules/PlainAction";
@@ -35,7 +36,8 @@ export function OffboardingList({ offboardings, canManage, onAdd, onOpen }: {
           <ListEntry key={o.offboarding_id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
             <PlainAction className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
                          onClick={() => onOpen(o.offboarding_id)}>
-              <div>
+              <UserAvatar name={o.employee_name} fileId={o.employee_photo_file_id} size="sm" />
+              <div className="min-w-0 flex-1">
                 <TextBlock className="font-semibold">{`${o.employee_name ?? "-"} · ${o.employee_no ?? ""}`}</TextBlock>
                 <TextBlock className="text-xs text-mist">
                   {`${REASON_LABEL[o.reason_type] ?? o.reason_type} · efektif ${formatDate(o.effective_date)}`}

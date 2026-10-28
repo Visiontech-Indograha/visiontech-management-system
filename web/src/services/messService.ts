@@ -20,6 +20,7 @@ export interface MessStay {
   longitude?: number | null;
   employee_id: string;
   employee_name?: string | null;
+  employee_photo_file_id?: string | null;
   employee_no?: string | null;
   stay_start_date: string;
   stay_end_date: string;

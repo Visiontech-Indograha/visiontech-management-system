@@ -1,23 +1,29 @@
+import { useState } from "react";
 import { ImageView } from "@/components/molecules/ImageView";
-import { ExternalLink } from "@/components/molecules/Links";
+import { PlainAction } from "@/components/molecules/PlainAction";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { useFileUrl } from "@/hooks/useFileUrl";
 import type { PhotoRef } from "@/lib/photoRefs";
 
 function Thumb({ fileId, alt }: { fileId: string; alt: string }) {
   const { data: thumb, isError, isPending } = useFileUrl(fileId, "thumb");
-  const { data: full } = useFileUrl(fileId, "view");
+  const [open, setOpen] = useState(false);
+  const { data: full } = useFileUrl(open ? fileId : undefined, "view");
   return (
     <div className="grid h-24 w-32 place-items-center overflow-hidden rounded-control border border-line bg-hover">
       {thumb ? (
-        <ExternalLink href={full ?? thumb} target="_blank" rel="noopener">
+        <PlainAction className="h-full w-full" aria-label={`Perbesar ${alt}`} onClick={() => setOpen(true)}>
           <ImageView src={thumb} alt={alt} className="h-full w-full object-cover" />
-        </ExternalLink>
+        </PlainAction>
       ) : (
         <TextBlock className="px-1 text-center text-2xs text-mist">
           {isError ? "Foto tidak dapat dimuat" : isPending ? "Memuat…" : ""}
         </TextBlock>
       )}
+      <VmsDialog open={open} title={alt} onClose={() => setOpen(false)}>
+        <ImageView src={full ?? thumb ?? ""} alt={alt} className="max-h-[70vh] w-full object-contain" />
+      </VmsDialog>
     </div>
   );
 }

@@ -931,7 +931,9 @@ class AttendanceSessionRepository(BaseRepository):
                        a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM', 'APPROVED') AS is_valid,
                        a.om_approval_status = 'PENDING_OM' AS is_pending,
                        a.meal_allowance_amount::float AS meal_allowance_amount,
-                       a.city_zone_status AS city_zone
+                       a.city_zone_status AS city_zone,
+                       (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
+                           AS selfie_file_id
                 FROM attendance a
                 WHERE a.employee_id = CAST(:emp AS uuid) AND a.delete_at IS NULL
                   AND a.attendance_date BETWEEN :start AND :end

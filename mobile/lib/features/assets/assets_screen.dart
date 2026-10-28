@@ -6,6 +6,7 @@ import '../../core/error_message.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 
 /// Label status pengajuan pinjam aset (alur: karyawan mengajukan, HR/GA memutuskan).
@@ -399,27 +400,7 @@ class _AssetPhoto extends ConsumerWidget {
       alignment: Alignment.center,
       child: fileId == null
           ? icon
-          : FutureBuilder<String>(
-              future: ref
-                  .read(syncEngineProvider)
-                  .api
-                  .fileUrl(fileId, variant: variant),
-              builder: (_, s) => s.hasData
-                  ? Image.network(
-                      s.data!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      errorBuilder: (_, _, _) => icon,
-                    )
-                  : s.hasError
-                  ? icon
-                  : const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-            ),
+          : VmsNetworkImage(fileId: fileId, variant: variant, fallback: icon),
     );
   }
 }

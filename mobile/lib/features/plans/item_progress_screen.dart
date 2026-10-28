@@ -8,6 +8,7 @@ import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../data/sync_engine.dart' show OfflineOp;
+import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
 import 'photo_slots.dart' show PhotoOrigin, pickReportPhoto;
@@ -552,18 +553,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
         clipBehavior: Clip.antiAlias,
         child: p.path != null
             ? Image.file(File(p.path!), fit: BoxFit.cover)
-            : FutureBuilder<String>(
-                future: ref.read(syncEngineProvider).api.fileUrl(p.fileId!, variant: 'thumb'),
-                builder: (_, s) => s.hasData
-                    ? Image.network(
-                        s.data!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(Icons.cloud_done_rounded),
-                      )
-                    : const Center(
-                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-              ),
+            : VmsNetworkImage(fileId: p.fileId!, fallback: const Icon(Icons.cloud_done_rounded)),
       ),
       if (_editable)
         Positioned(

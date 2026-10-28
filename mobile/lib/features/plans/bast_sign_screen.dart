@@ -133,6 +133,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_summary.text.trim().isEmpty) return _snack('Isi ringkasan pekerjaan.');
     final png = await _pad.currentState?.toPng();
     if (png == null) return _snack('Bubuhkan tanda tangan Anda.');

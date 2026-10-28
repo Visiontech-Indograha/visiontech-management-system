@@ -23,6 +23,20 @@ String overtimeStatusLabel(String status) => switch (status) {
 };
 
 /// Label status dokumen pribadi menurut masa berlakunya.
+/// Nama jenis dokumen yang ramah dibaca (sama dengan web); jenis lain ditampilkan apa adanya.
+String documentTypeLabel(String type) => switch (type) {
+  'KTP' => 'KTP',
+  'SIM_A' => 'SIM A',
+  'SIM_B1' => 'SIM B I',
+  'SIM_B2' => 'SIM B II',
+  'SIM_C' => 'SIM C',
+  'MCU' => 'Medical check-up',
+  'SERTIFIKAT_K3' => 'Sertifikat K3',
+  'SERTIFIKAT_TEKNIS' => 'Sertifikat teknis',
+  'KONTRAK_PKWT' => 'Kontrak PKWT',
+  _ => type.replaceAll('_', ' '),
+};
+
 String documentStatusLabel(String status) => switch (status) {
   'active' => 'Berlaku',
   'extended' => 'Diperpanjang',
@@ -166,14 +180,17 @@ class DocumentsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              (d['doc_type'] as String).replaceAll('_', ' '),
+              documentTypeLabel(d['doc_type'] as String),
               style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 4),
             Text(
-              'Berlaku ${_fmt(d['active_at'])} s.d. ${_fmt(d['expired_at'])}',
+              d['expired_at'] == null
+                  ? 'Berlaku sejak ${_fmt(d['active_at'])}'
+                  : 'Berlaku ${_fmt(d['active_at'])} s.d. ${_fmt(d['expired_at'])}',
               style: VmsTextStyles.bodySm,
             ),
+            if (d['file_id'] != null) ...[const SizedBox(height: 8), _DocumentFile(fileId: d['file_id'] as String)],
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -187,4 +204,41 @@ class DocumentsScreen extends StatelessWidget {
       );
     },
   );
+}
+
+/// Pratinjau berkas dokumen (foto) dari server; ketuk untuk memperbesar. Berkas non-gambar (PDF) tampil sebagai ikon.
+class _DocumentFile extends ConsumerWidget {
+  const _DocumentFile({required this.fileId});
+  final String fileId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const fallback = Center(child: Icon(Icons.description_rounded, size: 36, color: Colors.black38));
+    Widget image(String variant, BoxFit fit) => FutureBuilder<String>(
+      future: ref.read(syncEngineProvider).api.fileUrl(fileId, variant: variant),
+      builder: (_, s) => s.hasData
+          ? Image.network(s.data!, fit: fit, errorBuilder: (_, _, _) => fallback)
+          : s.hasError
+          ? fallback
+          : const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+    );
+    return InkWell(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (_) => Dialog(
+          clipBehavior: Clip.antiAlias,
+          child: InteractiveViewer(child: SizedBox(height: 420, child: image('view', BoxFit.contain))),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 120,
+          width: double.infinity,
+          color: Colors.black.withValues(alpha: 0.05),
+          child: image('thumb', BoxFit.cover),
+        ),
+      ),
+    );
+  }
 }

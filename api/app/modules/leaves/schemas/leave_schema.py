@@ -7,7 +7,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 LeaveType = Literal["ANNUAL", "SICK", "MATERNITY", "UNPAID", "OTHER"]
 LeaveStatus = Literal[
@@ -27,6 +27,12 @@ class LeaveCreate(BaseModel):
     end_date: date
     reason: str = Field(min_length=3, max_length=1000)
     attachment_file_id: UUID | None = None  # Surat dokter / dokumen pendukung
+
+    @model_validator(mode="after")
+    def _dates(self) -> "LeaveCreate":
+        if self.end_date < self.start_date:
+            raise ValueError("Tanggal selesai tidak boleh sebelum tanggal mulai.")
+        return self
 
 
 class LeaveReview(BaseModel):

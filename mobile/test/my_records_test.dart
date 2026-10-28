@@ -3,6 +3,12 @@ import 'package:vms_mobile/features/auth/auth_state.dart';
 import 'package:vms_mobile/features/records/my_records_screens.dart';
 
 void main() {
+  test('nama jenis dokumen ramah dibaca', () {
+    expect(documentTypeLabel('SERTIFIKAT_K3'), 'Sertifikat K3');
+    expect(documentTypeLabel('SIM_B1'), 'SIM B I');
+    expect(documentTypeLabel('SURAT_TUGAS'), 'SURAT TUGAS');
+  });
+
   test('label status lembur dan dokumen', () {
     expect(overtimeStatusLabel('PENDING'), 'Menunggu persetujuan');
     expect(overtimeStatusLabel('APPROVED'), 'Disetujui');

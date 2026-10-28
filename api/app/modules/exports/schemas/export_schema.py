@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Dokumen per order → format tetap (docs/35 §8: DOCX BAST & Survey Report, PDF resmi ber-QR, XLSX BoQ, PPTX progres).
 CompletionTemplate = Literal["BAST", "SURVEY_REPORT", "BAST_PDF", "BOQ", "PROGRESS_SLIDES"]
@@ -40,6 +40,12 @@ class PeriodicExportRequest(BaseModel):
     start_date: date
     end_date: date
     export_format: PeriodicFormat = "EXCEL_XLSX"
+
+    @model_validator(mode="after")
+    def _dates(self) -> PeriodicExportRequest:
+        if self.end_date < self.start_date:
+            raise ValueError("Tanggal selesai tidak boleh sebelum tanggal mulai.")
+        return self
 
 
 class ExportOut(BaseModel):

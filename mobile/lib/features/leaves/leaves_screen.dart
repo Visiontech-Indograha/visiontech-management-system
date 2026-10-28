@@ -274,6 +274,7 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
   }
 
   Future<void> _submit() async {
+    if (_busy) return;
     if (_start == null || _end == null || _reason.text.trim().length < 3) {
       setState(
         () => _error = 'Lengkapi tanggal dan alasan (minimal 3 karakter).',

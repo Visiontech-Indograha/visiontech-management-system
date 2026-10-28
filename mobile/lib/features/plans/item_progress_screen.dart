@@ -122,6 +122,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
     if (qty == null || qty < 0) return _snack('Isi jumlah yang sudah selesai dengan angka.');
     final problem = progressProblem(

@@ -11,7 +11,7 @@ import '../../data/sync_engine.dart' show OfflineOp;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
-import 'photo_slots.dart' show PhotoOrigin, pickReportPhoto;
+import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
 /// Alasan hasil kerja belum boleh disimpan, atau null bila valid. Jumlah tidak boleh melebihi target; menandai
 /// selesai (jumlah = target) mewajibkan semua foto wajib terisi.
@@ -518,6 +518,12 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
             Padding(
               padding: const EdgeInsets.only(top: 4, left: 28),
               child: Text('${slot['description']}', style: theme.textTheme.bodySmall),
+            ),
+          // Foto contoh dari PM: `path_image` berisi id berkas bila ada contoh (selain itu path placeholder).
+          if (RegExp(r'^[0-9a-f-]{36}$').hasMatch('${slot['path_image']}'))
+            Padding(
+              padding: const EdgeInsets.only(left: 28),
+              child: ExampleThumb(fileId: '${slot['path_image']}', label: '${slot['name']}'),
             ),
           const SizedBox(height: 10),
           Wrap(

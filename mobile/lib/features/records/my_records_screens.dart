@@ -1,7 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
@@ -217,14 +221,29 @@ class _DocumentFile extends ConsumerWidget {
     const fallback = Center(child: Icon(Icons.description_rounded, size: 36, color: Colors.black38));
     Widget image(String variant, BoxFit fit) =>
         VmsNetworkImage(fileId: fileId, variant: variant, fit: fit, fallback: fallback);
+    Future<void> open() async {
+      // PDF dibuka di aplikasi pembaca PDF; gambar tampil di penampil layar penuh.
+      try {
+        final bytes = await ref.read(syncEngineProvider).api.fileBytes(fileId, variant: 'view');
+        if (bytes.length > 4 && String.fromCharCodes(bytes.take(5)) == '%PDF-') {
+          final file = File('${(await getTemporaryDirectory()).path}/$fileId.pdf');
+          await file.writeAsBytes(bytes, flush: true);
+          final res = await OpenFilex.open(file.path);
+          if (res.type != ResultType.done && context.mounted) {
+            showVmsToast(context, 'Tidak ada aplikasi PDF untuk membuka dokumen.', error: true);
+          }
+          return;
+        }
+      } catch (e) {
+        if (context.mounted) showVmsToast(context, apiErrorMessage(e), error: true);
+        return;
+      }
+      if (!context.mounted) return;
+      await showVmsImageViewer(context, fileId);
+    }
+
     return InkWell(
-      onTap: () => showDialog<void>(
-        context: context,
-        builder: (_) => Dialog(
-          clipBehavior: Clip.antiAlias,
-          child: InteractiveViewer(child: SizedBox(height: 420, child: image('view', BoxFit.contain))),
-        ),
-      ),
+      onTap: open,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Container(

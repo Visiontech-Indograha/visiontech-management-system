@@ -224,6 +224,10 @@ $CHANGES
   step "Checkout $SHORT"
   git -C src checkout -q --force "$NEW" && rm -rf api web face && cp -a src/api src/web . && cp -a src/face-service face || exit 11
   rm -f api/.env web/.env
+  step "Simpan image yang sedang berjalan (untuk rollback otomatis)"
+  for c in api web; do
+    docker image inspect "${IMG}-$c" >/dev/null 2>&1 && docker tag "${IMG}-$c" "${IMG}-$c:rollback" && echo "rollback siap: ${IMG}-$c"
+  done
   step "Build image (docker compose build)"
   docker compose --progress=plain build 2>&1 || exit 12
   step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
@@ -259,6 +263,19 @@ $CHANGES
   docker image prune -f >/dev/null 2>&1
 ) > "$LOG" 2>&1
 RC=$?
+# Rollback otomatis: bila kontainer baru sudah dinyalakan tetapi tidak sehat (14/16/17/18), kembalikan image
+# sebelumnya agar produksi tetap melayani. Migrasi DB bersifat maju-saja → wajib kompatibel mundur (docs/RUNBOOK).
+rollback_images() {
+  local did=0 c
+  for c in api web; do
+    if docker image inspect "${IMG}-$c:rollback" >/dev/null 2>&1; then
+      docker tag "${IMG}-$c:rollback" "${IMG}-$c:latest" && did=1
+    fi
+  done
+  [ "$did" = 1 ] || { echo "rollback: tidak ada image sebelumnya" >> "$LOG"; return 1; }
+  docker compose up -d --force-recreate --no-build >> "$LOG" 2>&1     && echo "rollback: image sebelumnya dipulihkan dan dinyalakan" >> "$LOG"
+}
+case $RC in 14|16|17|18) rollback_images || true ;; esac
 case $RC in
   0) ;;
   11) fail "checkout kode" ;; 12) fail "build image" ;; 13) fail "backup database" ;;

@@ -138,3 +138,12 @@ def test_autodeploy_backs_off_after_a_failed_deploy_of_the_same_commit():
     assert 'echo "$NEW $(date +%s)" > "$FAILED_FILE"' in text   # fail() menandai
     assert 'rm -f "$FAILED_FILE"' in text                          # sukses membersihkan
     assert text.index("FAILED_FILE=") < text.index("Checkout") if "Checkout" in text else True
+
+
+def test_autodeploy_rolls_back_images_when_new_containers_are_unhealthy():
+    text = read(DEPLOY / "autodeploy.sh")
+    assert 'docker tag "${IMG}-$c" "${IMG}-$c:rollback"' in text         # simpan sebelum build
+    assert "up -d --force-recreate --no-build" in text                   # pulihkan tanpa membangun ulang
+    assert "case $RC in 14|16|17|18) rollback_images || true ;; esac" in text
+    # rollback hanya setelah kontainer dinyalakan: tidak untuk kegagalan checkout/build/backup/migrasi (11-13, 15)
+    assert text.index("rollback_images()") > text.index("Jalankan kontainer baru")

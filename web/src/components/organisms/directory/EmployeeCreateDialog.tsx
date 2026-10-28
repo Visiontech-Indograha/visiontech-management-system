@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useCreateEmployee } from "@/services/employeeService";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { ControlInput, FormBlock } from "@/components/molecules/FormBlock";
@@ -41,7 +41,8 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
@@ -129,7 +130,7 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
       onClose();
       navigate(`/directory/${created.employee_id}`);
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     } finally {
       setUploadingPhoto(false);
     }
@@ -138,7 +139,7 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
   const isBusy = isSubmitting || uploadingPhoto;
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Tambah karyawan"
       onClose={onClose}

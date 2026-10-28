@@ -9,7 +9,7 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useCreateMessStay, useMessPlaces } from "@/services/messService";
 import { useEmployees } from "@/services/employeeService";
 
@@ -48,7 +48,8 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<MessValues>({
     resolver: zodResolver(messSchema),
     defaultValues: {
@@ -69,12 +70,12 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
       toast.success("Hunian mess berhasil dicatat.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Tempatkan Karyawan di Mess"
       onClose={onClose}

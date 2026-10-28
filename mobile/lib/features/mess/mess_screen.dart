@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
@@ -48,6 +49,13 @@ class _MessScreenState extends ConsumerState<MessScreen> {
   List<Map<String, dynamic>> _stays = [];
   bool _loading = true;
   String? _error;
+  final _query = ListQuery();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -162,16 +170,45 @@ class _MessScreenState extends ConsumerState<MessScreen> {
                 title: 'Belum ada hunian mess',
                 message: 'Ketuk "Ajukan hunian mess" untuk memilih mess dan tanggal inap.',
               ),
-            for (final s in _stays)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _StayCard(
-                  stay: s,
-                  action: messStayAction(s, now),
-                  onCancel: () => _cancel(s),
-                  onEnd: () => _end(s),
-                ),
+            if (_stays.isNotEmpty) ...[
+              VmsSearchBar(
+                query: _query,
+                hint: 'Cari nama mess, kota, atau status...',
+                chips: const [
+                  VmsFilterOption('', 'Semua'),
+                  VmsFilterOption('REQUESTED', 'Diajukan'),
+                  VmsFilterOption('APPROVED', 'Disetujui'),
+                  VmsFilterOption('REJECTED', 'Ditolak'),
+                  VmsFilterOption('CANCELLED', 'Dibatalkan'),
+                ],
               ),
+              ListenableBuilder(
+                listenable: _query,
+                builder: (context, _) {
+                  final all = _query.filter<Map<String, dynamic>>(
+                    _stays,
+                    (s) => [s['mess_name'], s['city'], s['address'], s['status'], s['request_note']],
+                    chipTest: (s, chip) => '${s['status']}' == chip,
+                  );
+                  return Column(
+                    children: [
+                      if (all.isEmpty) VmsNoMatch(query: _query),
+                      for (final s in _query.visible(all))
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _StayCard(
+                            stay: s,
+                            action: messStayAction(s, now),
+                            onCancel: () => _cancel(s),
+                            onEnd: () => _end(s),
+                          ),
+                        ),
+                      VmsLoadMore(query: _query, total: all.length, noun: 'hunian'),
+                    ],
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

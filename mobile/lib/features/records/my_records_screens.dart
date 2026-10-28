@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -79,6 +80,13 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  final _query = ListQuery();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -126,8 +134,24 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
               ),
             if (!_loading && _error == null && _items.isEmpty)
               Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(widget.empty))),
-            for (final item in _items)
-              Padding(padding: const EdgeInsets.only(top: 12), child: widget.builder(item)),
+            if (_items.length > 3) VmsSearchBar(query: _query, hint: 'Cari...'),
+            ListenableBuilder(
+              listenable: _query,
+              builder: (context, _) {
+                final all = _query.filter<Map<String, dynamic>>(
+                  _items,
+                  (it) => [for (final v in it.values) if (v is String || v is num) v],
+                );
+                return Column(
+                  children: [
+                    if (all.isEmpty && _items.isNotEmpty) VmsNoMatch(query: _query),
+                    for (final item in _query.visible(all))
+                      Padding(padding: const EdgeInsets.only(top: 12), child: widget.builder(item)),
+                    VmsLoadMore(query: _query, total: all.length),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),

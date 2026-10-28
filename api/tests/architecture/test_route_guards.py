@@ -31,6 +31,7 @@ SELF_SERVICE = {
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
     ("GET", "/notifications"): "notifikasi milik sendiri (alur SK v2)",
+    ("GET", "/home/summary"): "HomeService memakai service modul lain: lingkup & izin per peran sama dengan daftar asalnya (diuji)",
     ("POST", "/notifications/read-all"): "menandai notifikasi milik sendiri",
     ("POST", "/notifications/{notification_id}/read"): "hanya notifikasi milik sendiri; milik orang lain tidak berubah",
     ("GET", "/offices"): "daftar kantor organisasi untuk check-in",

@@ -3740,6 +3740,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/home/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ringkasan Beranda sesuai peran
+         * @description Jumlah pekerjaan yang menunggu tindakan pengguna (cuti, absensi, lembur, mess, aset, koreksi, offboarding).
+         */
+        get: operations["home_summary_api_v1_home_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -5796,6 +5816,72 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HomeSummary
+         * @description Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null.
+         */
+        HomeSummary: {
+            /**
+             * Leaves To Review
+             * @description Cuti menunggu keputusan pengguna
+             * @default 0
+             */
+            leaves_to_review: number;
+            /**
+             * Attendance To Review
+             * @description Absensi berstatus perlu review
+             * @default 0
+             */
+            attendance_to_review: number;
+            /**
+             * Overtime To Review
+             * @description Lembur menunggu PM
+             * @default 0
+             */
+            overtime_to_review: number;
+            /**
+             * Mess To Review
+             * @description Pengajuan hunian mess menunggu
+             * @default 0
+             */
+            mess_to_review: number;
+            /**
+             * Loan Requests To Review
+             * @description Pengajuan pinjam aset menunggu
+             * @default 0
+             */
+            loan_requests_to_review: number;
+            /**
+             * Corrections To Review
+             * @description Koreksi laporan harian menunggu tinjauan
+             * @default 0
+             */
+            corrections_to_review: number;
+            /**
+             * Offboarding Open
+             * @description Proses offboarding yang belum selesai
+             * @default 0
+             */
+            offboarding_open: number;
+            /**
+             * My Leaves Pending
+             * @description Cuti milik sendiri yang belum diputuskan
+             * @default 0
+             */
+            my_leaves_pending: number;
+            /**
+             * Notifications Unread
+             * @description Notifikasi belum dibaca
+             * @default 0
+             */
+            notifications_unread: number;
+            /**
+             * Total To Review
+             * @description Jumlah semua yang menunggu tindakan pengguna
+             * @default 0
+             */
+            total_to_review: number;
         };
         /** ImageRequirementCreate */
         ImageRequirementCreate: {
@@ -16700,6 +16786,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    home_summary_api_v1_home_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomeSummary"];
                 };
             };
         };

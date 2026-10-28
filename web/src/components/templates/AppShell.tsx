@@ -4,6 +4,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/stores/sessionStore";
 import { useLiveEvents } from "@/hooks/useLiveEvents";
+import { useHomeSummary } from "@/services/homeService";
 import { ROLE_LABEL } from "@/lib/types";
 import { MobileTopBar } from "../organisms/MobileTopBar";
 import { NotificationBell } from "../organisms/NotificationBell";
@@ -16,6 +17,15 @@ import { SidebarProfile } from "../organisms/SidebarProfile";
 export function AppShell() {
   const { me, logout } = useSession();
   useLiveEvents(!!me);
+  const summary = useHomeSummary(!!me).data;
+  const badges: Record<string, number> = {
+    "/leaves": summary?.leaves_to_review ?? 0,
+    "/attendance": summary?.attendance_to_review ?? 0,
+    "/mess": summary?.mess_to_review ?? 0,
+    "/assets": summary?.loan_requests_to_review ?? 0,
+    "/offboarding": summary?.offboarding_open ?? 0,
+    "/work-plans": summary?.corrections_to_review ?? 0,
+  };
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -41,7 +51,7 @@ export function AppShell() {
           onToggleCollapse={() => setCollapsed((c) => !c)}
           onClose={() => setDrawerOpen(false)}
         />
-        <SidebarNav items={items} collapsed={collapsed} onNavigate={() => setDrawerOpen(false)} />
+        <SidebarNav items={items} badges={badges} collapsed={collapsed} onNavigate={() => setDrawerOpen(false)} />
         {me && (
           <SidebarProfile email={me.email} name={me.full_name} photoFileId={me.photo_file_id} roleLabel={roleLabel} collapsed={collapsed} onLogout={() => void logout()} />
         )}

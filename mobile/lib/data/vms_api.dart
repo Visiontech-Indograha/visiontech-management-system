@@ -154,6 +154,13 @@ class VmsApi {
     return Uri.parse(_dio.options.baseUrl).resolve(url).toString();
   }
 
+  /// Isi berkas (gambar) sebagai bita, untuk disimpan di cache disk perangkat.
+  Future<List<int>> fileBytes(String fileId, {String variant = 'thumb'}) async {
+    final url = await fileUrl(fileId, variant: variant);
+    final res = await _dio.get<List<int>>(url, options: Options(responseType: ResponseType.bytes));
+    return res.data ?? const <int>[];
+  }
+
   /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
   Future<ResponseBody> openEvents(CancelToken cancel) async {
     final res = await _dio.get<ResponseBody>(

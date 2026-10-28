@@ -1,25 +1,31 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/providers.dart';
 
-/// URL berkas yang sudah diminta, dipakai ulang selama tiketnya masih berlaku. Server menerbitkan URL yang sama
-/// dalam satu jendela waktu, sehingga cache gambar Flutter (memori) memakai ulang gambar yang sudah diunduh.
-final Map<String, ({DateTime at, Future<String> url})> _urlCache = {};
-const Duration _urlTtl = Duration(minutes: 20);
+/// Berkas gambar yang sudah dimuat, dipakai ulang di memori dan disimpan di cache disk aplikasi
+/// (kunci = id berkas + varian; isi berkas tidak berubah per id), sehingga gambar yang sama tidak diunduh lagi.
+final Map<String, Future<File>> _files = {};
 
-Future<String> _cachedUrl(WidgetRef ref, String fileId, String variant) {
-  final key = '$fileId|$variant';
-  final hit = _urlCache[key];
-  if (hit != null && DateTime.now().difference(hit.at) < _urlTtl) return hit.url;
-  final url = ref.read(syncEngineProvider).api.fileUrl(fileId, variant: variant);
-  _urlCache[key] = (at: DateTime.now(), url: url);
-  // Permintaan gagal tidak disimpan agar bisa dicoba lagi.
-  url.catchError((Object _) {
-    _urlCache.remove(key);
-    return '';
-  });
-  return url;
+Future<File> _cachedFile(WidgetRef ref, String fileId, String variant) {
+  final key = '${fileId}_$variant';
+  return _files.putIfAbsent(key, () async {
+    final dir = Directory('${(await getTemporaryDirectory()).path}/vms_img');
+    final file = File('${dir.path}/$key');
+    if (await file.exists() && await file.length() > 0) return file;
+    final bytes = await ref.read(syncEngineProvider).api.fileBytes(fileId, variant: variant);
+    await dir.create(recursive: true);
+    await file.writeAsBytes(bytes, flush: true);
+    return file;
+  })
+    // Permintaan gagal tidak disimpan agar bisa dicoba lagi.
+    ..catchError((Object _) {
+      _files.remove(key);
+      return File('');
+    });
 }
 
 /// Gambar dari berkas server (id berkas + varian) dengan penampung, ikon galat, dan cache URL.
@@ -40,10 +46,10 @@ class VmsNetworkImage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final broken = fallback ?? const Center(child: Icon(Icons.broken_image_outlined, color: Colors.black38));
-    return FutureBuilder<String>(
-      future: _cachedUrl(ref, fileId, variant),
-      builder: (_, s) => s.hasData && s.data!.isNotEmpty
-          ? Image.network(s.data!, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => broken)
+    return FutureBuilder<File>(
+      future: _cachedFile(ref, fileId, variant),
+      builder: (_, s) => s.hasData
+          ? Image.file(s.data!, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => broken)
           : s.hasError
           ? broken
           : const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),

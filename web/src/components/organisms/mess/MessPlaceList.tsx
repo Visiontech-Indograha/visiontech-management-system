@@ -1,3 +1,6 @@
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -39,6 +42,7 @@ export function MessPlaceList({
     setDeleting(null);
   };
 
+  const view = useClientList(places.data, (p) => [p.mess_name, p.city, p.address], { prefix: "msp_" });
   return (
     <>
       {places.isPending && <LoadingBar className="h-24" />}
@@ -54,8 +58,11 @@ export function MessPlaceList({
         </div>
       )}
       {places.data && places.data.length > 0 && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama mess atau kota..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {places.data.map((p) => (
+          {view.rows.map((p) => (
             <ListEntry
               key={p.mess_id}
               className="space-y-2 rounded-panel border border-line bg-surface p-4 shadow-card"
@@ -104,6 +111,8 @@ export function MessPlaceList({
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="mess" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
       {adding && <MessPlaceFormDialog onClose={onCloseAdd} />}
       {editing && (

@@ -1,3 +1,6 @@
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { useClientList } from "@/hooks/useClientList";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
@@ -33,6 +36,7 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
   onDeactivate: (type: WorkType) => void;
 }) {
   const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
+  const view = useClientList(types.data, (t) => [t.name, t.division_name], { prefix: "jns_" });
   return (
     <>
       {types.isPending && (
@@ -56,8 +60,11 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
         </div>
       )}
       {types.data && types.data.length > 0 && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari jenis pekerjaan atau divisi..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {types.data.map((t) => (
+          {view.rows.map((t) => (
             <ListEntry key={t.id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
@@ -113,6 +120,8 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="jenis" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
 
       <WorkTypeMaterialsDialog

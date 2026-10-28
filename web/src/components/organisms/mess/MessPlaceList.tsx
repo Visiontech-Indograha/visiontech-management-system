@@ -1,6 +1,7 @@
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -17,12 +18,13 @@ import { MessPlaceFormDialog } from "./MessPlaceFormDialog";
 
 /** Daftar mess (master): kartu dengan keterisian; HR/GA dapat menambah, mengubah, menghapus. */
 export function MessPlaceList({
-  places,
+  controls, places,
   canManage,
   adding,
   onCloseAdd,
 }: {
-  places: UseQueryResult<MessPlace[]>;
+  controls: ListControls;
+  places: UseQueryResult<Paged<MessPlace>>;
   canManage: boolean;
   adding: boolean;
   onCloseAdd: () => void;
@@ -42,7 +44,7 @@ export function MessPlaceList({
     setDeleting(null);
   };
 
-  const view = useClientList(places.data, (p) => [p.mess_name, p.city, p.address], { prefix: "msp_" });
+  const view = pagedView(places, controls);
   return (
     <>
       {places.isPending && <LoadingBar className="h-24" />}
@@ -52,12 +54,12 @@ export function MessPlaceList({
           onRetry={() => places.refetch()}
         />
       )}
-      {places.data?.length === 0 && (
+      {places.data && places.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="text-mist">Belum ada mess terdaftar.</TextBlock>
         </div>
       )}
-      {places.data && places.data.length > 0 && (
+      {places.data && (places.data.total > 0 || view.active) && (
         <>
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama mess atau kota..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}

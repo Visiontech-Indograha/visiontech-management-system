@@ -42,7 +42,7 @@ async def list_attendance(
     scope: str = Query("all", pattern="^(all|mine|team)$"),
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
-    q: str | None = Query(None, max_length=100, description="Nama atau NIP karyawan diawali kata kunci"),
+    q: str | None = Query(None, max_length=100, description="Nama atau NIP karyawan mengandung kata kunci"),
     current_user: CurrentUser = Depends(get_current_user),
     controller: AttendanceController = Depends(),
 ) -> AttendanceListResponse:

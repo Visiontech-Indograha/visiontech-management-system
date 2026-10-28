@@ -9,7 +9,8 @@ import { formatDate } from "@/lib/format";
 import { REASON_LABEL, STATUS_LABEL, type Offboarding } from "@/services/offboardingService";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
-import { useClientList } from "@/hooks/useClientList";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import { OffboardingAddButton } from "./OffboardingAddButton";
 
 const TONE: Record<string, "warning" | "neutral" | "success"> = {
@@ -20,18 +21,19 @@ const TONE: Record<string, "warning" | "neutral" | "success"> = {
 };
 
 /** Daftar offboarding: karyawan, alasan, tanggal efektif, status clearance/persetujuan. Klik → detail. */
-export function OffboardingList({ offboardings, canManage, onAdd, onOpen }: {
-  offboardings: UseQueryResult<Offboarding[]>;
+export function OffboardingList({ controls, offboardings, canManage, onAdd, onOpen }: {
+  controls: ListControls;
+  offboardings: UseQueryResult<Paged<Offboarding>>;
   canManage: boolean;
   onAdd: () => void;
   onOpen: (id: string) => void;
 }) {
-  const view = useClientList(offboardings.data, (o) => [o.employee_name, o.employee_no, o.division_name, REASON_LABEL[o.reason_type]], { prefix: "off_" });
+  const view = pagedView(offboardings, controls);
   return (
     <QueryState
       query={offboardings}
       errorText="Daftar offboarding gagal dimuat."
-      empty={(offboardings.data?.length ?? 0) === 0}
+      empty={(offboardings.data?.total ?? 0) === 0 && !view.active}
       emptyText="Belum ada proses offboarding."
       emptyAction={canManage ? <OffboardingAddButton onAdd={onAdd} /> : undefined}
     >

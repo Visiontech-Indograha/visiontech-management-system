@@ -1,3 +1,5 @@
+import type { ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { OffboardingAddButton } from "@/components/organisms/offboarding/OffboardingAddButton";
 import { OffboardingDetailDialog } from "@/components/organisms/offboarding/OffboardingDetailDialog";
@@ -13,8 +15,9 @@ export type OffboardingDialog =
   | null;
 
 /** Kerangka "Offboarding & Clearance" (docs/35 §7): PKWT segera berakhir, daftar proses, detail & persetujuan. */
-export function OffboardingTemplate({ offboardings, expiring, canManage, canApprovePm, dialog, onDialog }: {
-  offboardings: UseQueryResult<Offboarding[]>;
+export function OffboardingTemplate({ controls, offboardings, expiring, canManage, canApprovePm, dialog, onDialog }: {
+  controls: ListControls;
+  offboardings: UseQueryResult<Paged<Offboarding>>;
   expiring: PkwtExpiring[];
   canManage: boolean;
   canApprovePm: boolean;
@@ -26,7 +29,7 @@ export function OffboardingTemplate({ offboardings, expiring, canManage, canAppr
     <PageTemplate title="Offboarding & Clearance" action={canManage && <OffboardingAddButton onAdd={add} />}>
       <PkwtExpiringPanel rows={expiring} canManage={canManage}
                          onStart={(r) => onDialog({ kind: "create", employee: { id: r.employee_id, name: r.full_name } })} />
-      <OffboardingList offboardings={offboardings} canManage={canManage} onAdd={add}
+      <OffboardingList controls={controls} offboardings={offboardings} canManage={canManage} onAdd={add}
                        onOpen={(id) => onDialog({ kind: "detail", id })} />
       {dialog?.kind === "create" && <OffboardingFormDialog employee={dialog.employee} onClose={() => onDialog(null)} />}
       {dialog?.kind === "detail" && (

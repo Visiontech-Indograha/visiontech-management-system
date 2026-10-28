@@ -33,11 +33,14 @@ _REVIEW = Depends(require_permission(Permission.REVIEW_MESS))
 
 @router.get("/places", response_model=list[MessPlaceOut])
 async def list_places(
+    response: Response,
+    params: ListParams = Depends(),
     current_user: CurrentUser = Depends(get_current_user),
     controller: MessController = Depends(),
 ) -> list[MessPlaceOut]:
     """Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login."""
-    return await controller.handle_list_places(current_user)
+    rows = await controller.handle_list_places(current_user)
+    return list(apply_list(rows, params, response, lambda p: (p.mess_name, p.city, p.address)))
 
 
 @router.post("/places", response_model=MessPlaceOut, status_code=201)

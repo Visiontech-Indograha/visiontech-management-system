@@ -47,7 +47,7 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
 
   Future<void> _syncNow() async {
     setState(() => _loading = true);
-    await ref.read(syncEngineProvider).syncAll();
+    await ref.read(syncEngineProvider).syncAll(manual: true);
     await _load();
   }
 

@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { mockMe } from "@/app/mockSession";
 import { mockApi, renderRoute } from "./utils";
 
 /** F6: persetujuan cuti yang bertabrakan dengan jadwal tim wajib dikonfirmasi. F7: pembatalan cuti yang disetujui. */
@@ -22,7 +23,7 @@ describe("Persetujuan cuti dengan konflik jadwal tim", () => {
       }
       if (c.url === "/leaves/l1/review") return { data: leave({ status: "APPROVED_BY_HR" }) };
     });
-    renderRoute("/leaves", { role: "HR" });
+    renderRoute("/leaves", { me: { ...mockMe("HR")!, role: "ADMIN_HR_GA" } });
 
     fireEvent.click(await screen.findByRole("button", { name: "Tinjau cuti Uji Ketua" }));
     expect(await screen.findByText(/Peringatan: pemohon terjadwal di tim/)).toBeInTheDocument();
@@ -43,7 +44,7 @@ describe("Persetujuan cuti dengan konflik jadwal tim", () => {
       if (c.url === "/leaves" && c.method === "get") return { data: [leave()] };
       if (c.url === "/leaves/l1/review") return { data: leave({ status: "APPROVED_BY_HR" }) };
     });
-    renderRoute("/leaves", { role: "HR" });
+    renderRoute("/leaves", { me: { ...mockMe("HR")!, role: "ADMIN_HR_GA" } });
 
     fireEvent.click(await screen.findByRole("button", { name: "Tinjau cuti Uji Ketua" }));
     const approve = await screen.findByRole("button", { name: "Setujui Permohonan" });

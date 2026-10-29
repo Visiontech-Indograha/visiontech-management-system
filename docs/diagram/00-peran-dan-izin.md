@@ -101,6 +101,8 @@ Kode kesalahan: 401 tanpa token. 403 izin atau relasi kurang. 404 jadwal atau or
 
 Setiap item berikut perlu dikonfirmasi pemilik kode. Nomor T mengacu ke daftar di `README.md`.
 
+- **Tombol persetujuan jadwal (web & HP).** Tombol Setujui, Ubah, Salin, Kembalikan, dan Hapus pada jadwal harian hanya tampil bila API menandai `can_manage` (PM/OM divisi jadwal atau SUPER_ADMIN). Ketua dan anggota tidak melihat Setujui. PM/OM menyetujui draf miliknya langsung (satu langkah, audit mencatat SUBMITTED dan APPROVED); "Ajukan ke PM" tidak ditampilkan karena endpoint submit hanya menerima PM/OM.
+- **Dokumen pribadi (disengaja).** Anggota tidak dapat mencatat dokumen pribadi sendiri (403). Pencatatan dokumen karyawan dilakukan HR (`MANAGE_EMPLOYEE_DOCUMENTS`); anggota hanya mengunggah berkas (`UPLOAD_DOCUMENTS`).
 - **T1 (DELETE_ANY).** Diperbaiki (PR #186): ADMIN tidak lagi lolos hapus permanen; `DELETE_ANY` hanya SUPER_ADMIN (`permissions.py:108`).
 - **T2 (ADMIN di jadwal).** Akun ADMIN lolos `_PLANNER` karena bypass, tetapi `is_admin` hanya bernilai SUPER_ADMIN (`access_service.py:67-68`). Akibatnya approve, submit, dan lainnya ditolak 403 untuk ADMIN. [VERIFIKASI] apakah ADMIN memang tidak boleh memutuskan jadwal.
 - **T3 (tinjau absensi).** Diperbaiki (PR #213): FINANCE masuk `can_review` (`attendance_session_repository.py:617`); jangkauan PM diatur `shared/access/pm_reach.py`. OPS legacy memiliki `REVIEW_ATTENDANCE` tetapi tetap tidak masuk `can_review`.

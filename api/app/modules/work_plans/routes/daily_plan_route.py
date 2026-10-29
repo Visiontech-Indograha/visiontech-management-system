@@ -123,7 +123,7 @@ async def bulk_approve(data: BulkApproveIn, current_user: CurrentUser = _PLANNER
 async def get_daily_plan(daily_plan_id: UUID, access: DailyAccess = _VIEW,
                          controller: DailyPlanController = Depends()) -> DailyPlanDetail:
     """Detail jadwal beserta item & lampirannya."""
-    return await controller.handle_detail(daily_plan_id)
+    return await controller.handle_detail(access.user, daily_plan_id)
 
 
 @router.put("/daily/{daily_plan_id}", response_model=DailyPlanOut)

@@ -13,7 +13,7 @@ const plan = (over: Partial<DailyPlan> = {}): DailyPlan => ({
   daily_plan_id: "p1", kind: "WORK", division_id: "d1", division_name: "Sipil", team_id: "t1", team_name: "Tim Alpha",
   leader_employee_id: "e-lead", leader_name: "Agus", work_date: todayIso, site_name: "Gardu Induk Minas",
   site_lat: "1.4700000", site_lng: "101.4500000", attendance_radius_m: 150, clock_in_time: "07:00:00",
-  clock_out_time: "16:00:00", status: "DRAFT", created_by_id: "e-pm", item_count: 0, done_count: 0, progress_pct: 0, phases: [], ...over,
+  clock_out_time: "16:00:00", status: "DRAFT", created_by_id: "e-pm", item_count: 0, done_count: 0, progress_pct: 0, phases: [], can_manage: true, ...over,
 });
 
 const item = {
@@ -33,13 +33,13 @@ function renderDialog(props: Partial<{ plan: ReturnType<typeof plan> }> = {}) {
 }
 
 describe("jadwal harian tanpa item", () => {
-  it("Ajukan dan Setujui nonaktif dengan petunjuk saat jadwal belum berisi pekerjaan", async () => {
+  it("Setujui nonaktif dengan petunjuk saat jadwal DRAFT belum berisi pekerjaan (tanpa tombol Ajukan bagi PM/OM)", async () => {
     mockApi((c) => {
       if (c.url === "/work-plans/daily/p1") return { data: { ...plan(), items: [], attachment_file_ids: [] } };
     });
     renderDialog();
-    expect(await screen.findByRole("button", { name: "Ajukan ke PM" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Setujui jadwal" })).toBeDisabled();
+    expect(await screen.findByRole("button", { name: "Setujui jadwal" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Ajukan ke PM" })).not.toBeInTheDocument();
     expect(screen.getByText(/Tambahkan minimal satu pekerjaan/)).toBeInTheDocument();
   });
 

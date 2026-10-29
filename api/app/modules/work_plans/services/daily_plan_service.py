@@ -365,7 +365,15 @@ class DailyPlanService:
         if work_date < today - timedelta(days=BACKDATE_DAYS):
             raise ValidationError(f"Jadwal lebih dari {BACKDATE_DAYS} hari yang lalu tidak dapat disetujui.")
         await self._require_items_unless_standby(access, daily_plan_id)
+        one_step = access.plan.status == "DRAFT"
+        if one_step:
+            # PM/OM menyetujui draf miliknya dalam satu langkah (submit+approve atomik); jejak keduanya dicatat.
+            await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "SUBMITTED",
+                                      {"via": "ONE_STEP_APPROVE"})
         await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
+        if one_step:
+            await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "APPROVED",
+                                      {"via": "ONE_STEP_APPROVE", "from": "DRAFT"})
         if work_date < today:
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "BACKDATE_APPROVED",
                                       {"work_date": str(work_date)})

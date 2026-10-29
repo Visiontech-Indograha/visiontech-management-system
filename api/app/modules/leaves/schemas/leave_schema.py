@@ -72,7 +72,8 @@ class LeaveResponse(BaseModel):
     attachment_path: str | None = None
     reviewed_by_name: str | None = None
     reviewed_at: datetime | None = None
-    rejection_note: str | None = None
+    rejection_note: str | None = None  # hanya bila status REJECTED
+    review_note: str | None = None  # catatan persetujuan PM/HR/Finance (bukan penolakan)
     cancel_note: str | None = None
     conflicts: list[LeaveConflict] = Field(default_factory=list)
     create_at: datetime

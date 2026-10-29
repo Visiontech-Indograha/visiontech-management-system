@@ -2552,6 +2552,265 @@
     "title": "CorrectionOut",
     "type": "object"
    },
+   "DailyActivateIn": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi).",
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/PlanItemCreate"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "DailyActivateIn",
+    "type": "object"
+   },
+   "DailyBulkCellOut": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Message"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "status": {
+      "enum": [
+       "CREATED",
+       "SKIPPED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "work_date",
+     "status"
+    ],
+    "title": "DailyBulkCellOut",
+    "type": "object"
+   },
+   "DailyBulkIn": {
+    "description": "Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.",
+    "properties": {
+     "attendance_radius_m": {
+      "anyOf": [
+       {
+        "maximum": 5000.0,
+        "minimum": 10.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": 150,
+      "title": "Attendance Radius M"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "target": {
+      "default": "DRAFT",
+      "enum": [
+       "DRAFT",
+       "APPROVED"
+      ],
+      "title": "Target",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkIn",
+    "type": "object"
+   },
+   "DailyBulkOut": {
+    "properties": {
+     "cells": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkCellOut"
+      },
+      "title": "Cells",
+      "type": "array"
+     },
+     "created": {
+      "title": "Created",
+      "type": "integer"
+     },
+     "skipped": {
+      "title": "Skipped",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "created",
+     "skipped",
+     "cells"
+    ],
+    "title": "DailyBulkOut",
+    "type": "object"
+   },
+   "DailyBulkStandbyIn": {
+    "description": "Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati.",
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkStandbyIn",
+    "type": "object"
+   },
    "DailyFormOptions": {
     "properties": {
      "divisions": {
@@ -2888,6 +3147,11 @@
       ],
       "title": "Attendance Radius M"
      },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
+     },
      "clock_in_time": {
       "format": "time",
       "title": "Clock In Time",
@@ -3145,6 +3409,11 @@
        }
       ],
       "title": "Attendance Radius M"
+     },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
      },
      "clock_in_time": {
       "format": "time",
@@ -6176,6 +6445,17 @@
       ],
       "title": "Rejection Note"
      },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
      "reviewed_at": {
       "anyOf": [
        {
@@ -7360,6 +7640,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -7560,6 +7852,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -8944,6 +9248,45 @@
      "project_title"
     ],
     "title": "OrderOption",
+    "type": "object"
+   },
+   "OrderScheduleOut": {
+    "description": "Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target).",
+    "properties": {
+     "completed_target_unit": {
+      "title": "Completed Target Unit",
+      "type": "integer"
+     },
+     "plans": {
+      "items": {
+       "$ref": "#/components/schemas/DailyPlanOut"
+      },
+      "title": "Plans",
+      "type": "array"
+     },
+     "scheduled_target_qty": {
+      "description": "Jumlah target item yang sudah dijadwalkan untuk order ini",
+      "title": "Scheduled Target Qty",
+      "type": "number"
+     },
+     "total_target_unit": {
+      "title": "Total Target Unit",
+      "type": "integer"
+     },
+     "unscheduled_target_qty": {
+      "description": "Sisa target yang belum dijadwalkan (total - terjadwal)",
+      "title": "Unscheduled Target Qty",
+      "type": "number"
+     }
+    },
+    "required": [
+     "total_target_unit",
+     "completed_target_unit",
+     "scheduled_target_qty",
+     "unscheduled_target_qty",
+     "plans"
+    ],
+    "title": "OrderScheduleOut",
     "type": "object"
    },
    "OvertimeCreate": {
@@ -12076,6 +12419,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "maxLength": 50,
       "minLength": 2,
@@ -12222,6 +12577,29 @@
       "title": "Status",
       "type": "string"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "tool_code": {
       "title": "Tool Code",
       "type": "string"
@@ -12330,6 +12708,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "anyOf": [
        {
@@ -12422,6 +12812,18 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "vehicle_type": {
       "enum": [
@@ -12678,6 +13080,29 @@
       ],
       "title": "Stnk Expired At"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "vehicle_id": {
       "format": "uuid",
       "title": "Vehicle Id",
@@ -12770,6 +13195,18 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "vehicle_type": {
       "anyOf": [
@@ -13214,21 +13651,8 @@
         "type": "null"
        }
       ],
+      "description": "Klien dari master (wajib, kecuali lewat proyek)",
       "title": "Client Id"
-     },
-     "client_name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "Nama klien (kosong = dari proyek)",
-      "title": "Client Name"
      },
      "division_id": {
       "anyOf": [
@@ -13992,18 +14416,6 @@
        }
       ],
       "title": "Client Id"
-     },
-     "client_name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Client Name"
      },
      "order_number": {
       "anyOf": [
@@ -17587,7 +17999,7 @@
   },
   "/api/v1/clients": {
    "get": {
-    "description": "Daftar klien.",
+    "description": "Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.",
     "operationId": "list_clients_api_v1_clients_get",
     "parameters": [
      {
@@ -26303,6 +26715,100 @@
     ]
    }
   },
+  "/api/v1/work-plans/daily/bulk": {
+   "post": {
+    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.",
+    "operationId": "bulk_create_daily_api_v1_work_plans_daily_bulk_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Create Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/bulk-standby": {
+   "post": {
+    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).",
+    "operationId": "bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkStandbyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Standby Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily/recent-sites": {
    "get": {
     "description": "Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).",
@@ -26520,6 +27026,65 @@
      }
     ],
     "summary": "Update Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/activate": {
+   "post": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim.",
+    "operationId": "activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyActivateIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyPlanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Activate Daily Plan",
     "tags": [
      "Work Plans (Daily-First)"
     ]
@@ -27862,7 +28427,7 @@
   },
   "/api/v1/work-plans/orders/{completion_id}/schedule": {
    "get": {
-    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu).",
+    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.",
     "operationId": "order_schedule_api_v1_work_plans_orders__completion_id__schedule_get",
     "parameters": [
      {
@@ -27881,11 +28446,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "items": {
-          "$ref": "#/components/schemas/DailyPlanOut"
-         },
-         "title": "Response Order Schedule Api V1 Work Plans Orders  Completion Id  Schedule Get",
-         "type": "array"
+         "$ref": "#/components/schemas/OrderScheduleOut"
         }
        }
       },

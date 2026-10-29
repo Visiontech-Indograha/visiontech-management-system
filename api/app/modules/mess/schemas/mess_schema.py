@@ -47,6 +47,7 @@ class MessStayCreate(BaseModel):
     mess_id: UUID
     stay_start_date: date
     stay_end_date: date
+    team_id: UUID | None = None  # tim yang menginap (dinas luar kota), opsional
 
 
 class MessStayRequest(BaseModel):
@@ -56,6 +57,7 @@ class MessStayRequest(BaseModel):
     stay_start_date: date
     stay_end_date: date
     note: str | None = Field(None, max_length=500)
+    team_id: UUID | None = None  # tim yang menginap, opsional
 
 
 class MessDecision(BaseModel):

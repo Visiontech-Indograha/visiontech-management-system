@@ -13,6 +13,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.modules.work_plans.schemas.plan_item_schema import PlanItemCreate
+
 DailyStatus = Literal["DRAFT", "SUBMITTED", "APPROVED", "ONGOING", "COMPLETED"]
 # WORK = jadwal kerja; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib).
 DailyKind = Literal["WORK", "STANDBY"]
@@ -92,6 +94,58 @@ class BulkApproveOut(BaseModel):
     skipped: list[UUID]
 
 
+class DailyBulkIn(BaseModel):
+    """Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan."""
+
+    division_id: UUID
+    team_ids: list[UUID] = Field(min_length=1, max_length=30)
+    work_dates: list[date] = Field(min_length=1, max_length=31)
+    kind: DailyKind = "WORK"
+    # DRAFT = belum diajukan. APPROVED hanya untuk siaga (jadwal kerja butuh item dulu).
+    target: Literal["DRAFT", "APPROVED"] = "DRAFT"
+    site_name: str | None = Field(default=None, min_length=2, max_length=150)
+    site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
+    site_lng: Decimal | None = Field(default=None, ge=-180, le=180)
+    attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
+
+    @model_validator(mode="after")
+    def _rules(self) -> DailyBulkIn:
+        if (self.site_lat is None) != (self.site_lng is None):
+            raise ValueError("Latitude dan longitude harus diisi bersama atau dibiarkan kosong.")
+        if self.target == "APPROVED" and self.kind != "STANDBY":
+            raise ValueError("Jadwal kerja disetujui setelah berisi pekerjaan; gunakan target DRAFT.")
+        return self
+
+
+class DailyBulkStandbyIn(BaseModel):
+    """Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati."""
+
+    division_id: UUID
+    team_ids: list[UUID] = Field(min_length=1, max_length=30)
+    work_dates: list[date] = Field(min_length=1, max_length=31)
+
+
+class DailyBulkCellOut(BaseModel):
+    team_id: UUID
+    work_date: date
+    status: Literal["CREATED", "SKIPPED"]
+    daily_plan_id: UUID | None = None
+    reason: str | None = None  # kode galat tetap, mis. TEAM_DAY_TAKEN
+    message: str | None = None
+
+
+class DailyBulkOut(BaseModel):
+    created: int
+    skipped: int
+    cells: list[DailyBulkCellOut]
+
+
+class DailyActivateIn(BaseModel):
+    """Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi)."""
+
+    items: list[PlanItemCreate] = Field(min_length=1, max_length=50)
+
+
 class AttachmentsIn(BaseModel):
     file_ids: list[UUID] = Field(max_length=20)
 
@@ -144,11 +198,22 @@ class DailyPlanOut(BaseModel):
     done_count: int = 0
     progress_pct: int = 0  # rata-rata jumlah dikerjakan/target, 0–100
     phases: list[str] = []  # SURVEY/PREPARATION/INSTALLATION/REPLACEMENT/MAINTENANCE
+    # PM/OM divisi jadwal (atau SUPER_ADMIN): hanya mereka yang boleh menyetujui/mengubah. Dihitung server.
+    can_manage: bool = False
 
 
 class DailyPlanDetail(DailyPlanOut):
     items: list[DailyItemBrief] = []
     attachment_file_ids: list[UUID] = []
+
+
+class OrderScheduleOut(BaseModel):
+    """Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target)."""
+    total_target_unit: int
+    completed_target_unit: int
+    scheduled_target_qty: float = Field(description="Jumlah target item yang sudah dijadwalkan untuk order ini")
+    unscheduled_target_qty: float = Field(description="Sisa target yang belum dijadwalkan (total - terjadwal)")
+    plans: list[DailyPlanOut]
 
 
 class TeamOption(BaseModel):

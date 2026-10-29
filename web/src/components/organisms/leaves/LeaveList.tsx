@@ -180,6 +180,13 @@ export function LeaveList({
                     </div>
                   )}
 
+                  {l.review_note && (
+                    <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
+                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Catatan persetujuan:</TextBlock>
+                      <TextBlock as="span">{l.review_note}</TextBlock>
+                    </div>
+                  )}
+
                   {l.rejection_note && (
                     <div className="mt-2 p-2 rounded-control bg-danger/10 text-xs text-danger flex items-start gap-1.5">
                       <XCircle size={14} className="shrink-0 mt-0.5" />

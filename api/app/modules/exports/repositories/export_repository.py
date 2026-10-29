@@ -43,6 +43,15 @@ class ExportRepository(BaseRepository):
             {"team": str(team_id), "start": start, "end": end},
         )
 
+    async def led_team_ids(self, employee_id: UUID | str | None) -> set[str]:
+        """Tim yang dipimpin karyawan ini (ketua tim)."""
+        if not employee_id:
+            return set()
+        rows = await self.fetchall(
+            "SELECT team_id FROM team WHERE leader_employee_id = CAST(:e AS uuid) AND delete_at IS NULL",
+            {"e": str(employee_id)})
+        return {str(r.team_id) for r in rows}
+
     async def daily_items(self, daily_plan_id: UUID | str) -> list[Any]:
         """Item satu jadwal harian (laporan harian cetak)."""
         return await self._items("d.daily_plan_id = CAST(:d AS uuid)", {"d": str(daily_plan_id)})

@@ -72,12 +72,12 @@ class NotificationService:
         target: str | None = None,
         roles: Iterable[str] = ("PROJECT_MANAGER", "OPERATIONAL_MANAGER"),
     ) -> None:
-        """Notifikasi ke PM/OM di divisi karyawan itu."""
+        """Notifikasi ke PM/OM yang tercatat di divisi karyawan itu (division.pm_id / om_id)."""
         where = await self.repo.employee_division(employee_id)
-        if where is None:
+        if where is None or where.division_id is None:
             return
-        await self.notify_roles(roles, kind, title, body, office_id=where.office_id,
-                                division_id=where.division_id, target=target)
+        users = await self.repo.division_manager_user_ids(where.division_id, roles)
+        await self.repo.insert_for_users(users, kind, title, body, None, target)
 
     async def notify_employees(
         self, employee_ids: Iterable[str | UUID | None], kind: str, title: str, body: str = "",

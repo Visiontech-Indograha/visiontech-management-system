@@ -17,7 +17,7 @@ _SELECT = """
            wpd.project_id, (SELECT p.project_title FROM project p WHERE p.project_id = wpd.project_id)
                AS project_title,
            t.leader_employee_id, le.full_name AS leader_name, le.phone_number AS leader_phone,
-           d.pm_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
+           d.pm_id, d.om_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,
@@ -158,6 +158,14 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"t": str(team_id), "d": work_date, "ex": str(exclude) if exclude else None},
         ))
+
+    async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
+        """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""
+        await self.execute(
+            "UPDATE work_plan_daily SET kind = :kind, update_at = NOW() "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id), "kind": kind},
+        )
 
     async def insert(self, fields: dict[str, Any]) -> UUID:
         daily_plan_id: UUID = await self.scalar(
@@ -356,6 +364,24 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"c": str(completion_id)},
         ))
+
+    async def order_target_totals(self, completion_id: UUID | str) -> Any:
+        """Target total & selesai order (selesai = item utama, seperti ringkasan order) serta target yang terjadwal."""
+        return await self.fetchone(
+            """
+            SELECT wc.total_target_unit,
+                   COALESCE((SELECT SUM(wpi.completed_qty)::int FROM work_plan_item wpi
+                             WHERE wpi.completion_id = wc.completion_id AND wpi.is_main_deliverable = TRUE
+                               AND wpi.delete_at IS NULL), 0) AS completed_target_unit,
+                   COALESCE((SELECT SUM(i.target_qty)::float FROM work_plan_item i
+                             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
+                             WHERE i.completion_id = wc.completion_id AND i.delete_at IS NULL),
+                            0) AS scheduled_target_qty
+            FROM work_completion wc
+            WHERE wc.completion_id = CAST(:c AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"c": str(completion_id)},
+        )
 
     async def count_items(self, daily_plan_id: UUID | str) -> int:
         """Jumlah item jadwal yang belum dihapus (jadwal tanpa item tidak boleh diajukan/disetujui)."""

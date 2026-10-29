@@ -8,17 +8,11 @@ const LEAVE_STATUSES = ["PENDING", "APPROVED_BY_PM", "APPROVED_BY_HR", "REJECTED
 
 export function LeavesPage() {
   const { me } = useSession();
-  const canReview =
-    Boolean(me?.permissions.includes("review:attendance")) ||
-    Boolean(me?.permissions.includes("create:plan")) ||
-    me?.role === "PROJECT_MANAGER" ||
-    me?.role === "OPERATIONAL_MANAGER" ||
-    me?.role === "ADMIN_HR_GA" ||
-    me?.role === "HR" ||
-    me?.role === "SUPER_ADMIN";
+  // Sama dengan ALLOWED_REVIEW_ROLES di API (leave_service.py): PM, OM, HR/GA, super admin.
+  const canReview = ["PROJECT_MANAGER", "OPERATIONAL_MANAGER", "ADMIN_HR_GA", "SUPER_ADMIN"].includes(me?.role ?? "");
 
-  // Persetujuan kedua (setelah PM) hanya oleh HR/GA atau admin.
-  const canFinalReview = me?.role === "ADMIN_HR_GA" || me?.role === "HR" || me?.role === "SUPER_ADMIN";
+  // Persetujuan kedua (setelah PM) oleh HR/GA, OM, atau admin; PM tidak bisa memutus APPROVED_BY_PM (API).
+  const canFinalReview = ["ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"].includes(me?.role ?? "");
 
   const controls = useListControls({ size: 20 });
   const statusFilter = controls.filter("status", LEAVE_STATUSES);

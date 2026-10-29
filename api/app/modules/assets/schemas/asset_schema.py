@@ -35,6 +35,7 @@ def normalise_plate(value: str) -> str:
 # ── Alat ───────────────────────────────────────────────────────────────────────
 class ToolCreate(BaseModel):
     office_id: UUID
+    team_id: UUID | None = None  # tim pemakai bawaan (opsional)
     division_id: UUID | None = None
     ownership_type: Ownership
     category: ToolCategory
@@ -50,6 +51,7 @@ class ToolCreate(BaseModel):
 
 class ToolUpdate(BaseModel):
     office_id: UUID | None = None
+    team_id: UUID | None = None
     division_id: UUID | None = None
     ownership_type: Ownership | None = None
     category: ToolCategory | None = None
@@ -74,6 +76,8 @@ class AssetHolder(BaseModel):
 
 class ToolOut(AssetHolder):
     tool_id: UUID
+    team_id: UUID | None = None  # tim pemakai bawaan
+    team_name: str | None = None
     office_id: UUID
     office_name: str
     division_id: UUID | None = None
@@ -89,6 +93,7 @@ class ToolOut(AssetHolder):
 # ── Kendaraan ──────────────────────────────────────────────────────────────────
 class VehicleCreate(BaseModel):
     office_id: UUID
+    team_id: UUID | None = None  # tim pemakai bawaan (opsional)
     division_id: UUID
     vehicle_type: VehicleType
     name: str = Field(min_length=2, max_length=150)
@@ -103,6 +108,7 @@ class VehicleCreate(BaseModel):
 
 class VehicleUpdate(BaseModel):
     office_id: UUID | None = None
+    team_id: UUID | None = None
     division_id: UUID | None = None
     vehicle_type: VehicleType | None = None
     name: str | None = Field(default=None, min_length=2, max_length=150)
@@ -117,6 +123,8 @@ class VehicleUpdate(BaseModel):
 
 class VehicleOut(AssetHolder):
     vehicle_id: UUID
+    team_id: UUID | None = None  # tim pemakai bawaan
+    team_name: str | None = None
     office_id: UUID
     office_name: str
     division_id: UUID

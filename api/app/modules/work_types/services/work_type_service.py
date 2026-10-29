@@ -121,6 +121,47 @@ class WorkTypeService:
             )
         await self.repo.update_type(type_id, existing.name, is_active=False)
 
+    async def copy_to_division(
+        self,
+        org_id: str,
+        type_id: UUID,
+        target_division_id: UUID,
+        allowed_divisions: list[UUID] | None = None,
+    ) -> Any:
+        """Salin jenis pekerjaan (slot foto + template material default) ke divisi lain sebagai jenis baru.
+        Tautan pemasangan lanjutan tidak disalin (bergantung pada divisi asal)."""
+        source = await self.get(org_id, type_id)
+        if allowed_divisions is not None and str(target_division_id) not in {str(d) for d in allowed_divisions}:
+            raise AppError(
+                "FORBIDDEN", "Anda tidak memiliki hak untuk membuat jenis pekerjaan di divisi tujuan.", status=403
+            )
+        if await self.repo.name_taken(org_id, target_division_id, source.name, None):
+            raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi tujuan.", status=409)
+        photos = [
+            {
+                "label": p["label"],
+                "hint": p.get("hint"),
+                "required": p.get("required", True),
+                "example_file_id": p.get("example_file_id"),
+            }
+            for p in (source.photos or [])
+        ]
+        new_id = await self.repo.insert_type(
+            org_id, target_division_id, source.name, source.description, source.kind, None
+        )
+        await self.repo.replace_photos(org_id, new_id, photos)
+        for m in await self.repo.list_default_materials(type_id):
+            await self.repo.create_default_material(new_id, {
+                "material_code": m.material_code,
+                "material_name": m.material_name,
+                "default_qty": m.default_qty,
+                "unit": m.unit,
+                "category": m.category,
+                "description": m.description,
+                "sort_order": m.sort_order,
+            })
+        return await self.get(org_id, UUID(new_id))
+
     async def template_of_daily(self, daily_plan_id: UUID) -> list[Any]:
         """Slot foto SOP dari jenis pekerjaan item-item jadwal harian ini."""
         return await self.repo.template_of_daily(daily_plan_id)

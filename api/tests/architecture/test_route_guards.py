@@ -45,6 +45,7 @@ SELF_SERVICE = {
     ("GET", "/work-types/{type_id}/materials"): "BoM bawaan jenis pekerjaan (baca saja)",
     ("GET", "/divisions"): "daftar divisi organisasi sendiri (pilihan form karyawan)",
     ("GET", "/assets/tools"): "inventaris alat (baca saja) untuk perencanaan & HP tim (M4)",
+    ("GET", "/assets/availability"): "ketersediaan alat & kendaraan per tanggal (baca saja, butir 7)",
     ("GET", "/assets/vehicles"): "inventaris kendaraan + masa STNK/KIR (baca saja, M4)",
     ("GET", "/assets/vehicles/{vehicle_id}/files"): "berkas kendaraan (baca saja, M4)",
     ("GET", "/assets/vehicles/{vehicle_id}/inspections"): "riwayat inspeksi kendaraan (baca saja, M4)",

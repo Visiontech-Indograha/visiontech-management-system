@@ -44,3 +44,6 @@ Webhook Discord ada di `notify.env` (`DISCORD_WEBHOOK_DEPLOY`, opsional `DISCORD
 
 ## 8. Menutup port API dan MinIO ke localhost
 `bash ~/deploy/vms-mvp/src/deploy/tutup-port-layanan.sh --cek` lalu `--ya` (jam sepi). Dasar keamanannya: Cloudflare Tunnel hanya ke `localhost:8080`; Tailscale Serve/Funnel hanya ke `127.0.0.1`. API tetap terikat ke gerbang Docker agar monitor Kuma (`host.docker.internal`) hijau.
+
+## 9. Hardening server (diterapkan 29-10-2026)
+`sudo bash ~/deploy/vms-mvp/src/deploy/hardening-server.sh --cek` lalu `--ya` (buka satu sesi SSH cadangan; uji login kunci dari sesi baru sebelum menutup). Hasilnya: login root dan sandi SSH mati, `ufw` default tolak masuk (izin 22, 80, 443, 8080, 8000 dan antarmuka `tailscale0`), `fail2ban`, `unattended-upgrades`. Docker melewati ufw, jadi port kontainer harus diikat lewat compose (bagian 7–8). MariaDB bawaan host dibuka oleh `mariadb.socket` (`[::]:3306`) meski `bind-address` lokal; diikat dengan override `/etc/systemd/system/mariadb.socket.d/lokal.conf` (`ListenStream=127.0.0.1:3306`). Apache host dinonaktifkan (bukan bagian VMS). Cek: `sudo fail2ban-client status sshd`, `sudo ufw status`.

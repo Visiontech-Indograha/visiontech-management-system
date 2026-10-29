@@ -158,6 +158,14 @@ class DailyPlanRepository(BaseRepository):
             {"t": str(team_id), "d": work_date, "ex": str(exclude) if exclude else None},
         ))
 
+    async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
+        """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""
+        await self.execute(
+            "UPDATE work_plan_daily SET kind = :kind, update_at = NOW() "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id), "kind": kind},
+        )
+
     async def insert(self, fields: dict[str, Any]) -> UUID:
         daily_plan_id: UUID = await self.scalar(
             """

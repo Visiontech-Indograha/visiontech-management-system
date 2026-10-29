@@ -18,6 +18,7 @@ Inventaris aset (Milestone 4, docs/36; alur docs/35 §6): alat pribadi/umum, ken
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -194,6 +195,25 @@ class AssetService:
         return await self.repo.inspections(vehicle_id)
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
+    async def availability(self, work_date: date, team_id: UUID | None) -> list[dict[str, Any]]:
+        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana."""
+        rows = await self.repo.availability(work_date)
+        names = await self.repo.team_names([r.team_id for r in rows])
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            used_by = str(r.team_id) if r.team_id else None
+            out.append({
+                "asset_type": r.asset_type,
+                "asset_id": r.asset_id,
+                "asset_name": r.asset_name,
+                "status": r.status,
+                "available": used_by is None and r.status in ("ready", "allocated", "loaned"),
+                "used_by_team_id": used_by,
+                "used_by_team_name": names.get(used_by) if used_by else None,
+                "used_by_requested_team": bool(used_by and team_id and used_by == str(team_id)),
+            })
+        return out
+
     async def loans(
         self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None
     ) -> list[Any]:
@@ -240,11 +260,10 @@ class AssetService:
         asset = await self.repo.lock_asset(data.asset_type, asset_id)
         if asset is None:
             raise NotFoundError(_LABEL[data.asset_type])
-        if asset.status != "ready" or await self.repo.has_open_loan(data.asset_type, asset_id):
-            raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
         if not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan, nonaktif, atau sedang proses keluar.")
 
+        plan = None
         if data.daily_plan_id is not None:
             if data.asset_type == "TOOL" and asset.ownership_type == "PERSONAL_LOAN":
                 raise ValidationError("Alat pribadi dipinjamkan ke karyawan, tidak dikaitkan ke jadwal harian.")
@@ -255,6 +274,20 @@ class AssetService:
                 raise ValidationError("Jadwal harian sudah lewat.")
             if not plan.on_team:
                 raise ValidationError("Karyawan bukan anggota tim pada jadwal harian ini.")
+
+        # Bentrok dicek per tanggal: aset yang dipakai tim lain pada tanggal jadwal ini ditolak, pada tanggal lain
+        # boleh. Pinjaman tanpa jadwal tetap bentrok dengan peminjaman berjalan apa pun.
+        work_date = plan.work_date if plan is not None else None
+        if asset.status not in ("ready", "allocated", "loaned"):
+            raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
+        conflict = await self.repo.open_loan_conflict(data.asset_type, asset_id, work_date)
+        if conflict is not None:
+            if work_date is None:
+                msg = f"{_LABEL[data.asset_type]} sedang dipinjam dan belum dikembalikan."
+            else:
+                msg = (f"{_LABEL[data.asset_type]} sudah dipakai tim {conflict.team_name or 'lain'} "
+                       f"pada {work_date.isoformat()}.")
+            raise AppError("ASSET_NOT_AVAILABLE", msg, status=409)
 
         if data.asset_type == "VEHICLE":
             await self._check_vehicle_papers(asset_id, asset.vehicle_type, data.employee_id)

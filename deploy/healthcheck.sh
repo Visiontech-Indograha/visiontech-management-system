@@ -3,6 +3,7 @@
 # (masalah baru / pulih), bukan tiap 5 menit.
 #   */5 * * * * /home/ageng/deploy/vms-mvp/healthcheck.sh >> /home/ageng/deploy/vms-mvp/logs/healthcheck.log 2>&1
 # Opsi: --cetak  → hanya mencetak hasil (tanpa kirim Discord, tanpa mengubah status).
+# Kontainer yang sengaja dimatikan (mis. vms_beta_face): tulis namanya di berkas `healthcheck.skip` (satu per baris).
 # Env (notify.env): DISCORD_WEBHOOK_ALERT (bawaan: DISCORD_WEBHOOK_DEPLOY), VMS_DEPLOY_DIR, API_PORT, WEB_PORT.
 set -uo pipefail
 
@@ -24,6 +25,7 @@ add() { problems+=("$1"); }
 while read -r name; do
   policy=$(docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' "$name" 2>/dev/null)
   case "$policy" in always|unless-stopped) ;; *) continue ;; esac
+  [ -f healthcheck.skip ] && grep -qxF "$name" healthcheck.skip && continue
   status=$(docker inspect -f '{{.State.Status}}' "$name" 2>/dev/null)
   [ "$status" = "running" ] || add "kontainer $name tidak berjalan ($status)"
   restarts=$(docker inspect -f '{{.RestartCount}}' "$name" 2>/dev/null || echo 0)

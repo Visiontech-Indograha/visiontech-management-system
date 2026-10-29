@@ -41,6 +41,16 @@ EDITABLE_STATUSES = ("DRAFT", "SUBMITTED", "APPROVED", "ONGOING")
 FIELD_ACTIVE = ("APPROVED", "ONGOING")
 
 
+# Fase item default menurut jenis (kind) pekerjaan pada template; jenis lain = pemasangan (INSTALLATION).
+PHASE_BY_KIND = {
+    "SURVEY_TASK": "SURVEY",
+    "SURVEY_POINT": "SURVEY",
+    "REPLACEMENT": "REPLACEMENT",
+    "MAINTENANCE": "MAINTENANCE",
+}
+MAIN_PHASES = ("INSTALLATION", "REPLACEMENT", "MAINTENANCE")
+
+
 def _state(message: str) -> AppError:
     return AppError("INVALID_STATE", message, status=409)
 
@@ -118,6 +128,11 @@ class PlanItemService:
         fields = data.model_dump()
         fields["title"] = data.title.strip()
         await self._validate(access, fields)
+        if fields["task_phase"] is None:
+            kind = await self.repo.work_type_kind(data.work_type_id)
+            fields["task_phase"] = PHASE_BY_KIND.get(kind or "", "INSTALLATION")
+        if fields["is_main_deliverable"] and fields["task_phase"] not in MAIN_PHASES:
+            raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
         item_id = await self.repo.insert(daily_plan_id, fields)
         return await self.repo.get(item_id)
 

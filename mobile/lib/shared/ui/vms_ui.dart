@@ -600,7 +600,7 @@ class PrimaryAction extends StatelessWidget {
   }
 }
 
-/// Nama + tombol Telepon & WhatsApp (kontak PM ↔ ketua/anggota tim). Tanpa nomor → keterangan "belum ada nomor HP".
+/// Nama + tombol Telepon & WhatsApp (kontak PM ↔ ketua/anggota tim). Tanpa nomor → keterangan netral "nomor HP belum tercatat".
 class ContactRow extends StatelessWidget {
   const ContactRow({super.key, required this.label, required this.name, this.phone});
   final String label;
@@ -620,8 +620,18 @@ class ContactRow extends StatelessWidget {
         const Icon(Icons.contact_phone_outlined, size: 18),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            '$label: $name${p == null ? ' · belum ada nomor HP' : ''}',
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '$label: $name'),
+                // Keterangan netral (bukan galat): nomor memang belum dicatat di data karyawan.
+                if (p == null)
+                  TextSpan(
+                    text: ' · nomor HP belum tercatat',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+              ],
+            ),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),

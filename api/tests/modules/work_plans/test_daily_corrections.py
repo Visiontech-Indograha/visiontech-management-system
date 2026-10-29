@@ -86,6 +86,18 @@ def test_only_leader_asks_and_only_pm_decides(client, world: World):
     assert _decide(client, world, cid, "APPROVE", who="member").status_code in (403, 404)
 
 
+def test_leader_cannot_close_plan_while_correction_is_open(client, world: World):
+    """T7 (docs/diagram): saat koreksi REVISING jadwal berstatus ONGOING; /complete tidak boleh menutupnya."""
+    plan_id = _completed_plan(world)
+    _report(client, world, plan_id)
+    cid = _ask(client, world, plan_id).json()["correction_id"]
+    assert _decide(client, world, cid, "APPROVE").json()["status"] == "REVISING"
+    assert _plan_status(plan_id) == "ONGOING"
+    closed = client.post(f"/work-plans/daily/{plan_id}/complete", headers=world.headers(client, "leader"))
+    assert closed.status_code == 409 and closed.json()["error"]["code"] == "CORRECTION_OPEN"
+    assert _plan_status(plan_id) == "ONGOING"
+
+
 def test_only_one_open_correction_and_only_when_completed(client, world: World):
     plan_id = _completed_plan(world)
     assert _ask(client, world, plan_id).status_code == 201

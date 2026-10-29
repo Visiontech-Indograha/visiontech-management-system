@@ -190,7 +190,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   onClick={() => { setDayOpen(false); onOpen(plan); }}>
                   <TextBlock as="span" className={`absolute inset-y-0 left-0 w-1.5 ${color.bar}`} />
                   <div className="flex justify-between gap-2">
-                    <TextBlock as="span" className="truncate font-semibold">{`${team.name} · ${plan.site_name}`}</TextBlock>
+                    <TextBlock as="span" className="truncate font-semibold">{`${team.name} · ${plan.site_name || "Lokasi belum ditentukan"}`}</TextBlock>
                     <TextBlock as="span" className={`font-semibold ${WORK_STATE[workState(plan, today)].text}`}>{`${WORK_STATE[workState(plan, today)].label} · ${pct}%`}</TextBlock>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-line">

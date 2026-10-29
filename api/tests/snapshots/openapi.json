@@ -3147,6 +3147,11 @@
       ],
       "title": "Attendance Radius M"
      },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
+     },
      "clock_in_time": {
       "format": "time",
       "title": "Clock In Time",
@@ -3404,6 +3409,11 @@
        }
       ],
       "title": "Attendance Radius M"
+     },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
      },
      "clock_in_time": {
       "format": "time",
@@ -6434,6 +6444,17 @@
        }
       ],
       "title": "Rejection Note"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
      },
      "reviewed_at": {
       "anyOf": [

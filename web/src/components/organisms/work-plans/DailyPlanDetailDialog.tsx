@@ -73,8 +73,10 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     copyForm.reset();
     setMode(next);
   };
-  const editable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED");
-  const deletable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED" || p.status === "APPROVED");
+  // Tombol persetujuan hanya untuk PM/OM divisi jadwal (can_manage, dihitung API); ketua & anggota tidak melihatnya.
+  const manages = !!p.can_manage;
+  const editable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED");
+  const deletable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED" || p.status === "APPROVED");
 
   const run = async (fn: () => Promise<unknown>, done: string, close = false) => {
     setError(null);
@@ -91,10 +93,10 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     run(() => transition.mutateAsync({ id: p.daily_plan_id, action }), `Jadwal: ${ACTION_LABEL[action].toLowerCase()}.`);
 
   const actions: DailyAction[] = [
-    ...(canPlan && p.status === "DRAFT" ? (["submit"] as const) : []),
-    ...(editable ? (["approve"] as const) : []),
+    // PM/OM menyetujui draf miliknya langsung (satu langkah di API); tidak ada tombol "Ajukan ke PM" bagi PM/OM.
+    ...(manages && (p.status === "DRAFT" || p.status === "SUBMITTED") ? (["approve"] as const) : []),
     ...(isLeader && p.status === "APPROVED" ? (["start"] as const) : []),
-    ...((isLeader || canPlan) && p.status === "ONGOING" ? (["complete"] as const) : []),
+    ...((isLeader || manages) && p.status === "ONGOING" ? (["complete"] as const) : []),
   ];
 
   const pct = displayPct(p);
@@ -210,7 +212,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
               Tambahkan minimal satu pekerjaan sebelum diajukan atau disetujui.
             </TextBlock>
           )}
-          {canPlan && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
+          {manages && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
             <ActionButton size="sm" variant="outline" onClick={() => enterMode("reject")}>Kembalikan ke draf</ActionButton>
           )}
           {(canPlan || isLeader) && (
@@ -232,7 +234,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
             </ActionButton>
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
-          {canPlan && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}
+          {manages && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}
           {/* F10: hapus (lunak) untuk draf, diajukan, dan disetujui yang belum dimulai; API menolak bila sudah dipakai. */}
           {deletable && (
             <ActionButton

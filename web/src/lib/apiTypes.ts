@@ -74,7 +74,7 @@ export interface paths {
         };
         /**
          * List Clients
-         * @description Daftar klien.
+         * @description Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.
          */
         get: operations["list_clients_api_v1_clients_get"];
         put?: never;
@@ -9045,13 +9045,11 @@ export interface components {
             pm_id?: string | null;
             /** Project Id */
             project_id?: string | null;
-            /** Client Id */
-            client_id?: string | null;
             /**
-             * Client Name
-             * @description Nama klien (kosong = dari proyek)
+             * Client Id
+             * @description Klien dari master (wajib, kecuali lewat proyek)
              */
-            client_name?: string | null;
+            client_id?: string | null;
             /**
              * Project Title
              * @description Judul (kosong = dari proyek)
@@ -9296,8 +9294,6 @@ export interface components {
         WorkCompletionUpdate: {
             /** Client Id */
             client_id?: string | null;
-            /** Client Name */
-            client_name?: string | null;
             /** Project Title */
             project_title?: string | null;
             /** Order Number */

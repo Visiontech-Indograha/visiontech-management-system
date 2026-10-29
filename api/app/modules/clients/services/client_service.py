@@ -1,6 +1,8 @@
 """
-Klien (Milestone 10): pengelola rencana (`create:plan`: PM/OM/SUPER_ADMIN) mengelola; semua yang login membaca.
-Kode klien unik; klien yang sudah punya proyek tidak bisa dihapus (nonaktifkan lewat `status`).
+Klien (Milestone 10): pengelola rencana (`create:plan`: PM/OM/SUPER_ADMIN) mengelola. Daftar klien dibaca pengelola
+rencana dan PM/OM/HR (pembuat jadwal & order); pekerja lapangan dan ketua tim tidak melihat daftar (memuat PIC).
+Kode klien unik; nama klien unik tanpa memperhatikan huruf besar/kecil dan spasi di ujung; klien yang sudah
+punya proyek tidak bisa dihapus (nonaktifkan lewat `status`).
 """
 from __future__ import annotations
 
@@ -8,12 +10,18 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.clients.repositories.client_repository import ClientRepository
 from app.modules.clients.schemas.client_schema import ClientCreate, ClientUpdate
 from app.shared.access.access_service import is_admin
 
 CODE_TAKEN = "Kode klien sudah dipakai."
+_LIST_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "SUPER_ADMIN")
+
+
+def can_read_clients(user: CurrentUser) -> bool:
+    return Permission.CREATE_PLAN.value in user.permissions or user.has_role(*_LIST_ROLES)
 
 
 class ClientService:
@@ -22,6 +30,13 @@ class ClientService:
 
     async def list(self, q: str | None, active_only: bool) -> list[Any]:
         return await self.repo.list((q or "").strip() or None, active_only)
+
+    async def _ensure_unique_name(self, name: str, exclude: UUID | None = None) -> None:
+        """Nama yang sama (abaikan huruf besar/kecil dan spasi di ujung) = klien yang sama: pakai yang sudah ada."""
+        existing = await self.repo.find_by_name(name, exclude)
+        if existing is not None:
+            raise AppError("CLIENT_EXISTS", f"Klien \"{existing.name}\" sudah ada. Pilih klien yang sudah ada.",
+                           status=409, details={"client_id": str(existing.client_id), "name": existing.name})
 
     async def get(self, client_id: UUID) -> Any:
         row = await self.repo.get(client_id)
@@ -33,6 +48,7 @@ class ClientService:
         code = data.client_code.strip().upper()
         if await self.repo.code_taken(code):
             raise AppError("CLIENT_CODE_TAKEN", CODE_TAKEN, status=409)
+        await self._ensure_unique_name(data.name)
         return await self.repo.insert({**data.model_dump(), "client_code": code, "name": data.name.strip()})
 
     async def _check_manage(self, client_id: UUID, user: CurrentUser) -> None:
@@ -50,6 +66,9 @@ class ClientService:
             fields["client_code"] = fields["client_code"].strip().upper()
             if await self.repo.code_taken(fields["client_code"], exclude=client_id):
                 raise AppError("CLIENT_CODE_TAKEN", CODE_TAKEN, status=409)
+        if fields.get("name"):
+            fields["name"] = fields["name"].strip()
+            await self._ensure_unique_name(fields["name"], exclude=client_id)
         return await self.repo.update(client_id, fields)
 
     async def delete(self, client_id: UUID, user: CurrentUser) -> None:

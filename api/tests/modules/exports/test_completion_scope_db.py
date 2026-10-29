@@ -11,6 +11,7 @@ import docx
 
 from tests.conftest import World, requires_db, sync_query
 from tests.daily import add_item, make_daily_plan
+from tests.orders import make_client
 
 pytestmark = requires_db
 
@@ -30,7 +31,7 @@ def _export(client, headers: dict, completion_id: str, template: str):
 def _two_team_order(client, world: World) -> tuple[str, str]:
     """Order PM dengan item tim ketua (Titik A) dan item tim lain (Titik B) pada jadwal yang sudah disetujui."""
     created = client.post("/work-completions", headers=world.headers(client, "pm"),
-                          json={"division_id": world.unit_id, "client_name": f"Klien ekspor {world.tag}",
+                          json={"division_id": world.unit_id, "client_id": make_client(f"Klien ekspor {world.tag}"),
                                 "project_title": "Pekerjaan ekspor"})
     assert created.status_code in (200, 201), created.text
     cid = created.json().get("completion_id") or created.json().get("id")

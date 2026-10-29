@@ -5,13 +5,14 @@ Dulu nilai di luar rentang diskalakan diam-diam (123 → 0.000123).
 from __future__ import annotations
 
 from tests.conftest import World, requires_db
+from tests.orders import make_client
 
 pytestmark = requires_db
 
 
 def _post(client, world: World, **coords):
     return client.post("/work-completions", headers=world.headers(client, "admin"),
-                       json={"division_id": world.unit_id, "client_name": "Klien Koordinat",
+                       json={"division_id": world.unit_id, "client_id": make_client("Klien Koordinat"),
                              "project_title": "Pekerjaan Koordinat", **coords})
 
 

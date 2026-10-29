@@ -7,9 +7,8 @@ import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
-import { ActionButton } from "@/components/molecules/ActionButton";
 import { InlineLink } from "@/components/molecules/Links";
-import { koordinatError, namaKlienError } from "@/lib/inputRules";
+import { koordinatError } from "@/lib/inputRules";
 import { useCreateWorkCompletion, useUpdateWorkCompletion, type WorkCompletionOrder } from "@/services/workCompletionService";
 import { useUserDivisions } from "@/services/employeeService";
 import { useClients } from "@/services/clientService";
@@ -19,7 +18,6 @@ import { useSession } from "@/stores/sessionStore";
 interface FormValues {
   division_id?: string;
   client_id?: string;
-  client_name: string;
   project_id?: string;
   project_title: string;
   order_number?: string;
@@ -37,10 +35,6 @@ const parseCoord = (val: unknown): number | undefined => {
   return str === "" ? undefined : Number(str);
 };
 
-const clientNameRules = {
-  validate: (v: string) => (v.trim() === "" ? "Nama klien wajib diisi." : (namaKlienError(v) ?? true)),
-};
-
 /** Tanpa `order` = buat baru; dengan `order` = ubah (PUT) memakai isian awal dari order. */
 export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => void; order?: WorkCompletionOrder }) {
   const editing = !!order;
@@ -50,7 +44,6 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
   const { data: divisions } = useUserDivisions();
   const { data: clients } = useClients(true);
   const [formError, setFormError] = useState<string | null>(null);
-  const [isManualInput, setIsManualInput] = useState(editing);
   const [clientQuery, setClientQuery] = useState("");
 
   const {
@@ -64,7 +57,6 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
       ? {
           division_id: order.division_id ?? "",
           client_id: order.client_id ?? "",
-          client_name: order.client_name ?? "",
           project_id: "",
           project_title: order.project_title,
           order_number: order.order_number ?? "",
@@ -78,7 +70,6 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
       : {
           division_id: me?.division_id ?? "",
           client_id: "",
-          client_name: "",
           project_id: "",
           project_title: "",
           order_number: "",
@@ -112,10 +103,6 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
   const handleClientSelect = (clientId: string) => {
     setValue("client_id", clientId);
     setValue("project_id", "");
-    const found = clients?.find((c) => c.client_id === clientId);
-    if (found) {
-      setValue("client_name", found.name);
-    }
   };
 
   // Ketika proyek master dipilih dari dropdown
@@ -139,6 +126,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
     // Batas sama dengan API untuk lintang/bujur (-90..90, -180..180); isian di luar batas tidak dikirim.
+    if (!values.client_id) return setFormError("Pilih klien dari master klien.");
     const coordErr = koordinatError(String(values.site_lat ?? ""), String(values.site_lng ?? ""));
     if (coordErr) return setFormError(coordErr);
     const parsedLat = parseCoord(values.site_lat);
@@ -148,7 +136,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
         await update.mutateAsync({
           id: order.completion_id,
           payload: {
-            client_name: values.client_name,
+            client_id: values.client_id || null,
             project_title: values.project_title,
             order_number: values.order_number || null,
             total_target_unit: Number(values.total_target_unit),
@@ -163,7 +151,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
       } else {
         await create.mutateAsync({
           division_id: values.division_id || me?.division_id || undefined,
-          client_name: values.client_name,
+          client_id: values.client_id || null,
           project_title: values.project_title,
           order_number: values.order_number || undefined,
           total_target_unit: Number(values.total_target_unit),
@@ -211,24 +199,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
           </SelectField>
         )}
 
-        {!editing && (
-          <div className="flex items-center justify-between my-1">
-            <TextBlock as="span" className="text-xs text-mist">
-              Sumber Data Klien & Proyek:
-            </TextBlock>
-            <ActionButton
-              type="button"
-              variant="link"
-              size="xs"
-              className="text-primary font-medium p-0 h-auto"
-              onClick={() => setIsManualInput(!isManualInput)}
-            >
-              {isManualInput ? "Pilih dari Master Klien/Proyek" : "Ganti ke Input Bebas Manual"}
-            </ActionButton>
-          </div>
-        )}
-
-        {!isManualInput && (clients?.length ?? 0) > 0 ? (
+        {(clients?.length ?? 0) > 0 ? (
           <>
             <TextField
               label="Cari klien"
@@ -279,14 +250,6 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
             )}
 
             <TextField
-              label="Nama Klien / Perusahaan"
-              placeholder="misal: PT Pertamina EP, PT PLN Persero"
-              error={errors.client_name?.message}
-              maxLength={150}
-              {...register("client_name", clientNameRules)}
-            />
-
-            <TextField
               label="Judul Pekerjaan / Proyek"
               placeholder="misal: Pemasangan 13 Unit CCTV Kilang"
               error={errors.project_title?.message}
@@ -296,13 +259,9 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
           </>
         ) : (
           <>
-            <TextField
-              label="Nama Klien / Perusahaan"
-              placeholder="misal: PT Pertamina EP, PT PLN Persero"
-              error={errors.client_name?.message}
-              maxLength={150}
-              {...register("client_name", clientNameRules)}
-            />
+            <TextBlock className="rounded-control border border-dashed border-line p-3 text-sm text-mist">
+              Belum ada klien di master. Tambahkan dulu klien di menu Klien, lalu buat pekerjaannya.
+            </TextBlock>
 
             <TextField
               label="Judul Pekerjaan / Proyek"

@@ -20,7 +20,7 @@ export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string
 ];
 
 /** Simpan Blob dari API sebagai unduhan; nama berkas dari Content-Disposition server. */
-function saveBlob(data: Blob, disposition: string | undefined, fallback: string) {
+export function saveBlob(data: Blob, disposition: string | undefined, fallback: string) {
   // Utamakan nama asli UTF-8 (filename*), cadangan ASCII (filename).
   const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition ?? "")?.[1];
   const name = (utf8 && decodeURIComponent(utf8)) || /filename="([^"]+)"/.exec(disposition ?? "")?.[1] || fallback;

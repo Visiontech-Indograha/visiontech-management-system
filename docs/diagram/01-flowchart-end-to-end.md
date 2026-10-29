@@ -144,6 +144,28 @@ flowchart TD
     I1 --> I6
 ```
 
+## Alokasi mingguan (PM/OM, web) dan siaga
+
+Layar `/alokasi-mingguan` (menu hanya untuk izin `create:plan`). Sel kosong menjadi jadwal DRAFT lewat `POST /work-plans/daily/bulk`, lalu tiap jadwal yang dibuat diberi item lewat `POST /work-plans/daily/:id/items`. Siaga memakai `kind = STANDBY`.
+
+```mermaid
+flowchart TD
+    A1[PM/OM buka Alokasi mingguan] --> A2{Sel kosong?}
+    A2 -->|ya, satu sel| A3[Dialog Alokasikan]
+    A2 -->|pilih beberapa sel| A3
+    A3 --> A4[POST /work-plans/daily/bulk, hasil per sel]
+    A4 --> A5{Sel dibuat?}
+    A5 -->|ya| A6[POST /work-plans/daily/:id/items]
+    A5 -->|dilewati| A7[Tampilkan alasan dan peringatan]
+    A6 --> A8[Jadwal DRAFT, setujui dari Jadwal harian]
+    A1 --> A9[Siaga hari kosong: POST /work-plans/daily/bulk-standby]
+    A9 --> A10[Sel SIAGA]
+    A10 -->|Ubah jadi pekerjaan| A11[POST /work-plans/daily/:id/activate]
+    A11 --> A12[Jadwal WORK, notifikasi DAILY_ACTIVATED ke ketua dan anggota]
+```
+
+Di HP, jadwal `kind = STANDBY` tampil sebagai kartu 'Siaga — menunggu perintah PM' tanpa tombol 'Mulai hari kerja'; absen tetap tersedia.
+
 ## Catatan membaca diagram
 
 - Alur ACC ke BAST di atas adalah alur yang dimaksudkan. Kode `sign_order` tidak memeriksa `acc_status` (`api/app/modules/work_completion/services/work_completion_service.py:274-330`). Artinya BAST bisa ditandatangani sebelum ACC DITERIMA. Lihat T10 di `README.md`. [VERIFIKASI]

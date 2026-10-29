@@ -7,9 +7,10 @@ Mengikuti Panduan Standar Arofficektur API FastAPI Modular §4 & §5.1.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import get_current_user, require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.offices.controllers.office_controller import OfficeController
@@ -20,6 +21,8 @@ router = APIRouter(prefix="/offices", tags=["Offices"])
 
 @router.get("", response_model=list[OfficeResponse])
 async def get_offices(
+    response: Response,
+    params: ListParams = Depends(),
     for_attendance: bool = False,
     current_user: CurrentUser = Depends(get_current_user),
     controller: OfficeController = Depends(),
@@ -27,7 +30,8 @@ async def get_offices(
     """
     Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.
     """
-    return await controller.handle_list_offices(current_user, for_attendance)
+    rows = await controller.handle_list_offices(current_user, for_attendance)
+    return list(apply_list(rows, params, response, lambda o: (o.name, o.address)))
 
 
 @router.post("", response_model=OfficeResponse, status_code=status.HTTP_201_CREATED)

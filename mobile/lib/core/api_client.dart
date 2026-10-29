@@ -42,7 +42,12 @@ class ApiClient {
           }
           handler.next(options);
         },
+        onResponse: (response, handler) {
+          NetworkHint.markOnline();
+          handler.next(response);
+        },
         onError: (error, handler) async {
+          if (isNetworkFailure(error)) NetworkHint.markOffline();
           final isUnauthorized = error.response?.statusCode == 401;
           final alreadyRetried =
               error.requestOptions.extra['retriedAfterRefresh'] == true;
@@ -170,6 +175,23 @@ bool isNetworkFailure(DioException e) {
       e.type == DioExceptionType.receiveTimeout ||
       e.type == DioExceptionType.sendTimeout ||
       e.type == DioExceptionType.unknown;
+}
+
+/// Petunjuk jaringan bersama. Tanpa sinyal, tiap permintaan menunggu timeout sendiri; bila beberapa dibaca
+/// berurutan, layar bisa diam puluhan detik. Setelah SATU kegagalan jaringan, pembacaan yang punya cache
+/// langsung memakai cache selama [window] — tanpa menunggu timeout lagi. Hanya untuk pembacaan; penulisan
+/// (kirim/absen) tetap mencoba jaringan atau masuk antrean seperti biasa.
+class NetworkHint {
+  static const Duration window = Duration(seconds: 12);
+  static DateTime? _offlineUntil;
+
+  static bool get probablyOffline {
+    final until = _offlineUntil;
+    return until != null && DateTime.now().isBefore(until);
+  }
+
+  static void markOffline() => _offlineUntil = DateTime.now().add(window);
+  static void markOnline() => _offlineUntil = null;
 }
 
 /// Backend mengirim refresh token sebagai cookie httpOnly `refresh_token`

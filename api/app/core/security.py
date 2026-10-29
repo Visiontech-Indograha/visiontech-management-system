@@ -7,9 +7,9 @@ dari KMS/secret manager (K-05), tidak pernah disimpan di Git atau basis data.
 Verifikasi hanya menerima EdDSA dengan `kid` yang dikenal: token HS256, `alg: none`, dan
 kebingungan algoritma ditolak.
 """
+import hashlib
 import logging
-import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -123,20 +123,27 @@ def verify_time_anchor(token: str, user_id: str) -> int | None:
 # Terikat ketat pada user_id, file_id, organization_id, dan berumur singkat (5 menit).
 FILE_TICKET_AUDIENCE = "vms-file-ticket"
 FILE_TICKET_TTL = timedelta(minutes=5)
+# Tiket dibuat STABIL dalam satu jendela waktu: pengguna+berkas+varian yang sama → token (dan URL) yang sama, sehingga
+# peramban dapat men-cache gambar. Token tetap berlaku ≥ FILE_TICKET_TTL dari saat diterbitkan.
+FILE_TICKET_WINDOW_SECONDS = 1800
 
 
 def create_file_access_ticket(user_id: str, file_id: str, org_id: str, variant: str = "view") -> str:
     now = utcnow()
+    window_start = int(now.timestamp()) // FILE_TICKET_WINDOW_SECONDS * FILE_TICKET_WINDOW_SECONDS
+    start = datetime.fromtimestamp(window_start, tz=UTC)
+    # EdDSA deterministik + klaim yang sama ⇒ token sama; jti diturunkan (bukan acak) agar klaimnya sama.
+    jti = hashlib.sha256(f"{user_id}|{file_id}|{org_id}|{variant}|{window_start}".encode()).hexdigest()[:32]
     claims = {
         "sub": user_id,
         "fid": str(file_id),
         "org": str(org_id),
         "var": variant,
-        "iat": now,
-        "exp": now + FILE_TICKET_TTL,
+        "iat": start,
+        "exp": start + timedelta(seconds=FILE_TICKET_WINDOW_SECONDS) + FILE_TICKET_TTL,
         "aud": FILE_TICKET_AUDIENCE,
         "iss": ACCESS_ISSUER,
-        "jti": uuid.uuid4().hex,
+        "jti": jti,
     }
     return jwt.encode(claims, _private_key, algorithm=_ALGORITHM, headers={"kid": settings.JWT_KID})
 

@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
@@ -19,7 +20,9 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import '../face/face_enroll_gate.dart';
+import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
+import 'nearest_site.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -65,7 +68,28 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     return auth is AuthAuthenticated ? auth.user.employeeId : '';
   }
 
+  Map<String, int> _summary = const {};
+  bool _siteManual = false; // pengguna memilih lokasi sendiri → jangan diganti otomatis
+
+  /// Tanpa tugas berjalan: setelah titik GPS pertama tiba, pindah ke lokasi terdekat (bila pengguna belum memilih).
+  Future<void> _autoPickNearest() async {
+    if (_siteManual || _runningSites.isNotEmpty || _sites.length < 2) return;
+    final fix = await LocationWarmer.instance.waitForFix();
+    if (fix == null || !mounted || _siteManual) return;
+    final near = nearestSiteId(_sites, fix.latitude, fix.longitude);
+    if (near != null && near != _siteId) setState(() => _siteId = near);
+  }
+
+  /// Ringkasan antrean (best-effort): gagal/offline → kartu disembunyikan, tidak mengganggu absensi.
+  Future<void> _loadSummary() async {
+    try {
+      final s = await ref.read(syncEngineProvider).api.homeSummary();
+      if (mounted) setState(() => _summary = s);
+    } catch (_) {}
+  }
+
   Future<void> _load() async {
+    unawaited(_loadSummary());
     setState(() {
       _loading = true;
       _error = null;
@@ -95,13 +119,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final sites = await engine.fetchList('sites', engine.api.sites);
       // Lokasi tugas hari ini (jadwal harian tim yang disetujui/berjalan) juga target absen sah (docs/35 §5):
       // id = daily_plan_id, didahulukan di atas kantor.
-      final today = DateTime.now().toIso8601String().substring(0, 10);
+      // Tanggal server (WIB) bila sudah diketahui; jam HP bisa salah atau beda zona.
+      final today = _serverToday ??
+          DateFormat('yyyy-MM-dd').format(
+              DateTime.now().toUtc().add(const Duration(hours: 7)));
       final plans = await engine.fetchList('daily_today', () => engine.api.dailyPlans(start: today, end: today));
-      try {
-        final fs = await engine.api.faceStatus();
-        _faceEnrolled = fs['enrolled'] == true;
-      } catch (_) {
-        _faceEnrolled = false;
+      if (!NetworkHint.probablyOffline) {
+        try {
+          final fs = await engine.api.faceStatus();
+          _faceEnrolled = fs['enrolled'] == true;
+        } catch (_) {
+          _faceEnrolled = false;
+        }
       }
       final daySites = [
         for (final p in plans.items)
@@ -132,9 +161,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             _sites.any((s) => s['id'] == _siteId) &&
             (runningSites.isEmpty || runningSites.contains(_siteId));
         if (!keep) {
-          _siteId = _sites.isNotEmpty ? _sites.first['id'] as String : null;
+          // Tanpa tugas berjalan: pilih lokasi terdekat dari titik GPS terakhir yang segar (bila ada).
+          final fix = runningSites.isEmpty ? LocationWarmer.instance.freshFix() : null;
+          final near = fix == null ? null : nearestSiteId(_sites, fix.latitude, fix.longitude);
+          _siteId = near ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
         }
       });
+      unawaited(_autoPickNearest());
       await _syncReminders();
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
@@ -146,6 +179,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// Kartu "Absensi hari ini" (O-10). Sesi yang masih terbuka didahulukan: server menolak absen
   /// masuk selama ada sesi terbuka, jadi tombol absen pulang harus tetap muncul lewat tengah malam.
   /// Selain itu pakai tanggal dari server (zona waktu organisasi); jam HP hanya cadangan saat offline.
+  /// Label tombol pulang; bila sesi yang dibuka berasal dari hari lain, sebut tanggalnya agar tidak membingungkan.
+  String _openSessionLabel(Map<String, dynamic> today) {
+    final day = today['work_date'] as String?;
+    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (day == null || day == current) return 'Absen pulang';
+    return 'Absen pulang (masuk ${DateFormat('d MMM', 'id_ID').format(DateTime.parse(day))})';
+  }
+
   Map<String, dynamic>? get _today {
     // R-34: absen offline yang belum terkirim tampil sebagai absensi hari ini.
     final offIn = _offline.where((o) => o['kind'] == 'CHECK_IN' && o['dead'] != true).lastOrNull;
@@ -515,6 +556,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 autofocus: true,
                 maxLines: 4,
                 maxLength: 1000,
+                onChanged: (_) {
+                  if (error != null) setDialog(() => error = null);
+                },
                 decoration: InputDecoration(hintText: 'Mis. ban bocor di jalan menuju lokasi', errorText: error),
               ),
             ],
@@ -595,7 +639,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     ref.listen(liveEventTickProvider, (_, _) => _load()); // T8: peristiwa waktu nyata
     final today = _today;
     final auth = ref.watch(authControllerProvider);
-    final name = auth is AuthAuthenticated ? auth.user.username.split('@').first : '';
+    final name = auth is AuthAuthenticated ? auth.user.displayName.split(' ').first : '';
     final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
     final hour = DateTime.now().hour;
     final greet = hour < 11
@@ -606,7 +650,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         ? 'Selamat sore'
         : 'Selamat malam';
     return Scaffold(
-      appBar: const VmsTopBar(),
+      appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
         onRefresh: _load,
         edgeOffset: 120,
@@ -700,7 +744,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               ),
                               const SizedBox(height: 12),
                             ],
-                            if (_sites.isEmpty) ...[
+                            if (_sites.isEmpty && _loading) ...[
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              ),
+                            ] else if (_sites.isEmpty) ...[
                               const NoticeBanner(
                                 key: Key('belum-ada-lokasi-sk'),
                                 icon: Icons.location_off_rounded,
@@ -715,7 +764,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: Icons.place_rounded,
                                 value: _siteId,
                                 options: [for (final s in _sites) VmsOption(s['id'] as String, s['name'] as String)],
-                                onChanged: (v) => setState(() => _siteId = v),
+                                onChanged: (v) => setState(() {
+                                  _siteManual = true;
+                                  _siteId = v;
+                                }),
                               ),
                               const SizedBox(height: 14),
                               // Ada jadwal tugas hari ini tetapi memilih lokasi lain (mis. kantor): hanya peringatan,
@@ -767,9 +819,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   'Absen masuk menunggu pemeriksaan. Absen pulang '
                                   'bisa dilakukan setelah absen masuk disetujui.',
                             )
+                          else if (today['check_out_at'] == null && _wibHour(attendanceClock()) >= 19)
+                            const NoticeBanner(
+                              key: Key('pulang-ditutup'),
+                              icon: Icons.schedule_rounded,
+                              accent: Accent.indigo,
+                              text:
+                                  'Absen pulang mandiri ditutup pukul 19:00 WIB. '
+                                  'Sistem mencatat pulang otomatis, tidak perlu absen lagi.',
+                            )
                           else if (today['check_out_at'] == null)
                             PrimaryAction(
-                              label: 'Absen pulang',
+                              label: _openSessionLabel(today),
                               icon: Icons.logout_rounded,
                               gold: true,
                               busy: _busy,
@@ -785,6 +846,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       ),
                     ),
                   ),
+                  _QueueSummaryCard(summary: _summary, onReturn: _loadSummary),
                   const SectionTitle('Riwayat'),
                   if (_loading)
                     const Padding(
@@ -872,3 +934,55 @@ int _wibMinutes(DateTime now) {
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.
 DateTime Function() attendanceClock = DateTime.now;
+
+
+/// Kartu "Menunggu tindakan Anda": hanya baris berisi (>0); yang punya layar di HP bisa diketuk.
+class _QueueSummaryCard extends StatelessWidget {
+  const _QueueSummaryCard({required this.summary, required this.onReturn});
+
+  final Map<String, int> summary;
+
+  /// Dipanggil setelah kembali dari layar tujuan, agar angka tidak basi.
+  final Future<void> Function() onReturn;
+
+  static const _rows = <(String, String, String?)>[
+    ('leaves_to_review', 'Cuti menunggu keputusan', '/leaves'),
+    ('mess_to_review', 'Pengajuan mess menunggu', '/mess'),
+    ('loan_requests_to_review', 'Pengajuan pinjam aset menunggu', '/assets'),
+    ('attendance_to_review', 'Absensi perlu diperiksa', null),
+    ('overtime_to_review', 'Lembur menunggu persetujuan', '/overtime'),
+    ('corrections_to_review', 'Koreksi laporan harian menunggu', null),
+    ('my_leaves_pending', 'Cuti saya belum diputuskan', '/leaves'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = [for (final r in _rows) if ((summary[r.$1] ?? 0) > 0) r];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return Card(
+      margin: const EdgeInsets.only(top: 16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Menunggu tindakan Anda', style: Theme.of(context).textTheme.titleSmall),
+            for (final r in rows)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(r.$2),
+                trailing: Badge(label: Text('${summary[r.$1]}')),
+                onTap: r.$3 == null
+                    ? null
+                    : () async {
+                        await context.push(r.$3!);
+                        await onReturn();
+                      },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

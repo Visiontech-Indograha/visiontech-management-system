@@ -33,6 +33,8 @@ export interface EmployeeFilters {
   status: string;
   page: number;
   division_id?: string;
+  /** Ukuran halaman; pilihan tanpa pencarian memakai ukuran besar agar tidak ada karyawan yang terlewat. */
+  size?: number;
 }
 
 export function useEmployees(f: EmployeeFilters) {
@@ -41,7 +43,7 @@ export function useEmployees(f: EmployeeFilters) {
     queryFn: async () => {
       const params = {
         page: f.page,
-        size: PAGE_SIZE,
+        size: f.size ?? PAGE_SIZE,
         ...(f.status ? { status: f.status } : {}),
         ...(f.division_id ? { division_id: f.division_id } : {}),
         ...(f.q ? { q: f.q } : {}),
@@ -231,5 +233,15 @@ export function useAccountAction(employeeId: string) {
       return (await api.post<Account | AccountWithPassword>(`${base}/${path}`)).data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
+  });
+}
+
+/** Usulan nomor karyawan berikutnya (GET /employees/next-no); hanya saat formulir tambah dibuka. */
+export function useNextEmployeeNo() {
+  return useQuery({
+    queryKey: ["employees", "next-no"],
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => (await api.get<S["NextEmployeeNo"]>("/employees/next-no")).data.employee_no,
   });
 }

@@ -16,20 +16,6 @@ export interface ConflictDetail {
   end_time?: string | null;
 }
 
-export interface CheckConflictIn {
-  work_date: string;
-  start_time: string;
-  end_time: string;
-  employee_ids?: string[];
-  vehicle_id?: string | null;
-  exclude_item_id?: string | null;
-}
-
-export interface CheckConflictOut {
-  has_conflict: boolean;
-  conflicts: ConflictDetail[];
-}
-
 export interface UpdateItemProgressIn {
   completed_qty?: number | null;
   progress_percent?: number | null;
@@ -153,19 +139,6 @@ export interface TaskChainStatusOut {
   items: TaskChainItemDetail[];
 }
 
-export interface GenerateCompletionIn {
-  client_name?: string | null;
-  project_title?: string | null;
-}
-
-export interface GenerateCompletionOut {
-  success: boolean;
-  completion_id: string;
-  message: string;
-  total_target_unit: number;
-  order_status: string;
-}
-
 export interface DailyScheduleDetail {
   daily_plan_id: string;
   work_date: string;
@@ -190,12 +163,6 @@ export interface DailyScheduleDetail {
   items_schedule_slots: ItemScheduleSlot[];
 }
 
-/** Memeriksa tabrakan jadwal teknisi atau kendaraan. */
-export async function checkScheduleConflict(body: CheckConflictIn): Promise<CheckConflictOut> {
-  const res = await api.post<CheckConflictOut>("/work-plans/items/check-schedule-conflict", body);
-  return res.data;
-}
-
 /** Memperbarui capaian aktual dan persentase progres tugas. */
 export async function updateItemProgress(itemId: string, body: UpdateItemProgressIn): Promise<UpdateItemProgressOut> {
   const res = await api.patch<UpdateItemProgressOut>(`/work-plans/items/${itemId}/progress`, body);
@@ -217,15 +184,6 @@ export async function pmApproveOrMoveItem(itemId: string, body: Record<string, u
 /** Mengambil rantai rollover (task chain) lintas hari/minggu. */
 export async function getTaskChainStatus(itemId: string): Promise<Record<string, unknown>[]> {
   const res = await api.get<Record<string, unknown>[]>(`/work-plans/items/${itemId}/chain`);
-  return res.data;
-}
-
-/** Mengompilasi seluruh rantai tugas 100% tuntas menjadi Berita Acara Work Completion. */
-export async function generateCompletionFromChain(
-  itemId: string,
-  payload?: GenerateCompletionIn
-): Promise<GenerateCompletionOut> {
-  const res = await api.post<GenerateCompletionOut>(`/work-plans/items/${itemId}/generate-completion`, payload || {});
   return res.data;
 }
 

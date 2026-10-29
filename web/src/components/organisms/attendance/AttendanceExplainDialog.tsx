@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { TextAreaField } from "@/components/molecules/Field";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { explainSchema } from "@/schemas/attendanceSchemas";
 import { explainAttendance, useAttendanceAction, type Attendance, type ExplanationRequest } from "@/services/attendanceService";
 import { AttendanceFormDialog } from "./AttendanceFormDialog";
@@ -15,6 +15,7 @@ export function AttendanceExplainDialog({ item, onClose }: { item: Attendance; o
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<{ explanation: string }>({ resolver: zodResolver(explainSchema), defaultValues: { explanation: item.explanation ?? "" } });
   const onSubmit = handleSubmit(async (v) => {
@@ -24,7 +25,7 @@ export function AttendanceExplainDialog({ item, onClose }: { item: Attendance; o
       toast.success("Penjelasan ditambahkan.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
   return (

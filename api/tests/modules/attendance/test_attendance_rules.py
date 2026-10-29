@@ -68,7 +68,7 @@ _STATUS = ("CASE om_approval_status WHEN 'AUTO_VALID' THEN 'AUTO_VALID' WHEN 'AP
 def _row(att_id: str) -> tuple:
     return sync_query(
         f"SELECT {_STATUS}, (clock_in_at AT TIME ZONE 'Asia/Jakarta')::time > TIME '08:00', distance_to_target_m, clock_out_at IS NOT NULL, "
-        "(clock_out_at IS NOT NULL AND clock_out_at::time < scheduled_out), out_of_radius_note "
+        "(clock_out_at IS NOT NULL AND (clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < scheduled_out), out_of_radius_note "
         "FROM attendance WHERE attendance_id = %s", (att_id,))[0]
 
 

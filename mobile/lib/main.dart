@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -44,6 +45,14 @@ class VmsMobileApp extends ConsumerWidget {
           themeMode: ThemeMode.light,
           materialThemeBuilder: (context, _) => VmsTheme.light,
           routerConfig: router,
+          // Bahasa Indonesia: pemilih tanggal, penghitung karakter, dan teks bawaan Material tidak berbahasa Inggris.
+          locale: const Locale('id', 'ID'),
+          supportedLocales: const [Locale('id', 'ID')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           // ScaffoldMessenger (SnackBar) + safe zone kiri/kanan — lihat shared/app_frame.dart.
           // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
           builder: (context, child) => vmsAppFrame(

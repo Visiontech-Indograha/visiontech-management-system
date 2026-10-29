@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/providers.dart';
+import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
@@ -213,9 +215,10 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Kebutuhan lain'),
-        content: TextField(
+        content: VmsTextField(
           controller: ctrl,
           autofocus: true,
+          maxLength: 255,
           decoration: const InputDecoration(labelText: 'mis. Crane, izin kerja panas'),
         ),
         actions: [
@@ -228,6 +231,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
   }
 
   Future<void> _save() async {
+    if (_busy) return;
     if (_name.text.trim().length < 2) return _snack('Isi nama titik dulu (langkah 1).');
     if (_typeId == null) return _snack('Pilih jenis titik dulu (langkah 1).');
     if (_photos.isEmpty) return _snack('Ambil minimal satu foto (langkah 2).');
@@ -319,9 +323,10 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                   onSelectionChanged: _edit ? (v) => setState(() => _status = v.first) : null,
                 ),
                 const SizedBox(height: 12),
-                TextField(
+                VmsTextField(
                   key: const Key('survey-point-name'),
                   controller: _name,
+                  maxLength: 150,
                   enabled: _edit,
                   decoration: InputDecoration(
                     hintText: _cctv ? 'mis. Titik Pemasangan CCTV 03' : 'mis. Pintu akses Samping (perlu dipasang ACS)',
@@ -365,8 +370,9 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                         : null,
                   ),
                 if (_edit)
-                  TextField(
+                  VmsTextField(
                     controller: _newRemark,
+                    maxLength: 255,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _addRemark(),
                     decoration: InputDecoration(
@@ -458,13 +464,15 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
                         ),
                     ],
                   ),
-                  TextField(
+                  VmsTextField(
                     controller: _uplink,
+                    maxLength: 150,
                     enabled: _edit,
                     decoration: const InputDecoration(labelText: 'Uplink switch', hintText: 'mis. Control Room'),
                   ),
-                  TextField(
+                  VmsTextField(
                     controller: _foRemark,
+                    maxLength: 255,
                     enabled: _edit,
                     decoration: const InputDecoration(
                       labelText: 'Keterangan kabel',
@@ -531,18 +539,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
   Widget _photoTile(_Photo p) {
     final Widget image = p.path != null
         ? Image.file(File(p.path!), fit: BoxFit.cover)
-        : FutureBuilder<String>(
-            future: ref.read(syncEngineProvider).api.fileUrl(p.fileId!, variant: 'thumb'),
-            builder: (context, snap) => snap.hasData
-                ? Image.network(
-                    snap.data!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined),
-                  )
-                : const Center(
-                    child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-          );
+        : VmsNetworkImage(fileId: p.fileId!);
     return Stack(
       children: [
         Container(

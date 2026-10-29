@@ -1,6 +1,6 @@
 import { useSession } from "@/stores/sessionStore";
 import { HomeTemplate } from "@/components/templates/home/HomeTemplate";
-import { useAttendanceToReview, useExpiringDocuments } from "@/services/homeService";
+import { useAttendanceToReview, useExpiringDocuments, useHomeSummary } from "@/services/homeService";
 import { addDays, useDailyPlans, wibDate, weekStart } from "@/services/dailyPlanService";
 
 /** Beranda (R-12, daily-first): sapaan, ringkasan jadwal minggu ini, jadwal aktif, dokumen kedaluwarsa. */
@@ -15,6 +15,7 @@ export function HomePage() {
   const toReview = useAttendanceToReview(canReview);
   const canManageDocs = perms.includes("manage:employee_documents");
   const expiring = useExpiringDocuments(canManageDocs);
+  const summary = useHomeSummary();
 
   const list = plans.data ?? [];
   const running = list.filter((p) => p.status === "ONGOING");
@@ -26,7 +27,7 @@ export function HomePage() {
   return (
     <HomeTemplate
       today={today}
-      name={me?.email.split("@")[0]}
+      name={me?.full_name?.split(" ")[0] ?? me?.email?.split("@")[0] ?? "Pengguna"}
       stats={{
         running: { value: running.length, loading: plans.isPending },
         waiting: { value: waiting.length, loading: plans.isPending },
@@ -37,6 +38,8 @@ export function HomePage() {
         canReview,
         canManageDocs,
       }}
+      summary={summary.data}
+      summaryLoading={summary.isPending}
       canManageDocs={canManageDocs}
       expiringDocs={expiring.data}
       plans={plans}

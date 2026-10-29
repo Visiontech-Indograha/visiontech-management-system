@@ -63,6 +63,8 @@ function playNotificationChime() {
 }
 
 function handle(qc: QueryClient, ev: LiveEvent) {
+  // Antrean Beranda & lencana sidebar bergantung pada hampir semua peristiwa: segarkan ringkasannya.
+  if (ev.topic !== "security") void qc.invalidateQueries({ queryKey: ["home", "summary"] });
   if (ev.topic === "notification") {
     void qc.invalidateQueries({ queryKey: ["notifications"] });
     playNotificationChime();

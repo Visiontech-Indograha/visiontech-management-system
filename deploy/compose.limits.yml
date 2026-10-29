@@ -1,0 +1,23 @@
+# Batas sumber daya + rotasi log untuk stack produksi/beta (server 4 GB RAM / 2 CPU: tanpa batas, satu layanan
+# bisa menyeret yang lain ke swap — lihat pengukuran 2026-10-28: face prod 482 MB + beta 259 MB, swap 561 MB).
+#
+# Pasang (sekali, di ~/deploy/vms-mvp dan ~/deploy/vms-beta), gabungkan ke override yang sudah ada:
+#   cp compose.override.yml compose.override.yml.bak-$(date +%Y%m%d)
+#   # salin blok `services:` di bawah ke compose.override.yml (gabung per layanan), lalu:
+#   docker compose config >/dev/null && docker compose up -d
+# Nilai awal konservatif; ubah setelah melihat `docker stats --no-stream`.
+services:
+  api:
+    mem_limit: 768m
+    restart: unless-stopped
+    logging: &log
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+  web:
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *log
+  face:
+    mem_limit: 768m
+    restart: unless-stopped
+    logging: *log

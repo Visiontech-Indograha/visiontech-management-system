@@ -54,14 +54,17 @@ def day(client, world, fake_storage):
 
 @pytest.mark.parametrize("who", ["pm", "ops", "admin"])
 def test_reviewers_see_the_whole_company(client, world, day, who):
-    ids = {a["id"] for a in _list(client, world, who, size=100)["items"]}
-    assert {day["member"], day["leader"], day["pm"]} <= ids
+    # Satu perusahaan di DB bersama: jangan mengandalkan halaman pertama; periksa tiap karyawan lewat filternya.
+    for emp in ("member", "leader", "pm"):
+        ids = {a["id"] for a in _list(client, world, who, employee_id=world.employees[emp])["items"]}
+        assert day[emp] in ids
 
 
 def test_pm_sees_attendance_of_the_team(client, world, day):
     # R-33: PM meninjau bawahan lapangan di unitnya, jadi daftar PM memuat miliknya + bawahannya.
-    ids = {a["id"] for a in _list(client, world, "pm")["items"]}
-    assert {day["member"], day["leader"], day["pm"]} <= ids
+    for emp in ("member", "leader", "pm"):
+        ids = {a["id"] for a in _list(client, world, "pm", employee_id=world.employees[emp])["items"]}
+        assert day[emp] in ids
     by_leader = _list(client, world, "pm", employee_id=world.employees["leader"])
     assert [a["id"] for a in by_leader["items"]] == [day["leader"]]
 
@@ -72,11 +75,12 @@ def test_scope_separates_personal_from_team_or_general(client, world, day, who):
     own = day.get(who)
     mine = {a["id"] for a in _list(client, world, who, scope="mine")["items"]}
     team = {a["id"] for a in _list(client, world, who, scope="team")["items"]}
-    everything = {a["id"] for a in _list(client, world, who, size=100)["items"]}
 
     assert mine == ({own} if own else set())                       # hanya milik sendiri
     assert not (mine & team)                                       # tidak tercampur
-    assert own is None or own in everything
+    if own is not None:   # tampil juga di daftar umum (dicari lewat filter karyawan, bukan halaman pertama)
+        listed = {a["id"] for a in _list(client, world, who, employee_id=world.employees[who])["items"]}
+        assert own in listed
 
 
 def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(client, world, day):

@@ -10,7 +10,22 @@ import { fetchNotifications, markNotificationsRead } from "@/services/notificati
 
 const KEY = ["notifications"] as const;
 
-/** Lonceng notifikasi dalam aplikasi (alur rencana kerja v2): diperiksa tiap 60 detik, klik membuka rencana kerja terkait. */
+/** Halaman tujuan per jenis notifikasi (kolom `target` dari API); tanpa target tetap membuka jadwal bila ada rencana. */
+const TARGET_PATH: Record<string, string> = {
+  leave: "/leaves",
+  asset: "/assets",
+  overtime: "/overtime-recap",
+  mess: "/mess",
+  plan: "/work-plans",
+  correction: "/work-plans",
+  attendance: "/attendance",
+  completion: "/work-completions",
+  survey: "/surveys",
+  offboarding: "/offboarding",
+  document: "/my-documents",
+};
+
+/** Lonceng notifikasi dalam aplikasi (alur rencana kerja v2): diperiksa tiap 60 detik, klik membuka halaman terkait. */
 export function NotificationBell({ className }: { className?: string }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -57,7 +72,8 @@ export function NotificationBell({ className }: { className?: string }) {
               className="flex flex-col items-start gap-0.5 py-2"
               onSelect={() => {
                 if (!n.read_at) read.mutate(n.id);
-                if (n.daily_plan_id) navigate("/work-plans");
+                const path = (n.target && TARGET_PATH[n.target]) || (n.daily_plan_id ? "/work-plans" : null);
+                if (path) navigate(path);
               }}
             >
               <TextBlock as="span" className={clsx("text-sm", !n.read_at && "font-semibold text-ink")}>{n.title}</TextBlock>

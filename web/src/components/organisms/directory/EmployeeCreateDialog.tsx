@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { errorMessage } from "@/lib/errors";
-import { useCreateEmployee } from "@/services/employeeService";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
+import { useCreateEmployee, useNextEmployeeNo } from "@/services/employeeService";
 import { oversize, uploadForm } from "@/services/uploadService";
 import { ControlInput, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -41,7 +41,10 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    setError,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
@@ -57,6 +60,11 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
       postal_code: "",
     },
   });
+  const nextNo = useNextEmployeeNo();
+  useEffect(() => {
+    // Isi otomatis (tetap bisa diubah); jangan menimpa ketikan pengguna.
+    if (nextNo.data && !getValues("employee_no")) setValue("employee_no", nextNo.data, { shouldDirty: false });
+  }, [nextNo.data, getValues, setValue]);
 
   const fullNameValue = useWatch({ control, name: "full_name" });
 
@@ -107,6 +115,11 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
         photo_file_id = await uploadForm(form);
       }
 
+      const anyAddressField = !!(v.address_line || v.city || v.postal_code);
+      if (anyAddressField && (!v.address_line || !v.city || !v.postal_code)) {
+        setFormError("Jika mengisi alamat, seluruh kolom (jalan, kota, dan kode pos) wajib diisi lengkap.");
+        return;
+      }
       const hasAddress = !!(v.address_line && v.city && v.postal_code);
       const created = await create.mutateAsync({
         employee_no: v.employee_no,
@@ -124,7 +137,7 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
       onClose();
       navigate(`/directory/${created.employee_id}`);
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     } finally {
       setUploadingPhoto(false);
     }
@@ -133,7 +146,7 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
   const isBusy = isSubmitting || uploadingPhoto;
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Tambah karyawan"
       onClose={onClose}

@@ -15,7 +15,7 @@ export function WorkCompletionNavTabs({
             : "bg-hover text-foreground hover:bg-hover/80"
         }`}
       >
-        Pekerjaan Klien & BAST
+        Daftar Pekerjaan
       </InlineLink>
       <InlineLink
         to="/projects"

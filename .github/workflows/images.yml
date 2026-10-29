@@ -1,0 +1,46 @@
+# Bangun citra api/web di runner GitHub dan dorong ke GHCR (tag = SHA commit + latest).
+# Tahap 1: hanya menerbitkan citra (tidak mengubah server). Tahap 2 (opsional, tindakan pemilik server):
+# `docker login ghcr.io` dengan token read:packages di server, lalu autodeploy memakai `docker compose pull`
+# sebagai pengganti `build` agar server 2 CPU tidak kerja berat. Lihat deploy/README.md.
+name: Images · GHCR
+
+on:
+  push:
+    branches: [prod]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  push:
+    name: Bangun & dorong citra
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: api, context: api }
+          - { name: web, context: web }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ghcr.io/visiontech-indograha/vms-${{ matrix.name }}:${{ github.sha }}
+            ghcr.io/visiontech-indograha/vms-${{ matrix.name }}:latest
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}

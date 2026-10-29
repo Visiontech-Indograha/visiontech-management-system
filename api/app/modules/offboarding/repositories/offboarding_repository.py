@@ -17,7 +17,9 @@ _COLS = """
     o.offboarding_id, o.employee_id, o.reason_type::text AS reason_type, o.submission_date, o.effective_date,
     o.is_all_assets_returned, o.status, o.notes, o.create_at,
     o.approved_by_pm_id, pm.full_name AS approved_by_pm_name, o.approved_by_hr_id, hr.full_name AS approved_by_hr_name,
-    e.full_name AS employee_name, e.employee_no, e.division_id, d.name AS division_name,
+    e.full_name AS employee_name, e.employee_no, e.division_id,
+    (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+        AS employee_photo_file_id, d.name AS division_name,
     (SELECT COUNT(*) FROM offboarding_clearance_item c
      WHERE c.offboarding_id = o.offboarding_id AND c.verified_at IS NULL AND c.delete_at IS NULL)::int AS pending_items
 """

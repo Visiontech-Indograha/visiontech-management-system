@@ -55,7 +55,7 @@ ROLE=$(echo "SELECT rolsuper::text || ' ' || rolbypassrls::text FROM pg_roles WH
 [ "$ROLE" = "false false" ] || { echo "GAGAL: peran vms_api belum ada / tidak aman ($ROLE) — deploy rilis berisi 0024 dulu"; exit 1; }
 REV=$(docker exec vms_api alembic current 2>/dev/null | tail -1)
 case "$REV" in
-  0024_runtime_role*|0025*|0026*|0027*|0028*|0029*|003*) echo "   alembic: $REV" ;;
+  v2_*|0024_runtime_role*|0025*|0026*|0027*|0028*|0029*|003*) echo "   alembic: $REV" ;;
   *) echo "GAGAL: alembic belum di 0024 ($REV)"; exit 1 ;;
 esac
 echo "   peran vms_api siap (bukan superuser, tanpa BYPASSRLS)"

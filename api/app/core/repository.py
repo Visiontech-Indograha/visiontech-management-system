@@ -7,7 +7,8 @@ Menyediakan helper eksekusi SQL asinkron dengan parameter binding statis.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import re
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from sqlalchemy import text
@@ -41,6 +42,25 @@ class BaseRepository:
         """Mengeksekusi kueri SQL dan mengambil nilai skalar (kolom pertama baris pertama)."""
         result = await self.db.execute(text(query), params or {})
         return result.scalar()
+
+
+_IDENT = re.compile(r"^[a-z_][a-z0-9_]{0,62}$")
+
+
+def safe_columns(keys: Iterable[str]) -> list[str]:
+    """Pastikan nama kolom pada UPDATE dinamis hanyalah identifier SQL biasa (cegah injeksi lewat kunci dict)."""
+    cols = list(keys)
+    bad = [k for k in cols if not _IDENT.match(k)]
+    if bad:
+        raise ValueError(f"Nama kolom tidak valid: {bad[0]!r}")
+    return cols
+
+
+def escape_like(term: str | None) -> str | None:
+    """Netralkan wildcard LIKE (persen, garis bawah, backslash) pada kata kunci pengguna."""
+    if term is None:
+        return None
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 # Alias kompatibilitas

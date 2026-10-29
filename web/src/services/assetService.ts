@@ -8,6 +8,7 @@ export type Tool = S["ToolOut"];
 export type Vehicle = S["VehicleOut"];
 export type Loan = S["LoanOut"];
 export type VehicleFile = S["VehicleFileOut"];
+export type LoanRequest = S["LoanRequestOut"];
 export type ToolCreate = S["ToolCreate"];
 export type VehicleCreate = S["VehicleCreate"];
 export type LoanCreate = S["LoanCreate"];
@@ -70,3 +71,15 @@ export const useLend = () =>
 export const useReturnLoan = () =>
   useAssetMutation(async ({ assignmentId, condition }: { assignmentId: string; condition: ReturnCondition }) =>
     (await api.post<Loan>(`/assets/loans/${assignmentId}/return`, { condition })).data);
+
+/** Pengajuan pinjam dari karyawan (pengelola aset melihat semua). */
+export const useLoanRequests = (status?: string) =>
+  useQuery({
+    queryKey: [...KEY, "loan-requests", { status }],
+    queryFn: async () => (await api.get<LoanRequest[]>("/assets/loan-requests", { params: { status } })).data,
+  });
+
+/** HR/GA menyetujui (langsung serah terima) atau menolak pengajuan. */
+export const useReviewLoanRequest = () =>
+  useAssetMutation(async ({ id, decision, note }: { id: string; decision: "APPROVED" | "REJECTED"; note?: string }) =>
+    (await api.post<LoanRequest>(`/assets/loan-requests/${id}/review`, { decision, note })).data);

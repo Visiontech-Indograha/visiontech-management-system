@@ -26,6 +26,7 @@ class OfflineOp {
   static const taskToggle = 'TASK_TOGGLE';
   static const incidentReport = 'INCIDENT_REPORT';
   static const overtimeReport = 'OVERTIME_REPORT';
+  static const planItemProgress = 'PLAN_ITEM_PROGRESS';
 
   static const labels = {
     dailyReportSave: 'Simpan laporan harian',
@@ -33,6 +34,7 @@ class OfflineOp {
     taskToggle: 'Centang tugas',
     incidentReport: 'Laporan insiden',
     overtimeReport: 'Laporan lembur',
+    planItemProgress: 'Simpan hasil kerja',
     OfflineAttendance.entityType: 'Absensi offline',
   };
 }
@@ -269,6 +271,18 @@ class SyncEngine {
     String key,
     Future<List<Map<String, dynamic>>> Function() fetch,
   ) async {
+    // Baru saja gagal jaringan & sudah ada cache → langsung cache (tanpa menunggu timeout lagi).
+    if (NetworkHint.probablyOffline) {
+      final cached = await cacheGet(key);
+      if (cached.data != null) {
+        return (
+          items: ((cached.data as List?) ?? const [])
+              .map((x) => Map<String, dynamic>.from(x as Map))
+              .toList(),
+          cachedAt: cached.at ?? DateTime.fromMillisecondsSinceEpoch(0),
+        );
+      }
+    }
     try {
       final items = await fetch();
       await cachePut(key, items);
@@ -292,6 +306,10 @@ class SyncEngine {
     String key,
     Future<Map<String, dynamic>> Function() fetch,
   ) async {
+    if (NetworkHint.probablyOffline) {
+      final cached = await cacheGet(key);
+      if (cached.data != null) return Map<String, dynamic>.from(cached.data as Map);
+    }
     try {
       final data = await fetch();
       await cachePut(key, data);
@@ -304,9 +322,26 @@ class SyncEngine {
     }
   }
 
+  /// Menyimpan detail tiap jadwal ke cache di latar belakang, supaya jadwal yang belum pernah dibuka pun bisa
+  /// dibuka tanpa sinyal. Berhenti pada kegagalan jaringan pertama.
+  Future<void> prefetchPlanDetails(List<Map<String, dynamic>> plans) async {
+    for (final p in plans.take(14)) {
+      final id = p['daily_plan_id'];
+      if (id == null || NetworkHint.probablyOffline) return;
+      try {
+        await cachePut('daily_plan_$id', await _api.dailyPlan('$id'));
+      } on DioException catch (e) {
+        if (isNetworkFailure(e)) return;
+      }
+    }
+  }
+
   // --- Dipakai banner, profil & layar antrean -----------------------------
 
-  Future<SyncSummary> syncAll() async {
+  /// [manual] = tombol sinkron buatan user: selalu mencoba jaringan. Pemicu otomatis (konektivitas/startup)
+  /// tidak mereset status offline, supaya layar yang baru dibuka tetap langsung dari cache.
+  Future<SyncSummary> syncAll({bool manual = false}) async {
+    if (manual) NetworkHint.markOnline();
     final push = <String>[];
     final pull = <String>[];
     try {

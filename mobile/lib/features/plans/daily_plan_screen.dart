@@ -13,6 +13,7 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
+import 'day_resources_card.dart';
 import 'item_progress_screen.dart';
 import 'overtime_hours.dart';
 import 'survey_screen.dart';
@@ -86,6 +87,9 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   bool _busy = false;
   bool _reportPending = false;
   List<Map<String, dynamic>> _corrections = const [];
+  /// Kendaraan & alat jadwal ini; null = belum dimuat / tidak bisa dimuat (kartu disembunyikan).
+  List<Map<String, dynamic>>? _assets;
+  List<Map<String, dynamic>> _messStays = const [];
   /// Ketua sudah absen masuk pada tanggal jadwal (null = belum bisa dipastikan, mis. luring / gagal muat).
   bool? _checkedIn;
 
@@ -137,6 +141,20 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           // riwayat koreksi hanya tambahan; layar tetap tampil tanpanya
         }
       }
+      var assets = _assets;
+      var messStays = _messStays;
+      if (!NetworkHint.probablyOffline) {
+        try {
+          assets = await engine.api.dayAssets(widget.dailyPlanId);
+        } on DioException {
+          assets = null; // bukan anggota tim / gagal muat: kartu aset tidak ditampilkan
+        }
+        try {
+          messStays = await engine.api.myMess();
+        } on DioException {
+          messStays = const []; // hunian hanya tambahan; layar tetap tampil tanpanya
+        }
+      }
       var checkedIn = _checkedIn;
       if (plan['leader_employee_id'] == _me && plan['status'] == 'APPROVED') {
         checkedIn = null;
@@ -155,6 +173,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           _plan = plan;
           _dailyReport = report;
           _corrections = corrections;
+          _assets = assets;
+          _messStays = messStays;
           _checkedIn = checkedIn;
           _error = null;
         });
@@ -381,6 +401,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   Widget build(BuildContext context) {
     final plan = _plan;
     final theme = Theme.of(context);
+    final messStay = plan == null ? null : messStayForDay(_messStays, '${plan['work_date']}');
+    final assets = _assets;
     return Scaffold(
       appBar: AppBar(title: const Text('Jadwal harian')),
       body: plan == null
@@ -439,6 +461,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ],
                     ),
                   ),
+                  if (assets != null) ...[
+                    const SizedBox(height: 12),
+                    DayAssetsCard(assets: assets),
+                  ],
+                  if (messStay != null) ...[
+                    const SizedBox(height: 12),
+                    DayMessCard(stay: messStay),
+                  ],
                   if (_isLeader && plan['status'] == 'APPROVED') ...[
                     const SizedBox(height: 12),
                     if (_checkedIn != true)

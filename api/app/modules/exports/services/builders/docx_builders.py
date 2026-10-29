@@ -18,6 +18,7 @@ from docx.shared import Cm
 
 from app.modules.exports.services.builders.model import (
     COMPANY,
+    AssetLine,
     CompletionReport,
     DailyReport,
     ReportPoint,
@@ -181,6 +182,25 @@ def order_sheet_docx(r: CompletionReport) -> bytes:
     return kit.to_bytes(doc)
 
 
+def _assets_table(doc: DocxDocument, assets: list[AssetLine], *, with_date: bool) -> None:
+    """Tabel kendaraan & alat yang dipinjam; kosong → kalimat keterangan (bukan tabel kosong)."""
+    if not assets:
+        kit.para(doc, "Tidak ada kendaraan atau alat yang dipinjam.", italic=True)
+        return
+    headers = ["No", "Jenis", "Nama / kode", "Pemegang", "Status"]
+    if with_date:
+        headers.insert(1, "Tanggal")
+    rows = []
+    for i, a in enumerate(assets, start=1):
+        name = f"{a.name}\n{a.code}" if a.code else a.name
+        row: list[Any] = [i, a.kind, name, a.holder or "-", a.status or "-"]
+        if with_date:
+            row.insert(1, tgl(a.work_date))
+        rows.append(tuple(row))
+    widths = [1, 3, 2.6, 5, 3, 3] if with_date else [1, 2.6, 6, 4, 3]
+    kit.grid(doc, headers, rows, widths)
+
+
 def daily_report_docx(r: DailyReport) -> bytes:
     """Laporan harian satu jadwal (cetak per hari): header jadwal, tabel item, foto, laporan ketua."""
     doc = kit.new_document()
@@ -219,14 +239,17 @@ def daily_report_docx(r: DailyReport) -> bytes:
     else:
         kit.para(doc, "Belum ada item pekerjaan pada jadwal ini.", italic=True)
 
-    kit.heading(doc, "3. Laporan Ketua Tim")
+    kit.heading(doc, "3. Kendaraan & Alat")
+    _assets_table(doc, r.assets, with_date=False)
+
+    kit.heading(doc, "4. Laporan Ketua Tim")
     kit.para(doc, r.summary or "Belum ada laporan ringkasan dari ketua tim.")
     if r.obstacles:
         kit.para(doc, f"Kendala: {r.obstacles}")
 
     photos = [(f"{p.title} - {ph.label}", ph.image) for p in r.points for ph in p.photos]
     if photos:
-        kit.heading(doc, "4. Dokumentasi")
+        kit.heading(doc, "5. Dokumentasi")
         kit.picture_pair(doc, photos[:12])
 
     kit.para(

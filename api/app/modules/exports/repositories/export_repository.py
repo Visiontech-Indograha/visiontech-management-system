@@ -104,6 +104,35 @@ class ExportRepository(BaseRepository):
             {"t": str(team_id), "e": str(employee_id)},
         ))
 
+    async def daily_assets(self, daily_plan_id: UUID | str) -> list[Any]:
+        """Kendaraan & alat yang dikaitkan ke satu jadwal harian (laporan harian cetak)."""
+        return await self._asset_rows("wpd.daily_plan_id = CAST(:d AS uuid)", {"d": str(daily_plan_id)})
+
+    async def team_week_assets(self, team_id: UUID | str, start: date, end: date) -> list[Any]:
+        """Kendaraan & alat yang dikaitkan ke jadwal tim dalam rentang tanggal (laporan mingguan tim)."""
+        return await self._asset_rows(
+            "wpd.team_id = CAST(:team AS uuid) AND wpd.work_date BETWEEN :start AND :end "
+            "AND wpd.status IN ('APPROVED', 'ONGOING', 'COMPLETED')",
+            {"team": str(team_id), "start": start, "end": end},
+        )
+
+    async def _asset_rows(self, where: str, params: dict[str, Any]) -> list[Any]:
+        return list(await self.fetchall(
+            f"""
+            SELECT CASE WHEN aa.vehicle_id IS NOT NULL THEN 'Kendaraan' ELSE 'Alat' END AS kind,
+                   COALESCE(t.name, v.name) AS name, COALESCE(t.tool_code, v.number_plate) AS code,
+                   e.full_name AS holder, wpd.work_date, aa.assignment_status::text AS status
+            FROM asset_assignment aa
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+            JOIN employee e ON e.employee_id = aa.employee_id
+            LEFT JOIN tool t ON t.tool_id = aa.tool_id
+            LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
+            WHERE {where} AND aa.delete_at IS NULL
+            ORDER BY wpd.work_date, kind, name
+            """,
+            params,
+        ))
+
     async def _items(self, where: str, params: dict[str, Any]) -> list[Any]:
         return list(await self.fetchall(
             f"""

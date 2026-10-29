@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import json
 import os
 import socket
 import sys
@@ -63,6 +64,13 @@ requires_db = pytest.mark.skipif(not _DB_OK, reason="PostgreSQL uji tidak dapat 
 def _face_enrollment_off() -> None:
     # Uji tidak bergantung pada saklar di api/.env; uji gerbang wajah menyalakannya sendiri (monkeypatch).
     settings.FACE_ENROLLMENT_REQUIRED = False   # sesi penuh: monkeypatch.undo() di uji tidak boleh menghidupkannya lagi
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _face_fake_mode_on() -> None:
+    # Absen di uji diverifikasi lewat mode wajah palsu dev (F8): karyawan uji yang terdaftar selalu cocok,
+    # tanpa face-service. Karyawan tanpa pendaftaran tetap NOT_ENROLLED (uji gerbang wajah).
+    settings.FACE_FAKE_MODE = True
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -189,6 +197,12 @@ def make_user() -> Iterator[Callable[..., SeededUser]]:
             "VALUES (%s, %s, %s, '2026-01-05') RETURNING employee_id",
             (_office(), f"Karyawan uji {tag}", f"UJI-{tag}"))[0][0])
         employees.append(employee_id)
+        from app.modules.face.services.face_service import FAKE_MODEL, fake_embedding
+
+        sync_query(
+            "UPDATE employee SET face_embedding = %s::jsonb WHERE employee_id = %s",
+            (json.dumps({"vector": fake_embedding(employee_id), "model": FAKE_MODEL, "version": "0",
+                         "enrolled_at": "2026-01-05T00:00:00+07:00"}), employee_id))
         user_id = str(sync_query(
             "INSERT INTO users (employee_id, username, email, password_hash, system_role) "
             "VALUES (%s, %s, %s, %s, %s::system_role_enum) RETURNING user_id",

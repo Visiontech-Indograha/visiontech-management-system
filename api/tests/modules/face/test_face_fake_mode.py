@@ -113,12 +113,22 @@ async def test_online_without_enrollment_is_flagged_when_enrollment_flag_is_off(
     assert "belum mendaftar wajah" in repo.flag_missing_face.await_args.args[2]
 
 
-async def test_unchecked_face_is_flagged_not_silently_passed(monkeypatch):
+async def test_unchecked_mobile_face_is_flagged_not_silently_passed(monkeypatch):
     row = SimpleNamespace(id=uuid4())
     svc, repo = _attendance(None, enrollment_required=False, monkeypatch=monkeypatch)
-    outcome = await svc.verify_face(EMP, None, online=True)
+    outcome = await svc.verify_face(EMP, None, online=True, mobile=True)
+    assert outcome.result == "NOT_CHECKED"
     assert await svc.record_face(row, "CHECK_IN", outcome, online=True) == "flagged"
     assert "tidak diperiksa" in repo.flag_missing_face.await_args.args[2]
+
+
+async def test_web_attendance_without_face_is_not_flagged(monkeypatch):
+    row = SimpleNamespace(id=uuid4())
+    svc, repo = _attendance(None, enrollment_required=False, monkeypatch=monkeypatch)
+    outcome = await svc.verify_face(EMP, None, online=True, mobile=False)
+    assert outcome is None
+    assert await svc.record_face(row, "CHECK_IN", outcome, online=True) is row
+    repo.flag_missing_face.assert_not_awaited()
 
 
 async def test_matched_face_is_not_flagged(monkeypatch):

@@ -113,10 +113,10 @@ describe("Absensi", () => {
     await waitFor(() => expect(calls.some((c) => c.url === "/attendance" && (c.params as { scope?: string })?.scope === "mine")).toBe(true));
   });
 
-  it("Finance/OPS: tab bernama Absensi umum; pekerja biasa tanpa tab", async () => {
+  it("Finance/OPS: tab bernama Semua karyawan; pekerja biasa tanpa tab", async () => {
     mockApi((c) => (c.url === "/attendance" ? { data: { items: [], total: 0, page: 1, size: 50 } } : undefined));
     const { unmount } = renderRoute("/attendance", { role: "OPS" });
-    expect(await screen.findByRole("tab", { name: "Absensi umum" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "Semua karyawan" })).toBeInTheDocument();
     unmount();
     renderRoute("/attendance", { role: "field" });
     await screen.findByRole("heading", { name: "Absensi" });

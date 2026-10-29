@@ -411,6 +411,7 @@
      "out_of_radius_note": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -799,6 +800,18 @@
       ],
       "title": "Employee Name"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "encouragement_message": {
       "anyOf": [
        {
@@ -1080,10 +1093,12 @@
     "description": "Skema permohonan ganti kata sandi.",
     "properties": {
      "current_password": {
+      "maxLength": 256,
       "title": "Current Password",
       "type": "string"
      },
      "new_password": {
+      "maxLength": 128,
       "title": "New Password",
       "type": "string"
      }
@@ -1099,16 +1114,19 @@
     "description": "Skema payload untuk permintaan login akun.",
     "properties": {
      "email": {
+      "maxLength": 254,
       "title": "Email",
       "type": "string"
      },
      "password": {
+      "maxLength": 256,
       "title": "Password",
       "type": "string"
      },
      "platform": {
       "anyOf": [
        {
+        "maxLength": 20,
         "type": "string"
        },
        {
@@ -1298,6 +1316,17 @@
        }
       ],
       "title": "Employee Id"
+     },
+     "full_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
      },
      "permissions": {
       "items": {
@@ -1666,7 +1695,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status",
       "type": "string"
@@ -2030,6 +2060,7 @@
      "client_code": {
       "maxLength": 30,
       "minLength": 2,
+      "pattern": "^[A-Za-z0-9_-]+$",
       "title": "Client Code",
       "type": "string"
      },
@@ -2055,6 +2086,8 @@
       "anyOf": [
        {
         "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$",
         "type": "string"
        },
        {
@@ -2157,6 +2190,7 @@
        {
         "maxLength": 30,
         "minLength": 2,
+        "pattern": "^[A-Za-z0-9_-]+$",
         "type": "string"
        },
        {
@@ -2194,6 +2228,8 @@
       "anyOf": [
        {
         "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$",
         "type": "string"
        },
        {
@@ -2248,6 +2284,151 @@
      "template"
     ],
     "title": "CompletionExportRequest",
+    "type": "object"
+   },
+   "CorrectionCreate": {
+    "properties": {
+     "reason": {
+      "maxLength": 1000,
+      "minLength": 5,
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "reason"
+    ],
+    "title": "CorrectionCreate",
+    "type": "object"
+   },
+   "CorrectionDecide": {
+    "description": "APPROVE/REJECT untuk permintaan awal; ACCEPT/RETURN untuk hasil revisi. Menolak/mengembalikan wajib catatan.",
+    "properties": {
+     "decision": {
+      "enum": [
+       "APPROVE",
+       "REJECT",
+       "ACCEPT",
+       "RETURN"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "CorrectionDecide",
+    "type": "object"
+   },
+   "CorrectionOut": {
+    "properties": {
+     "correction_id": {
+      "format": "uuid",
+      "title": "Correction Id",
+      "type": "string"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     },
+     "requested_by_id": {
+      "format": "uuid",
+      "title": "Requested By Id",
+      "type": "string"
+     },
+     "requested_by_name": {
+      "title": "Requested By Name",
+      "type": "string"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "revision_count": {
+      "title": "Revision Count",
+      "type": "integer"
+     },
+     "site_name": {
+      "title": "Site Name",
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "REQUESTED",
+       "REVISING",
+       "IN_REVIEW",
+       "ACCEPTED",
+       "REJECTED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "correction_id",
+     "daily_plan_id",
+     "work_date",
+     "site_name",
+     "team_name",
+     "requested_by_id",
+     "requested_by_name",
+     "reason",
+     "status",
+     "revision_count",
+     "create_at"
+    ],
+    "title": "CorrectionOut",
     "type": "object"
    },
    "DailyFormOptions": {
@@ -3147,6 +3328,7 @@
      "obstacles": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -3174,6 +3356,7 @@
      },
      "summary": {
       "description": "Ringkasan hasil kerja harian",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Summary",
       "type": "string"
@@ -3289,6 +3472,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -3437,6 +3621,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -4074,6 +4259,7 @@
       "title": "Active At"
      },
      "doc_type": {
+      "maxLength": 50,
       "title": "Doc Type",
       "type": "string"
      },
@@ -4643,6 +4829,7 @@
     "description": "Schema for supplying an explanation to an attendance record.",
     "properties": {
      "explanation": {
+      "maxLength": 2000,
       "title": "Explanation",
       "type": "string"
      }
@@ -4899,11 +5086,89 @@
     "title": "HTTPValidationError",
     "type": "object"
    },
+   "HomeSummary": {
+    "description": "Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null.",
+    "properties": {
+     "attendance_to_review": {
+      "default": 0,
+      "description": "Absensi berstatus perlu review",
+      "minimum": 0.0,
+      "title": "Attendance To Review",
+      "type": "integer"
+     },
+     "corrections_to_review": {
+      "default": 0,
+      "description": "Koreksi laporan harian menunggu tinjauan",
+      "minimum": 0.0,
+      "title": "Corrections To Review",
+      "type": "integer"
+     },
+     "leaves_to_review": {
+      "default": 0,
+      "description": "Cuti menunggu keputusan pengguna",
+      "minimum": 0.0,
+      "title": "Leaves To Review",
+      "type": "integer"
+     },
+     "loan_requests_to_review": {
+      "default": 0,
+      "description": "Pengajuan pinjam aset menunggu",
+      "minimum": 0.0,
+      "title": "Loan Requests To Review",
+      "type": "integer"
+     },
+     "mess_to_review": {
+      "default": 0,
+      "description": "Pengajuan hunian mess menunggu",
+      "minimum": 0.0,
+      "title": "Mess To Review",
+      "type": "integer"
+     },
+     "my_leaves_pending": {
+      "default": 0,
+      "description": "Cuti milik sendiri yang belum diputuskan",
+      "minimum": 0.0,
+      "title": "My Leaves Pending",
+      "type": "integer"
+     },
+     "notifications_unread": {
+      "default": 0,
+      "description": "Notifikasi belum dibaca",
+      "minimum": 0.0,
+      "title": "Notifications Unread",
+      "type": "integer"
+     },
+     "offboarding_open": {
+      "default": 0,
+      "description": "Proses offboarding yang belum selesai",
+      "minimum": 0.0,
+      "title": "Offboarding Open",
+      "type": "integer"
+     },
+     "overtime_to_review": {
+      "default": 0,
+      "description": "Lembur menunggu PM",
+      "minimum": 0.0,
+      "title": "Overtime To Review",
+      "type": "integer"
+     },
+     "total_to_review": {
+      "default": 0,
+      "description": "Jumlah semua yang menunggu tindakan pengguna",
+      "minimum": 0.0,
+      "title": "Total To Review",
+      "type": "integer"
+     }
+    },
+    "title": "HomeSummary",
+    "type": "object"
+   },
    "ImageRequirementCreate": {
     "properties": {
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -4925,6 +5190,7 @@
      },
      "path_image": {
       "description": "URL contoh foto/panduan",
+      "maxLength": 500,
       "title": "Path Image",
       "type": "string"
      },
@@ -5020,6 +5286,7 @@
      "description": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -5055,6 +5322,7 @@
      "path_image": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -5461,6 +5729,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "period_year": {
       "title": "Period Year",
       "type": "integer"
@@ -5602,6 +5882,18 @@
       ],
       "title": "Employee No"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "end_date": {
       "format": "date",
       "title": "End Date",
@@ -5725,6 +6017,36 @@
      "decision"
     ],
     "title": "LeaveReview",
+    "type": "object"
+   },
+   "LeaveTypeOption": {
+    "properties": {
+     "code": {
+      "enum": [
+       "ANNUAL",
+       "SICK",
+       "MATERNITY",
+       "UNPAID",
+       "OTHER"
+      ],
+      "title": "Code",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "uses_quota": {
+      "title": "Uses Quota",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "code",
+     "label",
+     "uses_quota"
+    ],
+    "title": "LeaveTypeOption",
     "type": "object"
    },
    "LineEditIn": {
@@ -5957,6 +6279,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "handover_file_id": {
       "anyOf": [
        {
@@ -5973,6 +6307,57 @@
       "format": "date-time",
       "title": "Loaned At",
       "type": "string"
+     },
+     "return_condition": {
+      "anyOf": [
+       {
+        "enum": [
+         "ready",
+         "damaged",
+         "lost"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Condition"
+     },
+     "return_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return File Id"
+     },
+     "return_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Note"
+     },
+     "return_requested_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Return Requested At"
      },
      "returned_at": {
       "anyOf": [
@@ -6013,6 +6398,227 @@
     "title": "LoanOut",
     "type": "object"
    },
+   "LoanRequestCreate": {
+    "description": "Karyawan mengajukan pinjam aset; employee_id selalu diambil dari akun yang login.",
+    "properties": {
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     },
+     "needed_on": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Needed On"
+     },
+     "purpose": {
+      "maxLength": 1000,
+      "minLength": 3,
+      "title": "Purpose",
+      "type": "string"
+     },
+     "tool_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tool Id"
+     },
+     "vehicle_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Id"
+     }
+    },
+    "required": [
+     "asset_type",
+     "purpose"
+    ],
+    "title": "LoanRequestCreate",
+    "type": "object"
+   },
+   "LoanRequestOut": {
+    "properties": {
+     "asset_code": {
+      "title": "Asset Code",
+      "type": "string"
+     },
+     "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+     },
+     "asset_name": {
+      "title": "Asset Name",
+      "type": "string"
+     },
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     },
+     "assignment_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assignment Id"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_name": {
+      "title": "Employee Name",
+      "type": "string"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
+     "needed_on": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Needed On"
+     },
+     "purpose": {
+      "title": "Purpose",
+      "type": "string"
+     },
+     "request_id": {
+      "format": "uuid",
+      "title": "Request Id",
+      "type": "string"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "status": {
+      "enum": [
+       "PENDING",
+       "APPROVED",
+       "REJECTED",
+       "CANCELLED"
+      ],
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "request_id",
+     "asset_type",
+     "asset_id",
+     "asset_name",
+     "asset_code",
+     "employee_id",
+     "employee_name",
+     "purpose",
+     "status",
+     "create_at"
+    ],
+    "title": "LoanRequestOut",
+    "type": "object"
+   },
+   "LoanRequestReview": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "APPROVED",
+       "REJECTED"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "decision"
+    ],
+    "title": "LoanRequestReview",
+    "type": "object"
+   },
    "LoanReturn": {
     "properties": {
      "condition": {
@@ -6027,6 +6633,43 @@
      }
     },
     "title": "LoanReturn",
+    "type": "object"
+   },
+   "LoanReturnRequest": {
+    "description": "Pengajuan pengembalian oleh pemegang aset: kondisi, catatan, dan foto kondisi.",
+    "properties": {
+     "condition": {
+      "default": "ready",
+      "enum": [
+       "ready",
+       "damaged",
+       "lost"
+      ],
+      "title": "Condition",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "photo_file_id": {
+      "format": "uuid",
+      "title": "Photo File Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "photo_file_id"
+    ],
+    "title": "LoanReturnRequest",
     "type": "object"
    },
    "MealAllowanceRow": {
@@ -6148,6 +6791,18 @@
       ],
       "title": "Phone Number"
      },
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     },
      "system_role": {
       "anyOf": [
        {
@@ -6175,21 +6830,57 @@
     "title": "MemberOut",
     "type": "object"
    },
-   "MessStayCreate": {
+   "MessDecision": {
+    "properties": {
+     "approve": {
+      "title": "Approve",
+      "type": "boolean"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     }
+    },
+    "required": [
+     "approve"
+    ],
+    "title": "MessDecision",
+    "type": "object"
+   },
+   "MessPlaceIn": {
     "properties": {
      "address": {
+      "maxLength": 500,
+      "minLength": 5,
       "title": "Address",
       "type": "string"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "maximum": 1000.0,
+        "minimum": 1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Jumlah penghuni maksimum; kosong = tak dibatasi",
+      "title": "Capacity"
      },
      "city": {
       "maxLength": 100,
       "minLength": 2,
       "title": "City",
-      "type": "string"
-     },
-     "employee_id": {
-      "format": "uuid",
-      "title": "Employee Id",
       "type": "string"
      },
      "latitude": {
@@ -6201,6 +6892,9 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Latitude"
@@ -6214,6 +6908,9 @@
        },
        {
         "type": "string"
+       },
+       {
+        "type": "null"
        }
       ],
       "title": "Longitude"
@@ -6222,6 +6919,185 @@
       "maxLength": 150,
       "minLength": 2,
       "title": "Mess Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "mess_name",
+     "city",
+     "address"
+    ],
+    "title": "MessPlaceIn",
+    "type": "object"
+   },
+   "MessPlaceOut": {
+    "properties": {
+     "address": {
+      "title": "Address",
+      "type": "string"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     },
+     "city": {
+      "title": "City",
+      "type": "string"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "mess_id": {
+      "format": "uuid",
+      "title": "Mess Id",
+      "type": "string"
+     },
+     "mess_name": {
+      "title": "Mess Name",
+      "type": "string"
+     },
+     "occupied": {
+      "default": 0,
+      "title": "Occupied",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "mess_id",
+     "mess_name",
+     "city",
+     "address"
+    ],
+    "title": "MessPlaceOut",
+    "type": "object"
+   },
+   "MessPlaceUpdate": {
+    "properties": {
+     "address": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "minLength": 5,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "capacity": {
+      "anyOf": [
+       {
+        "maximum": 1000.0,
+        "minimum": 1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Capacity"
+     },
+     "city": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "mess_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mess Name"
+     }
+    },
+    "title": "MessPlaceUpdate",
+    "type": "object"
+   },
+   "MessStayCreate": {
+    "description": "Pencatatan langsung oleh HR/GA: karyawan + mess dari master, langsung disetujui.",
+    "properties": {
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "mess_id": {
+      "format": "uuid",
+      "title": "Mess Id",
       "type": "string"
      },
      "stay_end_date": {
@@ -6236,12 +7112,8 @@
      }
     },
     "required": [
-     "mess_name",
-     "city",
-     "address",
-     "latitude",
-     "longitude",
      "employee_id",
+     "mess_id",
      "stay_start_date",
      "stay_end_date"
     ],
@@ -6262,6 +7134,29 @@
       "format": "date-time",
       "title": "Create At",
       "type": "string"
+     },
+     "decided_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decided At"
+     },
+     "decision_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Decision Note"
      },
      "employee_id": {
       "format": "uuid",
@@ -6290,13 +7185,51 @@
       ],
       "title": "Employee No"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "latitude": {
-      "title": "Latitude",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
      },
      "longitude": {
-      "title": "Longitude",
-      "type": "string"
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "mess_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mess Id"
      },
      "mess_name": {
       "title": "Mess Name",
@@ -6305,6 +7238,22 @@
      "mess_stay_id": {
       "format": "uuid",
       "title": "Mess Stay Id",
+      "type": "string"
+     },
+     "request_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Request Note"
+     },
+     "status": {
+      "default": "APPROVED",
+      "title": "Status",
       "type": "string"
      },
      "stay_end_date": {
@@ -6323,8 +7272,6 @@
      "mess_name",
      "city",
      "address",
-     "latitude",
-     "longitude",
      "employee_id",
      "stay_start_date",
      "stay_end_date",
@@ -6333,73 +7280,47 @@
     "title": "MessStayOut",
     "type": "object"
    },
+   "MessStayRequest": {
+    "description": "Pengajuan hunian oleh karyawan sendiri; diputus PM/OM/HR.",
+    "properties": {
+     "mess_id": {
+      "format": "uuid",
+      "title": "Mess Id",
+      "type": "string"
+     },
+     "note": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Note"
+     },
+     "stay_end_date": {
+      "format": "date",
+      "title": "Stay End Date",
+      "type": "string"
+     },
+     "stay_start_date": {
+      "format": "date",
+      "title": "Stay Start Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "mess_id",
+     "stay_start_date",
+     "stay_end_date"
+    ],
+    "title": "MessStayRequest",
+    "type": "object"
+   },
    "MessStayUpdate": {
     "properties": {
-     "address": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Address"
-     },
-     "city": {
-      "anyOf": [
-       {
-        "maxLength": 100,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "City"
-     },
-     "latitude": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Latitude"
-     },
-     "longitude": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Longitude"
-     },
-     "mess_name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Mess Name"
-     },
      "stay_end_date": {
       "anyOf": [
        {
@@ -6447,6 +7368,170 @@
     "title": "MissingCheckInResponse",
     "type": "object"
    },
+   "MyPhotoIn": {
+    "description": "Ganti foto profil sendiri: `file_id` hasil POST /files/upload milik pengguna; `null` menghapus foto.",
+    "properties": {
+     "file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     }
+    },
+    "title": "MyPhotoIn",
+    "type": "object"
+   },
+   "MyPhotoOut": {
+    "properties": {
+     "photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo File Id"
+     }
+    },
+    "title": "MyPhotoOut",
+    "type": "object"
+   },
+   "MyRecapItem": {
+    "properties": {
+     "check_in_at": {
+      "format": "date-time",
+      "title": "Check In At",
+      "type": "string"
+     },
+     "check_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Out At"
+     },
+     "city_zone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "City Zone"
+     },
+     "is_early_leave": {
+      "title": "Is Early Leave",
+      "type": "boolean"
+     },
+     "is_late": {
+      "title": "Is Late",
+      "type": "boolean"
+     },
+     "is_pending": {
+      "title": "Is Pending",
+      "type": "boolean"
+     },
+     "is_valid": {
+      "title": "Is Valid",
+      "type": "boolean"
+     },
+     "meal_allowance_amount": {
+      "default": 0,
+      "title": "Meal Allowance Amount",
+      "type": "number"
+     },
+     "selfie_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selfie File Id"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_date",
+     "check_in_at",
+     "is_late",
+     "is_early_leave",
+     "is_valid",
+     "is_pending"
+    ],
+    "title": "MyRecapItem",
+    "type": "object"
+   },
+   "MyRecapResponse": {
+    "description": "Rekap absensi bulanan milik sendiri (HP karyawan).",
+    "properties": {
+     "days_present": {
+      "title": "Days Present",
+      "type": "integer"
+     },
+     "early_leave_days": {
+      "title": "Early Leave Days",
+      "type": "integer"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/MyRecapItem"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "late_days": {
+      "title": "Late Days",
+      "type": "integer"
+     },
+     "meal_allowance_total": {
+      "title": "Meal Allowance Total",
+      "type": "number"
+     },
+     "month": {
+      "title": "Month",
+      "type": "string"
+     },
+     "pending_days": {
+      "title": "Pending Days",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "month",
+     "days_present",
+     "late_days",
+     "early_leave_days",
+     "pending_days",
+     "meal_allowance_total",
+     "items"
+    ],
+    "title": "MyRecapResponse",
+    "type": "object"
+   },
    "NeedsReviewResponse": {
     "description": "Schema for review alerts.",
     "properties": {
@@ -6469,6 +7554,21 @@
      "daily_average"
     ],
     "title": "NeedsReviewResponse",
+    "type": "object"
+   },
+   "NextEmployeeNo": {
+    "properties": {
+     "employee_no": {
+      "description": "Usulan nomor karyawan berikutnya (boleh diubah)",
+      "maxLength": 50,
+      "title": "Employee No",
+      "type": "string"
+     }
+    },
+    "required": [
+     "employee_no"
+    ],
+    "title": "NextEmployeeNo",
     "type": "object"
    },
    "NotificationList": {
@@ -6535,6 +7635,17 @@
        }
       ],
       "title": "Read At"
+     },
+     "target": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target"
      },
      "title": {
       "title": "Title",
@@ -6729,6 +7840,18 @@
       ],
       "title": "Employee No"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "is_all_assets_returned": {
       "title": "Is All Assets Returned",
       "type": "boolean"
@@ -6876,6 +7999,18 @@
        }
       ],
       "title": "Employee No"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "is_all_assets_returned": {
       "title": "Is All Assets Returned",
@@ -7404,6 +8539,7 @@
       "type": "string"
      },
      "op_type": {
+      "maxLength": 50,
       "title": "Op Type",
       "type": "string"
      },
@@ -7572,6 +8708,7 @@
       "type": "number"
      },
      "reason": {
+      "maxLength": 1000,
       "title": "Reason",
       "type": "string"
      }
@@ -7603,6 +8740,18 @@
      "employee_name": {
       "title": "Employee Name",
       "type": "string"
+     },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
      },
      "pending_entries": {
       "title": "Pending Entries",
@@ -7654,6 +8803,18 @@
       "title": "Employee Name",
       "type": "string"
      },
+     "employee_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee Photo File Id"
+     },
      "hours": {
       "title": "Hours",
       "type": "number"
@@ -7664,6 +8825,7 @@
       "type": "string"
      },
      "reason": {
+      "maxLength": 1000,
       "title": "Reason",
       "type": "string"
      },
@@ -7733,12 +8895,14 @@
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service.",
     "properties": {
      "decision": {
+      "maxLength": 20,
       "title": "Decision",
       "type": "string"
      },
      "note": {
       "anyOf": [
        {
+        "maxLength": 1000,
         "type": "string"
        },
        {
@@ -8384,7 +9548,8 @@
        "IN_PROGRESS",
        "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY"
+       "SHIFTED_DAY",
+       "CANCELLED"
       ],
       "title": "Status",
       "type": "string"
@@ -9560,6 +10725,7 @@
      "note": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -11339,6 +12505,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -11402,6 +12569,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -11616,6 +12784,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -11720,6 +12889,7 @@
      "order_status": {
       "default": "ONGOING",
       "description": "Status order (PENDING, ONGOING, URGENT, COMPLETED)",
+      "maxLength": 30,
       "title": "Order Status",
       "type": "string"
      },
@@ -11738,6 +12908,7 @@
      "priority_level": {
       "default": "NORMAL",
       "description": "Prioritas (LOW, NORMAL, HIGH, URGENT)",
+      "maxLength": 20,
       "title": "Priority Level",
       "type": "string"
      },
@@ -11770,6 +12941,7 @@
      "site_address": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -11803,6 +12975,7 @@
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12254,6 +13427,7 @@
      },
      "description": {
       "description": "Deskripsi permintaan revisi/tambahan klien",
+      "maxLength": 2000,
       "minLength": 3,
       "title": "Description",
       "type": "string"
@@ -12364,6 +13538,7 @@
      "obstacles": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12383,12 +13558,14 @@
      },
      "signature_data_url": {
       "description": "Base64 PNG tanda tangan digital",
+      "maxLength": 700000,
       "title": "Signature Data Url",
       "type": "string"
      },
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12410,6 +13587,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12420,6 +13598,7 @@
      },
      "order_status": {
       "description": "PENDING, CANCELLED, ONGOING, URGENT, COMPLETED",
+      "maxLength": 30,
       "title": "Order Status",
       "type": "string"
      }
@@ -12448,6 +13627,7 @@
      "client_name": {
       "anyOf": [
        {
+        "maxLength": 150,
         "type": "string"
        },
        {
@@ -12459,6 +13639,7 @@
      "order_number": {
       "anyOf": [
        {
+        "maxLength": 50,
         "type": "string"
        },
        {
@@ -12470,6 +13651,7 @@
      "order_status": {
       "anyOf": [
        {
+        "maxLength": 30,
         "type": "string"
        },
        {
@@ -12481,6 +13663,7 @@
      "priority_level": {
       "anyOf": [
        {
+        "maxLength": 20,
         "type": "string"
        },
        {
@@ -12492,6 +13675,7 @@
      "project_title": {
       "anyOf": [
        {
+        "maxLength": 255,
         "type": "string"
        },
        {
@@ -12503,6 +13687,7 @@
      "site_address": {
       "anyOf": [
        {
+        "maxLength": 500,
         "type": "string"
        },
        {
@@ -12536,6 +13721,7 @@
      "summary_notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -12558,6 +13744,7 @@
      "unit_measure": {
       "anyOf": [
        {
+        "maxLength": 50,
         "type": "string"
        },
        {
@@ -13118,6 +14305,219 @@
     ]
    }
   },
+  "/api/v1/assets/loan-requests": {
+   "get": {
+    "description": "Pengajuan pinjam aset. Pengelola aset melihat semua; karyawan hanya miliknya.",
+    "operationId": "list_loan_requests_api_v1_assets_loan_requests_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "pattern": "^(PENDING|APPROVED|REJECTED|CANCELLED)$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/LoanRequestOut"
+         },
+         "title": "Response List Loan Requests Api V1 Assets Loan Requests Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Loan Requests",
+    "tags": [
+     "Assets"
+    ]
+   },
+   "post": {
+    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.",
+    "operationId": "request_loan_api_v1_assets_loan_requests_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanRequestCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Loan",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
+  "/api/v1/assets/loan-requests/{request_id}/cancel": {
+   "post": {
+    "description": "Pemohon membatalkan pengajuan yang masih menunggu.",
+    "operationId": "cancel_loan_request_api_v1_assets_loan_requests__request_id__cancel_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "request_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Request Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Cancel Loan Request",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
+  "/api/v1/assets/loan-requests/{request_id}/review": {
+   "post": {
+    "description": "HR/GA menyetujui (langsung serah terima) atau menolak pengajuan.",
+    "operationId": "review_loan_request_api_v1_assets_loan_requests__request_id__review_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "request_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Request Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanRequestReview"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanRequestOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Review Loan Request",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
   "/api/v1/assets/loans": {
    "get": {
     "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.",
@@ -13165,6 +14565,65 @@
         }
        ],
        "title": "Daily Plan Id"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -13309,6 +14768,65 @@
     ]
    }
   },
+  "/api/v1/assets/loans/{assignment_id}/return-request": {
+   "post": {
+    "description": "Pemegang aset mengajukan pengembalian dengan kondisi dan foto; pengelola yang mengonfirmasi.",
+    "operationId": "request_return_api_v1_assets_loans__assignment_id__return_request_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "assignment_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Assignment Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LoanReturnRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LoanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Return",
+    "tags": [
+     "Assets"
+    ]
+   }
+  },
   "/api/v1/assets/tools": {
    "get": {
     "description": "Daftar alat (pribadi & umum) beserta pemegangnya saat ini.",
@@ -13353,6 +14871,65 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -13651,6 +15228,65 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -14196,6 +15832,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 30,
          "type": "string"
         },
         {
@@ -14237,6 +15874,25 @@
        "minimum": 1,
        "title": "Size",
        "type": "integer"
+      }
+     },
+     {
+      "description": "Nama atau NIP karyawan diawali kata kunci",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nama atau NIP karyawan diawali kata kunci",
+       "title": "Q"
       }
      }
     ],
@@ -14472,6 +16128,64 @@
      }
     ],
     "summary": "Export Attendance",
+    "tags": [
+     "Attendance"
+    ]
+   }
+  },
+  "/api/v1/attendance/me/recap": {
+   "get": {
+    "description": "Rekap absensi bulanan milik sendiri: hadir, terlambat, pulang awal, uang makan.",
+    "operationId": "my_recap_api_v1_attendance_me_recap_get",
+    "parameters": [
+     {
+      "description": "Bulan YYYY-MM (default: bulan ini WIB)",
+      "in": "query",
+      "name": "month",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "pattern": "^\\d{4}-\\d{2}$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Bulan YYYY-MM (default: bulan ini WIB)",
+       "title": "Month"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyRecapResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "My Recap",
     "tags": [
      "Attendance"
     ]
@@ -14879,6 +16593,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 60,
          "type": "string"
         },
         {
@@ -14886,6 +16601,63 @@
         }
        ],
        "title": "Entity Type"
+      }
+     },
+     {
+      "description": "Awalan aksi, tabel, atau nama pelaku",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Awalan aksi, tabel, atau nama pelaku",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Mulai tanggal (inklusif)",
+      "in": "query",
+      "name": "date_from",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Mulai tanggal (inklusif)",
+       "title": "Date From"
+      }
+     },
+     {
+      "description": "Sampai tanggal (inklusif)",
+      "in": "query",
+      "name": "date_to",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Sampai tanggal (inklusif)",
+       "title": "Date To"
       }
      }
     ],
@@ -16153,6 +17925,80 @@
     ]
    }
   },
+  "/api/v1/employees/me/photo": {
+   "put": {
+    "description": "Ganti (atau hapus, `file_id: null`) foto profil sendiri; berkas harus gambar unggahan pengguna ini.",
+    "operationId": "set_my_photo_api_v1_employees_me_photo_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MyPhotoIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyPhotoOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set My Photo",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
+  "/api/v1/employees/next-no": {
+   "get": {
+    "description": "Awalan dan lebar angka mengikuti karyawan terbaru; pengguna tetap boleh mengubahnya.",
+    "operationId": "next_employee_no_api_v1_employees_next_no_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NextEmployeeNo"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Usulan nomor karyawan berikutnya",
+    "tags": [
+     "Employees"
+    ]
+   }
+  },
   "/api/v1/employees/{emp_id}/account": {
    "delete": {
     "description": "Hapus permanen akun login karyawan — hanya SUPER_ADMIN.",
@@ -16470,6 +18316,84 @@
        "format": "uuid",
        "title": "Emp Id",
        "type": "string"
+      }
+     },
+     {
+      "description": "Filter status dokumen",
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 30,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter status dokumen",
+       "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -17937,6 +19861,11 @@
       "required": false,
       "schema": {
        "default": "view",
+       "enum": [
+        "thumb",
+        "view",
+        "full"
+       ],
        "title": "Variant",
        "type": "string"
       }
@@ -18020,6 +19949,11 @@
       "required": false,
       "schema": {
        "default": "full",
+       "enum": [
+        "thumb",
+        "view",
+        "full"
+       ],
        "title": "Variant",
        "type": "string"
       }
@@ -18059,6 +19993,33 @@
     "summary": "Get File Url",
     "tags": [
      "Files"
+    ]
+   }
+  },
+  "/api/v1/home/summary": {
+   "get": {
+    "description": "Jumlah pekerjaan yang menunggu tindakan pengguna (cuti, absensi, lembur, mess, aset, koreksi, offboarding).",
+    "operationId": "home_summary_api_v1_home_summary_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HomeSummary"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ringkasan Beranda sesuai peran",
+    "tags": [
+     "Home"
     ]
    }
   },
@@ -18546,7 +20507,7 @@
   },
   "/api/v1/leaves": {
    "get": {
-    "description": "Mengambil riwayat atau daftar permohonan cuti.",
+    "description": "Mengambil riwayat atau daftar permohonan cuti. Cari `q`: nama, NIP, divisi, alasan.",
     "operationId": "list_leaves_api_v1_leaves_get",
     "parameters": [
      {
@@ -18576,6 +20537,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 30,
          "type": "string"
         },
         {
@@ -18594,6 +20556,8 @@
       "schema": {
        "anyOf": [
         {
+         "maximum": 2100,
+         "minimum": 2000,
          "type": "integer"
         },
         {
@@ -18602,6 +20566,122 @@
        ],
        "description": "Tahun cuti",
        "title": "Year"
+      }
+     },
+     {
+      "description": "Filter jenis cuti",
+      "in": "query",
+      "name": "leave_type",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 30,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter jenis cuti",
+       "title": "Leave Type"
+      }
+     },
+     {
+      "description": "Cuti yang berakhir pada/setelah tanggal ini",
+      "in": "query",
+      "name": "date_from",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Cuti yang berakhir pada/setelah tanggal ini",
+       "title": "Date From"
+      }
+     },
+     {
+      "description": "Cuti yang mulai pada/sebelum tanggal ini",
+      "in": "query",
+      "name": "date_to",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Cuti yang mulai pada/sebelum tanggal ini",
+       "title": "Date To"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -18703,15 +20783,23 @@
       }
      },
      {
-      "description": "Tahun kuota cuti",
+      "description": "Tahun kuota cuti (default: tahun berjalan WIB)",
       "in": "query",
       "name": "year",
       "required": false,
       "schema": {
-       "default": 2026,
-       "description": "Tahun kuota cuti",
-       "title": "Year",
-       "type": "integer"
+       "anyOf": [
+        {
+         "maximum": 2100,
+         "minimum": 2000,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tahun kuota cuti (default: tahun berjalan WIB)",
+       "title": "Year"
       }
      }
     ],
@@ -18743,6 +20831,37 @@
      }
     ],
     "summary": "Get Leave Balance",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/types": {
+   "get": {
+    "description": "Daftar jenis cuti beserta keterangan pemakaian kuota.",
+    "operationId": "list_leave_types_api_v1_leaves_types_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/LeaveTypeOption"
+         },
+         "title": "Response List Leave Types Api V1 Leaves Types Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Leave Types",
     "tags": [
      "Leaves"
     ]
@@ -18792,6 +20911,55 @@
      }
     ],
     "summary": "Get Leave",
+    "tags": [
+     "Leaves"
+    ]
+   }
+  },
+  "/api/v1/leaves/{leave_id}/cancel": {
+   "post": {
+    "description": "Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).",
+    "operationId": "cancel_leave_api_v1_leaves__leave_id__cancel_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "leave_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Leave Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LeaveResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Cancel Leave",
     "tags": [
      "Leaves"
     ]
@@ -18946,7 +21114,7 @@
   },
   "/api/v1/mess": {
    "get": {
-    "description": "Mengambil daftar riwayat dan jadwal hunian mess karyawan.",
+    "description": "Mengambil daftar riwayat, jadwal hunian, dan pengajuan mess karyawan.",
     "operationId": "list_stays_api_v1_mess_get",
     "parameters": [
      {
@@ -19005,6 +21173,82 @@
        "description": "Hunian yang beririsan sampai tanggal ini",
        "title": "End"
       }
+     },
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "pattern": "^(REQUESTED|APPROVED|REJECTED|CANCELLED)$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
      }
     ],
     "responses": {
@@ -19044,7 +21288,7 @@
     ]
    },
    "post": {
-    "description": "Mencatat hunian mess karyawan baru.",
+    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.",
     "operationId": "create_stay_api_v1_mess_post",
     "requestBody": {
      "content": {
@@ -19084,6 +21328,412 @@
      }
     ],
     "summary": "Create Stay",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/me": {
+   "get": {
+    "description": "Riwayat, jadwal, dan pengajuan hunian mess milik sendiri (tanpa izin view:mess; hanya data akun ini).",
+    "operationId": "my_stays_api_v1_mess_me_get",
+    "parameters": [
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MessStayOut"
+         },
+         "title": "Response My Stays Api V1 Mess Me Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "My Stays",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/places": {
+   "get": {
+    "description": "Daftar mess yang bisa dipilih (nama, alamat, kapasitas, jumlah penghuni hari ini); semua akun login.",
+    "operationId": "list_places_api_v1_mess_places_get",
+    "parameters": [
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/MessPlaceOut"
+         },
+         "title": "Response List Places Api V1 Mess Places Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Places",
+    "tags": [
+     "Mess"
+    ]
+   },
+   "post": {
+    "description": "Menambah mess ke daftar master.",
+    "operationId": "create_place_api_v1_mess_places_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessPlaceIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessPlaceOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Create Place",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/places/{mess_id}": {
+   "delete": {
+    "description": "Menghapus mess dari daftar (ditolak bila masih dihuni / ada pengajuan aktif).",
+    "operationId": "delete_place_api_v1_mess_places__mess_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Place Api V1 Mess Places  Mess Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Place",
+    "tags": [
+     "Mess"
+    ]
+   },
+   "put": {
+    "description": "Memperbarui data mess di master.",
+    "operationId": "update_place_api_v1_mess_places__mess_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessPlaceUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessPlaceOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Place",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/requests": {
+   "post": {
+    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.",
+    "operationId": "request_stay_api_v1_mess_requests_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessStayRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Stay",
     "tags": [
      "Mess"
     ]
@@ -19189,7 +21839,7 @@
     ]
    },
    "put": {
-    "description": "Memperbarui informasi hunian mess karyawan.",
+    "description": "Mengubah periode hunian.",
     "operationId": "update_stay_api_v1_mess__mess_stay_id__put",
     "parameters": [
      {
@@ -19241,6 +21891,163 @@
      }
     ],
     "summary": "Update Stay",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/cancel": {
+   "post": {
+    "description": "Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai.",
+    "operationId": "cancel_stay_api_v1_mess__mess_stay_id__cancel_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Cancel Stay",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/decision": {
+   "post": {
+    "description": "PM divisi / OM / HR menyetujui atau menolak pengajuan hunian (penolakan wajib beralasan).",
+    "operationId": "decide_stay_api_v1_mess__mess_stay_id__decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MessDecision"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Decide Stay",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/end": {
+   "post": {
+    "description": "Penghuni (atau HR/GA) menyelesaikan hunian yang sedang berjalan; riwayat tetap tersimpan.",
+    "operationId": "end_stay_api_v1_mess__mess_stay_id__end_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessStayOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "End Stay",
     "tags": [
      "Mess"
     ]
@@ -19408,6 +22215,65 @@
         }
        ],
        "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -19819,6 +22685,65 @@
        "title": "For Attendance",
        "type": "boolean"
       }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
      }
     ],
     "responses": {
@@ -20019,6 +22944,25 @@
     "operationId": "list_overtime_api_v1_overtime_get",
     "parameters": [
      {
+      "description": "Filter status lembur",
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 30,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter status lembur",
+       "title": "Status"
+      }
+     },
+     {
       "description": "ID jadwal harian",
       "in": "query",
       "name": "daily_plan_id",
@@ -20054,6 +22998,65 @@
        ],
        "description": "Alias daily_plan_id",
        "title": "Work Plan Id"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -20746,6 +23749,24 @@
     "operationId": "list_teams_api_v1_teams_get",
     "parameters": [
      {
+      "description": "Hanya tim aktif (true) atau nonaktif (false)",
+      "in": "query",
+      "name": "active",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Hanya tim aktif (true) atau nonaktif (false)",
+       "title": "Active"
+      }
+     },
+     {
       "description": "Filter berdasarkan ID divisi",
       "in": "query",
       "name": "division_id",
@@ -20762,6 +23783,65 @@
        ],
        "description": "Filter berdasarkan ID divisi",
        "title": "Division Id"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],
@@ -21217,6 +24297,7 @@
       "schema": {
        "anyOf": [
         {
+         "pattern": "^(DRAFT|PENDING|PLANNED|ONGOING|IN_PROGRESS|WAITING_ACC|ACCEPTED|REWORK|COMPLETED|CANCELLED|URGENT)$",
          "type": "string"
         },
         {
@@ -21235,6 +24316,7 @@
       "schema": {
        "anyOf": [
         {
+         "maxLength": 100,
          "type": "string"
         },
         {
@@ -22162,6 +25244,174 @@
     ]
    }
   },
+  "/api/v1/work-plans/corrections": {
+   "get": {
+    "description": "Daftar koreksi laporan: PM/OM divisinya, ketua tim yang diajukannya, admin semua.",
+    "operationId": "correction_inbox_api_v1_work_plans_corrections_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "pattern": "^(REQUESTED|REVISING|IN_REVIEW|ACCEPTED|REJECTED)$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CorrectionOut"
+         },
+         "title": "Response Correction Inbox Api V1 Work Plans Corrections Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Correction Inbox",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/corrections/{correction_id}/decision": {
+   "post": {
+    "description": "PM/OM divisi: setujui/tolak permintaan, atau terima/kembalikan hasil revisi.",
+    "operationId": "decide_correction_api_v1_work_plans_corrections__correction_id__decision_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "correction_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Correction Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CorrectionDecide"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Decide Correction",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/corrections/{correction_id}/submit": {
+   "post": {
+    "description": "Ketua tim mengirim revisi untuk diperiksa PM.",
+    "operationId": "submit_revision_api_v1_work_plans_corrections__correction_id__submit_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "correction_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Correction Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Submit Revision",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily": {
    "get": {
     "description": "Jadwal dalam rentang tanggal (default: minggu ini, Senin–Minggu). PM/OM: divisinya; lapangan: timnya,\nyang sudah disetujui.",
@@ -22818,6 +26068,116 @@
      }
     ],
     "summary": "Copy Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/corrections": {
+   "get": {
+    "description": "Riwayat koreksi laporan satu jadwal harian.",
+    "operationId": "plan_corrections_api_v1_work_plans_daily__daily_plan_id__corrections_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/CorrectionOut"
+         },
+         "title": "Response Plan Corrections Api V1 Work Plans Daily  Daily Plan Id  Corrections Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Plan Corrections",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   },
+   "post": {
+    "description": "Ketua tim meminta koreksi laporan jadwal yang sudah COMPLETED.",
+    "operationId": "request_correction_api_v1_work_plans_daily__daily_plan_id__corrections_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CorrectionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CorrectionOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Request Correction",
     "tags": [
      "Work Plans (Daily-First)"
     ]
@@ -24701,6 +28061,65 @@
         }
        ],
        "title": "Division Id"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],

@@ -7,6 +7,7 @@ import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useSaveClient, type Client, type ClientInput } from "@/services/clientService";
 
 export function ClientFormDialog({
@@ -22,7 +23,8 @@ export function ClientFormDialog({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ClientInput>({
     defaultValues: {
       client_code: client?.client_code ?? "",
@@ -45,13 +47,13 @@ export function ClientFormDialog({
       });
       toast.success(client ? "Data klien diperbarui." : "Klien baru berhasil ditambahkan.");
       onClose();
-    } catch {
-      setFormError("Gagal menyimpan data klien. Pastikan kode klien belum pernah digunakan.");
+    } catch (err) {
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={client ? "Ubah data klien" : "Tambah klien baru"}
       onClose={onClose}
@@ -79,7 +81,9 @@ export function ClientFormDialog({
             error={errors.client_code?.message}
             {...register("client_code", {
               required: "Kode klien wajib diisi.",
+              minLength: { value: 2, message: "Kode klien minimal 2 karakter." },
               maxLength: { value: 20, message: "Maksimal 20 karakter." },
+              pattern: { value: /^[A-Za-z0-9_-]+$/, message: "Kode hanya huruf, angka, - dan _ (tanpa spasi)." },
             })}
           />
           <TextField
@@ -88,6 +92,8 @@ export function ClientFormDialog({
             error={errors.name?.message}
             {...register("name", {
               required: "Nama klien wajib diisi.",
+              minLength: { value: 2, message: "Nama klien minimal 2 karakter." },
+              maxLength: { value: 150, message: "Maksimal 150 karakter." },
             })}
           />
         </div>
@@ -97,13 +103,17 @@ export function ClientFormDialog({
             label="Nama PIC Klien (Opsional)"
             placeholder="cth. Bpk. Hendra Gunawan"
             error={errors.pic_name?.message}
+            maxLength={100}
             {...register("pic_name")}
           />
           <TextField
             label="Nomor Telepon / WhatsApp PIC"
             placeholder="cth. 081234567890"
             error={errors.pic_phone?.message}
-            {...register("pic_phone")}
+            maxLength={30}
+            {...register("pic_phone", {
+              pattern: { value: /^[0-9+()\-\s]{5,30}$/, message: "Nomor telepon hanya angka, +, -, ( ) dan spasi (min. 5)." },
+            })}
           />
         </div>
 
@@ -111,6 +121,7 @@ export function ClientFormDialog({
           label="Alamat Kantor Klien (Opsional)"
           placeholder="Alamat gedung atau operasional klien..."
           rows={3}
+          maxLength={2000}
           error={errors.address?.message}
           {...register("address")}
         />

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -6,7 +7,7 @@ import { TextAreaField } from "@/components/molecules/Field";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
-import { useReviewLeave, type LeaveRequest } from "@/services/leaveService";
+import { useReviewLeave, type LeaveRequest, LEAVE_TYPE_LABEL } from "@/services/leaveService";
 
 export function LeaveReviewDialog({
   leave,
@@ -91,7 +92,7 @@ export function LeaveReviewDialog({
             <TextBlock as="span">
               Jenis:{" "}
               <TextBlock as="strong" className="text-foreground">
-                {leave.leave_type}
+                {LEAVE_TYPE_LABEL[leave.leave_type] ?? leave.leave_type}
               </TextBlock>{" "}
               · Durasi:{" "}
               <TextBlock as="strong" className="text-foreground">
@@ -101,7 +102,7 @@ export function LeaveReviewDialog({
           </div>
           <div>
             <TextBlock as="span">
-              Rentang: {String(leave.start_date).slice(0, 10)} s/d {String(leave.end_date).slice(0, 10)}
+              Rentang: {formatDate(String(leave.start_date))} s/d {formatDate(String(leave.end_date))}
             </TextBlock>
           </div>
           <div className="pt-1 text-mist">

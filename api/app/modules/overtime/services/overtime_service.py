@@ -18,6 +18,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.overtime.repositories.overtime_repository import OvertimeRepository
 from app.shared.access.access_service import DailyNeed, check_daily_access, is_admin, require_daily_status
 
@@ -58,6 +59,14 @@ class OvertimeService:
         if await self.repo.duplicate(daily_plan_id, employee_id):
             raise _state("Pengajuan lembur Anda untuk jadwal ini sudah ada dan sedang diproses.")
         overtime_id = await self.repo.insert(daily_plan_id, employee_id, access.plan.work_date, hours, reason)
+        notifier = NotificationService(self.db)
+        if employee_id:
+            await notifier.notify_division_managers(
+                employee_id, "OVERTIME_REQUESTED",
+                f"{await notifier.employee_name(employee_id)} mengajukan lembur {hours:g} jam",
+                reason,
+                target="overtime",
+            )
         return await self.repo.get(overtime_id)
 
     async def review(self, user: CurrentUser, overtime_id: UUID, decision: str, note: str | None) -> Any:
@@ -77,6 +86,10 @@ class OvertimeService:
             raise ValidationError("Keputusan harus disetujui atau ditolak.")
         if not await self.repo.review(overtime_id, user.employee_id, decision, (note or "").strip() or None):
             raise _state("Pengajuan lembur ini sudah diperiksa.")
+        verdict = "disetujui" if decision == "APPROVED" else "ditolak"
+        await NotificationService(self.db).notify_employees(
+            [ot.employee_id], "OVERTIME_DECIDED", f"Lembur Anda {verdict}", (note or "").strip(), target="overtime",
+        )
         return await self.repo.get(overtime_id)
 
     async def list_overtimes(self, user: CurrentUser, daily_plan_id: UUID | None = None) -> Sequence[Any]:

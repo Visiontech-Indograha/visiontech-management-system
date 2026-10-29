@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
+from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
 from app.modules.work_plans.schemas.daily_plan_schema import DailyPlanCreate, DailyPlanUpdate
 from app.shared.access.access_service import (
@@ -212,6 +213,7 @@ class DailyPlanService:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT")
         await self.repo.set_status(daily_plan_id, "SUBMITTED")
+        await NotificationService(self.db).daily_submitted(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
     async def approve(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
@@ -220,6 +222,7 @@ class DailyPlanService:
         if access.plan.work_date < jakarta_now().date():
             raise ValidationError("Jadwal untuk tanggal yang sudah lewat tidak dapat disetujui.")
         await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
+        await NotificationService(self.db).daily_approved(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
     async def bulk_approve(self, user: CurrentUser, daily_plan_ids: list[UUID]) -> dict[str, list[UUID]]:
@@ -237,6 +240,7 @@ class DailyPlanService:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "SUBMITTED", "APPROVED")
         await self.repo.set_status(daily_plan_id, "DRAFT", rejection_reason=reason.strip())
+        await NotificationService(self.db).daily_rejected(daily_plan_id, reason.strip())
         return await self.repo.get(daily_plan_id)
 
     async def start(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
@@ -278,6 +282,14 @@ class DailyPlanService:
         summary = data.summary if hasattr(data, "summary") else data.get("summary", "")
         obstacles = data.obstacles if hasattr(data, "obstacles") else data.get("obstacles")
         await self.repo.create_daily_report(daily_plan_id, leader_id, summary, obstacles, photos)
+        notifier = NotificationService(self.db)
+        people = await notifier.repo.daily_people(daily_plan_id)
+        if people:
+            await notifier.notify_employees(
+                [people.pm, people.om], "DAILY_REPORT_SUBMITTED",
+                f"Laporan harian {people.team_name} dikirim", people.site_name or "",
+                target="plan", plan_id=daily_plan_id,
+            )
         return await self.repo.get_daily_report(daily_plan_id)
 
     async def get_daily_report(self, user: CurrentUser, daily_plan_id: UUID) -> Any:

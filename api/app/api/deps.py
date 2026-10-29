@@ -78,8 +78,15 @@ async def get_current_user(
             pass
 
     # Memuat identitas dan peran terbaru dari database
-    identity = await CRUDUser(db).find_identity(user_id)
+    users = CRUDUser(db)
+    identity = await users.find_identity(user_id)
     if not identity or not identity.is_active:
+        raise _unauthenticated()
+    try:
+        alive = await users.session_alive(UUID(str(session_id)))
+    except ValueError:
+        alive = False
+    if not alive:
         raise _unauthenticated()
 
     roles = list(identity.roles)

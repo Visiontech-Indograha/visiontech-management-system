@@ -15,7 +15,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 TaskPhase = Literal["SURVEY", "PREPARATION", "INSTALLATION", "REPLACEMENT", "MAINTENANCE"]
-ItemStatus = Literal["TODO", "IN_PROGRESS", "DONE", "PENDING_ROLLOVER", "SHIFTED_DAY"]
+ItemStatus = Literal["TODO", "IN_PROGRESS", "DONE", "PENDING_ROLLOVER", "SHIFTED_DAY", "CANCELLED"]
 RolloverStatus = Literal["NONE", "WAITING_PM", "APPROVED_BY_PM", "REJECTED_BY_PM"]
 MAIN_PHASES = ("INSTALLATION", "REPLACEMENT", "MAINTENANCE")
 

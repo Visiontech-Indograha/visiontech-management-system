@@ -10,6 +10,8 @@ export type DailyPlanCreate = S["DailyPlanCreate"];
 export type DailyPlanUpdate = S["DailyPlanUpdate"];
 export type DailyFormOptions = S["DailyFormOptions"];
 export type GeoResult = S["GeoResult"];
+export type Correction = S["CorrectionOut"];
+export type CorrectionDecision = S["CorrectionDecide"]["decision"];
 export type DailyAction = "submit" | "approve" | "start" | "complete";
 
 const KEY = ["daily-plans"] as const;
@@ -162,3 +164,38 @@ export const useWeeklyPresentation = (teamId: string, meetingDate: string) =>
     enabled: Boolean(teamId && meetingDate),
   });
 
+// ── Koreksi laporan harian ────────────────────────────────────────────────────
+export const useCorrectionInbox = () =>
+  useQuery({
+    queryKey: [...KEY, "corrections"],
+    queryFn: async () => (await api.get<Correction[]>("/work-plans/corrections")).data,
+  });
+
+export const useDecideCorrection = () =>
+  useDailyMutation(async ({ id, decision, note }: { id: string; decision: CorrectionDecision; note?: string }) =>
+    (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note })).data);
+
+export const CORRECTION_STATUS: Record<Correction["status"], string> = {
+  REQUESTED: "Menunggu keputusan",
+  REVISING: "Sedang direvisi ketua",
+  IN_REVIEW: "Revisi menunggu pemeriksaan",
+  ACCEPTED: "Diterima",
+  REJECTED: "Ditolak",
+};
+
+/** Keputusan yang tersedia untuk PM menurut status koreksi. */
+export function correctionActions(status: Correction["status"]): { decision: CorrectionDecision; label: string; needsNote: boolean }[] {
+  if (status === "REQUESTED") {
+    return [
+      { decision: "APPROVE", label: "Setujui revisi", needsNote: false },
+      { decision: "REJECT", label: "Tolak", needsNote: true },
+    ];
+  }
+  if (status === "IN_REVIEW") {
+    return [
+      { decision: "ACCEPT", label: "Terima laporan", needsNote: false },
+      { decision: "RETURN", label: "Kembalikan untuk revisi", needsNote: true },
+    ];
+  }
+  return [];
+}

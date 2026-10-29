@@ -6,7 +6,7 @@ export function AuditEntityFilter({ entity, onEntityChange }: { entity: string; 
   return (
       <ControlSelect
         aria-label="Filter entitas"
-        className="mb-4 h-11 w-full rounded-control border border-line bg-surface px-3 text-sm md:w-auto"
+        className="h-10 w-full rounded-control border border-line bg-surface px-3 text-sm md:w-auto"
         value={entity}
         onChange={(e) => onEntityChange(e.target.value)}
       >

@@ -1,11 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { QueryState } from "@/components/molecules/QueryState";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/lib/format";
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { PhotoStrip } from "@/components/organisms/PhotoStrip";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
@@ -26,11 +28,14 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
           {data?.items.map((a) => (
             <ListEntry key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
-                  <TextBlock className="text-sm text-mist">
-                    {formatDate(a.work_date)} · {a.site_label}
-                  </TextBlock>
+                <div className="flex items-center gap-3">
+                  <UserAvatar name={a.employee_name} fileId={a.employee_photo_file_id} size="sm" />
+                  <div>
+                    <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
+                    <TextBlock className="text-sm text-mist">
+                      {formatDate(a.work_date)} · {a.site_label}
+                    </TextBlock>
+                  </div>
                 </div>
                 <StatusBadge status={a.status} />
               </div>
@@ -44,7 +49,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                 <div>
                   <TextBlock as="dt" className="inline text-mist">Jarak: </TextBlock>
                   <TextBlock as="dd" className="inline">
-                    {Math.round(a.distance_m)} m{a.is_late ? " · terlambat" : ""}
+                    {formatDistance(a.distance_m)}{a.is_late ? " · terlambat" : ""}
                     {a.is_early_leave ? " · pulang cepat" : ""}
                     {a.offline ? " · absen offline" : ""}
                   </TextBlock>
@@ -62,7 +67,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   <div>
                     <TextBlock as="dt" className="inline text-mist">Jarak pulang: </TextBlock>
                     <TextBlock as="dd" className="inline">
-                      {Math.round(a.check_out_distance_m)} m{a.check_out_outside ? " · Pulang di luar radius" : ""}
+                      {formatDistance(a.check_out_distance_m)}{a.check_out_outside ? " · Pulang di luar radius" : ""}
                     </TextBlock>
                   </div>
                 )}
@@ -71,11 +76,11 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                     <TextBlock as="dt" className="inline text-mist">Wajah: </TextBlock>
                     <TextBlock as="dd" className="inline">
                       {a.face_result
-                        ? `Masuk: ${a.face_result}${a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
+                        ? `Masuk: ${faceResultLabel(a.face_result)}${a.face_result !== "SKIPPED" && a.face_similarity !== null && a.face_similarity !== undefined ? ` (${Math.round(a.face_similarity * 100)}%)` : ""}`
                         : ""}
                       {a.face_result && a.check_out_face_result ? " · " : ""}
                       {a.check_out_face_result
-                        ? `Pulang: ${a.check_out_face_result}${a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
+                        ? `Pulang: ${faceResultLabel(a.check_out_face_result)}${a.check_out_face_result !== "SKIPPED" && a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
                         : ""}
                     </TextBlock>
                   </div>
@@ -103,9 +108,13 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   onDelete={async () => {
                     await deleteAttendance(a.id);
                     await qc.invalidateQueries({ queryKey: ["attendance"] });
+                    await qc.invalidateQueries({ queryKey: ["attendance-recap"] });
                   }}
                 />
               </div>
+              {a.selfie_file_id && (a.can_review || a.employee_id === meEmployeeId) && (
+                <PhotoStrip photos={[{ file_id: a.selfie_file_id }]} alt="Swafoto absen" />
+              )}
               {a.status === "NEEDS_REVIEW" && (
                 <div className="mt-auto flex flex-col gap-2 md:flex-row">
                   {a.can_review ? (

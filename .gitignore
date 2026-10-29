@@ -133,3 +133,8 @@ postman/skills/
 
 
 
+
+# log lokal
+*.log
+api-*.err
+ANTIGRAVITY_MEMORY.md

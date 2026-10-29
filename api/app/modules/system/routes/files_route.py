@@ -6,6 +6,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
@@ -38,7 +39,7 @@ async def upload_document(
 @router.get("/{file_id}")
 async def get_file_content(
     file_id: uuid.UUID,
-    variant: str = "view",
+    variant: Literal["thumb", "view", "full"] = "view",
     download: bool = False,
     current_user: CurrentUser = Depends(get_file_viewer),
     file_service: FileService = Depends(get_file_viewer_service),
@@ -59,7 +60,7 @@ async def get_file_content(
 @router.get("/{file_id}/url")
 async def get_file_url(
     file_id: uuid.UUID,
-    variant: str = "full",
+    variant: Literal["thumb", "view", "full"] = "full",
     current_user: CurrentUser = Depends(get_current_user),
     controller: FilesController = Depends(),
 ) -> dict[str, str]:

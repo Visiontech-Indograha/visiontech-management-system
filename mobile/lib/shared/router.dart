@@ -2,14 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/assets/assets_screen.dart';
 import '../features/attendance/attendance_screen.dart';
+import '../features/attendance/recap_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/biometric_lock_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/gallery/photo_gallery_screen.dart';
+import '../features/leaves/leaves_screen.dart';
+import '../features/mess/mess_screen.dart';
 import '../features/plans/daily_plans_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/records/my_records_screens.dart';
 import 'home_shell.dart';
 import 'splash_screen.dart';
 
@@ -24,6 +29,24 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   }
 }
 
+/// Halaman untuk rute tak dikenal / tautan kedaluwarsa (Bahasa Indonesia) dengan jalan kembali ke Beranda.
+Widget vmsNotFoundScreen(BuildContext context, GoRouterState state) => Scaffold(
+  appBar: AppBar(title: const Text('Halaman tidak ditemukan')),
+  body: Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Halaman yang dituju tidak ada atau sudah tidak berlaku.', textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: () => context.go('/'), child: const Text('Ke Beranda')),
+        ],
+      ),
+    ),
+  ),
+);
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refreshNotifier = _RouterRefreshNotifier(ref);
   ref.onDispose(refreshNotifier.dispose);
@@ -31,6 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: refreshNotifier,
+    errorBuilder: vmsNotFoundScreen,
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final isLoginRoute = state.matchedLocation == '/login';
@@ -64,6 +88,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/biometric-lock',
         builder: (context, state) => const BiometricLockScreen(),
       ),
+      GoRoute(
+        path: '/leaves',
+        builder: (context, state) => const LeavesScreen(),
+      ),
+      GoRoute(
+        path: '/assets',
+        builder: (context, state) => const AssetsScreen(),
+      ),
+      GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
+      GoRoute(path: '/overtime', builder: (context, state) => const OvertimeHistoryScreen()),
+      GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),
+      GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             HomeShell(navigationShell: navigationShell),

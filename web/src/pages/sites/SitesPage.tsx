@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { SitesTemplate } from "@/components/templates/sites/SitesTemplate";
-import { type Site, useSites } from "@/services/siteService";
+import { useListControls } from "@/hooks/useListControls";
+import { usePagedList } from "@/hooks/usePagedList";
+import type { Site } from "@/services/siteService";
 
 /** Master lokasi kerja (geofence absensi): GET/POST/DELETE /sites, izin manage:sites (R-33).
  * PM → lokasi proyek untuk bawahannya (unit ditetapkan server); Finance → lokasi kantor. */
 export function SitesPage() {
-  const sites = useSites();
+  const controls = useListControls({ prefix: "lok_" });
+  const sites = usePagedList<Site>(["sites"], "/offices", controls);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<Site | null>(null);
 
   return (
     <SitesTemplate
+      controls={controls}
       sites={sites}
       adding={adding}
       removing={removing}

@@ -112,11 +112,12 @@ class AttendanceMonitorService:
             return 0
 
         today = now.date()
-        close_time = now.replace(hour=close_hour, minute=close_min, second=0, microsecond=0)
         explanation = f"Lupa absen pulang (ditutup otomatis oleh sistem pada pukul {settings.ATTENDANCE_CLOSE_TIME})"
 
         session_repo = CRUDAttendanceSession(self.repo.db)
-        closed_rows = await session_repo.auto_checkout_unclosed(org_id, today, close_time, explanation)
+        closed_rows = await session_repo.auto_checkout_unclosed(
+            org_id, today, time(close_hour, close_min), explanation
+        )
         if closed_rows:
             emp_ids = [str(r.employee_id) for r in closed_rows]
             await NotificationService(self.repo.db).attendance_auto_checkout_bulk(str(org_id), emp_ids)

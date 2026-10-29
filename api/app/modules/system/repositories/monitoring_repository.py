@@ -108,7 +108,8 @@ class CRUDMonitoring(CRUDBase):
                        ELSE 'NEEDS_REVIEW'
                    END AS status,
                    ({IS_LATE_A}) AS is_late,
-                   (a.clock_out_at IS NOT NULL AND a.clock_out_at::time < a.scheduled_out) AS is_early_leave,
+                   (a.clock_out_at IS NOT NULL
+                    AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                    CAST(a.city_zone_status AS text) AS city_category
             FROM attendance a
             JOIN employee e ON e.employee_id = a.employee_id

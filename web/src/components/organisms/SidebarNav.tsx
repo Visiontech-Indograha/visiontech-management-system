@@ -5,8 +5,10 @@ import { MenuLink } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
 
 /** Menu utama di rail kiri, dikelompokkan per `group`; label disembunyikan saat rail diciutkan. */
-export function SidebarNav({ items, collapsed, onNavigate }: {
+export function SidebarNav({ items, collapsed, onNavigate, badges = {} }: {
   items: NavItem[];
+  /** Jumlah antrean per path menu (dari /home/summary); 0 atau kosong = tanpa lencana. */
+  badges?: Record<string, number>;
   collapsed: boolean;
   /** Dipanggil saat menu dipilih (menutup laci di ponsel). */
   onNavigate: () => void;
@@ -38,6 +40,18 @@ export function SidebarNav({ items, collapsed, onNavigate }: {
             >
               <Icon size={19} strokeWidth={1.75} aria-hidden className="shrink-0" />
               <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>{item.label}</TextBlock>
+              {(badges[item.path] ?? 0) > 0 && (
+                <TextBlock
+                  as="span"
+                  aria-label={`${badges[item.path]} menunggu`}
+                  className={clsx(
+                    "rounded-full bg-gold px-1.5 text-xs font-semibold text-ink",
+                    collapsed ? "absolute right-1.5 top-1.5 md:min-w-4 md:text-center" : "ml-auto",
+                  )}
+                >
+                  {badges[item.path]}
+                </TextBlock>
+              )}
             </MenuLink>
           </Fragment>
         );

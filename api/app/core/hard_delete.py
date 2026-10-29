@@ -3,7 +3,11 @@ app/core/hard_delete.py
 Hapus permanen satu baris beserta rujukannya (khusus SUPER_ADMIN, izin DELETE_ANY) + catatan audit.
 
 Tabel yang merujuk baris ini dicari dari katalog PostgreSQL (bukan daftar tulisan tangan, agar tidak ada yang
-terlewat saat skema bertambah): kolom rujukan NOT NULL → barisnya dihapus, kolom boleh NULL → diisi NULL.
+terlewat saat skema bertambah):
+- kolom rujukan bernama sama dengan PK (mis. `employee_id`) = data milik baris ini → ikut dihapus;
+- kolom NOT NULL dengan nama lain (mis. `division.pm_id`, `team.leader_employee_id`) = baris ini memegang
+  peran pada data orang lain → ditolak 409 sampai perannya dialihkan (jangan ikut menghapus divisi/tim);
+- kolom boleh NULL → diisi NULL.
 Bila masih ada data lain yang bergantung pada baris anak, DB menolak dan pemanggil menerima 409.
 """
 from __future__ import annotations
@@ -39,8 +43,25 @@ def _ident(name: str) -> str:
 async def purge_row(db: AsyncSession, table: str, pk_column: str, row_id: UUID) -> None:
     """Hapus `table` baris `row_id` beserta rujukannya. Dipanggil dalam transaksi permintaan."""
     params = {"id": str(row_id)}
+    refs = (await db.execute(_REFERENCES, {"parent": table})).all()
+    blockers = []
+    for ref in refs:
+        if ref.not_null and ref.col != pk_column:
+            hit = await db.execute(
+                text(f"SELECT 1 FROM {ref.tbl} WHERE {_ident(ref.col)} = CAST(:id AS uuid) LIMIT 1"), params
+            )
+            if hit.first() is not None:
+                blockers.append(f"{ref.tbl}.{ref.col}")
+    if blockers:
+        raise AppError(
+            "STILL_REFERENCED",
+            "Data ini masih memegang peran pada data lain (" + ", ".join(blockers) + "). "
+            "Alihkan perannya terlebih dahulu sebelum menghapus permanen.",
+            status=409,
+            details={"references": blockers},
+        )
     try:
-        for ref in (await db.execute(_REFERENCES, {"parent": table})).all():
+        for ref in refs:
             target = ref.tbl
             if ref.not_null:
                 await db.execute(text(f"DELETE FROM {target} WHERE {_ident(ref.col)} = CAST(:id AS uuid)"), params)

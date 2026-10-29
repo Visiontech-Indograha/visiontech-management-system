@@ -61,7 +61,7 @@ class ExplanationRequest(BaseModel):
     """
     Schema for supplying an explanation to an attendance record.
     """
-    explanation: str
+    explanation: str = Field(max_length=2000)
 
 
 class AttendanceAdminPatch(BaseModel):
@@ -69,7 +69,7 @@ class AttendanceAdminPatch(BaseModel):
     clock_in_at: datetime | None = None
     clock_out_at: datetime | None = None
     om_approval_status: Literal["AUTO_VALID", "PENDING_OM", "APPROVED_BY_OM", "REJECTED_BY_OM"] | None = None
-    out_of_radius_note: str | None = None
+    out_of_radius_note: str | None = Field(None, max_length=2000)
     reason: str = Field(min_length=3, max_length=500)
 
 
@@ -78,7 +78,7 @@ class ReviewRequest(BaseModel):
     Schema for reviewing (approving or rejecting) an attendance event.
     """
     is_approved: bool
-    note: str | None = None
+    note: str | None = Field(None, max_length=2000)
 
 
 class AttendanceResponse(BaseModel):
@@ -108,6 +108,7 @@ class AttendanceResponse(BaseModel):
     # Alasan peninjau bila absensi ditolak
     review_note: str | None = None
     employee_name: str | None = None
+    employee_photo_file_id: UUID | None = None
     # Peminta berwenang meninjau baris ini (R-33, dihitung oleh server)
     can_review: bool = False
     # R-34: Absen offline — catatan pemeriksaan server & jam pulang yang menunggu persetujuan absen masuk.
@@ -211,3 +212,27 @@ class NeedsReviewResponse(BaseModel):
     alerted: bool
     needs_review_today: int
     daily_average: float
+
+
+class MyRecapItem(BaseModel):
+    work_date: date
+    check_in_at: datetime
+    check_out_at: datetime | None = None
+    is_late: bool
+    is_early_leave: bool
+    is_valid: bool
+    is_pending: bool
+    meal_allowance_amount: float = 0
+    city_zone: str | None = None
+    selfie_file_id: UUID | None = None
+
+
+class MyRecapResponse(BaseModel):
+    """Rekap absensi bulanan milik sendiri (HP karyawan)."""
+    month: str
+    days_present: int
+    late_days: int
+    early_leave_days: int
+    pending_days: int
+    meal_allowance_total: float
+    items: list[MyRecapItem]

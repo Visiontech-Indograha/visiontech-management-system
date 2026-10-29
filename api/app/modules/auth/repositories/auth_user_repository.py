@@ -51,6 +51,19 @@ class AuthUserRepository(BaseRepository):
             {"id": user_id},
         )
 
+    async def session_alive(self, session_id: UUID | str) -> bool:
+        """Keluarga sesi token masih punya refresh aktif (logout/cabut perangkat langsung berlaku)."""
+        row = await self.fetchone(
+            """
+            SELECT 1 AS ok FROM user_sessions s
+            WHERE s.token_family_id = (SELECT token_family_id FROM user_sessions WHERE session_id = CAST(:sid AS uuid))
+              AND s.is_revoked = FALSE AND s.delete_at IS NULL AND s.expires_at > now()
+            LIMIT 1
+            """,
+            {"sid": str(session_id)},
+        )
+        return row is not None
+
     async def find_identity(self, user_id: UUID | str) -> Any:
         """Status aktif & peran akun — dibaca ulang dari DB pada setiap permintaan (bukan dari klaim token)."""
         return await self.fetchone(
@@ -85,13 +98,26 @@ class AuthUserRepository(BaseRepository):
         )
         return emp
 
+    async def full_name(self, user_id: UUID | str) -> str | None:
+        """Nama lengkap karyawan yang tertaut ke akun ini (untuk sapaan di aplikasi)."""
+        name = await self.scalar(
+            "SELECT e.full_name FROM users u JOIN employee e ON e.employee_id = u.employee_id "
+            "WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL",
+            {"uid": user_id},
+        )
+        return str(name) if name else None
+
     async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
-        """ID berkas foto profil karyawan yang tertaut ke akun ini (URL bertanda tangan diambil klien terpisah)."""
+        """ID berkas (file_object.id) foto profil karyawan milik akun ini; None bila belum ada/bukan unggahan.
+
+        Kolom `profile_photo_path` menyimpan storage_key, bukan id; klien memanggil GET /files/{id}/url dengan id.
+        """
         photo = await self.scalar(
             """
-            SELECT e.profile_photo_path
+            SELECT f.id
             FROM users u
             JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+            JOIN file_object f ON f.storage_key = e.profile_photo_path
             WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
             """,
             {"uid": user_id},

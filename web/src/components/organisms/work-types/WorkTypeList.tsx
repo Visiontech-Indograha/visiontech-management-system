@@ -1,3 +1,7 @@
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import { useState } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
@@ -26,13 +30,15 @@ function ExamplePhoto({ fileId, label }: { fileId: string; label: string }) {
 }
 
 /** Kartu jenis pekerjaan + slot fotonya; keadaan memuat, galat (+ coba lagi), kosong (+ tambah), berhasil. */
-export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
-  types: UseQueryResult<WorkType[]>;
+export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
+  controls: ListControls;
+  types: UseQueryResult<Paged<WorkType>>;
   onAdd: () => void;
   onEdit: (type: WorkType) => void;
   onDeactivate: (type: WorkType) => void;
 }) {
   const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
+  const view = pagedView(types, controls);
   return (
     <>
       {types.isPending && (
@@ -49,15 +55,18 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
           </ActionButton>
         </div>
       )}
-      {types.data?.length === 0 && (
+      {types.data && types.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="mb-3 text-mist">Belum ada jenis pekerjaan. Tambahkan jenis beserta template foto laporannya.</TextBlock>
           <WorkTypeAddButton onAdd={onAdd} />
         </div>
       )}
-      {types.data && types.data.length > 0 && (
+      {types.data && (types.data.total > 0 || view.active) && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari jenis pekerjaan atau divisi..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {types.data.map((t) => (
+          {view.rows.map((t) => (
             <ListEntry key={t.id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
               <div className="mb-2 flex items-start justify-between gap-2">
                 <div>
@@ -113,6 +122,8 @@ export function WorkTypeList({ types, onAdd, onEdit, onDeactivate }: {
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="jenis" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
 
       <WorkTypeMaterialsDialog

@@ -9,6 +9,7 @@ import { Pill } from "@/components/molecules/Pill";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   CONDITION_LABEL,
@@ -77,6 +78,7 @@ export function OffboardingDetailDialog({ offboardingId, canManage, canApprovePm
   const [verifying, setVerifying] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [approving, setApproving] = useState<"PM" | "HR" | null>(null);
   const o = detail.data;
 
   const doApprove = (approval_type: "PM" | "HR") =>
@@ -154,12 +156,12 @@ export function OffboardingDetailDialog({ offboardingId, canManage, canApprovePm
             {o.status !== "COMPLETED" && (
               <div className="flex flex-wrap gap-2">
                 {canApprovePm && !o.approved_by_pm_id && (
-                  <ActionButton size="sm" disabled={!approvable || approve.isPending} onClick={() => doApprove("PM")}>
+                  <ActionButton size="sm" disabled={!approvable || approve.isPending} onClick={() => setApproving("PM")}>
                     Setujui sebagai PM
                   </ActionButton>
                 )}
                 {canManage && !o.approved_by_hr_id && (
-                  <ActionButton size="sm" disabled={!approvable || approve.isPending} onClick={() => doApprove("HR")}>
+                  <ActionButton size="sm" disabled={!approvable || approve.isPending} onClick={() => setApproving("HR")}>
                     Setujui sebagai HR
                   </ActionButton>
                 )}
@@ -190,6 +192,18 @@ export function OffboardingDetailDialog({ offboardingId, canManage, canApprovePm
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={approving !== null}
+        title={approving === "HR" ? "Setujui sebagai HR?" : "Setujui sebagai PM?"}
+        message="Persetujuan tidak dapat dibatalkan. Bila ini persetujuan terakhir, akun karyawan akan dinonaktifkan."
+        confirmLabel="Setujui"
+        busy={approve.isPending}
+        onConfirm={() => {
+          if (approving) doApprove(approving);
+          setApproving(null);
+        }}
+        onClose={() => setApproving(null)}
+      />
     </VmsDialog>
   );
 }

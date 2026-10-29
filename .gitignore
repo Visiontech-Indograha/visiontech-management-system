@@ -121,6 +121,7 @@ MEMORY.md
 memory.md
 CLAUDE.md
 GEMINI.md
+CHANGELOG.md
 *.agent.md
 
 !web/src/lib/

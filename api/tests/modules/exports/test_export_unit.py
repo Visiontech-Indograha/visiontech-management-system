@@ -167,3 +167,13 @@ async def test_printed_by_shows_employee_name_not_email():
     assert await svc._printer(user) == "Budi Santoso"
     svc.repo.employee_name = AsyncMock(return_value=None)
     assert await svc._printer(SimpleNamespace(email="x@contoh.test", employee_id=None)) == "-"
+
+
+def test_periodic_schedule_sheet_prints_plan_status_in_indonesian():
+    day = SimpleNamespace(work_date=date(2026, 9, 14), team_name="Tim A", site_name="Pos", status="APPROVED",
+                          items=1, items_done=0, items_shifted=0, avg_progress=0, titles="Instalasi 1")
+    per = PeriodicReport("MEP", date(2026, 9, 14), date(2026, 9, 20), [day], [], [], "pm",
+                         datetime(2026, 9, 21, tzinfo=UTC))
+    ws = load_workbook(io.BytesIO(periodic_xlsx(per)))["Jadwal"]
+    values = [c.value for row in ws.iter_rows() for c in row]
+    assert "Disetujui" in values and "APPROVED" not in values

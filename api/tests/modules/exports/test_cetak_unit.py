@@ -19,7 +19,15 @@ from PIL import Image
 from app.core.errors import ForbiddenError, NotFoundError
 from app.modules.exports.services import export_service as es
 from app.modules.exports.services.builders.docx_builders import bast_docx, daily_report_docx, order_sheet_docx
-from app.modules.exports.services.builders.model import CompletionReport, DailyReport, ReportPhoto, ReportPoint
+from app.modules.exports.services.builders.model import (
+    CompletionReport,
+    DailyReport,
+    ReportPhoto,
+    ReportPoint,
+)
+from app.modules.exports.services.builders.model import (
+    tgl as tgl_text,
+)
 from app.shared.documents import static_map as sm
 
 
@@ -383,3 +391,47 @@ def test_bast_map_legend_uses_same_terms_as_the_map():
     points = [_point("Survei A", lat=1.4, lng=101.4, status="DONE", day=2)]
     text = _text(bast_docx(_completion(points, map_image=_png(), has_coordinates=True)))
     assert "Existing (sudah terpasang)" in text and "Usulan pemasangan baru" in text
+
+
+# ── Uji tambahan B7: peta order, jadwal, koordinat, dan status berbahasa Indonesia ─────────────
+
+
+def test_bast_daily_summary_covers_every_schedule_day_of_the_order():
+    text = _text(bast_docx(_completion([_point("Survei A", day=2)])))
+    for day in (date(2026, 11, 2), date(2026, 11, 5), date(2026, 11, 20)):
+        assert tgl_text(day) in text, tgl_text(day)
+    assert "Tidak ada pekerjaan tercatat." in text
+
+
+def test_bast_and_order_sheet_print_order_coordinates():
+    order = {**ORDER, "site_lat": -6.1944, "site_lng": 106.8229}
+    report = _completion([_point("Survei A", day=2)])
+    report.order.update(order)
+    assert "-6.194400, 106.822900" in _text(bast_docx(report))
+    assert "-6.194400, 106.822900" in _text(order_sheet_docx(report))
+
+
+def test_order_sheet_schedule_falls_back_to_item_dates_not_dashes():
+    report = _completion([_point("Survei A", day=2), _point("Survei B", day=5)])
+    report.order.update({"start_work_date": None, "end_work_date": None})
+    text = _text(order_sheet_docx(report))
+    assert "2 November 2026 s.d. 5 November 2026" in text
+    assert "- s.d. -" not in text
+
+
+def test_daily_report_prints_plan_status_in_indonesian():
+    report = DailyReport("Tim MEP", "MEP", date(2026, 11, 3), None, "APPROVED", "Agus", [], [], None, None,
+                         "Budi", datetime(2026, 11, 3, tzinfo=UTC))
+    text = _text(daily_report_docx(report))
+    assert "Disetujui" in text and "APPROVED" not in text
+
+
+@pytest.mark.anyio
+async def test_completion_map_marks_the_order_site_even_without_item_coordinates(monkeypatch):
+    seen: list[list] = []
+    monkeypatch.setattr(es, "render_point_map", lambda points: seen.append(points) or _png())
+    rows = [_row(item_id="a", site_lat=None, site_lng=None)]
+    order = {**ORDER, "site_lat": -6.1944, "site_lng": 106.8229}
+    report = await _svc(rows)._completion_report(order, USER)
+    assert report.has_coordinates is True and report.map_image == _png()
+    assert [m.label for m in seen[0]] == ["Lokasi order"]

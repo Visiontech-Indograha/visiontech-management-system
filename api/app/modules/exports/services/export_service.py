@@ -412,6 +412,10 @@ class ExportService:
         marks = [MapPoint(p.title, float(p.lat), float(p.lng), next((ph.image for ph in p.photos), None),
                           status="EXISTING" if p.status == "DONE" else "PROPOSED")
                  for p in points if p.lat is not None and p.lng is not None]
+        # Lokasi order sendiri ikut ditandai (penanda terakhir: nomor titik pada tabel tetap sesuai urutan).
+        if order.get("site_lat") is not None and order.get("site_lng") is not None:
+            marks.append(MapPoint("Lokasi order", float(order["site_lat"]), float(order["site_lng"]), None,
+                                  status="PROPOSED"))
         map_image = await asyncio.to_thread(render_point_map, marks) if marks else None
         return CompletionReport(
             order=order, points=points, roster=roster, bom=bom, generated_by=await self._printer(user),

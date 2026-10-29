@@ -1,6 +1,6 @@
 # MULAI DI SINI
 
-> **Melanjutkan pekerjaan yang sedang berjalan?** Baca `docs/23-SERAH-TERIMA-AGEN.md`: berisi
+> **Melanjutkan pekerjaan yang sedang berjalan?** Baca `docs/RUNBOOK-PRODUKSI.md`, `docs/LINGKUNGAN.md`, dan `docs/PETA-PORT.md`: berisi
 > keadaan terakhir, aturan kerja dari pemilik, lingkungan (server, APK, Flutter), dan daftar yang terbuka.
 
 **Dokumen pembuka.** Ditulis untuk dibaca lebih dulu oleh siapa pun — manusia atau agen AI —

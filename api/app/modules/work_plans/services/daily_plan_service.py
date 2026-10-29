@@ -346,6 +346,7 @@ class DailyPlanService:
                 status=422,
             )
         await self.repo.set_status(daily_plan_id, "COMPLETED")
+        await self.repo.release_plan_assets(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
     async def submit_daily_report(self, user: CurrentUser, daily_plan_id: UUID, data: Any) -> Any:

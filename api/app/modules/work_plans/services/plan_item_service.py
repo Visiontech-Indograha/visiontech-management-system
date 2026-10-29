@@ -27,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
+from app.modules.work_completion.repositories.work_completion_bom_repository import WorkCompletionBomRepository
 from app.modules.work_plans.repositories.plan_item_repository import PlanItemRepository
 from app.modules.work_plans.schemas.plan_item_schema import (
     PlanItemCreate,
@@ -142,6 +143,9 @@ class PlanItemService:
         if fields["is_main_deliverable"] and fields["task_phase"] not in MAIN_PHASES:
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
         item_id = await self.repo.insert(daily_plan_id, fields)
+        if fields.get("completion_id") and fields.get("work_type_id"):
+            # BoM default jenis pekerjaan ikut masuk ke order saat item dibuat dari template (idempoten).
+            await WorkCompletionBomRepository(self.db).sync_bom_from_work_types(fields["completion_id"])
         return await self.repo.get(item_id)
 
     async def update(self, user: CurrentUser, item_id: UUID, data: PlanItemUpdate) -> Any:

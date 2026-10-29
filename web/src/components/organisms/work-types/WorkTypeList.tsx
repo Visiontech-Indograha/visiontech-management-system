@@ -7,6 +7,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { WORK_TYPE_KIND_LABEL, type WorkType } from "@/services/workTypeService";
 import { WorkTypeAddButton } from "./WorkTypeAddButton";
 import { WorkTypeMaterialsDialog } from "./WorkTypeMaterialsDialog";
+import { WorkTypeCopyDialog } from "./WorkTypeCopyDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -38,6 +39,7 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
   onDeactivate: (type: WorkType) => void;
 }) {
   const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
+  const [copyingType, setCopyingType] = useState<WorkType | null>(null);
   const view = pagedView(types, controls);
   return (
     <>
@@ -114,6 +116,11 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
                   BoM Standar
                 </ActionButton>
                 {t.is_active && (
+                  <ActionButton variant="outline" size="sm" onClick={() => setCopyingType(t)}>
+                    Salin ke divisi
+                  </ActionButton>
+                )}
+                {t.is_active && (
                   <ActionButton variant="ghost" size="sm" onClick={() => onDeactivate(t)} aria-label={`Nonaktifkan ${t.name}`}>
                     Nonaktifkan
                   </ActionButton>
@@ -130,6 +137,7 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
         workType={selectedForMaterials}
         onClose={() => setSelectedForMaterials(null)}
       />
+      {copyingType && <WorkTypeCopyDialog type={copyingType} onClose={() => setCopyingType(null)} />}
     </>
   );
 }

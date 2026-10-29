@@ -25,6 +25,11 @@ _EXPORT_COLS = """
 class ExportRepository(BaseRepository):
     """Query bahan dokumen & registri ekspor."""
 
+    async def employee_name(self, employee_id: UUID | str) -> str | None:
+        val: str | None = await self.scalar(
+            "SELECT full_name FROM employee WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
+        return val
+
     # ── Bahan dokumen order ───────────────────────────────────────────────────
     async def completion_items(self, completion_id: UUID | str) -> list[Any]:
         """Item (titik) order, urut tanggal & jam; termasuk nama penugasan dan foto realisasinya."""

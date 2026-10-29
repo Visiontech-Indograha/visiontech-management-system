@@ -24,12 +24,7 @@ def _clean_coordinate(val: Any, max_abs: float) -> float | None:
         f = float(val)
     except (ValueError, TypeError):
         raise ValueError("Koordinat harus berupa angka desimal valid.") from None
-    if abs(f) > max_abs:
-        for scale in (1e6, 1e7, 1e5):
-            candidate = f / scale
-            if abs(candidate) <= max_abs:
-                f = candidate
-                break
+    # Tanpa penskalaan diam-diam: 123 untuk latitude adalah galat masukan, bukan 0.000123.
     if abs(f) > max_abs:
         raise ValueError(f"Koordinat di luar batas jangkauan (-{max_abs} s/d {max_abs}).")
     return round(f, 7)

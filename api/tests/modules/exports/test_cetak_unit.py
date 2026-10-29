@@ -19,7 +19,15 @@ from PIL import Image
 from app.core.errors import ForbiddenError, NotFoundError
 from app.modules.exports.services import export_service as es
 from app.modules.exports.services.builders.docx_builders import bast_docx, daily_report_docx, order_sheet_docx
-from app.modules.exports.services.builders.model import CompletionReport, DailyReport, ReportPhoto, ReportPoint
+from app.modules.exports.services.builders.model import (
+    CompletionReport,
+    DailyReport,
+    ReportPhoto,
+    ReportPoint,
+)
+from app.modules.exports.services.builders.model import (
+    tgl as tgl_text,
+)
 from app.shared.documents import static_map as sm
 
 
@@ -213,9 +221,10 @@ def test_bast_says_map_unavailable_without_connection():
     assert "Peta tidak tersedia (tanpa koneksi ke citra satelit)." in text
 
 
-def test_bast_omits_map_section_without_coordinates():
+def test_bast_keeps_map_page_with_placeholder_without_coordinates():
     text = _text(bast_docx(_completion([_point("Tanpa koordinat")])))
-    assert "Peta Lokasi" not in text
+    assert "Peta Lokasi" in text
+    assert "Koordinat lokasi belum diisi." in text
     assert "Ringkasan Laporan Harian" in text
 
 
@@ -259,6 +268,7 @@ def _svc(items: list | None = None, header: object | None = None) -> es.ExportSe
     repo.team_roster = AsyncMock(return_value=[])
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
+    repo.employee_name = AsyncMock(return_value="Pengguna Uji")
     repo.insert_export = AsyncMock(
         return_value=SimpleNamespace(
             export_id="e1",
@@ -375,3 +385,53 @@ async def test_daily_report_hidden_schedule_is_not_found_or_forbidden(monkeypatc
     monkeypatch.setattr(es, "check_daily_access", AsyncMock(side_effect=ForbiddenError("x")))
     with pytest.raises(ForbiddenError):
         await svc.export_daily_report(USER, "d1")
+
+
+def test_bast_map_legend_uses_same_terms_as_the_map():
+    points = [_point("Survei A", lat=1.4, lng=101.4, status="DONE", day=2)]
+    text = _text(bast_docx(_completion(points, map_image=_png(), has_coordinates=True)))
+    assert "Existing (sudah terpasang)" in text and "Usulan pemasangan baru" in text
+
+
+# ── Uji tambahan B7: peta order, jadwal, koordinat, dan status berbahasa Indonesia ─────────────
+
+
+def test_bast_daily_summary_covers_every_schedule_day_of_the_order():
+    text = _text(bast_docx(_completion([_point("Survei A", day=2)])))
+    for day in (date(2026, 11, 2), date(2026, 11, 5), date(2026, 11, 20)):
+        assert tgl_text(day) in text, tgl_text(day)
+    assert "Tidak ada pekerjaan tercatat." in text
+
+
+def test_bast_and_order_sheet_print_order_coordinates():
+    order = {**ORDER, "site_lat": -6.1944, "site_lng": 106.8229}
+    report = _completion([_point("Survei A", day=2)])
+    report.order.update(order)
+    assert "-6.194400, 106.822900" in _text(bast_docx(report))
+    assert "-6.194400, 106.822900" in _text(order_sheet_docx(report))
+
+
+def test_order_sheet_schedule_falls_back_to_item_dates_not_dashes():
+    report = _completion([_point("Survei A", day=2), _point("Survei B", day=5)])
+    report.order.update({"start_work_date": None, "end_work_date": None})
+    text = _text(order_sheet_docx(report))
+    assert "2 November 2026 s.d. 5 November 2026" in text
+    assert "- s.d. -" not in text
+
+
+def test_daily_report_prints_plan_status_in_indonesian():
+    report = DailyReport("Tim MEP", "MEP", date(2026, 11, 3), None, "APPROVED", "Agus", [], [], None, None,
+                         "Budi", datetime(2026, 11, 3, tzinfo=UTC))
+    text = _text(daily_report_docx(report))
+    assert "Disetujui" in text and "APPROVED" not in text
+
+
+@pytest.mark.anyio
+async def test_completion_map_marks_the_order_site_even_without_item_coordinates(monkeypatch):
+    seen: list[list] = []
+    monkeypatch.setattr(es, "render_point_map", lambda points: seen.append(points) or _png())
+    rows = [_row(item_id="a", site_lat=None, site_lng=None)]
+    order = {**ORDER, "site_lat": -6.1944, "site_lng": 106.8229}
+    report = await _svc(rows)._completion_report(order, USER)
+    assert report.has_coordinates is True and report.map_image == _png()
+    assert [m.label for m in seen[0]] == ["Lokasi order"]

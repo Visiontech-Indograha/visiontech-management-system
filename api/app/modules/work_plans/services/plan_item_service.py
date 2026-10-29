@@ -133,6 +133,10 @@ class PlanItemService:
     async def create(self, user: CurrentUser, daily_plan_id: UUID, data: PlanItemCreate) -> Any:
         access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT", "SUBMITTED")
+        return await self.add_validated(access, daily_plan_id, data)
+
+    async def add_validated(self, access: DailyAccess, daily_plan_id: UUID | str, data: PlanItemCreate) -> Any:
+        """Menambah item setelah pemeriksaan akses & status oleh pemanggil (dipakai juga oleh aktivasi siaga)."""
         fields = data.model_dump()
         fields["title"] = data.title.strip()
         await self._validate(access, fields)

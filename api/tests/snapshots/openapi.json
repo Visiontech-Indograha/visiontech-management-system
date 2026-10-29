@@ -2552,6 +2552,265 @@
     "title": "CorrectionOut",
     "type": "object"
    },
+   "DailyActivateIn": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi).",
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/PlanItemCreate"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "DailyActivateIn",
+    "type": "object"
+   },
+   "DailyBulkCellOut": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Message"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "status": {
+      "enum": [
+       "CREATED",
+       "SKIPPED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "work_date",
+     "status"
+    ],
+    "title": "DailyBulkCellOut",
+    "type": "object"
+   },
+   "DailyBulkIn": {
+    "description": "Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.",
+    "properties": {
+     "attendance_radius_m": {
+      "anyOf": [
+       {
+        "maximum": 5000.0,
+        "minimum": 10.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": 150,
+      "title": "Attendance Radius M"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "target": {
+      "default": "DRAFT",
+      "enum": [
+       "DRAFT",
+       "APPROVED"
+      ],
+      "title": "Target",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkIn",
+    "type": "object"
+   },
+   "DailyBulkOut": {
+    "properties": {
+     "cells": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkCellOut"
+      },
+      "title": "Cells",
+      "type": "array"
+     },
+     "created": {
+      "title": "Created",
+      "type": "integer"
+     },
+     "skipped": {
+      "title": "Skipped",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "created",
+     "skipped",
+     "cells"
+    ],
+    "title": "DailyBulkOut",
+    "type": "object"
+   },
+   "DailyBulkStandbyIn": {
+    "description": "Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati.",
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkStandbyIn",
+    "type": "object"
+   },
    "DailyFormOptions": {
     "properties": {
      "divisions": {
@@ -26317,6 +26576,100 @@
     ]
    }
   },
+  "/api/v1/work-plans/daily/bulk": {
+   "post": {
+    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.",
+    "operationId": "bulk_create_daily_api_v1_work_plans_daily_bulk_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Create Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/bulk-standby": {
+   "post": {
+    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).",
+    "operationId": "bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkStandbyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Standby Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily/recent-sites": {
    "get": {
     "description": "Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).",
@@ -26534,6 +26887,65 @@
      }
     ],
     "summary": "Update Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/activate": {
+   "post": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim.",
+    "operationId": "activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyActivateIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyPlanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Activate Daily Plan",
     "tags": [
      "Work Plans (Daily-First)"
     ]

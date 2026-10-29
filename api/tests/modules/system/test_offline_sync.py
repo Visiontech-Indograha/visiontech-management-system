@@ -92,3 +92,37 @@ def test_rejections_are_kept_and_do_not_block_other_operations(client, world: Wo
         retired["client_op_id"], forbidden_report["client_op_id"], wrong_state["client_op_id"]
     }
     assert all(op["error_message"] for op in rejected)
+
+
+def _progress_item(client, world: World) -> tuple[str, str]:
+    plan_id = make_daily_plan(world, status="DRAFT", days_from_today=0)
+    wt = str(sync_query("INSERT INTO work_type (division_id, name) VALUES (%s, %s) RETURNING work_type_id",
+                        (world.unit_id, f"Instalasi offline {world.tag}"))[0][0])
+    created = client.post(f"/work-plans/daily/{plan_id}/items", headers=world.headers(client, "pm"), json={
+        "work_type_id": wt, "title": "Titik offline", "task_phase": "INSTALLATION", "is_main_deliverable": True,
+        "target_qty": "4"})
+    assert created.status_code == 201, created.text
+    sync_query("UPDATE work_plan_daily SET status = 'ONGOING' WHERE daily_plan_id = %s", (plan_id,))
+    return plan_id, created.json()["item_id"]
+
+
+def test_item_progress_syncs_and_rejects_over_target(client, world: World):
+    _, item_id = _progress_item(client, world)
+    ok = _op("PLAN_ITEM_PROGRESS", {"item_id": item_id, "completed_qty": 2, "notes": "Dikerjakan tanpa sinyal",
+                                    "photos": [], "new_photo_requirements": []})
+    first = _sync(client, world, "member", [ok])
+    assert first.status_code == 200, first.text
+    assert [r["status"] for r in first.json()["results"]] == ["APPLIED"]
+    row = sync_query("SELECT completed_qty, notes FROM work_plan_item WHERE item_id = %s", (item_id,))[0]
+    assert float(row[0]) == 2 and row[1] == "Dikerjakan tanpa sinyal"
+
+    too_much = _op("PLAN_ITEM_PROGRESS", {"item_id": item_id, "completed_qty": 9, "photos": []})
+    result = _sync(client, world, "member", [too_much]).json()["results"][0]
+    assert result["status"] == "REJECTED" and "melebihi target" in result["error_message"]
+
+
+def test_item_progress_from_outsider_is_rejected(client, world: World, other_world: World):
+    _, item_id = _progress_item(client, world)
+    op = _op("PLAN_ITEM_PROGRESS", {"item_id": item_id, "completed_qty": 1, "photos": []})
+    result = _sync(client, other_world, "member", [op]).json()["results"][0]
+    assert result["status"] == "REJECTED"

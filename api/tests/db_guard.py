@@ -18,7 +18,8 @@ def unsafe_test_database(url: str) -> str | None:
     parsed = urlparse(url.replace("+asyncpg", ""))
     host = (parsed.hostname or "").lower()
     name = parsed.path.lstrip("/")
-    if host in _LOCAL_HOSTS or name.endswith("_test") or name.startswith("test_"):
+    allowed = {n.strip() for n in os.environ.get("TEST_ALLOW_DB_NAMES", "").split(",") if n.strip()}
+    if host in _LOCAL_HOSTS or name.endswith("_test") or name.startswith("test_") or name in allowed:
         return None
     return (f"DB uji '{name}' di {host}:{parsed.port or 5432} bukan DB lokal, '*_test', atau 'test_*' — "
             "kemungkinan DB produksi. Set TEST_DATABASE_URL (lihat api/.env.test, docs/24 T0).")

@@ -22,7 +22,7 @@ def get_test_db_url() -> str:
             line = line.strip()
             if line.startswith("TEST_DATABASE_URL="):
                 return line.split("=", 1)[1].strip()
-    return "postgresql+asyncpg://vms_app:dd0fba9822fad65ca32ec3713994a1551a7164a72e3854b2@192.168.88.160:5434/test_migration"
+    raise SystemExit("TEST_DATABASE_URL belum diisi (env atau .env.test).")
 
 async def main():
     url = get_test_db_url()

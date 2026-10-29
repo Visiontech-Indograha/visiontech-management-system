@@ -106,3 +106,27 @@ lalu membandingkan jumlah baris per tabel, versi alembic, tabel ber-RLS, dan fun
 kontainer sementara selalu dihapus; keluaran hanya nama tabel & angka. Jalankan tiap bulan dan setelah perubahan
 besar skema. Catatan: berkas di MinIO (foto/dokumen/PDF) belum ikut dicadangkan, dan cadangan DB masih di server
 yang sama (lihat docs/06 P9-5).
+
+## Alur pengembangan beta → produksi (ringkas)
+
+`feature/*` → PR ke `development` (CI api/web/mobile + gitleaks wajib hijau) → merge ke `beta` (server beta deploy otomatis;
+uji nyata web + APK beta dari `apk.yml`) → PR `beta` → `prod` (satu persetujuan, CI hijau) → server prod deploy
+(backup → migrasi → cek siap pakai → Discord). Hotfix: `hotfix/*` dari `prod`, PR langsung ke `prod`, lalu back-merge ke
+`beta`/`development`. Migrasi DB selalu kompatibel mundur (tambah dulu, pakai, baru hapus) dan diuji di beta sebelum prod.
+
+## Pemantauan dan pemeliharaan
+
+- `deploy/healthcheck.sh` (cron 5 menit; alert Discord hanya saat berubah): kontainer berkebijakan restart yang mati,
+  /health /ready web proxy, jangkauan API→MinIO, disk/RAM/swap, umur backup lokal dan luar-server.
+- `deploy/uptime-kuma.compose.yml`: pemantau ketersediaan (hanya Tailscale/lokal).
+- `deploy/backup-offsite.sh`: salinan backup ke mesin lain via rsync + SSH (butuh `offsite.env`).
+- `deploy/hardening-server.sh --cek|--ya`: SSH, firewall, fail2ban, pembaruan otomatis (perlu sudo, dijalankan pemilik).
+- Anti-loop: deploy yang gagal untuk commit yang sama baru dicoba lagi setelah `VMS_DEPLOY_RETRY_AFTER` detik (bawaan 900);
+  penanda `.last-failed`. Salin `autodeploy.sh` terbaru ke server (lihat bagian "Memasang perubahan skrip").
+- Panduan operasional harian: [`docs/RUNBOOK-PRODUKSI.md`](../docs/RUNBOOK-PRODUKSI.md).
+
+## Citra via GHCR (opsional, mengurangi beban build di server)
+Workflow `.github/workflows/images.yml` membangun `api` dan `web` di runner GitHub saat `prod` berubah dan mendorongnya ke
+`ghcr.io/visiontech-indograha/vms-{api,web}:<sha>` (+ `latest`). Server belum memakainya. Untuk beralih (tindakan pemilik server):
+buat token `read:packages`, `docker login ghcr.io` di server, ubah `compose.yml` server ke `image: ghcr.io/...:${TAG}` dan ganti
+`docker compose build` di `autodeploy.sh` dengan `docker compose pull`. Uji dulu di beta.

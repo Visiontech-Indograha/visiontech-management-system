@@ -264,3 +264,30 @@ export function useSyncBomFromWorkTypes() {
     },
   });
 }
+
+export interface WorkCompletionSignPayload {
+  signature_data_url: string;
+  summary_notes?: string | null;
+  obstacles?: string | null;
+  realization_photos?: string[];
+}
+
+export function useSignWorkCompletion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: WorkCompletionSignPayload;
+    }) => {
+      const res = await api.post<WorkCompletionOrder>(`/work-completions/${id}/sign`, payload);
+      return res.data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["work-completions"] });
+      qc.invalidateQueries({ queryKey: completionKey(vars.id) });
+    },
+  });
+}

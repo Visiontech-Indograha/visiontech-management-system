@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../plans/daily_plan_screen.dart';
 
@@ -106,10 +108,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
   String? _error;
+  final _query = ListQuery();
+
+  List<Map<String, dynamic>> get _filtered => _query.filter<Map<String, dynamic>>(
+    _items,
+    (n) => [n['title'], n['body']],
+    chipTest: (n, chip) => chip != 'unread' || n['read_at'] == null,
+  );
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _query.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
   }
 
@@ -135,7 +153,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     try {
       if (n['read_at'] == null) await api.readNotification(n['id'] as String);
       final planId = n['daily_plan_id'] as String?;
-      if (planId != null) {
+      final route = notificationRoute(n['target'] as String?);
+      if (route != null && planId == null) {
+        if (!mounted) return;
+        await context.push(route);
+      } else if (planId != null) {
         if (!mounted) return;
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -205,7 +227,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       icon: Icons.notifications_off_outlined,
                       title: 'Belum ada notifikasi',
                     ),
-                  for (final n in _items)
+                  if (_items.isNotEmpty)
+                    VmsSearchBar(
+                      query: _query,
+                      hint: 'Cari notifikasi...',
+                      chips: const [VmsFilterOption('', 'Semua'), VmsFilterOption('unread', 'Belum dibaca')],
+                    ),
+                  if (_items.isNotEmpty && _filtered.isEmpty) VmsNoMatch(query: _query),
+                  for (final n in _query.visible(_filtered))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: SurfaceCard(
@@ -255,6 +284,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         ),
                       ),
                     ),
+                  VmsLoadMore(query: _query, total: _filtered.length, noun: 'notifikasi'),
                 ],
               ),
             ),
@@ -264,3 +294,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 }
+
+/// Layar tujuan untuk jenis notifikasi (`target` dari API); null bila tidak ada layar khusus.
+String? notificationRoute(String? target) => switch (target) {
+      'leave' => '/leaves',
+      'asset' => '/assets',
+      'overtime' => '/overtime',
+      'mess' => '/mess',
+      _ => null,
+    };

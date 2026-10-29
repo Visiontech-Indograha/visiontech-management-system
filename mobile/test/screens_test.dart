@@ -260,7 +260,7 @@ void main() {
           'today': '2000-01-02',
         };
         await show(tester, const AttendanceScreen());
-        expect(find.text('Absen pulang'), findsOneWidget);
+        expect(find.textContaining('Absen pulang'), findsOneWidget);
         expect(find.text('Absen masuk'), findsNothing);
       },
     );

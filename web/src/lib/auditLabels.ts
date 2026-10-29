@@ -10,6 +10,28 @@ export const AUDIT_ENTITIES: Record<string, string> = {
   qr_token: "Token QR",
   document_signature: "Tanda tangan dokumen",
   face_enrollment: "Pendaftaran wajah",
+  attendance: "Absensi",
+  document_template_export: "Ekspor dokumen",
+  offboarding_clearance_item: "Clearance offboarding",
+  offline_sync: "Sinkronisasi offline",
+  users: "Akun pengguna",
+  work_completion: "Penyelesaian pekerjaan",
+  work_plan_item: "Item pekerjaan",
 };
 
-export const ACTION_LABEL: Record<string, string> = { INSERT: "Tambah", UPDATE: "Ubah", DELETE: "Hapus" };
+export const ACTION_LABEL: Record<string, string> = {
+  INSERT: "Tambah",
+  UPDATE: "Ubah",
+  DELETE: "Hapus",
+  APPROVE_ROLLOVER: "Setujui pemindahan jadwal",
+  REQUEST_ROLLOVER: "Ajukan pemindahan jadwal",
+  CLOCK_IN_OUT_OF_RADIUS: "Absen masuk di luar radius",
+  DEVICE_KEY_REGISTERED: "Perangkat didaftarkan",
+  EXPORT_DOC: "Ekspor dokumen",
+  LOGIN_FAILED: "Login gagal",
+  LOGIN_SUCCESS: "Login berhasil",
+  LOGIN_UNLOCKED: "Kunci login dibuka",
+  OFFBOARD_CLEARANCE: "Clearance offboarding",
+  OFFLINE_OPERATION: "Operasi offline disinkronkan",
+  SIGN_REPORT: "Tanda tangan laporan",
+};

@@ -46,12 +46,14 @@ class WorkCompletionCreate(BaseModel):
     order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
     total_target_unit: int = Field(default=1, ge=1, description="Total target unit volume pekerjaan")
     unit_measure: str = Field(default="Unit", max_length=50, description="Satuan unit (Unit, Titik, Meter, Gardu)")
-    order_status: str = Field(default="ONGOING", description="Status order (PENDING, ONGOING, URGENT, COMPLETED)")
-    priority_level: str = Field(default="NORMAL", description="Prioritas (LOW, NORMAL, HIGH, URGENT)")
-    site_address: str | None = None
+    order_status: str = Field(
+        default="ONGOING", description="Status order (PENDING, ONGOING, URGENT, COMPLETED)", max_length=30
+    )
+    priority_level: str = Field(default="NORMAL", description="Prioritas (LOW, NORMAL, HIGH, URGENT)", max_length=20)
+    site_address: str | None = Field(None, max_length=500)
     site_lat: float | None = None
     site_lng: float | None = None
-    summary_notes: str | None = None
+    summary_notes: str | None = Field(None, max_length=2000)
 
     @field_validator("site_lat", mode="before")
     @classmethod
@@ -67,17 +69,17 @@ class WorkCompletionCreate(BaseModel):
 class WorkCompletionUpdate(BaseModel):
     """Schema pembaruan detail Order Klien."""
     client_id: UUID | None = None
-    client_name: str | None = None
-    project_title: str | None = None
-    order_number: str | None = None
+    client_name: str | None = Field(None, max_length=150)
+    project_title: str | None = Field(None, max_length=255)
+    order_number: str | None = Field(None, max_length=50)
     total_target_unit: int | None = None
-    unit_measure: str | None = None
-    order_status: str | None = None
-    priority_level: str | None = None
-    site_address: str | None = None
+    unit_measure: str | None = Field(None, max_length=50)
+    order_status: str | None = Field(None, max_length=30)
+    priority_level: str | None = Field(None, max_length=20)
+    site_address: str | None = Field(None, max_length=500)
     site_lat: float | None = None
     site_lng: float | None = None
-    summary_notes: str | None = None
+    summary_notes: str | None = Field(None, max_length=2000)
 
     @field_validator("site_lat", mode="before")
     @classmethod
@@ -93,12 +95,14 @@ class WorkCompletionUpdate(BaseModel):
 class WorkCompletionAccDecision(BaseModel):
     """Schema keputusan ACC Client oleh PM."""
     decision: Literal["MENUNGGU_ACC", "DITERIMA", "DITOLAK_REWORK"]
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=2000)
 
 
 class WorkCompletionRevisionCreate(BaseModel):
     """Schema penambahan revisi permintaan dari klien."""
-    description: str = Field(..., min_length=3, description="Deskripsi permintaan revisi/tambahan klien")
+    description: str = Field(
+        ..., min_length=3, description="Deskripsi permintaan revisi/tambahan klien", max_length=2000
+    )
     request_date: date | None = None
     create_survey: bool = Field(default=False, description="Otomatis buat draf survei tugas untuk revisi ini")
 
@@ -118,15 +122,15 @@ class WorkCompletionRevisionOut(BaseModel):
 
 class WorkCompletionStatusUpdate(BaseModel):
     """Schema khusus pembaruan status order oleh PM/OM."""
-    order_status: str = Field(..., description="PENDING, CANCELLED, ONGOING, URGENT, COMPLETED")
-    notes: str | None = None
+    order_status: str = Field(..., description="PENDING, CANCELLED, ONGOING, URGENT, COMPLETED", max_length=30)
+    notes: str | None = Field(None, max_length=2000)
 
 
 class WorkCompletionSignRequest(BaseModel):
     """Schema tanda tangan digital Berita Acara Penyelesaian."""
-    signature_data_url: str = Field(..., description="Base64 PNG tanda tangan digital")
-    summary_notes: str | None = None
-    obstacles: str | None = None
+    signature_data_url: str = Field(..., description="Base64 PNG tanda tangan digital", max_length=700000)
+    summary_notes: str | None = Field(None, max_length=2000)
+    obstacles: str | None = Field(None, max_length=2000)
     # Ketua tim: id file_object foto realisasi (kosong = tetap yang lama). Diabaikan saat PM menandatangani.
     realization_photos: list[UUID] = Field(default_factory=list, max_length=30)
 
@@ -154,7 +158,7 @@ class WorkCompletionBomIn(BaseModel):
     actual_qty: float = Field(default=0.0, ge=0.0)
     unit: str = Field(default="Unit", max_length=50)
     category: str | None = Field(None, max_length=100)
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=2000)
     sort_order: int = 0
 
 
@@ -167,7 +171,7 @@ class WorkCompletionBomUpdate(BaseModel):
     actual_qty: float | None = Field(None, ge=0.0)
     unit: str | None = Field(None, max_length=50)
     category: str | None = Field(None, max_length=100)
-    notes: str | None = None
+    notes: str | None = Field(None, max_length=2000)
     sort_order: int | None = None
 
 

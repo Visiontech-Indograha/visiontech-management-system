@@ -78,6 +78,7 @@ class OffboardingListItem(BaseModel):
     offboarding_id: UUID
     employee_id: UUID
     employee_name: str | None = None
+    employee_photo_file_id: UUID | None = None
     employee_no: str | None = None
     division_name: str | None = None
     reason_type: str

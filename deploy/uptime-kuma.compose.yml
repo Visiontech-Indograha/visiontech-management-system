@@ -1,0 +1,28 @@
+# Uptime Kuma — pemantau ketersediaan ringan (±100 MB). Hanya dapat dibuka dari server itu sendiri / Tailscale.
+# Pasang:   docker compose -f deploy/uptime-kuma.compose.yml up -d
+# Buka:     http://100.117.92.14:3001  (alamat Tailscale server)  → buat akun admin saat pertama.
+# Monitor yang disarankan (interval 60 dtk, notifikasi → Discord):
+#   - HTTP  http://host.docker.internal:8000/health          (200)
+#   - HTTP  http://host.docker.internal:8000/ready           (200; menandakan DB terhubung)
+#   - HTTP  http://host.docker.internal:8080/                (200)
+#   - HTTP  http://host.docker.internal:8080/api/v1/auth/me  (401 = jalur proxy web→API sehat)
+#   - Sertifikat/domain publik bila ada.
+# Pemeriksaan disk/RAM/backup/kontainer ada di deploy/healthcheck.sh (cron), melengkapi — bukan menggantikan — ini.
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: vms_uptime_kuma
+    restart: unless-stopped
+    ports:
+      - "100.117.92.14:3001:3001"
+      - "127.0.0.1:3001:3001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - uptime_kuma_data:/app/data
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+volumes:
+  uptime_kuma_data:

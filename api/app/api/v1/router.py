@@ -15,6 +15,7 @@ from app.modules.documents.routes import documents_router, expiry_router
 from app.modules.employees.routes import router as employees_router
 from app.modules.exports.routes import router as exports_router
 from app.modules.face.routes import router as face_router
+from app.modules.home.routes import home_router
 from app.modules.image_requirements.routes import router as image_requirements_router
 from app.modules.job_positions.routes import router as job_positions_router
 from app.modules.leaves.routes import leaves_router
@@ -37,7 +38,12 @@ from app.modules.system_backup.routes import router as backup_router
 from app.modules.teams.routes import router as teams_router
 from app.modules.work_completion.routes import router as work_completion_router
 from app.modules.work_completion.routes import verify_router
-from app.modules.work_plans.routes import daily_plans_router, plan_items_router, surveys_router
+from app.modules.work_plans.routes import (
+    daily_corrections_router,
+    daily_plans_router,
+    plan_items_router,
+    surveys_router,
+)
 from app.modules.work_types.routes import router as work_types_router
 
 api_router = APIRouter()
@@ -47,6 +53,7 @@ api_router.include_router(projects_router)
 api_router.include_router(job_positions_router)
 api_router.include_router(surveys_router)  # sebelum daily_plans: /work-plans/surveys/* tidak tertangkap rute lain
 api_router.include_router(daily_plans_router)
+api_router.include_router(daily_corrections_router)
 api_router.include_router(plan_items_router)
 api_router.include_router(work_completion_router)
 api_router.include_router(exports_router)
@@ -80,6 +87,7 @@ api_router.include_router(plan_assets_router)
 api_router.include_router(overtime_router)
 api_router.include_router(overtime_recaps_router)
 api_router.include_router(notifications_router)
+api_router.include_router(home_router)
 api_router.include_router(events_router)
 api_router.include_router(work_types_router)
 api_router.include_router(app_releases_router)

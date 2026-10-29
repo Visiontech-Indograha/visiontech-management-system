@@ -2329,6 +2329,11 @@
       "title": "Decision",
       "type": "string"
      },
+     "force": {
+      "default": false,
+      "title": "Force",
+      "type": "boolean"
+     },
      "note": {
       "anyOf": [
        {
@@ -2621,6 +2626,18 @@
       ],
       "default": 150,
       "title": "Attendance Radius M"
+     },
+     "backdate_reason": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backdate Reason"
      },
      "clock_in_time": {
       "default": "07:00:00",

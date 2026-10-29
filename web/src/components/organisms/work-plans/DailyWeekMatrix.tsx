@@ -4,7 +4,7 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { displayPct, PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, WORK_STATE, workState, type Phase } from "@/lib/workPhase";
-import { addDays, useDailyPlans, weekStart, type DailyPlan } from "@/services/dailyPlanService";
+import { addDays, BACKDATE_DAYS, useDailyPlans, weekStart, type DailyPlan } from "@/services/dailyPlanService";
 
 const MONTH = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
 const LONG = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -110,9 +110,11 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   aria-label={`${LONG.format(asDate(d))}: ${list.length ? `${list.length} jadwal` : "kosong"}`}
                   onClick={() => {
                     setPicked(d);
-                    // Satu jadwal → langsung detail lengkap; lebih dari satu / kosong → pilih dulu di jendela hari.
-                    if (list.length === 1) onOpen(list[0]!);
-                    else if (list.length > 1 || (canPlan && d >= today)) setDayOpen(true);
+                    // PM/OM: jendela hari selalu terbuka (baris tim tanpa jadwal → "Buat jadwal").
+                    // Peran lain: satu jadwal → langsung detail; lebih dari satu → pilih dulu di jendela hari.
+                    if (canPlan) setDayOpen(true);
+                    else if (list.length === 1) onOpen(list[0]!);
+                    else if (list.length > 1) setDayOpen(true);
                   }}
                   className={[
                     "flex h-auto min-h-20 flex-col items-stretch justify-start gap-1 rounded-none border-b border-r border-line p-1 text-left sm:min-h-28 sm:p-1.5",
@@ -162,10 +164,16 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
       {dayOpen && (
         <VmsDialog open title={LONG.format(asDate(picked))} onClose={() => setDayOpen(false)}>
           <div className="space-y-2">
+            {picked < today && (
+              <TextBlock as="p" className="text-xs text-mist">
+                {`Tanggal lampau: jadwal baru hanya sampai ${BACKDATE_DAYS} hari ke belakang dan wajib beralasan.`}
+              </TextBlock>
+            )}
             {rows.map((team) => {
               const plan = dayPlans.find((p) => p.team_id === team.team_id);
               if (!plan) {
-                if (only || !(canPlan && picked >= today)) return null;
+                // Tim tanpa jadwal pada tanggal ini: tombol buat (tanggal lampau sampai BACKDATE_DAYS hari, PM/OM).
+                if (only || !canPlan || picked < addDays(today, -BACKDATE_DAYS)) return null;
                 return (
                   <ActionButton key={team.team_id} variant="outline" className="w-full justify-between border-dashed text-mist"
                     onClick={() => { setDayOpen(false); onCreate(team, picked); }}>

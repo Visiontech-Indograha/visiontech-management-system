@@ -136,4 +136,21 @@ describe("item jadwal: lintang dan bujur", () => {
     expect(await screen.findByText(/Lintang tidak valid\. Harus antara -90 dan 90/)).toBeInTheDocument();
     expect(calls.some((c) => c.method === "post" && c.url.endsWith("/items"))).toBe(false);
   });
+
+  it("F10: salin boleh mundur; tanggal sebelum jadwal ikut disalin (hari jadwal tidak ikut)", async () => {
+    const shift = (iso: string, days: number) => new Date(new Date(`${iso}T00:00:00Z`).getTime() + days * 86400000).toISOString().slice(0, 10);
+    const source = shift(todayIso, 5);
+    const calls = mockApi((c) => {
+      if (c.url === "/work-plans/daily/p1") return { data: { ...plan({ status: "APPROVED", item_count: 1, work_date: source }), items: [item], attachment_file_ids: [] } };
+      if (c.url === "/work-plans/daily/p1/copy") return { data: [] };
+    });
+    renderDialog({ plan: plan({ status: "APPROVED", item_count: 1, work_date: source }) });
+    fireEvent.click(await screen.findByRole("button", { name: "Salin ke hari lain" }));
+    const [d, m, y] = shift(todayIso, 2).split("-").reverse();
+    fireEvent.change(screen.getByLabelText("Salin setiap hari sampai tanggal"), { target: { value: `${d}/${m}/${y}` } });
+    fireEvent.click(screen.getByRole("button", { name: "Salin" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/daily/p1/copy")).toBe(true));
+    const body = calls.find((c) => c.url === "/work-plans/daily/p1/copy")?.data as { work_dates: string[] };
+    expect(body.work_dates).toEqual([shift(todayIso, 2), shift(todayIso, 3), shift(todayIso, 4)]);
+  });
 });

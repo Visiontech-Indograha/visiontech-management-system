@@ -5,6 +5,7 @@ penyetuju); work_plan_daily 1─N work_plan_item, work_plan_attachment, attendan
 """
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -230,6 +231,20 @@ class DailyPlanRepository(BaseRepository):
             {"id": str(daily_plan_id)},
         ))
 
+    async def log_audit(self, user_id: str, role: str, daily_plan_id: UUID | str, action: str,
+                        diff: dict[str, Any]) -> None:
+        """Jejak audit jadwal harian (mis. BACKDATE_CREATED, BACKDATE_APPROVED) ke app_activity_logs."""
+        await self.execute(
+            """
+            INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                                           changed_diff)
+            VALUES (CAST(:uid AS uuid), :role, 'web_react', :action, 'work_plan_daily', CAST(:id AS uuid),
+                    CAST(:diff AS jsonb))
+            """,
+            {"uid": user_id, "role": (role or "")[:30], "action": action, "id": str(daily_plan_id),
+             "diff": json.dumps(diff, default=str)},
+        )
+
     async def archive(self, daily_plan_id: UUID | str) -> None:
         await self.execute(
             "UPDATE work_plan_item SET delete_at = now(), update_at = now() "
@@ -330,17 +345,20 @@ class DailyPlanRepository(BaseRepository):
             {"id": str(daily_plan_id)},
         ))
 
-    async def leader_checked_in(self, daily_plan_id: UUID | str) -> bool:
-        """Ketua tim sudah absen masuk pada tanggal jadwal (absensi yang belum dihapus)."""
+    async def leader_checked_in(self, daily_plan_id: UUID | str, today: date) -> bool:
+        """Ketua tim sudah absen masuk pada tanggal jadwal ATAU pada hari ini (WIB), absensi yang belum dihapus.
+
+        Jadwal bertanggal lampau yang belum dimulai boleh dimulai bila ketua sudah absen hari ini (F11)."""
         return bool(await self.scalar(
             """
             SELECT 1 FROM work_plan_daily wpd
             JOIN team t ON t.team_id = wpd.team_id
-            JOIN attendance a ON a.employee_id = t.leader_employee_id AND a.attendance_date = wpd.work_date
+            JOIN attendance a ON a.employee_id = t.leader_employee_id
+                             AND a.attendance_date IN (wpd.work_date, CAST(:today AS date))
             WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND a.delete_at IS NULL
             LIMIT 1
             """,
-            {"id": str(daily_plan_id)},
+            {"id": str(daily_plan_id), "today": today},
         ))
 
     async def copy_items(self, source_id: UUID | str, target_id: UUID | str) -> None:

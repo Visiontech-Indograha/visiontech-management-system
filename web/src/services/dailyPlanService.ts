@@ -17,6 +17,9 @@ export type DailyAction = "submit" | "approve" | "start" | "complete";
 
 const KEY = ["daily-plans"] as const;
 
+/** Jadwal tanggal lampau (PM/OM, beralasan) hanya boleh sampai sekian hari ke belakang; sama dengan API. */
+export const BACKDATE_DAYS = 7;
+
 /** Tanggal ISO (YYYY-MM-DD) menurut WIB. */
 export const wibDate = (d: Date = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
 
@@ -187,8 +190,8 @@ export const useCorrectionInbox = () =>
 export const useDecideCorrection = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, decision, note }: { id: string; decision: CorrectionDecision; note?: string }) =>
-      (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note })).data,
+    mutationFn: async ({ id, decision, note, force }: { id: string; decision: CorrectionDecision; note?: string; force?: boolean }) =>
+      (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note, force: force ?? false })).data,
     onSuccess: (updated) => {
       qc.setQueryData<Correction[]>([...KEY, "corrections"], (old) =>
         old?.map((c) => (c.correction_id === updated.correction_id ? updated : c)),

@@ -11915,6 +11915,80 @@
     ]
    }
   },
+  "/api/v1/assets/availability": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Asset Availability",
+    "description": "Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana).",
+    "operationId": "asset_availability_api_v1_assets_availability_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "date",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "date",
+       "description": "Tanggal jadwal (YYYY-MM-DD)",
+       "title": "Date"
+      },
+      "description": "Tanggal jadwal (YYYY-MM-DD)"
+     },
+     {
+      "name": "team_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tim peminta: tandai aset yang dipakai tim ini",
+       "title": "Team Id"
+      },
+      "description": "Tim peminta: tandai aset yang dipakai tim ini"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AssetAvailabilityOut"
+         },
+         "title": "Response Asset Availability Api V1 Assets Availability Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/assets/tools": {
    "get": {
     "tags": [
@@ -14179,6 +14253,65 @@
     }
    }
   },
+  "/api/v1/work-types/{type_id}/copy-to-division": {
+   "post": {
+    "tags": [
+     "Work Types"
+    ],
+    "summary": "Copy Work Type To Division",
+    "description": "Menyalin jenis pekerjaan (template foto + BoM default) ke divisi lain sebagai jenis baru.\nPM hanya dapat menyalin ke divisinya sendiri.",
+    "operationId": "copy_work_type_to_division_api_v1_work_types__type_id__copy_to_division_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "type_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Type Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CopyToDivisionIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-types/{type_id}": {
    "put": {
     "tags": [
@@ -15010,6 +15143,81 @@
     ],
     "title": "AppUpdateOut",
     "description": "Jawaban pemeriksaan pembaruan untuk satu HP."
+   },
+   "AssetAvailabilityOut": {
+    "properties": {
+     "asset_type": {
+      "type": "string",
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type"
+     },
+     "asset_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Asset Id"
+     },
+     "asset_name": {
+      "type": "string",
+      "title": "Asset Name"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "ready",
+       "allocated",
+       "loaned",
+       "damaged",
+       "lost",
+       "pension"
+      ],
+      "title": "Status"
+     },
+     "available": {
+      "type": "boolean",
+      "title": "Available"
+     },
+     "used_by_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Used By Team Id"
+     },
+     "used_by_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Used By Team Name"
+     },
+     "used_by_requested_team": {
+      "type": "boolean",
+      "title": "Used By Requested Team",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "asset_type",
+     "asset_id",
+     "asset_name",
+     "status",
+     "available"
+    ],
+    "title": "AssetAvailabilityOut",
+    "description": "Ketersediaan satu alat/kendaraan pada satu tanggal jadwal."
    },
    "AssetStatusUpdate": {
     "properties": {
@@ -16995,6 +17203,21 @@
      "template"
     ],
     "title": "CompletionExportRequest"
+   },
+   "CopyToDivisionIn": {
+    "properties": {
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "division_id"
+    ],
+    "title": "CopyToDivisionIn",
+    "description": "Divisi tujuan salinan jenis pekerjaan."
    },
    "CorrectionCreate": {
     "properties": {

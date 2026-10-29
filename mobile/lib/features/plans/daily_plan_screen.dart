@@ -604,13 +604,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
             future: ref.read(syncEngineProvider).api.workCompletion(id),
             builder: (context, snap) {
               final o = snap.data;
+              final proyek = textOr(o?['project_title'], 'Proyek');
               final (title, subtitle) = o == null
                   ? ('Serah terima pekerjaan', 'Memuat status…')
                   : o['pm_signed_at'] != null
-                  ? ('Sudah disetujui PM', '${o['project_title']} · pekerjaan selesai')
+                  ? ('Sudah disetujui PM', '$proyek · pekerjaan selesai')
                   : o['leader_signed_at'] != null
-                  ? ('Menunggu persetujuan PM', '${o['project_title']} · bisa tanda tangan ulang')
-                  : ('Tanda tangan serah terima', '${o['project_title']} · ringkasan, foto hasil kerja, tanda tangan');
+                  ? ('Menunggu persetujuan PM', '$proyek · bisa tanda tangan ulang')
+                  : ('Tanda tangan serah terima', '$proyek · ringkasan, foto hasil kerja, tanda tangan');
               return _Tile(
                 icon: o?['pm_signed_at'] != null ? Icons.verified_rounded : Icons.draw_rounded,
                 title: title,

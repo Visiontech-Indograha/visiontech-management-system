@@ -165,6 +165,29 @@ void main() {
       await show(tester, const DailyPlansScreen());
       expect(find.text('Tidak ada jadwal minggu ini'), findsOneWidget);
     });
+
+    testWidgets('kartu tidak Selesai bila masih ada item belum selesai (persen 100 dari server ditahan 99)', (
+      tester,
+    ) async {
+      // Satu item dipindah hari (tak dihitung persen) sehingga server memberi progress_pct 100 padahal 1 dari 2 selesai.
+      backend.routes['/work-plans/daily'] = (_) => [{..._day('c', 'ONGOING'), 'progress_pct': 100}];
+      await show(tester, const DailyPlansScreen());
+
+      expect(find.textContaining('1 dari 2 pekerjaan selesai · 99%'), findsOneWidget);
+      expect(find.text('Selesai'), findsNothing);
+    });
+
+    testWidgets('judul kartu kosong memakai nama proyek atau "Tanpa judul", bukan teks null', (tester) async {
+      backend.routes['/work-plans/daily'] = (_) => [
+        {..._day('d', 'APPROVED'), 'site_name': null, 'project_title': 'Proyek Menara'},
+        {..._day('e', 'APPROVED', date: '2026-10-22'), 'site_name': null, 'project_title': null},
+      ];
+      await show(tester, const DailyPlansScreen());
+
+      expect(find.text('Proyek Menara'), findsOneWidget);
+      expect(find.text('Tanpa judul'), findsOneWidget);
+      expect(find.textContaining('null'), findsNothing);
+    });
   });
 
   group('Absensi', () {
@@ -480,6 +503,14 @@ void main() {
       await tapPlus(tester, 6); // 4 tersimpan -> 10 (target), tetapi belum disimpan
       expect(find.textContaining('Belum disimpan'), findsOneWidget);
       expect(find.text('Selesai'), findsNothing);
+    });
+
+    testWidgets('isian jumlah tanpa penghitung "n/12" yang membingungkan', (tester) async {
+      await openItem(tester);
+      expect(find.textContaining('/12'), findsNothing);
+
+      await tapPlus(tester, 1);
+      expect(find.textContaining('/12'), findsNothing);
     });
 
     testWidgets('setelah Simpan sukses: toast Tersimpan lalu kembali ke jadwal', (tester) async {

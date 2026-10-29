@@ -38,6 +38,22 @@ stateDiagram-v2
     APPROVED --> [*] : DELETE (arsip, belum dimulai dan belum dipakai)
 ```
 
+## 2.1a Kind jadwal: SIAGA ke WORK (`work_plan_daily.kind`)
+
+Kind: WORK (jadwal kerja) atau STANDBY (SIAGA: tim menunggu perintah PM, tanpa item wajib) (`api/app/modules/work_plans/schemas/daily_plan_schema.py:DailyKind`). Kind tidak berubah lewat PUT. Satu-satunya jalan dari STANDBY ke WORK adalah aktivasi.
+
+| Transisi | Endpoint | Siapa | Prasyarat | Efek samping | Bukti |
+|---|---|---|---|---|---|
+| (awal) to STANDBY | POST /work-plans/daily/bulk-standby, atau POST /work-plans/daily/bulk dengan kind STANDBY | PM, OM divisi | Tim dan tanggal; sel yang sudah berisi dilewati (TEAM_DAY_TAKEN) | Baris kind STANDBY; target APPROVED boleh (tanpa item) | `daily_plan_service.py` (`bulk_create`); `daily_plan_schema.py` (`DailyBulkIn`) |
+| STANDBY to WORK | POST /work-plans/daily/:id/activate | PM, OM divisi (MANAGE) | Kind STANDBY (409 BUKAN_SIAGA); status DRAFT, SUBMITTED, atau APPROVED (409); minimal satu item (422) | Item ditambahkan, kind = WORK, notifikasi DAILY_ACTIVATED ke ketua dan anggota | `daily_plan_service.py:396-413`; `daily_plan_route.py` (`/activate`) |
+
+```mermaid
+stateDiagram-v2
+    [*] --> SIAGA : bulk-standby atau bulk kind STANDBY
+    SIAGA --> WORK : POST activate (MANAGE, minimal 1 item)
+    [*] --> WORK : bulk kind WORK (DRAFT), lalu item ditambahkan
+```
+
 ## 2.2 ItemStatus (`work_plan_item.status`) dan RolloverStatus
 
 ItemStatus: TODO, IN_PROGRESS, DONE, PENDING_ROLLOVER, SHIFTED_DAY, CANCELLED (`api/app/modules/work_plans/schemas/plan_item_schema.py:18`). RolloverStatus: NONE, WAITING_PM, APPROVED_BY_PM, REJECTED_BY_PM (`:19`).

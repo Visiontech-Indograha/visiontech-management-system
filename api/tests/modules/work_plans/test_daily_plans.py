@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
-from tests.daily import make_daily_plan
+from tests.daily import add_item, check_in, make_daily_plan
 
 pytestmark = requires_db
 
@@ -23,13 +23,15 @@ def _create(client, world: World, who: str = "pm", **over):
     return client.post("/work-plans/daily", headers=world.headers(client, who), json=_body(world, **over))
 
 
-def test_pm_creates_draft_and_runs_full_cycle(client, world: World):
+def test_pm_creates_draft_and_runs_full_cycle(client, world: World, fake_storage):
     created = _create(client, world, days=0)
     assert created.status_code == 201, created.text
     plan = created.json()
     assert plan["status"] == "DRAFT" and plan["team_name"]
     pid = plan["daily_plan_id"]
     pm, leader = world.headers(client, "pm"), world.headers(client, "leader")
+    add_item(pid, world, "Titik CCTV uji")  # jadwal kosong tidak boleh diajukan (PLAN_EMPTY)
+    check_in(client, world, "leader")  # ketua harus absen masuk sebelum mulai (CHECKIN_REQUIRED)
 
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).json()["status"] == "SUBMITTED"
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).json()["status"] == "APPROVED"
@@ -83,6 +85,7 @@ def test_reject_returns_to_draft_with_reason(client, world: World):
 
 def test_bulk_approve_skips_ineligible(client, world: World, other_world: World):
     mine = make_daily_plan(world, status="SUBMITTED", days_from_today=1)
+    add_item(mine, world, "Titik CCTV uji")
     done = make_daily_plan(world, status="COMPLETED", days_from_today=2)
     foreign = make_daily_plan(other_world, status="SUBMITTED", days_from_today=1)
     result = client.post("/work-plans/daily/approve", headers=world.headers(client, "pm"),
@@ -147,6 +150,7 @@ def test_recent_sites_lists_distinct_team_sites_newest_first(client, world: Worl
 def test_plan_without_site_name_can_be_submitted_and_approved(client, world: World):
     """Temuan uji nyata 29-10-2026: jadwal tanpa nama lokasi memberi 500 (notification.body NULL)."""
     pid = _create(client, world, days=3, site_name=None).json()["daily_plan_id"]
+    add_item(pid, world, "Titik CCTV uji")
     pm = world.headers(client, "pm")
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).status_code == 200
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).status_code == 200

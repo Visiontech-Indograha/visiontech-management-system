@@ -70,16 +70,20 @@ class WorkCompletionCoreRepository(BaseRepository):
         )
         return role
 
-    async def get_pm_division(self, employee_id: UUID | str) -> UUID | None:
-        """Mencari division_id dari penugasan PM di tabel division atau kolom division_id employee."""
-        sql = """
-            SELECT division_id FROM division WHERE pm_id = CAST(:emp AS uuid) AND delete_at IS NULL
-            UNION
-            SELECT division_id FROM employee WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL
-            LIMIT 1
-        """
-        row = await self.scalar(sql, {"emp": str(employee_id)})
-        return UUID(str(row)) if row else None
+    async def get_pm_divisions(self, employee_id: UUID | str) -> list[dict[str, str]]:
+        """Divisi yang dipimpin PM (bisa lebih dari satu). Tanpa divisi yang dipimpin, pakai divisi profil karyawan."""
+        rows = await self.fetchall(
+            "SELECT division_id, name FROM division WHERE pm_id = CAST(:emp AS uuid) AND delete_at IS NULL "
+            "ORDER BY name",
+            {"emp": str(employee_id)},
+        )
+        if not rows:
+            rows = await self.fetchall(
+                "SELECT d.division_id, d.name FROM employee e JOIN division d ON d.division_id = e.division_id "
+                "WHERE e.employee_id = CAST(:emp AS uuid) AND e.delete_at IS NULL AND d.delete_at IS NULL",
+                {"emp": str(employee_id)},
+            )
+        return [{"division_id": str(r.division_id), "name": r.name} for r in rows]
 
     async def is_division_manager(self, division_id: UUID | str, employee_id: UUID | str) -> bool:
         return bool(await self.scalar(

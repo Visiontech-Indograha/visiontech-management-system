@@ -39,25 +39,25 @@ class OffboardingService:
         self.assets = assets
 
     # ── Baca ─────────────────────────────────────────────────────────────────
-    async def _my_division(self, user: CurrentUser) -> str | None:
-        """None = semua divisi (HR/admin/OM); PM hanya divisinya."""
+    async def _my_divisions(self, user: CurrentUser) -> list[str] | None:
+        """None = semua divisi (HR/admin/OM); PM = seluruh divisi yang ia pimpin (bisa lebih dari satu)."""
         if _manages_all(user) or user.has_role("OPERATIONAL_MANAGER"):
             return None
         if not user.employee_id:
             raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
-        division = await self.repo.scalar(
-            "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL LIMIT 1",
+        rows = await self.repo.fetchall(
+            "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL",
             {"e": user.employee_id},
         )
-        return str(division) if division else "00000000-0000-0000-0000-000000000000"
+        return [str(r.division_id) for r in rows] or ["00000000-0000-0000-0000-000000000000"]
 
     async def list_all(self, user: CurrentUser, status: str | None) -> list[Any]:
-        return await self.repo.list_all(status=status, division_id=await self._my_division(user))
+        return await self.repo.list_all(status=status, division_ids=await self._my_divisions(user))
 
     async def _visible(self, user: CurrentUser, offboarding_id: UUID, *, for_update: bool = False) -> Any:
         record = await self.repo.get(offboarding_id, for_update=for_update)
-        division = await self._my_division(user)
-        if record is None or (division is not None and str(record.division_id) != division):
+        divisions = await self._my_divisions(user)
+        if record is None or (divisions is not None and str(record.division_id) not in divisions):
             raise NotFoundError("Data proses keluar")
         return record
 
@@ -68,7 +68,7 @@ class OffboardingService:
 
     async def pkwt_expiring(self, user: CurrentUser, days: int) -> list[Any]:
         until = jakarta_now().date() + timedelta(days=days)
-        return await self.repo.pkwt_expiring(until, await self._my_division(user))
+        return await self.repo.pkwt_expiring(until, await self._my_divisions(user))
 
     # ── Proses ───────────────────────────────────────────────────────────────
     async def create(self, data: OffboardingCreate) -> dict[str, Any]:

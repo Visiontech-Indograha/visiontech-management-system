@@ -880,7 +880,7 @@ class AttendanceSessionRepository(BaseRepository):
             )
         )
 
-    async def meal_allowance_recap(self, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
+    async def meal_allowance_recap(self, start: Any, end: Any, division_ids: list[str] | None = None) -> list[Any]:
         """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama);
         hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
         return list(
@@ -896,11 +896,11 @@ class AttendanceSessionRepository(BaseRepository):
                 JOIN employee e ON e.employee_id = a.employee_id
                 WHERE a.delete_at IS NULL
                   AND a.attendance_date BETWEEN :start AND :end
-                  AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
+                  AND (CAST(:divs AS uuid[]) IS NULL OR e.division_id = ANY(CAST(:divs AS uuid[])))
                 GROUP BY e.employee_id, e.employee_no, e.full_name
                 ORDER BY e.full_name
                 """,
-                {"start": start, "end": end, "div": str(division_id) if division_id else None},
+                {"start": start, "end": end, "divs": division_ids or None},
             )
         )
 

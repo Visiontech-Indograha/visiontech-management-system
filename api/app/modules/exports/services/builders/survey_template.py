@@ -27,6 +27,16 @@ from app.shared.documents.branding import apply_logos
 
 TEMPLATES = Path(__file__).resolve().parents[4] / "shared" / "documents" / "templates"
 SAMPLE_CLIENT = "PERTAMINA HULU ROKAN"
+# Teks proyek bawaan master (kop, footer, sampul). Diganti judul pekerjaan & klien nyata; tidak boleh tersisa.
+MASTER_TITLES = (
+    ("NEW CCTV INSTALLATION AT PHR ZONA ROKAN", "{title}"),
+    ("INSTALLASI BARU CCTV- ACS AREA ZONA ROKAN", "{title}"),
+    ("NEW ACS AND CCTV INSTALLATION AT SMO SOUTH AREA", "{title}"),
+    ("SURVEY REPORT NEW CCTV INSTALATION", "SURVEY REPORT {title}"),
+    ("INSTALLASI ACS", "{title}"),
+    ("Proposal for New CCTV and ACS Installation", "Proposal: {title}"),
+    ("Proposal for New CCTV Installation", "Proposal: {title}"),
+)
 
 # Kolom tabel "Hitungan installasi Fiber Optic (FO) CCTV" (urutan = kolom master, mulai kolom ke-3).
 FO_NUMERIC = ["Galian/Tarikan", "Indoor Cable", "Spare cable", "Kabel FO", "Kabel Power", "Cable Subduct", "Pipe 2\"",
@@ -98,6 +108,7 @@ class SurveyDoc:
     member_names: list[str]
     logos: dict[str, bytes] = field(default_factory=dict)
     auto_layout: bytes | None = None  # peta satelit + penanda titik (static_map)  # logo kop pengganti (company/client)
+    project_title: str = ""  # judul pekerjaan (order) → kop, footer, sampul
 
 
 # ── Helper teks: isi run tanpa merusak format ─────────────────────────────────
@@ -304,14 +315,22 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
 
     # Sampul tetap; isi klien, tanggal, lokasi, tujuan.
     client = data.client.upper()
+    title = data.project_title.strip() or client
     set_text(elements[spec["client"]], client)
     set_after(elements[spec["date"]], ":", data.date_text)
     set_after(elements[spec["location"]], ":", data.location)
     set_after(elements[spec["purpose"]], ":", data.purpose)
+    titles = [(old, new.format(title=title)) for old, new in MASTER_TITLES]
     for section in doc.sections:
         for part in (section.header, section.footer, section.first_page_header, section.first_page_footer):
             for p in part._element.iter(qn("w:p")):
                 replace_in(p, SAMPLE_CLIENT, client.removeprefix("PT. ").removeprefix("PT "))
+                for old, new in titles:
+                    replace_in(p, old, new)
+    for el in elements[: spec["cover_end"] + 1]:
+        if el.tag == qn("w:p"):
+            for old, new in titles:
+                replace_in(el, old, new)
     for el in elements[spec["cover_end"] + 1:-1]:
         body.remove(el)
 

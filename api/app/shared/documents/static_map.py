@@ -81,9 +81,58 @@ def _tile(z: int, x: int, y: int, client: httpx.Client) -> Image.Image | None:
     return img
 
 
-def _card_size(p: MapPoint) -> tuple[int, int]:
-    text = min(640, 60 + int(_font(30).getlength(p.label)))
-    return (max(380, text), 60 + 285) if p.photo else (max(240, text), 70)
+TITLE_LINE = 38   # tinggi satu baris judul (font 30 px)
+CARD_PAD = 14
+PHOTO_H = 261
+
+
+def _wrap_label(text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, width: float) -> list[str]:
+    """Pecah label per kata agar tiap baris muat di `width`. Kata tunggal yang lebih lebar dipecah per karakter.
+    Tidak pernah memotong dengan "…": nama lengkap tetap terbaca (kotak tumbuh ke bawah bila perlu)."""
+    lines: list[str] = []
+    current = ""
+    for word in text.split():
+        pieces = [word] if font.getlength(word) <= width else _break_word(word, font, width)
+        for piece in pieces:
+            candidate = f"{current} {piece}".strip()
+            if current and font.getlength(candidate) > width:
+                lines.append(current)
+                current = piece
+            else:
+                current = candidate
+    if current:
+        lines.append(current)
+    return lines or [""]
+
+
+def _break_word(word: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, width: float) -> list[str]:
+    parts: list[str] = []
+    chunk = ""
+    for ch in word:
+        if chunk and font.getlength(chunk + ch) > width:
+            parts.append(chunk)
+            chunk = ch
+        else:
+            chunk += ch
+    if chunk:
+        parts.append(chunk)
+    return parts
+
+
+def _card_layout(p: MapPoint, number: int = 1) -> tuple[int, int, list[str]]:
+    """Ukuran kotak keterangan dan baris judulnya ("<nomor>. <nama>" dibungkus). Lebar mengikuti teks terpanjang
+    (maks 640 px), tinggi mengikuti jumlah baris judul dan foto (bila ada)."""
+    font = _font(30)
+    title = f"{number}. {p.label}"
+    natural = int(font.getlength(title)) + 32
+    width = max(380 if p.photo else 240, min(640, natural))
+    lines = _wrap_label(title, font, width - 32)
+    height = CARD_PAD + len(lines) * TITLE_LINE + CARD_PAD
+    if p.photo:
+        height += 10 + PHOTO_H + CARD_PAD
+    return width, height, lines
+
+
 
 
 def _overlap(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> float:
@@ -163,12 +212,12 @@ def render_point_map(points: list[MapPoint]) -> bytes | None:
             canvas.paste(img, (int(tx * TILE - ox), int(ty * TILE - oy)))
 
     pts = [(x - ox, y - oy) for x, y in world]
-    sizes = [_card_size(p) for p in points]
-    cards = _place_cards(pts, sizes, SIZE)
+    layouts = [_card_layout(p, i + 1) for i, p in enumerate(points)]
+    cards = _place_cards(pts, [(w, h) for w, h, _ in layouts], SIZE)
     draw = ImageDraw.Draw(canvas)
     title_font, num_font, small = _font(30), _font(24), _font(20)
 
-    for i, (p, (mx, my), box) in enumerate(zip(points, pts, cards, strict=True)):
+    for p, (mx, my), box, (_, _, lines) in zip(points, pts, cards, layouts, strict=True):
         fill = "#FFFDF2" if p.photo else "#A5DDF7"
         bx = (box[0] + box[2]) / 2
         by = (box[1] + box[3]) / 2
@@ -176,12 +225,13 @@ def render_point_map(points: list[MapPoint]) -> bytes | None:
         nx, ny = -math.sin(ang) * 26, math.cos(ang) * 26
         draw.polygon([(mx, my), (bx + nx, by + ny), (bx - nx, by - ny)], fill=fill, outline="#374151")
         draw.rounded_rectangle(box, radius=10, fill=fill, outline="#374151", width=2)
-        draw.text((box[0] + 16, box[1] + 14), _fit(draw, f"{i + 1}. {p.label}", title_font, box[2] - box[0] - 32),
-                  font=title_font, fill="#111827")
+        for k, line in enumerate(lines):
+            draw.text((box[0] + 16, box[1] + CARD_PAD + k * TITLE_LINE), line, font=title_font, fill="#111827")
         if p.photo:
             try:
-                ph = ImageOps.fit(Image.open(io.BytesIO(p.photo)).convert("RGB"), (int(box[2] - box[0] - 32), 261))
-                canvas.paste(ph, (int(box[0] + 16), int(box[1] + 64)))
+                top = box[1] + CARD_PAD + len(lines) * TITLE_LINE + 10
+                ph = ImageOps.fit(Image.open(io.BytesIO(p.photo)).convert("RGB"), (int(box[2] - box[0] - 32), PHOTO_H))
+                canvas.paste(ph, (int(box[0] + 16), int(top)))
             except OSError:
                 pass
     for i, (p, (mx, my)) in enumerate(zip(points, pts, strict=True)):
@@ -203,10 +253,3 @@ def render_point_map(points: list[MapPoint]) -> bytes | None:
     canvas.save(out, "PNG", optimize=True)
     return out.getvalue()
 
-
-def _fit(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont | ImageFont.ImageFont, width: float) -> str:
-    if draw.textlength(text, font=font) <= width:
-        return text
-    while text and draw.textlength(text + "…", font=font) > width:
-        text = text[:-1]
-    return text + "…"

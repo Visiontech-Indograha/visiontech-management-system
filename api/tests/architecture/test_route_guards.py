@@ -75,6 +75,9 @@ SELF_SERVICE = {
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
+    ("PUT", "/teams/{team_id}/logo"): "TeamLogoService: hanya ketua tim tersebut (SUPER_ADMIN darurat, diuji)",
+    ("DELETE", "/teams/{team_id}/logo"): "TeamLogoService: hanya ketua tim tersebut (SUPER_ADMIN darurat, diuji)",
+    ("GET", "/teams/{team_id}/logo"): "TeamLogoService: anggota tim, PM/OM divisi, HR, SUPER_ADMIN; lain 404 (diuji)",
     # M5 daily-first: kedudukan pada jadwal/order dibaca di service (check_daily_access / standing order).
     ("GET", "/work-plans/daily/{daily_plan_id}/items"): "PlanItemService: check_daily_access(VIEW), lain 404",
     ("GET", "/work-plans/items/{item_id}"): "PlanItemService: jadwal item terlihat (VIEW), lain 404",

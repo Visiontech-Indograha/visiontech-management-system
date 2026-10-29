@@ -124,7 +124,8 @@ def order_sheet_docx(r: CompletionReport) -> bytes:
     """Surat tugas / lembar order: dibuat PM dari data order, tanpa tanda tangan."""
     o = r.order
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Surat Tugas Pekerjaan", f"Nomor order: {r.number}", o.get("client_name"))
+    kit.letterhead(doc, COMPANY, "Surat Tugas Pekerjaan", f"Nomor order: {r.number}", o.get("client_name"),
+                   team_logo=r.team_logo)
 
     kit.heading(doc, "1. Data Order")
     kit.info_table(
@@ -183,7 +184,7 @@ def order_sheet_docx(r: CompletionReport) -> bytes:
 def daily_report_docx(r: DailyReport) -> bytes:
     """Laporan harian satu jadwal (cetak per hari): header jadwal, tabel item, foto, laporan ketua."""
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Laporan Harian Tim", tgl(r.work_date), r.team_name)
+    kit.letterhead(doc, COMPANY, "Laporan Harian Tim", tgl(r.work_date), r.team_name, team_logo=r.team_logo)
 
     kit.heading(doc, "1. Informasi Jadwal")
     kit.info_table(
@@ -241,7 +242,8 @@ def daily_report_docx(r: DailyReport) -> bytes:
 def bast_docx(r: CompletionReport) -> bytes:
     o = r.order
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Berita Acara Serah Terima Pekerjaan", f"Nomor: {r.number}", o.get("client_name"))
+    kit.letterhead(doc, COMPANY, "Berita Acara Serah Terima Pekerjaan", f"Nomor: {r.number}", o.get("client_name"),
+                   team_logo=r.team_logo)
 
     kit.heading(doc, "1. Informasi Pekerjaan")
     kit.info_table(doc, [
@@ -295,7 +297,8 @@ def survey_report_docx(r: CompletionReport) -> bytes:
     o = r.order
     points = r.survey_points
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Survey Report", o.get("project_title"), o.get("client_name"))
+    kit.letterhead(doc, COMPANY, "Survey Report", o.get("project_title"), o.get("client_name"),
+                   team_logo=r.team_logo)
 
     dates = sorted({p.work_date for p in points})
     kit.heading(doc, "1. Informasi Survei")

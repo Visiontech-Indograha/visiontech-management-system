@@ -13,7 +13,7 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 
 _TEAM_COLUMNS = """
-    t.team_id, t.office_id, t.division_id, t.leader_employee_id, t.name, t.status, t.create_at,
+    t.team_id, t.office_id, t.division_id, t.leader_employee_id, t.name, t.status, t.create_at, t.logo_file_id,
     e.full_name AS leader_name, d.name AS division_name, o.name AS office_name,
     (SELECT COUNT(*)::int FROM member m
       WHERE m.team_id = t.team_id AND m.delete_at IS NULL AND m.is_active) AS member_count
@@ -43,7 +43,8 @@ class TeamRepository(BaseRepository):
 
     async def get(self, team_id: UUID | str) -> Any:
         return await self.fetchone(
-            f"SELECT {_TEAM_COLUMNS}, d.pm_id {_TEAM_FROM} WHERE t.team_id = CAST(:id AS uuid) AND t.delete_at IS NULL",
+            f"SELECT {_TEAM_COLUMNS}, d.pm_id, d.om_id {_TEAM_FROM} "
+            "WHERE t.team_id = CAST(:id AS uuid) AND t.delete_at IS NULL",
             {"id": str(team_id)},
         )
 
@@ -212,3 +213,38 @@ class TeamRepository(BaseRepository):
             {"t": str(team_id), "e": str(employee_id)},
         )
         return removed is not None
+
+    async def logo_file_by_hash(self, office_id: UUID | str, sha256: bytes) -> Any:
+        """Berkas logo tim yang isinya sama (kunci sha256 sudah diberi awalan tim → tak bisa bentrok lintas tim)."""
+        return await self.fetchone(
+            "SELECT CAST(id AS text) AS id FROM file_object WHERE office_id = CAST(:org AS uuid) AND sha256 = :sha",
+            {"org": str(office_id), "sha": sha256},
+        )
+
+    async def insert_logo_file(self, *, file_id: str, office_id: UUID | str, storage_key: str, file_name: str,
+                               mime_type: str, byte_size: int, sha256: bytes, user_id: str) -> str:
+        """Catat berkas logo di file_object; bila kunci sama sudah ada (balapan), pakai id yang sudah tercatat."""
+        row = await self.fetchone(
+            """
+            INSERT INTO file_object (id, office_id, storage_key, file_name, mime_type, byte_size, sha256, uploaded_by)
+            VALUES (CAST(:fid AS uuid), CAST(:org AS uuid), :key, :name, :mime, :size, :sha, CAST(:uid AS uuid))
+            ON CONFLICT (office_id, sha256) DO UPDATE SET file_name = EXCLUDED.file_name
+            RETURNING CAST(id AS text) AS id
+            """,
+            {"fid": file_id, "org": str(office_id), "key": storage_key, "name": file_name, "mime": mime_type,
+             "size": byte_size, "sha": sha256, "uid": user_id},
+        )
+        return str(row.id)
+
+    async def logo_file(self, file_id: UUID | str) -> Any:
+        """Kunci storage & MIME berkas logo, atau None."""
+        return await self.fetchone(
+            "SELECT storage_key, mime_type FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
+        )
+
+    async def set_logo(self, team_id: UUID | str, file_id: str | None) -> None:
+        await self.execute(
+            "UPDATE team SET logo_file_id = CAST(:fid AS uuid), update_at = now() "
+            "WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(team_id), "fid": file_id},
+        )

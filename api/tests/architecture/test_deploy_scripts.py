@@ -160,3 +160,11 @@ def test_images_carry_environment_and_revision_labels():
             assert needle in text, f"{dockerfile}: tidak ada {needle}"
     deploy = read(DEPLOY / "autodeploy.sh")
     assert '--build-arg "GIT_SHA=' in deploy and '--build-arg "VMS_ENV=' in deploy
+
+
+def test_autodeploy_updates_itself_once_from_repo():
+    text = read(DEPLOY / "autodeploy.sh")
+    assert "VMS_SELF_UPDATED" in text and "bash -n" in text and "cmp -s" in text
+    # pembaruan diri harus terjadi sebelum penentuan commit baru / build
+    first_heavy = text.index("NEW=$(git -C src rev-parse")
+    assert text.index("VMS_SELF_UPDATED") < first_heavy

@@ -1,4 +1,4 @@
-# CI — gerbang kualitas setiap PR (dok 17, docs/PLAN-PERBAIKAN-TEMUAN.md T-10).
+# CI — gerbang kualitas setiap PR (dok 17).
 # Semua langkah di sini sudah digladi lokal (database kosong dari db/*.sql → 199 uji hijau).
 #
 # Hemat menit (keputusan pemilik 2026-10-08): paket Free = 2.000 menit/bulan untuk repo privat, habis

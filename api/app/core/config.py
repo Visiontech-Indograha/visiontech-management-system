@@ -144,7 +144,7 @@ class Settings(BaseSettings):
     # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.
     APP_RELEASE_DIR: str = ""
 
-    # Pengaturan jam operasional absensi (07:00 s.d. 19:00, 8 jam kerja efektif + 1 jam istirahat)
+    # Pengaturan jam operasional absensi (06:45 s.d. 19:00, 8 jam kerja efektif + 1 jam istirahat)
     ATTENDANCE_OPEN_TIME: str = "06:45"  # tombol absen masuk aktif mulai jam ini
     ATTENDANCE_LATE_AFTER: str = "08:00"  # absen masuk setelah jam ini tetap boleh tetapi bertanda terlambat
     ATTENDANCE_CLOSE_TIME: str = "19:00"

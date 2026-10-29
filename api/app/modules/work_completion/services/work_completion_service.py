@@ -200,7 +200,7 @@ class WorkCompletionService:
             raise ValidationError("Klien tidak ditemukan.")
         if project is not None and str(project.client_id) != str(client.client_id):
             raise ValidationError("Klien order tidak sesuai dengan klien proyek.")
-        return client.name
+        return str(client.name)
 
     async def create_order(self, current_user: CurrentUser, data: dict[str, Any]) -> dict[str, Any]:
         """Membuat order proyek baru."""

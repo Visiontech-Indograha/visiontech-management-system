@@ -41,3 +41,6 @@ Webhook Discord ada di `notify.env` (`DISCORD_WEBHOOK_DEPLOY`, opsional `DISCORD
 
 ## 7. Menutup port DB ke localhost
 `bash ~/deploy/vms-mvp/src/deploy/tutup-port-db.sh --cek` lalu `--ya` (jam sepi; DB restart beberapa detik). Mengikat `5433` ke `127.0.0.1`; aplikasi, backup, dan deploy tidak terpengaruh. Pulihkan dengan berkas `docker-compose.prod.yml.bak-*` yang dicetak skrip.
+
+## 8. Menutup port API dan MinIO ke localhost
+`bash ~/deploy/vms-mvp/src/deploy/tutup-port-layanan.sh --cek` lalu `--ya` (jam sepi). Dasar keamanannya: Cloudflare Tunnel hanya ke `localhost:8080`; Tailscale Serve/Funnel hanya ke `127.0.0.1`. API tetap terikat ke gerbang Docker agar monitor Kuma (`host.docker.internal`) hijau.

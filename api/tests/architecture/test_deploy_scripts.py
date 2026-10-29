@@ -168,3 +168,8 @@ def test_autodeploy_updates_itself_once_from_repo():
     # pembaruan diri harus terjadi sebelum penentuan commit baru / build
     first_heavy = text.index("NEW=$(git -C src rev-parse")
     assert text.index("VMS_SELF_UPDATED") < first_heavy
+
+
+def test_builds_are_serialized_across_environments():
+    text = read(DEPLOY / "autodeploy.sh")
+    assert "flock -w" in text and "BUILD_LOCK" in text and "compose --progress=plain build" in text

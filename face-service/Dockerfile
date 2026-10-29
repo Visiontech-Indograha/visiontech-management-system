@@ -23,6 +23,11 @@ COPY main.py rules.py .
 RUN useradd --system --no-create-home face && chown -R face /models
 USER face
 
+# Metadata citra (terbaca lewat `docker inspect` / deploy/status-layanan.sh). GIT_SHA & VMS_ENV diisi autodeploy.sh.
+ARG GIT_SHA=tidak-diketahui
+ARG VMS_ENV=tidak-diketahui
+LABEL org.opencontainers.image.title="vms-face"       org.opencontainers.image.description="VMS Face service (verifikasi wajah)"       org.opencontainers.image.revision="${GIT_SHA}"       org.opencontainers.image.source="https://github.com/Visiontech-Indograha/visiontech-management-system"       vms.layanan="face"       vms.lingkungan="${VMS_ENV}"       vms.port-dalam="8001"
+
 EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
     CMD python -c "import urllib.request,sys; sys.exit(0 if b'\"ok\"' in urllib.request.urlopen('http://127.0.0.1:8001/health').read() else 1)"

@@ -12,5 +12,5 @@
 - [ ] Uji hijau (pytest dengan DB nyata · npm test · flutter test)
 - [ ] OpenAPI / migrasi / `db/*.sql` disamakan (bila berubah)
 - [ ] Rute publik/izin baru beralasan
-- [ ] Tidak ada rahasia; CHANGELOG diperbarui
+- [ ] Tidak ada rahasia
 - [ ] Langkah server/APK untuk pemilik ditulis (bila ada)

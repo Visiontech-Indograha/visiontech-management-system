@@ -27,6 +27,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanUpdate,
     DailyStatus,
     GeoResult,
+    RecentSiteOut,
     RejectIn,
 )
 from app.modules.work_plans.schemas.daily_report_schema import (
@@ -54,6 +55,13 @@ async def geo_search(q: str = Query(min_length=3, max_length=200), current_user:
                      controller: DailyPlanController = Depends()) -> list[GeoResult]:
     """Cari koordinat lokasi site (OpenStreetMap)."""
     return await controller.handle_geo_search(q)
+
+
+@router.get("/daily/recent-sites", response_model=list[RecentSiteOut])
+async def recent_sites(team_id: UUID, limit: int = Query(default=10, ge=1, le=30), current_user: CurrentUser = _PLANNER,
+                       controller: DailyPlanController = Depends()) -> list[RecentSiteOut]:
+    """Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian)."""
+    return await controller.handle_recent_sites(current_user, team_id, limit)
 
 
 @router.get("/daily", response_model=list[DailyPlanOut])

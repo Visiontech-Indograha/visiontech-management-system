@@ -22,4 +22,11 @@ void main() {
     expect(messStayAction(_stay('APPROVED', '2026-10-01', '2026-10-05'), today), isNull);
     expect(messStayAction(_stay('REJECTED', '2026-11-01', '2026-11-05'), today), isNull);
   });
+
+  test('"Ajukan lagi" menemukan mess lewat kunci mess_id dari API (bukan id)', () {
+    final places = [{'mess_id': 'abd0', 'mess_name': 'Mess Uji Pekanbaru'}, {'mess_id': '1c75', 'mess_name': 'Mes Tebing'}];
+    expect(findMessPlace(places, 'abd0')?['mess_name'], 'Mess Uji Pekanbaru');
+    expect(findMessPlace(places, 'tidak-ada'), isNull);
+    expect(findMessPlace(places, null), isNull);
+  });
 }

@@ -87,6 +87,9 @@ class DailyPlanService:
         data["attachment_file_ids"] = await self.repo.attachment_ids(daily_plan_id)
         return data
 
+    async def recent_sites(self, user: CurrentUser, team_id: UUID, limit: int) -> list[Any]:
+        return await self.repo.recent_sites(team_id=team_id, managed_by=self._manager_scope(user), limit=limit)
+
     async def form_options(self, user: CurrentUser) -> dict[str, Any]:
         scope = self._manager_scope(user)
         return {

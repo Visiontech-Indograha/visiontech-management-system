@@ -314,7 +314,9 @@ class _PlanCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            StatusPill(state),
+                            plan['kind'] == 'STANDBY'
+                                ? const StatusPill('SUBMITTED', label: 'Siaga')
+                                : StatusPill(state),
                           ],
                         ),
                         const SizedBox(height: 4),

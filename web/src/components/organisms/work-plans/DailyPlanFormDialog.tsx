@@ -9,6 +9,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
 import { SiteMapPicker } from "@/components/organisms/sites/SiteMapPicker";
+import { DailyPlanAssetsPanel } from "@/components/organisms/work-plans/DailyPlanAssetsPanel";
 import {
   addDays,
   BACKDATE_DAYS,
@@ -166,6 +167,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           <TextField label="Lintang (lat)" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} error={errors.site_lat} />
           <TextField label="Bujur (lng)" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} error={errors.site_lng} />
         </div>
+        <DailyPlanAssetsPanel teamId={teamId} workDate={workDate} />
         <div className="grid gap-x-3 md:grid-cols-3">
           <TextField name="attendance_radius_m" label="Radius absen (m)" inputMode="numeric" value={radius} onChange={(e) => setRadius(e.target.value)} error={errors.attendance_radius_m} />
           <TextField name="clock_in_time" label="Jam masuk" type="time" defaultValue={(plan?.clock_in_time ?? "07:00").slice(0, 5)} />

@@ -56,6 +56,7 @@ export interface MessStayCreate {
   mess_id: string;
   stay_start_date: string;
   stay_end_date: string;
+  team_id?: string | null;
 }
 
 const KEY = ["mess-stays"] as const;

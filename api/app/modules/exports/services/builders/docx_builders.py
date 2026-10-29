@@ -11,6 +11,7 @@ from __future__ import annotations
 import io
 from collections import defaultdict
 from datetime import date, timedelta
+from typing import Any
 
 from docx.document import Document as DocxDocument
 from docx.shared import Cm
@@ -47,7 +48,7 @@ def _integrity(doc: object, r: CompletionReport) -> None:
     kit.para(doc, text, italic=True, size=8)  # type: ignore[arg-type]
 
 
-def _schedule_days(order: dict, points: list[ReportPoint]) -> list[date]:
+def _schedule_days(order: dict[str, Any], points: list[ReportPoint]) -> list[date]:
     """Seluruh tanggal jadwal order: rentang start..end order ditambah tanggal item (urut, tanpa duplikat)."""
     days: set[date] = {p.work_date for p in points if p.work_date}
     start, end = order.get("start_work_date"), order.get("end_work_date")
@@ -108,7 +109,7 @@ def _map_section(doc: DocxDocument, r: CompletionReport, no: int) -> None:
         kit.para(doc, "Peta tidak tersedia (tanpa koneksi ke citra satelit).", italic=True)
 
 
-def _work_period(order: dict, points: list[ReportPoint]) -> str:
+def _work_period(order: dict[str, Any], points: list[ReportPoint]) -> str:
     """Periode kerja: tanggal order; bila kosong, rentang tanggal item; bila keduanya kosong → belum ditetapkan."""
     start, end = order.get("start_work_date"), order.get("end_work_date")
     if not (start or end) and points:

@@ -2591,7 +2591,7 @@
      "Work Plans (Daily-First)"
     ],
     "summary": "Order Schedule",
-    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu).",
+    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.",
     "operationId": "order_schedule_api_v1_work_plans_orders__completion_id__schedule_get",
     "security": [
      {
@@ -2616,11 +2616,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "type": "array",
-         "items": {
-          "$ref": "#/components/schemas/DailyPlanOut"
-         },
-         "title": "Response Order Schedule Api V1 Work Plans Orders  Completion Id  Schedule Get"
+         "$ref": "#/components/schemas/OrderScheduleOut"
         }
        }
       }
@@ -23735,6 +23731,45 @@
      "project_title"
     ],
     "title": "OrderOption"
+   },
+   "OrderScheduleOut": {
+    "properties": {
+     "total_target_unit": {
+      "type": "integer",
+      "title": "Total Target Unit"
+     },
+     "completed_target_unit": {
+      "type": "integer",
+      "title": "Completed Target Unit"
+     },
+     "scheduled_target_qty": {
+      "type": "number",
+      "title": "Scheduled Target Qty",
+      "description": "Jumlah target item yang sudah dijadwalkan untuk order ini"
+     },
+     "unscheduled_target_qty": {
+      "type": "number",
+      "title": "Unscheduled Target Qty",
+      "description": "Sisa target yang belum dijadwalkan (total - terjadwal)"
+     },
+     "plans": {
+      "items": {
+       "$ref": "#/components/schemas/DailyPlanOut"
+      },
+      "type": "array",
+      "title": "Plans"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total_target_unit",
+     "completed_target_unit",
+     "scheduled_target_qty",
+     "unscheduled_target_qty",
+     "plans"
+    ],
+    "title": "OrderScheduleOut",
+    "description": "Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target)."
    },
    "OvertimeCreate": {
     "properties": {

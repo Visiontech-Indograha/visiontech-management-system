@@ -8946,6 +8946,45 @@
     "title": "OrderOption",
     "type": "object"
    },
+   "OrderScheduleOut": {
+    "description": "Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target).",
+    "properties": {
+     "completed_target_unit": {
+      "title": "Completed Target Unit",
+      "type": "integer"
+     },
+     "plans": {
+      "items": {
+       "$ref": "#/components/schemas/DailyPlanOut"
+      },
+      "title": "Plans",
+      "type": "array"
+     },
+     "scheduled_target_qty": {
+      "description": "Jumlah target item yang sudah dijadwalkan untuk order ini",
+      "title": "Scheduled Target Qty",
+      "type": "number"
+     },
+     "total_target_unit": {
+      "title": "Total Target Unit",
+      "type": "integer"
+     },
+     "unscheduled_target_qty": {
+      "description": "Sisa target yang belum dijadwalkan (total - terjadwal)",
+      "title": "Unscheduled Target Qty",
+      "type": "number"
+     }
+    },
+    "required": [
+     "total_target_unit",
+     "completed_target_unit",
+     "scheduled_target_qty",
+     "unscheduled_target_qty",
+     "plans"
+    ],
+    "title": "OrderScheduleOut",
+    "type": "object"
+   },
    "OvertimeCreate": {
     "description": "Schema for reporting overtime (domain.js REPORT_OVERTIME).\n\nAturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan\ndiperiksa secara terpusat di OvertimeService. Hal ini dilakukan\nagar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.",
     "properties": {
@@ -27837,7 +27876,7 @@
   },
   "/api/v1/work-plans/orders/{completion_id}/schedule": {
    "get": {
-    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu).",
+    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.",
     "operationId": "order_schedule_api_v1_work_plans_orders__completion_id__schedule_get",
     "parameters": [
      {
@@ -27856,11 +27895,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "items": {
-          "$ref": "#/components/schemas/DailyPlanOut"
-         },
-         "title": "Response Order Schedule Api V1 Work Plans Orders  Completion Id  Schedule Get",
-         "type": "array"
+         "$ref": "#/components/schemas/OrderScheduleOut"
         }
        }
       },

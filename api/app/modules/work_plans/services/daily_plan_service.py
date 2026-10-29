@@ -135,6 +135,13 @@ class DailyPlanService:
             raise NotFoundError("Order Proyek Klien")
         return visible
 
+    async def order_target_totals(self, completion_id: UUID) -> Any:
+        """Total target order, yang sudah selesai, dan yang sudah masuk jadwal (dipanggil setelah akses dicek)."""
+        totals = await self.repo.order_target_totals(completion_id)
+        if totals is None:
+            raise NotFoundError("Order Proyek Klien")
+        return totals
+
     @staticmethod
     def _manages_order(user: CurrentUser, scope: Any) -> bool:
         """Super Admin, HR/GA, PM order, atau PM/OM divisi order."""

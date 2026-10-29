@@ -9,22 +9,30 @@ from uuid import UUID
 from fastapi import Depends
 
 from app.core.security import CurrentUser
-from app.modules.teams.dependencies import get_team_service
+from app.modules.teams.dependencies import get_team_logo_service, get_team_service
 from app.modules.teams.schemas.team_schema import (
+    TEAM_LOGO_PATH,
     MemberAdd,
     TeamCreate,
     TeamDetail,
     TeamListItem,
+    TeamLogoOut,
     TeamUpdate,
 )
+from app.modules.teams.services.team_logo_service import TeamLogoService
 from app.modules.teams.services.team_service import TeamService
 
 
 class TeamController:
     """Controller pengelolaan tim kerja dan anggota tim."""
 
-    def __init__(self, team_service: TeamService = Depends(get_team_service)) -> None:
+    def __init__(
+        self,
+        team_service: TeamService = Depends(get_team_service),
+        logo_service: TeamLogoService = Depends(get_team_logo_service),
+    ) -> None:
         self.service = team_service
+        self.logo_service = logo_service
 
     async def handle_list_teams(
         self,
@@ -84,3 +92,14 @@ class TeamController:
     ) -> dict[str, str]:
         await self.service.remove_member(current_user, team_id, employee_id)
         return {"message": "Anggota berhasil dikeluarkan dari tim."}
+
+    async def handle_set_logo(self, current_user: CurrentUser, team_id: UUID, raw: bytes) -> TeamLogoOut:
+        file_id = await self.logo_service.set_logo(current_user, team_id, raw)
+        return TeamLogoOut(team_id=team_id, logo_file_id=UUID(file_id),
+                           logo_url=TEAM_LOGO_PATH.format(team_id=team_id))
+
+    async def handle_delete_logo(self, current_user: CurrentUser, team_id: UUID) -> None:
+        await self.logo_service.delete_logo(current_user, team_id)
+
+    async def handle_get_logo(self, current_user: CurrentUser, team_id: UUID) -> tuple[bytes, str]:
+        return await self.logo_service.get_logo(current_user, team_id)

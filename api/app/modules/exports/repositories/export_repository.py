@@ -73,6 +73,20 @@ class ExportRepository(BaseRepository):
             {"t": str(team_id)},
         )
 
+    async def team_logo_keys(self, team_ids: list[str]) -> dict[str, str]:
+        """team_id → storage_key logo tim (hanya tim yang punya logo)."""
+        if not team_ids:
+            return {}
+        rows = await self.fetchall(
+            """
+            SELECT CAST(t.team_id AS text) AS team_id, fo.storage_key
+            FROM team t JOIN file_object fo ON fo.id = t.logo_file_id
+            WHERE t.team_id = ANY(CAST(:ids AS uuid[])) AND t.delete_at IS NULL
+            """,
+            {"ids": team_ids},
+        )
+        return {str(r.team_id): r.storage_key for r in rows}
+
     async def is_team_member(self, team_id: UUID | str, employee_id: UUID | str) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM team t WHERE t.team_id = CAST(:t AS uuid) "

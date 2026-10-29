@@ -266,6 +266,7 @@ def _svc(items: list | None = None, header: object | None = None) -> es.ExportSe
     repo.daily_items = AsyncMock(return_value=items or [])
     repo.daily_header = AsyncMock(return_value=header)
     repo.team_roster = AsyncMock(return_value=[])
+    repo.team_logo_keys = AsyncMock(return_value={})  # tanpa logo tim: dokumen memakai logo default
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
     repo.employee_name = AsyncMock(return_value="Pengguna Uji")

@@ -1,28 +1,51 @@
-# Pembaruan dependensi otomatis (mingguan, dikelompokkan agar PR tidak membanjir). Peninjauan: CI wajib hijau.
+# Pembaruan dependensi otomatis. Semua PR ke `development` (bukan `prod`: merge ke prod = deploy produksi),
+# bulanan, satu PR per ekosistem (minor+patch digabung). Pembaruan MAJOR tidak dibuka otomatis; naikkan
+# manual saat ada waktu menguji. Peringatan keamanan tetap dibuat Dependabot di luar jadwal ini.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /api
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    target-branch: development
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       python-minor-patch:
         update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /web
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    target-branch: development
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
   - package-ecosystem: pub
     directory: /mobile
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    target-branch: development
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    groups:
+      pub-minor-patch:
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly, day: monday }
-    open-pull-requests-limit: 5
+    target-branch: development
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /api
-    schedule: { interval: weekly, day: monday }
+    target-branch: development
+    schedule: { interval: monthly }
+    open-pull-requests-limit: 1

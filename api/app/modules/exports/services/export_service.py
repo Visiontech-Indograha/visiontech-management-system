@@ -32,6 +32,7 @@ from app.modules.exports.services.builders.docx_builders import (
     survey_report_docx,
 )
 from app.modules.exports.services.builders.model import (
+    AssetLine,
     CompletionReport,
     DailyReport,
     PeriodicReport,
@@ -89,6 +90,8 @@ MAX_PHOTOS_PER_POINT = 6
 MAX_PHOTOS = 40
 MAX_PHOTOS_TEAM_WEEK = 90  # ±3 foto × 30 pekerjaan seminggu
 PHOTO_EDGE = 1280
+# Status penugasan aset (enum asset_status_enum) dalam Bahasa Indonesia untuk dokumen cetak.
+_ASSET_STATUS = {"loaned": "Dipinjam", "allocated": "Dialokasikan", "ready": "Siap", "returned": "Dikembalikan"}
 _UUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 
@@ -103,6 +106,15 @@ def _shrink(image: bytes) -> bytes | None:
             return buf.getvalue()
     except (UnidentifiedImageError, OSError, ValueError):
         return None
+
+
+def _asset_lines(rows: list[Any]) -> list[AssetLine]:
+    """Baris SQL kendaraan/alat → model dokumen."""
+    return [
+        AssetLine(kind=r.kind, name=r.name or "-", code=r.code, holder=r.holder, work_date=r.work_date,
+                  status=_ASSET_STATUS.get(r.status or "", r.status))
+        for r in rows
+    ]
 
 
 def _slug(text: str | None) -> str:
@@ -290,6 +302,7 @@ class ExportService:
             obstacles=header.obstacles, generated_by=await self._printer(user), generated_at=jakarta_now(),
             report_submitted_at=header.report_submitted_at,
             team_logo=await self._team_logo([str(header.team_id)]),
+            assets=_asset_lines(await self.repo.daily_assets(daily_plan_id)),
         )
         content = daily_report_docx(report)
         key = (f"exports/daily-report/{daily_plan_id}/{jakarta_now():%Y%m%d-%H%M%S}_daily_report_"
@@ -414,6 +427,7 @@ class ExportService:
             team_name=team.name, division_name=team.division_name, start=start, end=end, points=points,
             roster=await self.repo.team_roster([str(team_id)]), generated_by=await self._printer(user),
             generated_at=jakarta_now(), team_logo=await self._team_logo([str(team_id)]),
+            assets=_asset_lines(await self.repo.team_week_assets(team_id, start, end)),
         )
         content = team_week_pptx(report)
         key = f"exports/team-week/{team_id}/{start:%Y%m%d}_{jakarta_now():%H%M%S}_team_week.pptx"

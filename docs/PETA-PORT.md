@@ -19,6 +19,8 @@ Citra membawa label: `vms.layanan`, `vms.lingkungan`, `vms.port-dalam`, `org.ope
 Jalur publik: Cloudflare (`portal.visiontechindo.com`) dan Tailscale Funnel (`:10000` → beta API `127.0.0.1:8001`,
 `:8443`) menunjuk ke port di atas. **Mengubah angka port produksi/beta harus bersamaan dengan memperbarui target tunnel itu.**
 
+**Status 29-10-2026:** port API prod `8000`, API beta `8001`, dan MinIO `9000` sudah terikat ke `127.0.0.1` (API juga ke gerbang Docker `172.17.0.1` untuk Uptime Kuma) lewat `deploy/tutup-port-layanan.sh`; DB `5433` lewat `tutup-port-db.sh`. Web `8080`/`8081` tetap terbuka (LAN/Tailscale).
+
 ## Usulan penomoran (diterapkan bertahap, bukan sekaligus)
 Pola: ribuan/ratusan menandai lingkungan, dua digit terakhir menandai layanan.
 

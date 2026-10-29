@@ -15,6 +15,7 @@ import 'package:vms_mobile/data/sync_engine.dart';
 import 'package:vms_mobile/features/attendance/attendance_screen.dart';
 import 'package:vms_mobile/features/auth/auth_controller.dart';
 import 'package:vms_mobile/features/auth/auth_state.dart';
+import 'package:vms_mobile/features/notifications/notifications_screen.dart';
 import 'package:vms_mobile/features/plans/daily_plan_screen.dart';
 import 'package:vms_mobile/features/plans/daily_plans_screen.dart';
 import 'package:vms_mobile/features/plans/item_progress_screen.dart';
@@ -330,6 +331,92 @@ void main() {
         find.text('Menunggu dikirim otomatis saat ada sinyal.'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('Siaga (kind STANDBY)', () {
+    Map<String, dynamic> standbyDetail(String status) => {
+      ..._day('s', status),
+      'kind': 'STANDBY',
+      'clock_in_time': '08:00:00',
+      'clock_out_time': '16:00:00',
+      'pm_name': 'Budi',
+      'pm_phone': null,
+      'items': <Object>[],
+    };
+
+    void noReport() {
+      backend.routes['/report'] = (o) =>
+          throw httpError(o, 404, {'error': {'code': 'NOT_FOUND', 'message': 'belum ada laporan'}});
+    }
+
+    testWidgets('jadwal siaga menampilkan kartu menunggu perintah PM tanpa tombol Mulai hari kerja', (tester) async {
+      backend.routes['/work-plans/daily/s'] = (_) => standbyDetail('APPROVED');
+      noReport();
+      backend.routes['/attendance'] = (_) => {
+        'items': [
+          {'work_date': '2026-10-21', 'check_in_at': '2026-10-21T01:00:00Z'},
+        ],
+        'total': 1,
+      };
+      backend.routes['/start'] = (_) => standbyDetail('ONGOING');
+      await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
+
+      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
+      expect(find.text('Mulai hari kerja'), findsNothing);
+      expect(backend.requests.any((r) => r.path.endsWith('/start')), isFalse);
+    });
+
+    testWidgets('jadwal kerja biasa tetap menampilkan Mulai hari kerja dan tanpa kartu siaga', (tester) async {
+      backend.routes['/work-plans/daily/s'] = (_) => {...standbyDetail('APPROVED'), 'kind': 'WORK'};
+      noReport();
+      backend.routes['/attendance'] = (_) => {
+        'items': [
+          {'work_date': '2026-10-21', 'check_in_at': '2026-10-21T01:00:00Z'},
+        ],
+        'total': 1,
+      };
+      await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
+
+      expect(find.text('Siaga — menunggu perintah PM'), findsNothing);
+      expect(find.text('Mulai hari kerja'), findsOneWidget);
+    });
+
+    testWidgets('daftar jadwal memberi label Siaga pada hari siaga', (tester) async {
+      backend.routes['/work-plans/daily'] = (_) => [
+        {..._day('s', 'APPROVED'), 'kind': 'STANDBY', 'item_count': 0, 'done_count': 0},
+      ];
+      await show(tester, const DailyPlansScreen());
+
+      expect(find.text('Siaga'), findsOneWidget);
+    });
+
+    testWidgets('notifikasi DAILY_ACTIVATED membuka jadwal yang diaktifkan', (tester) async {
+      backend.routes['/notifications'] = (_) => {
+        'unread': 1,
+        'items': [
+          {
+            'id': 'n1',
+            'title': 'Tim Anda mendapat tugas',
+            'body': 'Lokasi s',
+            'kind': 'DAILY_ACTIVATED',
+            'target': 'plan',
+            'daily_plan_id': 's',
+            'read_at': null,
+            'created_at': '2026-10-21T01:00:00Z',
+          },
+        ],
+      };
+      backend.routes['/notifications/n1/read'] = (_) => <String, dynamic>{};
+      backend.routes['/work-plans/daily/s'] = (_) => standbyDetail('APPROVED');
+      noReport();
+      backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
+      await show(tester, const NotificationsScreen());
+
+      await tester.tap(find.text('Tim Anda mendapat tugas'));
+      await settle(tester);
+      expect(backend.requests.any((r) => r.path.endsWith('/work-plans/daily/s')), isTrue);
+      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
     });
   });
 

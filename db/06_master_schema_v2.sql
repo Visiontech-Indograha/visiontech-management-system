@@ -228,6 +228,7 @@ CREATE TABLE IF NOT EXISTS tool (
     category tool_category_enum NOT NULL,
     name VARCHAR(100) NOT NULL,
     tool_code VARCHAR(50) NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim pemakai bawaan (v2_0015)
     photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -245,6 +246,7 @@ CREATE TABLE IF NOT EXISTS vehicle (
     vehicle_type vehicle_type_enum NOT NULL,
     name TEXT NOT NULL,
     number_plate VARCHAR(20) NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim pemakai bawaan (v2_0015)
     photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -413,6 +415,7 @@ CREATE TABLE IF NOT EXISTS company_mess_stay (
     employee_id UUID NOT NULL REFERENCES employee(employee_id),
     stay_start_date DATE NOT NULL,
     stay_end_date DATE NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim yang menginap (v2_0015)
     status VARCHAR(20) NOT NULL DEFAULT 'APPROVED',
     requested_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
     request_note TEXT NULL,
@@ -424,6 +427,7 @@ CREATE TABLE IF NOT EXISTS company_mess_stay (
     delete_at TIMESTAMPTZ NULL,
     CONSTRAINT ck_mess_stay_status CHECK (status IN ('REQUESTED','APPROVED','REJECTED','CANCELLED'))
 );
+CREATE INDEX IF NOT EXISTS ix_company_mess_stay_team_dates ON company_mess_stay (team_id, stay_start_date);
 
 -- 20. Tabel asset_assignment (Peminjaman Alat Pribadi, Alat Umum & Kendaraan - Konfirmasi 3A, 3B, 1A)
 CREATE TABLE IF NOT EXISTS asset_assignment (

@@ -169,6 +169,10 @@ async def get_file_viewer(
     )
 
 
+def _is_legacy_admin(current_user: CurrentUser) -> bool:
+    return "ADMIN" in current_user.roles or RoleCode.ADMIN in current_user.roles
+
+
 def require_permission(
     required_permission: Permission,
 ) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
@@ -177,7 +181,8 @@ def require_permission(
     Jika tidak, akan memunculkan galat 403 Forbidden.
     """
     async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-        if "ADMIN" in current_user.roles or RoleCode.ADMIN in current_user.roles:
+        # ADMIN lama lolos semua izin KECUALI hapus permanen (DELETE_ANY khusus SUPER_ADMIN, lihat core/permissions.py).
+        if _is_legacy_admin(current_user) and required_permission is not Permission.DELETE_ANY:
             return current_user
         if required_permission.value not in current_user.permissions:
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
@@ -190,7 +195,7 @@ def require_any_permission(
 ) -> Callable[[CurrentUser], Coroutine[Any, Any, CurrentUser]]:
     """Lolos bila pengguna punya SALAH SATU izin yang disebut (mis. cari alamat: pengelola SK atau pengelola lokasi)."""
     async def permission_checker(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-        if "ADMIN" in current_user.roles or RoleCode.ADMIN in current_user.roles:
+        if _is_legacy_admin(current_user) and Permission.DELETE_ANY not in required:
             return current_user
         if not any(p.value in current_user.permissions for p in required):
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)

@@ -112,6 +112,18 @@ void main() {
     await db.close();
   });
 
+  Future<void> settle(WidgetTester tester) async {
+    // Beri waktu I/O nyata (berkas swafoto, DB lokal, unggah palsu) sampai indikator proses hilang,
+    // baru tunggu animasi selesai — rantai async V2 (kamera → unggah → kirim) lebih panjang dari 100 ms.
+    for (var i = 0; i < 30; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+      await tester.pump(const Duration(milliseconds: 50));
+      // Minimal ±0,5 dtk: di CI yang lambat indikator proses belum tentu sudah muncul di putaran awal.
+      if (i >= 10 && find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
+    }
+    await tester.pumpAndSettle();
+  }
+
   Future<void> show(WidgetTester tester, Widget screen) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(
@@ -130,20 +142,11 @@ void main() {
       );
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
-    await tester.pumpAndSettle();
+    // Muat data memakai I/O nyata: tunggu indikator hilang (settle), bukan pumpAndSettle yang bisa
+    // habis waktu saat pemuatan pertama masih berjalan.
+    await settle(tester);
   }
 
-  Future<void> settle(WidgetTester tester) async {
-    // Beri waktu I/O nyata (berkas swafoto, DB lokal, unggah palsu) sampai indikator proses hilang,
-    // baru tunggu animasi selesai — rantai async V2 (kamera → unggah → kirim) lebih panjang dari 100 ms.
-    for (var i = 0; i < 30; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
-      await tester.pump(const Duration(milliseconds: 50));
-      // Minimal ±0,5 dtk: di CI yang lambat indikator proses belum tentu sudah muncul di putaran awal.
-      if (i >= 10 && find.byType(CircularProgressIndicator).evaluate().isEmpty) break;
-    }
-    await tester.pumpAndSettle();
-  }
 
   group('Jadwal harian', () {
     testWidgets('menampilkan jadwal minggu ini beserta ringkasan titik', (tester) async {

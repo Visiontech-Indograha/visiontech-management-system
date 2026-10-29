@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { DialogCancelButton } from "@/components/molecules/DialogActions";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { FormBlock } from "@/components/molecules/FormBlock";
@@ -31,9 +32,7 @@ export function AssetFormDialog({
       onClose={onClose}
       footer={
         <>
-          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
-            Batal
-          </ActionButton>
+          <DialogCancelButton onCancel={onClose} disabled={submitting} />
           <ActionButton type="submit" form="asset-form" disabled={submitting}>
             {submitting ? "Menyimpan..." : submitLabel}
           </ActionButton>

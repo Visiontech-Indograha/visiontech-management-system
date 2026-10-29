@@ -15,19 +15,21 @@ import { AssetFormDialog } from "./AssetFormDialog";
  * ketersediaan: bila aset sudah dipakai tim lain pada tanggal itu, peringatan tampil dan simpan dinonaktifkan.
  * Aturan STNK/KIR/SIM & jadwal tetap dijaga API.
  */
-export function AssetLendDialog({ kind, assetId, assetName, onClose }: {
+export function AssetLendDialog({ kind, assetId, assetName, onClose, preset }: {
   kind: AssetKind;
   assetId: string;
   assetName: string;
   onClose: () => void;
+  /** Isian awal dari jadwal harian (tombol di dialog jadwal): tanggal, tim, dan jadwal. */
+  preset?: { workDate?: string; teamId?: string; dailyPlanId?: string };
 }) {
   const lend = useLend();
   const upload = useUploadFile();
   const [q, setQ] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [workDate, setWorkDate] = useState(wibDate());
-  const [teamId, setTeamId] = useState("");
-  const [dailyPlanId, setDailyPlanId] = useState("");
+  const [workDate, setWorkDate] = useState(preset?.workDate || wibDate());
+  const [teamId, setTeamId] = useState(preset?.teamId ?? "");
+  const [dailyPlanId, setDailyPlanId] = useState(preset?.dailyPlanId ?? "");
   const employees = useEmployees({ q, status: "active", page: 1 });
   const teams = useTeams();
   const plans = useDailyPlans({ start: workDate, end: workDate });

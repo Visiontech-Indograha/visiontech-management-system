@@ -49,8 +49,10 @@ def _check_in(client, world: World, who: str = "member", location=INSIDE, **extr
 
 
 def _check_out(client, world: World, who: str = "member"):
+    # Swafoto ikut dikirim seperti aplikasi HP: absen pulang juga diperiksa wajahnya (F8).
     return client.post("/attendance/check-out", headers=world.headers(client, who),
-                       json={"location": INSIDE, "channel": _channel(who)})
+                       json={"location": INSIDE, "channel": _channel(who),
+                             "selfie_file_id": _selfie(client, world, who)})
 
 
 def _needs_review(client, world: World, who: str = "member") -> str:

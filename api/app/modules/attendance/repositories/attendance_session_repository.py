@@ -99,6 +99,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -321,6 +322,7 @@ class AttendanceSessionRepository(BaseRepository):
         selfie_file_id: UUID | None,
         face_result: str | None,
         face_similarity: float | None,
+        face_status: str = "NOT_CHECKED",
         source: str = "MOBILE",
         explanation: str | None = None,
         at: Any = None,
@@ -381,7 +383,7 @@ class AttendanceSessionRepository(BaseRepository):
                 face_match_score, face_photo_path, distance_to_target_m,
                 is_within_attendance_radius, out_of_radius_photo_path, out_of_radius_note,
                 om_approval_status, distance_from_main_office_m, city_zone_status,
-                meal_allowance_amount
+                meal_allowance_amount, face_status
             ) VALUES (
                 CAST(:emp AS uuid), :work_date, :target_type, CAST(:office_id AS uuid), CAST(:daily_id AS uuid),
                 :sched_in, :sched_out, COALESCE(CAST(:at AS timestamptz), NOW()),
@@ -389,7 +391,7 @@ class AttendanceSessionRepository(BaseRepository):
                 :face_score, :photo_path, :dist_target,
                 :in_radius, :out_photo, :note,
                 :om_status, :dist_main, CAST(:city_zone AS city_zone_enum),
-                :meal_amount
+                :meal_amount, :face_status
             )
             RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
                       COALESCE(daily_plan_id, office_id) AS site_id, CAST(:label AS text) AS site_label,
@@ -408,6 +410,7 @@ class AttendanceSessionRepository(BaseRepository):
                       CAST(:selfie_id AS uuid) AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -423,6 +426,7 @@ class AttendanceSessionRepository(BaseRepository):
                 "in_lat": lat,
                 "in_lng": lng,
                 "face_score": face_score,
+                "face_status": face_status,
                 "photo_path": photo_path,
                 "dist_target": distance_to_target,
                 "in_radius": is_within_radius,
@@ -479,6 +483,7 @@ class AttendanceSessionRepository(BaseRepository):
                           AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity,
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
@@ -557,6 +562,7 @@ class AttendanceSessionRepository(BaseRepository):
                           AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -590,6 +596,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -742,6 +749,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS employee_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,

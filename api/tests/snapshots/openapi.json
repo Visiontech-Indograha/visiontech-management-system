@@ -856,6 +856,17 @@
       ],
       "title": "Face Similarity"
      },
+     "face_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Status"
+     },
      "id": {
       "format": "uuid",
       "title": "Id",

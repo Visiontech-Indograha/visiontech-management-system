@@ -27,6 +27,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanCopy,
     DailyPlanCreate,
     DailyPlanDetail,
+    DailyPlanLocationUpdate,
     DailyPlanOut,
     DailyPlanUpdate,
     DailyStatus,
@@ -143,6 +144,14 @@ async def update_daily_plan(daily_plan_id: UUID, data: DailyPlanUpdate, current_
                             controller: DailyPlanController = Depends()) -> DailyPlanOut:
     """Mengubah jadwal (DRAFT/SUBMITTED)."""
     return await controller.handle_update(current_user, daily_plan_id, data)
+
+
+@router.patch("/daily/{daily_plan_id}/location", response_model=DailyPlanOut)
+async def update_daily_plan_location(daily_plan_id: UUID, data: DailyPlanLocationUpdate,
+                                     current_user: CurrentUser = _PLANNER,
+                                     controller: DailyPlanController = Depends()) -> DailyPlanOut:
+    """Ubah lokasi jadwal DISETUJUI yang belum dimulai tanpa mengembalikannya ke draf (PM/OM); tercatat di audit."""
+    return await controller.handle_update_location(current_user, daily_plan_id, data)
 
 
 @router.delete("/daily/{daily_plan_id}")

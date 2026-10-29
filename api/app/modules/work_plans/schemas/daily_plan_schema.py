@@ -75,6 +75,15 @@ class DailyPlanUpdate(BaseModel):
         return self
 
 
+class DailyPlanLocationUpdate(BaseModel):
+    """Ubah lokasi jadwal DISETUJUI yang belum dimulai (PM/OM). Lokasi selalu lengkap: nama dan koordinat."""
+
+    site_name: str = Field(min_length=2, max_length=150)
+    site_lat: Decimal = Field(ge=-90, le=90)
+    site_lng: Decimal = Field(ge=-180, le=180)
+    attendance_radius_m: int = Field(ge=10, le=5000)
+
+
 class DailyPlanCopy(BaseModel):
     """Salin jadwal (lokasi, jam, tim) ke tanggal lain — mis. menyusun satu minggu."""
 

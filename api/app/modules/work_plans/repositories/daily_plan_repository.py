@@ -17,7 +17,7 @@ _SELECT = """
            wpd.project_id, (SELECT p.project_title FROM project p WHERE p.project_id = wpd.project_id)
                AS project_title,
            t.leader_employee_id, le.full_name AS leader_name, le.phone_number AS leader_phone,
-           d.pm_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
+           d.pm_id, d.om_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,

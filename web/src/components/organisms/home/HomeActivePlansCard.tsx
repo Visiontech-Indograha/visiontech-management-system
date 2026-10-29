@@ -29,7 +29,7 @@ export function HomeActivePlansCard({ plans, active }: { plans: UseQueryResult<D
                   <TextBlock className="truncate font-medium text-ink">{p.team_name}</TextBlock>
                   <TextBlock className="mt-0.5 flex items-center gap-1.5 truncate text-body-sm text-mist">
                     <MapPin size={14} aria-hidden className="shrink-0" />
-                    {p.site_name} · {formatDate(p.work_date)}
+                    {p.site_name || "Lokasi belum ditentukan"} · {formatDate(p.work_date)}
                   </TextBlock>
                 </div>
                 <StatusBadge status={p.status} />

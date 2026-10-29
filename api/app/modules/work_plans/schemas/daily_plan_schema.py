@@ -198,6 +198,8 @@ class DailyPlanOut(BaseModel):
     done_count: int = 0
     progress_pct: int = 0  # rata-rata jumlah dikerjakan/target, 0–100
     phases: list[str] = []  # SURVEY/PREPARATION/INSTALLATION/REPLACEMENT/MAINTENANCE
+    # PM/OM divisi jadwal (atau SUPER_ADMIN): hanya mereka yang boleh menyetujui/mengubah. Dihitung server.
+    can_manage: bool = False
 
 
 class DailyPlanDetail(DailyPlanOut):

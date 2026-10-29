@@ -19,6 +19,7 @@ export interface LeaveRequest {
   reviewed_by_name?: string | null;
   reviewed_at?: string | null;
   rejection_note?: string | null;
+  review_note?: string | null;
   cancel_note?: string | null;
   conflicts?: LeaveConflict[];
   create_at: string;

@@ -4901,6 +4901,11 @@ export interface components {
             decision: "APPROVE" | "REJECT" | "ACCEPT" | "RETURN";
             /** Note */
             note?: string | null;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
         };
         /** CorrectionOut */
         CorrectionOut: {
@@ -5046,6 +5051,8 @@ export interface components {
              * @default 16:00:00
              */
             clock_out_time: string;
+            /** Backdate Reason */
+            backdate_reason?: string | null;
         };
         /** DailyPlanDetail */
         DailyPlanDetail: {

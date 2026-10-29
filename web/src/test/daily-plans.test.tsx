@@ -31,8 +31,9 @@ describe("Jadwal harian", () => {
       if (c.url === "/work-plans/daily/p1/approve") return { data: plan({ status: "APPROVED" }) };
     });
     renderRoute("/work-plans", { role: "PM" });
-    // Satu jadwal di tanggal itu → langsung detail lengkap.
+    // Satu jadwal di tanggal itu: jendela hari (PM) → baris tim → detail lengkap.
     fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Setujui jadwal" }));
     // Aksi penting meminta konfirmasi dulu; belum ada permintaan sebelum dikonfirmasi.
@@ -102,5 +103,68 @@ describe("Jadwal harian", () => {
     expect(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Buat jadwal/ })).toBeNull();
     expect(screen.queryByRole("button", { name: /Setujui minggu ini/ })).toBeNull();
+  });
+});
+
+describe("F10 · buat jadwal dari sel hari, tanggal lampau, dan hapus", () => {
+  const yIso = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() - 86_400_000));
+  const yLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+    .format(new Date(`${yIso}T00:00:00Z`));
+
+  it("PM membuka sel hari berjadwal lalu melihat tim lain yang belum punya jadwal dengan 'Buat jadwal'", async () => {
+    mockApi((c) => {
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [plan()] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+    const day = await screen.findByRole("dialog");
+    expect(within(day).getByRole("button", { name: /Tim Alpha/ })).toBeInTheDocument();
+    fireEvent.click(within(day).getByRole("button", { name: /Tim Bravo/ }));
+    const form = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
+    expect(within(form).getByLabelText("Tim")).toHaveValue("t2");
+    expect(within(form).queryByLabelText(/Alasan tanggal lampau/)).toBeNull();
+  });
+
+  it("tanggal lampau: buat jadwal meminta alasan dan mengirimnya sebagai backdate_reason", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-plans/daily" && c.method === "post") return { data: plan({ status: "DRAFT", work_date: yIso }) };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${yLabel}: kosong` }));
+    const day = await screen.findByRole("dialog");
+    fireEvent.click(within(day).getByRole("button", { name: /Tim Alpha/ }));
+    const form = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
+    expect(within(form).getByLabelText("Tanggal")).toHaveValue(yIso);
+    const submitForm = () => fireEvent.submit(form.querySelector("form") as HTMLFormElement);
+    submitForm();
+    expect(await within(form).findByText("Isi alasan untuk tanggal lampau.")).toBeInTheDocument();
+    expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily")).toBe(false);
+    fireEvent.change(within(form).getByLabelText(/Alasan tanggal lampau/), { target: { value: "Hujan, pekerjaan tertunda" } });
+    submitForm();
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily")).toBe(true));
+    const body = calls.find((c) => c.method === "post" && c.url === "/work-plans/daily")?.data as Record<string, unknown>;
+    expect(body.work_date).toBe(yIso);
+    expect(body.backdate_reason).toBe("Hujan, pekerjaan tertunda");
+  });
+
+  it("jadwal disetujui yang belum dimulai bisa dihapus setelah konfirmasi", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/work-plans/daily/p1" && c.method === "delete") return { status: 204, data: null };
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [plan({ status: "APPROVED" })] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-plans/daily/p1") return { data: { ...plan({ status: "APPROVED" }), items: [], attachment_file_ids: [] } };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
+    const detail = await screen.findByRole("dialog");
+    fireEvent.click(within(detail).getByRole("button", { name: "Hapus" }));
+    const confirm = await screen.findByRole("dialog", { name: "Hapus jadwal?" });
+    expect(calls.some((c) => c.method === "delete")).toBe(false);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Hapus" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "delete" && c.url === "/work-plans/daily/p1")).toBe(true));
   });
 });

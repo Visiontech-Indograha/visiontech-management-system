@@ -103,10 +103,15 @@ def test_copy_to_other_dates(client, world: World):
     assert {c["status"] for c in copied.json()} == {"DRAFT"}
 
 
-def test_only_unused_unapproved_plans_can_be_deleted(client, world: World):
+def test_only_unused_unstarted_plans_can_be_deleted(client, world: World):
+    """F10: jadwal DISETUJUI yang belum dimulai boleh dihapus (lunak); yang sudah ONGOING tidak."""
     pm = world.headers(client, "pm")
+    ongoing = make_daily_plan(world, status="ONGOING")
+    assert client.delete(f"/work-plans/daily/{ongoing}", headers=pm).status_code == 409
     approved = make_daily_plan(world, status="APPROVED", days_from_today=1)
-    assert client.delete(f"/work-plans/daily/{approved}", headers=pm).status_code == 409
+    assert client.delete(f"/work-plans/daily/{approved}", headers=pm).status_code == 200
+    assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s",
+                      (approved,))[0][0]
     draft = make_daily_plan(world, status="DRAFT", days_from_today=2)
     assert client.delete(f"/work-plans/daily/{draft}", headers=pm).status_code == 200
     assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s", (draft,))[0][0]
@@ -154,3 +159,31 @@ def test_plan_without_site_name_can_be_submitted_and_approved(client, world: Wor
     pm = world.headers(client, "pm")
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).status_code == 200
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).status_code == 200
+
+
+def test_pm_backdates_up_to_seven_days_with_reason_and_audit(client, world: World):
+    """F10: PM/OM boleh membuat jadwal tanggal lampau <= 7 hari bila beralasan; tercatat di audit."""
+    pm = world.headers(client, "pm")
+    reason = "Hujan, pekerjaan tertunda"
+    created = _create(client, world, days=-2, backdate_reason=reason)
+    assert created.status_code == 201, created.text
+    plan_id = created.json()["daily_plan_id"]
+    audit = sync_query("SELECT action, changed_diff->>'reason' FROM app_activity_logs "
+                       "WHERE entity_id = %s AND action = 'BACKDATE_CREATED'", (plan_id,))
+    assert audit == [("BACKDATE_CREATED", reason)]
+
+    assert _create(client, world, days=-2).status_code == 422          # tanpa alasan
+    assert _create(client, world, days=-8, backdate_reason=reason).status_code == 422  # lebih dari 7 hari
+    assert _create(client, world, who="member", days=-2, backdate_reason=reason).status_code == 403
+
+    assert client.post(f"/work-plans/daily/{plan_id}/items", headers=pm,
+                       json={"work_type_id": str(sync_query(
+                           "INSERT INTO work_type (division_id, name) VALUES (%s, 'Uji backdate') "
+                           "RETURNING work_type_id", (world.unit_id,))[0][0]),
+                           "title": "Titik backdate", "task_phase": "INSTALLATION",
+                           "is_main_deliverable": True, "target_qty": "1"}).status_code == 201
+    approved = client.post(f"/work-plans/daily/{plan_id}/approve", headers=pm)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "APPROVED"
+    assert sync_query("SELECT COUNT(*) FROM app_activity_logs WHERE entity_id = %s "
+                      "AND action = 'BACKDATE_APPROVED'", (plan_id,))[0][0] == 1

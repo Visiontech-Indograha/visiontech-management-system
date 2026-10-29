@@ -46,6 +46,7 @@ describe("persen jadwal (W6)", () => {
     });
     renderRoute("/work-plans", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getAllByText("Berjalan").length).toBeGreaterThan(0);
     expect(within(dialog).getByText("99%")).toBeInTheDocument();
@@ -79,6 +80,7 @@ describe("volume target (W2)", () => {
     });
     renderRoute("/work-plans", { role: "PM" });
     fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(await within(dialog).findByRole("button", { name: "Tambah pekerjaan" }));
     fireEvent.change(within(dialog).getByLabelText("Judul titik"), { target: { value: "Titik uji" } });

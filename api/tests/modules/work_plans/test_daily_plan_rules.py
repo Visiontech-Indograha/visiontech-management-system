@@ -85,3 +85,43 @@ def test_copy_carries_items_with_progress_reset_and_skips_survey_and_dependent(c
         (new_plan,))
     assert sorted(r[0] for r in rows) == ["Instalasi A", "Pemasangan bergantung"]
     assert all(r[1] == "TODO" and r[2] == 0 and r[3] == 0 for r in rows)
+
+
+def test_start_past_plan_allowed_when_leader_checked_in_today(client, world: World):
+    """F11: jadwal bertanggal lampau yang belum dimulai boleh dimulai bila ketua sudah absen HARI INI."""
+    plan = make_daily_plan(world, status="APPROVED", days_from_today=-1)
+    add_item(plan, world, "Titik CCTV uji")
+    leader = world.headers(client, "leader")
+
+    assert client.post(f"/work-plans/daily/{plan}/start", headers=leader).status_code == 409
+    check_in(client, world, "leader")
+    started = client.post(f"/work-plans/daily/{plan}/start", headers=leader)
+    assert started.status_code == 200, started.text
+    assert started.json()["status"] == "ONGOING"
+
+
+def test_complete_without_report_is_report_required(client, world: World):
+    plan = make_daily_plan(world, status="ONGOING")
+    add_item(plan, world, "Titik selesai")
+
+    refused = client.post(f"/work-plans/daily/{plan}/complete", headers=world.headers(client, "leader"))
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["error"]["code"] == "REPORT_REQUIRED"
+
+
+def test_complete_pending_rollover_comes_before_report_check(client, world: World):
+    """F16: keputusan pindah hari (ROLLOVER_PENDING) diperiksa lebih dulu daripada laporan harian (REPORT_REQUIRED)."""
+    plan = make_daily_plan(world, status="ONGOING")
+    add_item(plan, world, "Titik menunggu", status="PENDING_ROLLOVER")
+    leader = world.headers(client, "leader")
+
+    refused = client.post(f"/work-plans/daily/{plan}/complete", headers=leader)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "ROLLOVER_PENDING"
+
+    report = client.post(f"/work-plans/daily/{plan}/report", headers=leader,
+                         json={"summary": "Laporan uji", "obstacles": None, "photos_json": []})
+    assert report.status_code in (200, 201), report.text
+    still = client.post(f"/work-plans/daily/{plan}/complete", headers=leader)
+    assert still.status_code == 409, still.text
+    assert still.json()["error"]["code"] == "ROLLOVER_PENDING"

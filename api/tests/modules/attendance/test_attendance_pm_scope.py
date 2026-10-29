@@ -7,11 +7,12 @@ from __future__ import annotations
 
 import io
 
+import pytest
 from PIL import Image
 
 from tests.conftest import World, requires_db, sync_query
 
-pytestmark = requires_db
+pytestmark = [requires_db, pytest.mark.usefixtures("fake_storage")]
 
 
 def _second_division_pm(world: World) -> str:
@@ -28,8 +29,9 @@ def _member_check_in(client, world: World) -> str:
     selfie = client.post("/files/upload", headers=world.headers(client, "member"),
                          files={"file": ("swafoto.png", buf.getvalue(), "image/png")})
     assert selfie.status_code == 200, selfie.text
-    body = {"site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "channel": "MOBILE",
-            "selfie_file_id": selfie.json()["file_id"]}
+    # Di luar radius + penjelasan → status NEEDS_REVIEW (menunggu pemeriksaan PM divisinya).
+    body = {"site_id": world.site_id, "location": {"lat": -6.3, "lng": 106.8}, "channel": "MOBILE",
+            "selfie_file_id": selfie.json()["file_id"], "explanation": "Survei titik di luar lokasi"}
     check_in = client.post("/attendance/check-in", headers=world.headers(client, "member"), json=body)
     assert check_in.status_code == 200, check_in.text
     return check_in.json()["id"]
@@ -66,7 +68,7 @@ def test_pm_of_other_division_cannot_review_attendance(client, world: World):
                          json={"is_approved": True})
     assert denied.status_code in (403, 404), denied.text
     allowed = client.post(f"/attendance/{att_id}/review", headers=world.headers(client, "pm"),
-                          json={"is_approved": True})
+                          json={"is_approved": True, "note": "Diperiksa PM divisi"})
     assert allowed.status_code == 200, allowed.text
 
 

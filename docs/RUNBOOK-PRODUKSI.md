@@ -28,6 +28,7 @@ Pulihkan DB: `deploy/uji-pulih-cadangan.sh` (latihan, tidak menyentuh prod) lalu
 ## 4. Backup
 - Harian 01:30: `backup.sh` → `backups/*.dump` (7 terakhir) + unggah MinIO `vms-backups`.
 - Luar-server: `deploy/backup-offsite.sh` (rsync via Tailscale; konfigurasi `offsite.env`, lihat komentar di skrip). Tanpa ini tidak ada salinan di luar server.
+  Pasang dua fase: `bash siapkan-offsite.sh siapkan <user@host> <folder>` (buat kunci + `offsite.env`, cetak baris kunci untuk mesin tujuan), lalu `bash siapkan-offsite.sh pasang` (uji kering, salin nyata, cron 01:45).
 - `healthcheck.sh` memberi alert Discord bila backup lokal/luar-server > 26 jam.
 
 ## 5. Pemeliharaan rutin

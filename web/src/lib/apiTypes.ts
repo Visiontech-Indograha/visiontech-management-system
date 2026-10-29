@@ -542,6 +542,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Create Daily
+         * @description Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+         */
+        post: operations["bulk_create_daily_api_v1_work_plans_daily_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/bulk-standby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Standby Daily
+         * @description Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+         */
+        post: operations["bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/{daily_plan_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Daily Plan
+         * @description Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim.
+         */
+        post: operations["activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/approve": {
         parameters: {
             query?: never;
@@ -5042,6 +5102,100 @@ export interface components {
              */
             create_at: string;
         };
+        /**
+         * DailyActivateIn
+         * @description Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi).
+         */
+        DailyActivateIn: {
+            /** Items */
+            items: components["schemas"]["PlanItemCreate"][];
+        };
+        /** DailyBulkCellOut */
+        DailyBulkCellOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CREATED" | "SKIPPED";
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Message */
+            message?: string | null;
+        };
+        /**
+         * DailyBulkIn
+         * @description Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.
+         */
+        DailyBulkIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Team Ids */
+            team_ids: string[];
+            /** Work Dates */
+            work_dates: string[];
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
+            /**
+             * Target
+             * @default DRAFT
+             * @enum {string}
+             */
+            target: "DRAFT" | "APPROVED";
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /**
+             * Attendance Radius M
+             * @default 150
+             */
+            attendance_radius_m: number | null;
+        };
+        /** DailyBulkOut */
+        DailyBulkOut: {
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Cells */
+            cells: components["schemas"]["DailyBulkCellOut"][];
+        };
+        /**
+         * DailyBulkStandbyIn
+         * @description Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati.
+         */
+        DailyBulkStandbyIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Team Ids */
+            team_ids: string[];
+            /** Work Dates */
+            work_dates: string[];
+        };
         /** DailyFormOptions */
         DailyFormOptions: {
             /** Divisions */
@@ -5116,6 +5270,12 @@ export interface components {
              * Format: date
              */
             work_date: string;
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /** Site Name */
             site_name?: string | null;
             /** Site Lat */
@@ -5208,6 +5368,12 @@ export interface components {
              * @enum {string}
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /**
              * Created By Id
              * Format: uuid
@@ -5316,6 +5482,12 @@ export interface components {
              * @enum {string}
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /**
              * Created By Id
              * Format: uuid
@@ -6845,6 +7017,8 @@ export interface components {
              * Format: date
              */
             stay_end_date: string;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayOut */
         MessStayOut: {
@@ -6925,6 +7099,8 @@ export interface components {
             stay_end_date: string;
             /** Note */
             note?: string | null;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayUpdate */
         MessStayUpdate: {
@@ -8672,6 +8848,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /**
@@ -8706,6 +8884,10 @@ export interface components {
              * Format: uuid
              */
             tool_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8743,6 +8925,8 @@ export interface components {
         ToolUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Ownership Type */
@@ -8776,6 +8960,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /**
              * Division Id
              * Format: uuid
@@ -8868,6 +9054,10 @@ export interface components {
              * Format: uuid
              */
             vehicle_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8907,6 +9097,8 @@ export interface components {
         VehicleUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Vehicle Type */
@@ -10553,6 +10745,107 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_create_daily_api_v1_work_plans_daily_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyBulkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyBulkStandbyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyBulkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyActivateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -7619,6 +7619,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -7819,6 +7831,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -12374,6 +12398,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "maxLength": 50,
       "minLength": 2,
@@ -12520,6 +12556,29 @@
       "title": "Status",
       "type": "string"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "tool_code": {
       "title": "Tool Code",
       "type": "string"
@@ -12628,6 +12687,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "anyOf": [
        {
@@ -12720,6 +12791,18 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "vehicle_type": {
       "enum": [
@@ -12976,6 +13059,29 @@
       ],
       "title": "Stnk Expired At"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "vehicle_id": {
       "format": "uuid",
       "title": "Vehicle Id",
@@ -13068,6 +13174,18 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "vehicle_type": {
       "anyOf": [

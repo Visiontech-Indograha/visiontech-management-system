@@ -477,6 +477,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Weekly Matrix
+         * @description Matriks alokasi mingguan: tim × 7 hari (Senin–Minggu) untuk divisi yang dikelola PM/OM. `division_id` opsional
+         *     (kosong = semua divisi yang dikelola). Sel memuat status, jenis (WORK/STANDBY), ringkasan item, dan sisa target
+         *     order.
+         */
+        get: operations["weekly_matrix_api_v1_work_plans_weekly_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/geo/search": {
         parameters: {
             query?: never;
@@ -5110,6 +5132,22 @@ export interface components {
             /** Items */
             items: components["schemas"]["PlanItemCreate"][];
         };
+        /**
+         * DailyBulkAsset
+         * @description Aset yang akan dipakai pekerjaan massal; hanya dipakai untuk peringatan bentrok per sel (tidak menulis).
+         */
+        DailyBulkAsset: {
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+        };
         /** DailyBulkCellOut */
         DailyBulkCellOut: {
             /**
@@ -5133,6 +5171,8 @@ export interface components {
             reason?: string | null;
             /** Message */
             message?: string | null;
+            /** Warnings */
+            warnings?: components["schemas"]["DailyBulkWarning"][];
         };
         /**
          * DailyBulkIn
@@ -5171,6 +5211,8 @@ export interface components {
              * @default 150
              */
             attendance_radius_m: number | null;
+            /** Assets */
+            assets?: components["schemas"]["DailyBulkAsset"][];
         };
         /** DailyBulkOut */
         DailyBulkOut: {
@@ -5195,6 +5237,19 @@ export interface components {
             team_ids: string[];
             /** Work Dates */
             work_dates: string[];
+        };
+        /**
+         * DailyBulkWarning
+         * @description Peringatan per sel yang tidak menggagalkan pembuatan: LEADER_CUTI (ketua cuti), ASET_BENTROK (aset dipinjam).
+         */
+        DailyBulkWarning: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "LEADER_CUTI" | "ASET_BENTROK";
+            /** Message */
+            message: string;
         };
         /** DailyFormOptions */
         DailyFormOptions: {
@@ -9122,6 +9177,102 @@ export interface components {
             /** Photo File Id */
             photo_file_id?: string | null;
         };
+        /** WeeklyCell */
+        WeeklyCell: {
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Status */
+            status?: ("DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED") | null;
+            /** Kind */
+            kind?: ("WORK" | "STANDBY") | null;
+            /**
+             * Item Count
+             * @default 0
+             */
+            item_count: number;
+            /** Items */
+            items?: components["schemas"]["WeeklyItemBrief"][];
+            /** Orders */
+            orders?: components["schemas"]["WeeklyOrderRef"][];
+        };
+        /** WeeklyDivision */
+        WeeklyDivision: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Name */
+            name: string;
+        };
+        /** WeeklyItemBrief */
+        WeeklyItemBrief: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /** Title */
+            title: string;
+            /** Work Type Name */
+            work_type_name?: string | null;
+            /** Completion Id */
+            completion_id?: string | null;
+            /** Target Qty */
+            target_qty?: string | null;
+            /** Completed Qty */
+            completed_qty?: string | null;
+            /** Status */
+            status: string;
+        };
+        /** WeeklyMatrixOut */
+        WeeklyMatrixOut: {
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /** Days */
+            days: string[];
+            /** Divisions */
+            divisions: components["schemas"]["WeeklyDivision"][];
+            /** Rows */
+            rows: components["schemas"]["WeeklyRow"][];
+        };
+        /**
+         * WeeklyOrderRef
+         * @description Order klien yang dikerjakan pada sel. `remaining_qty` = total - selesai; `unscheduled_qty` = total - sudah
+         *     dijadwalkan di semua jadwal (sisa yang belum dialokasikan).
+         */
+        WeeklyOrderRef: {
+            /**
+             * Completion Id
+             * Format: uuid
+             */
+            completion_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Project Title */
+            project_title?: string | null;
+            /** Order Number */
+            order_number?: string | null;
+            /** Total Target Unit */
+            total_target_unit: number;
+            /** Remaining Qty */
+            remaining_qty: number;
+            /** Unscheduled Qty */
+            unscheduled_qty: number;
+        };
         /** WeeklyPresentationOut */
         WeeklyPresentationOut: {
             /**
@@ -9145,6 +9296,27 @@ export interface components {
             presentation_notes?: string | null;
             /** Pm Feedback */
             pm_feedback?: string | null;
+        };
+        /** WeeklyRow */
+        WeeklyRow: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Team Name */
+            team_name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name: string;
+            /** Leader Name */
+            leader_name?: string | null;
+            /** Cells */
+            cells: components["schemas"]["WeeklyCell"][];
         };
         /**
          * WorkCompletionAccDecision
@@ -10640,6 +10812,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DailyFormOptions"];
+                };
+            };
+        };
+    };
+    weekly_matrix_api_v1_work_plans_weekly_get: {
+        parameters: {
+            query: {
+                /** @description Senin awal minggu (YYYY-MM-DD) */
+                week_start: string;
+                division_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyMatrixOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -94,6 +94,13 @@ class BulkApproveOut(BaseModel):
     skipped: list[UUID]
 
 
+class DailyBulkAsset(BaseModel):
+    """Aset yang akan dipakai pekerjaan massal; hanya dipakai untuk peringatan bentrok per sel (tidak menulis)."""
+
+    asset_type: Literal["TOOL", "VEHICLE"]
+    asset_id: UUID
+
+
 class DailyBulkIn(BaseModel):
     """Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan."""
 
@@ -107,6 +114,7 @@ class DailyBulkIn(BaseModel):
     site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
     site_lng: Decimal | None = Field(default=None, ge=-180, le=180)
     attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
+    assets: list[DailyBulkAsset] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def _rules(self) -> DailyBulkIn:
@@ -125,6 +133,13 @@ class DailyBulkStandbyIn(BaseModel):
     work_dates: list[date] = Field(min_length=1, max_length=31)
 
 
+class DailyBulkWarning(BaseModel):
+    """Peringatan per sel yang tidak menggagalkan pembuatan: LEADER_CUTI (ketua cuti), ASET_BENTROK (aset dipinjam)."""
+
+    code: Literal["LEADER_CUTI", "ASET_BENTROK"]
+    message: str
+
+
 class DailyBulkCellOut(BaseModel):
     team_id: UUID
     work_date: date
@@ -132,6 +147,7 @@ class DailyBulkCellOut(BaseModel):
     daily_plan_id: UUID | None = None
     reason: str | None = None  # kode galat tetap, mis. TEAM_DAY_TAKEN
     message: str | None = None
+    warnings: list[DailyBulkWarning] = Field(default_factory=list)
 
 
 class DailyBulkOut(BaseModel):

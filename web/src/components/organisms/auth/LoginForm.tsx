@@ -66,6 +66,7 @@ export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
               </ActionButton>
             </FormBlock>
           </PanelContent>
+          <TextBlock className="text-center text-xs text-muted-foreground">Versi {__APP_VERSION__}</TextBlock>
         </Panel>
   );
 }

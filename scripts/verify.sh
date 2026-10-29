@@ -18,6 +18,9 @@ step() { # step <nama> <direktori> <perintah...>
   if (cd "$dir" && "$@") >> "$log" 2>&1; then echo "  ok     $name"; else echo "  GAGAL  $name"; tail -n 15 "$log" | sed 's/^/         /'; fail=1; fi
 }
 
+# Versi SemVer konsisten (VERSION = api/VERSION = web/package.json = mobile/pubspec.yaml).
+step "versi konsisten" . bash scripts/versi.sh
+
 if [ "$what" = api ] || [ "$what" = all ]; then
   step "api ruff" api "../$PY" -m ruff check app tests
   step "api mypy" api "../$PY" -m mypy

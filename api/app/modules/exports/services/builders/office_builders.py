@@ -17,6 +17,7 @@ from pptx.presentation import Presentation as PptxPresentation
 from app.modules.exports.services.builders import pptx_theme as theme
 from app.modules.exports.services.builders.model import (
     COMPANY,
+    AssetLine,
     CompletionReport,
     PeriodicReport,
     TeamWeekReport,
@@ -197,6 +198,17 @@ def periodic_pptx(r: PeriodicReport) -> bytes:
     return theme.save(prs)
 
 
+def _assets_slide(prs: PptxPresentation, assets: Sequence[AssetLine], footer: str) -> None:
+    """Satu slide tabel kendaraan & alat tim pada minggu itu; tanpa aset → tanpa slide."""
+    for start in range(0, len(assets), 14):
+        chunk = assets[start:start + 14]
+        slide = theme.page(prs, "Kendaraan & alat minggu ini", footer=footer)
+        theme.table(slide, ["Tanggal", "Jenis", "Nama / kode", "Pemegang", "Status"],
+                    [(tgl(a.work_date), a.kind, f"{a.name} ({a.code})" if a.code else a.name, a.holder or "-",
+                      a.status or "-") for a in chunk],
+                    [3.6, 3.0, 6.4, 3.8, 3.2])
+
+
 def team_week_pptx(r: TeamWeekReport) -> bytes:
     """Laporan mingguan tim: sampul, ringkasan (kartu angka + jenis), tabel semua pekerjaan, satu slide per
     pekerjaan (foto, keterangan, status), penutup."""
@@ -209,6 +221,7 @@ def team_week_pptx(r: TeamWeekReport) -> bytes:
     _summary(prs, r.points, r.division_name, footer, "Anggota tim",
              "\n".join([f"Ketua: {leader}", *[f"• {m}" for m in members]]))
     _points_table(prs, "Semua pekerjaan minggu ini", r.team_name, r.points, footer)
+    _assets_slide(prs, r.assets, footer)
     _work_slides(prs, r.points, footer)
     theme.closing(prs, f"{r.team_name} · {COMPANY}")
     return theme.save(prs)

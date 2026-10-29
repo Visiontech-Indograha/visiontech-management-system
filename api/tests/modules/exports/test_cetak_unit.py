@@ -20,6 +20,7 @@ from app.core.errors import ForbiddenError, NotFoundError
 from app.modules.exports.services import export_service as es
 from app.modules.exports.services.builders.docx_builders import bast_docx, daily_report_docx, order_sheet_docx
 from app.modules.exports.services.builders.model import (
+    AssetLine,
     CompletionReport,
     DailyReport,
     ReportPhoto,
@@ -201,6 +202,36 @@ def test_daily_report_without_leader_report_says_so():
     assert "Belum ada item pekerjaan pada jadwal ini." in text
 
 
+def _daily(assets: list[AssetLine]) -> DailyReport:
+    return DailyReport(
+        team_name="Tim MEP", division_name="MEP", work_date=date(2026, 11, 3), site_name=None, status="ONGOING",
+        leader_name="Agus", points=[], roster=[], summary=None, obstacles=None, generated_by="pm@x",
+        generated_at=datetime(2026, 11, 3, tzinfo=UTC), assets=assets,
+    )
+
+
+def test_daily_report_lists_vehicles_and_tools_with_holder_and_status():
+    text = _text(daily_report_docx(_daily([
+        AssetLine("Kendaraan", "Hilux", "B 1234 XY", "Agus", date(2026, 11, 3), "Dipinjam"),
+        AssetLine("Alat", "Bor beton", "TL-007", "Riko", date(2026, 11, 3), "Dipinjam"),
+    ])))
+    assert "3. Kendaraan & Alat" in text and "4. Laporan Ketua Tim" in text
+    assert "Hilux" in text and "B 1234 XY" in text and "Bor beton" in text and "TL-007" in text
+    assert "Riko" in text and "Dipinjam" in text
+
+
+def test_daily_report_without_assets_says_none_is_borrowed():
+    text = _text(daily_report_docx(_daily([])))
+    assert "Tidak ada kendaraan atau alat yang dipinjam." in text
+
+
+def test_asset_rows_map_to_lines_with_indonesian_status():
+    rows = [SimpleNamespace(kind="Kendaraan", name="Hilux", code="B 1234 XY", holder="Agus",
+                            work_date=date(2026, 11, 3), status="loaned")]
+    (line,) = es._asset_lines(rows)
+    assert line.kind == "Kendaraan" and line.code == "B 1234 XY" and line.status == "Dipinjam"
+
+
 # ── Peta lokasi & ringkasan harian di BAST ───────────────────────────────────
 
 
@@ -266,6 +297,8 @@ def _svc(items: list | None = None, header: object | None = None) -> es.ExportSe
     repo.completion_items = AsyncMock(return_value=items or [])
     repo.daily_items = AsyncMock(return_value=items or [])
     repo.daily_header = AsyncMock(return_value=header)
+    repo.daily_assets = AsyncMock(return_value=[])
+    repo.team_week_assets = AsyncMock(return_value=[])
     repo.team_roster = AsyncMock(return_value=[])
     repo.team_logo_keys = AsyncMock(return_value={})  # tanpa logo tim: dokumen memakai logo default
     repo.image_keys = AsyncMock(return_value={})
@@ -376,6 +409,25 @@ async def test_daily_report_export_is_stored_with_its_schedule(monkeypatch):
     _, content = await svc.export_daily_report(USER, "d1")
     assert "LAPORAN HARIAN TIM" in _text(content)
     assert svc.repo.insert_export.await_args.kwargs["daily_plan_id"] == "d1"
+
+
+@pytest.mark.anyio
+async def test_daily_report_export_prints_vehicles_and_tools_of_the_schedule(monkeypatch):
+    monkeypatch.setattr(es.storage, "upload_file", lambda *a, **k: True)
+    header = SimpleNamespace(
+        daily_plan_id="d1", team_id="t1", work_date=date(2026, 11, 3), site_name=None, status="ONGOING",
+        team_name="Tim MEP", division_name="MEP", leader_name="Agus", summary=None, obstacles=None,
+        report_submitted_at=None,
+    )
+    svc = _svc([_row()], header)
+    svc.repo.daily_assets = AsyncMock(return_value=[
+        SimpleNamespace(kind="Kendaraan", name="Hilux", code="B 1234 XY", holder="Agus",
+                        work_date=date(2026, 11, 3), status="loaned"),
+    ])
+    monkeypatch.setattr(es, "check_daily_access", AsyncMock(return_value=None))
+    _, content = await svc.export_daily_report(USER, "d1")
+    svc.repo.daily_assets.assert_awaited_once_with("d1")
+    assert "B 1234 XY" in _text(content) and "Dipinjam" in _text(content)
 
 
 @pytest.mark.anyio

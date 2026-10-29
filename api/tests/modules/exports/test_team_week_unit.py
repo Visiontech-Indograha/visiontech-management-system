@@ -18,7 +18,7 @@ from pptx import Presentation
 from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.exports.services import export_service as es
-from app.modules.exports.services.builders.model import ReportPhoto, ReportPoint, TeamWeekReport
+from app.modules.exports.services.builders.model import AssetLine, ReportPhoto, ReportPoint, TeamWeekReport
 from app.modules.exports.services.builders.office_builders import team_week_pptx
 from app.shared.content_disposition import content_disposition
 
@@ -140,3 +140,47 @@ async def test_team_week_is_readable_by_hr_like_daily_report(monkeypatch):
     assert err.value.code == "NO_WORK"  # lolos gerbang akses; tanpa item hanya pesan "tidak ada pekerjaan"
     check.assert_not_awaited()
 
+
+
+def test_team_week_deck_has_vehicle_and_tool_slide_when_assets_exist():
+    report = _report()
+    report.assets = [AssetLine("Kendaraan", "Hilux", "B 1234 XY", "Agus", date(2026, 10, 27), "Dipinjam")]
+    prs = Presentation(io.BytesIO(team_week_pptx(report)))
+    texts = [_slide_text(s) for s in prs.slides]
+    # sampul + ringkasan + tabel + aset + 2 pekerjaan + penutup
+    assert len(texts) == 7
+    assert "Kendaraan & alat minggu ini" in texts[3] and "B 1234 XY" in texts[3] and "Dipinjam" in texts[3]
+
+
+def test_team_week_deck_without_assets_has_no_asset_slide():
+    prs = Presentation(io.BytesIO(team_week_pptx(_report())))
+    texts = [_slide_text(s) for s in prs.slides]
+    assert not any("Kendaraan & alat" in t for t in texts)
+    assert len(texts) == 6
+
+
+@pytest.mark.anyio
+async def test_team_week_export_passes_the_teams_vehicles_and_tools_to_the_deck(monkeypatch):
+    svc = _service(member=True, items=[SimpleNamespace(team_id="t")])
+    svc.repo.team_week_assets = AsyncMock(return_value=[
+        SimpleNamespace(kind="Alat", name="Bor beton", code="TL-007", holder="Riko", work_date=date(2026, 10, 27),
+                        status="allocated"),
+    ])
+    svc.repo.team_roster = AsyncMock(return_value=[])
+    svc._points = AsyncMock(return_value=([], []))
+    svc._team_logo = AsyncMock(return_value=None)
+    svc._printer = AsyncMock(return_value="ketua")
+    svc._store = AsyncMock(return_value=SimpleNamespace(export_id="e1"))
+    captured: dict[str, object] = {}
+
+    def spy(report):  # type: ignore[no-untyped-def]
+        captured["report"] = report
+        return b"pptx"
+
+    monkeypatch.setattr(es, "team_week_pptx", spy)
+    user = CurrentUser(user_id=str(uuid4()), organization_id=str(uuid4()), email="ketua@x", role="PROJECT_MANAGER",
+                       roles=["PROJECT_MANAGER"], session_id="s", permissions=[], employee_id=str(uuid4()))
+    await svc.export_team_week(user, uuid4(), date(2026, 10, 26))
+    svc.repo.team_week_assets.assert_awaited_once()
+    (line,) = captured["report"].assets
+    assert line.name == "Bor beton" and line.code == "TL-007" and line.status == "Dialokasikan"

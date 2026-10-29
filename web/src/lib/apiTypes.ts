@@ -672,6 +672,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/{daily_plan_id}/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Daily Plan Location
+         * @description Ubah lokasi jadwal DISETUJUI yang belum dimulai tanpa mengembalikannya ke draf (PM/OM); tercatat di audit.
+         */
+        patch: operations["update_daily_plan_location_api_v1_work_plans_daily__daily_plan_id__location_patch"];
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/{daily_plan_id}/copy": {
         parameters: {
             query?: never;
@@ -5475,6 +5495,20 @@ export interface components {
              * @default []
              */
             attachment_file_ids: string[];
+        };
+        /**
+         * DailyPlanLocationUpdate
+         * @description Ubah lokasi jadwal DISETUJUI yang belum dimulai (PM/OM). Lokasi selalu lengkap: nama dan koordinat.
+         */
+        DailyPlanLocationUpdate: {
+            /** Site Name */
+            site_name: string;
+            /** Site Lat */
+            site_lat: number | string;
+            /** Site Lng */
+            site_lng: number | string;
+            /** Attendance Radius M */
+            attendance_radius_m: number;
         };
         /** DailyPlanOut */
         DailyPlanOut: {
@@ -11220,6 +11254,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_daily_plan_location_api_v1_work_plans_daily__daily_plan_id__location_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyPlanLocationUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyPlanOut"];
                 };
             };
             /** @description Validation Error */

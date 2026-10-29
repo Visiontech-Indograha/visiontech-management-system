@@ -87,6 +87,12 @@ export const useCreateDailyPlan = () =>
 export const useUpdateDailyPlan = (id: string) =>
   useDailyMutation(async (body: DailyPlanUpdate) => (await api.put<DailyPlan>(`/work-plans/daily/${id}`, body)).data);
 
+export type DailyPlanLocation = S["DailyPlanLocationUpdate"];
+
+/** PATCH lokasi jadwal DISETUJUI yang belum dimulai (PM/OM); status tetap, tidak kembali ke draf. */
+export const useUpdateDailyPlanLocation = (id: string) =>
+  useDailyMutation(async (body: DailyPlanLocation) => (await api.patch<DailyPlan>(`/work-plans/daily/${id}/location`, body)).data);
+
 export const useDeleteDailyPlan = () =>
   useDailyMutation(async (id: string) => (await api.delete(`/work-plans/daily/${id}`)).data);
 

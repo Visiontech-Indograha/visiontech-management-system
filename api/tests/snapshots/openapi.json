@@ -3435,6 +3435,57 @@
     "title": "DailyPlanDetail",
     "type": "object"
    },
+   "DailyPlanLocationUpdate": {
+    "description": "Ubah lokasi jadwal DISETUJUI yang belum dimulai (PM/OM). Lokasi selalu lengkap: nama dan koordinat.",
+    "properties": {
+     "attendance_radius_m": {
+      "maximum": 5000.0,
+      "minimum": 10.0,
+      "title": "Attendance Radius M",
+      "type": "integer"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Site Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "site_name",
+     "site_lat",
+     "site_lng",
+     "attendance_radius_m"
+    ],
+    "title": "DailyPlanLocationUpdate",
+    "type": "object"
+   },
    "DailyPlanOut": {
     "properties": {
      "approved_at": {
@@ -28056,6 +28107,65 @@
     "summary": "Create Item",
     "tags": [
      "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/location": {
+   "patch": {
+    "description": "Ubah lokasi jadwal DISETUJUI yang belum dimulai tanpa mengembalikannya ke draf (PM/OM); tercatat di audit.",
+    "operationId": "update_daily_plan_location_api_v1_work_plans_daily__daily_plan_id__location_patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyPlanLocationUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyPlanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Daily Plan Location",
+    "tags": [
+     "Work Plans (Daily-First)"
     ]
    }
   },

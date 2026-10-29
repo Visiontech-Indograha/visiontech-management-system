@@ -35,6 +35,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyBulkOut,
     DailyBulkWarning,
     DailyPlanCreate,
+    DailyPlanLocationUpdate,
     DailyPlanUpdate,
 )
 from app.modules.work_plans.services.plan_item_service import PlanItemService
@@ -237,6 +238,31 @@ class DailyPlanService:
                       project_id=str(data.project_id) if data.project_id else None,
                       site_name=data.site_name.strip() if data.site_name else None)
         await self.repo.update(daily_plan_id, fields)
+        return await self.repo.get(daily_plan_id)
+
+    async def update_location(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanLocationUpdate) -> Any:
+        """Ubah lokasi (nama, koordinat, radius) jadwal DISETUJUI yang belum dimulai, tanpa mengembalikan ke draf.
+        Dicatat di audit LOCATION_CHANGED dengan nilai sebelum dan sesudah."""
+        access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
+        require_daily_status(access, "APPROVED")
+        plan = access.plan
+        if plan.work_date <= jakarta_now().date():
+            raise AppError("PLAN_STARTED", "Lokasi hanya dapat diubah sebelum hari kerja dimulai.", status=409)
+        current = await self.repo.get(daily_plan_id)
+        name = data.site_name.strip()
+        await self.repo.update(daily_plan_id, {
+            "team_id": None, "project_id": None, "work_date": None, "clock_in_time": None, "clock_out_time": None,
+            "site_name": name, "site_name_set": True,
+            "site_lat": data.site_lat, "site_lat_set": True,
+            "site_lng": data.site_lng, "site_lng_set": True,
+            "attendance_radius_m": data.attendance_radius_m, "attendance_radius_m_set": True,
+        })
+        await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "LOCATION_CHANGED", {
+            "from": {"site_name": current.site_name, "site_lat": str(current.site_lat),
+                     "site_lng": str(current.site_lng), "attendance_radius_m": current.attendance_radius_m},
+            "to": {"site_name": name, "site_lat": str(data.site_lat), "site_lng": str(data.site_lng),
+                   "attendance_radius_m": data.attendance_radius_m},
+        })
         return await self.repo.get(daily_plan_id)
 
     async def copy(self, user: CurrentUser, daily_plan_id: UUID, work_dates: list[date]) -> list[Any]:

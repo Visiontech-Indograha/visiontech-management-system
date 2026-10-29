@@ -215,4 +215,42 @@ describe("F10 · buat jadwal dari sel hari, tanggal lampau, dan hapus", () => {
     await waitFor(() => expect(deleted.length).toBe(1));
     expect(calls.filter((c) => c.method === "delete").map((c) => c.url)).toEqual(["/work-plans/daily/p1", "/work-plans/daily/p2"]);
   });
+
+  it("PM mengubah lokasi jadwal yang disetujui sebelum hari kerjanya, tanpa kembali ke draf", async () => {
+    const tomorrow = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + 86_400_000));
+    const tLabel = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" })
+      .format(new Date(`${tomorrow}T00:00:00Z`));
+    const calls = mockApi((c) => {
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [plan({ status: "APPROVED", work_date: tomorrow })] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-plans/daily/p1/location") return { data: plan({ status: "APPROVED", work_date: tomorrow, site_name: "Lokasi HP Uji" }) };
+      if (c.url === "/work-plans/daily/p1") return { data: { ...plan({ status: "APPROVED", work_date: tomorrow }), items: [], attachment_file_ids: [] } };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${tLabel}: 1 jadwal` }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
+    const detail = await screen.findByRole("dialog");
+    fireEvent.click(within(detail).getByRole("button", { name: "Ubah lokasi" }));
+    const form = within(await screen.findByRole("form", { name: "Ubah lokasi jadwal" }));
+    fireEvent.change(form.getByLabelText("Nama lokasi"), { target: { value: "Lokasi HP Uji" } });
+    fireEvent.change(form.getByLabelText("Lintang (lat)"), { target: { value: "0.4212983" } });
+    fireEvent.change(form.getByLabelText("Bujur (lng)"), { target: { value: "101.3806115" } });
+    fireEvent.click(form.getByRole("button", { name: "Simpan lokasi" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "patch" && c.url === "/work-plans/daily/p1/location")).toBe(true));
+    expect(calls.find((c) => c.method === "patch")!.data).toEqual({ site_name: "Lokasi HP Uji", site_lat: 0.4212983, site_lng: 101.3806115, attendance_radius_m: 150 });
+    expect(calls.some((c) => c.method === "post" && c.url.endsWith("/submit"))).toBe(false);
+  });
+
+  it("jadwal disetujui hari ini tidak menawarkan Ubah lokasi", async () => {
+    mockApi((c) => {
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [plan({ status: "APPROVED" })] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-plans/daily/p1") return { data: { ...plan({ status: "APPROVED" }), items: [], attachment_file_ids: [] } };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 1 jadwal` }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Alpha/ }));
+    const detail = await screen.findByRole("dialog");
+    expect(within(detail).queryByRole("button", { name: "Ubah lokasi" })).toBeNull();
+  });
 });

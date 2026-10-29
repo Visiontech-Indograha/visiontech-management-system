@@ -22,6 +22,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyFormOptions,
     DailyPlanCreate,
     DailyPlanDetail,
+    DailyPlanLocationUpdate,
     DailyPlanOut,
     DailyPlanUpdate,
     GeoResult,
@@ -101,6 +102,11 @@ class DailyPlanController:
 
     async def handle_update(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanUpdate) -> DailyPlanOut:
         return self._out(user, await self.service.update(user, daily_plan_id, data))
+
+    async def handle_update_location(
+        self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanLocationUpdate
+    ) -> DailyPlanOut:
+        return self._out(user, await self.service.update_location(user, daily_plan_id, data))
 
     async def handle_copy(self, user: CurrentUser, daily_plan_id: UUID, work_dates: list[date]) -> list[DailyPlanOut]:
         return [self._out(user, r) for r in await self.service.copy(user, daily_plan_id, work_dates)]

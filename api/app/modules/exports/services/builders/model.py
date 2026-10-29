@@ -95,6 +95,8 @@ class CompletionReport:
     photos: list[ReportPhoto] = field(default_factory=list)  # foto realisasi tingkat order (ketua tim)
     leader_signature: bytes | None = None
     pm_signature: bytes | None = None
+    map_image: bytes | None = None  # PNG peta + penanda titik (None: tanpa koneksi / tanpa koordinat)
+    has_coordinates: bool = False  # ada titik berkoordinat (beda 'tanpa koneksi' dan 'tanpa titik')
 
     @property
     def survey_points(self) -> list[ReportPoint]:
@@ -109,6 +111,25 @@ class CompletionReport:
     @property
     def number(self) -> str:
         return str(self.order.get("order_number") or str(self.order["completion_id"])[:8].upper())
+
+
+@dataclass
+class DailyReport:
+    """Laporan harian satu jadwal: tim, ketua, item (progres, catatan, alasan tunda) dan laporan ketua."""
+
+    team_name: str
+    division_name: str
+    work_date: date
+    site_name: str | None
+    status: str
+    leader_name: str
+    points: list[ReportPoint]
+    roster: list[Any]
+    summary: str | None
+    obstacles: str | None
+    generated_by: str
+    generated_at: datetime
+    report_submitted_at: datetime | None = None
 
 
 @dataclass

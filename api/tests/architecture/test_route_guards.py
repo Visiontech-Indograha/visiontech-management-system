@@ -110,6 +110,7 @@ GUARDED_IN_HANDLER = {
     ("GET", "/exports/surveys/{task_id}/preview"): "ExportService → SurveyService.detail (akses survei)",
     ("POST", "/exports/surveys/{task_id}"): "ExportService → SurveyService.detail (akses survei)",
     ("POST", "/exports/team-week"): "ExportService.export_team_week: anggota tim atau PM/OM divisinya (diuji)",
+    ("POST", "/exports/daily-report"): "ExportService.export_daily_report: check_daily_access VIEW (tim saat dirilis, PM/OM; lain 404)",
     ("GET", "/work-completions/{completion_id}/signatures/{role}"): "WorkCompletionService._access (tim/PM order)",
     ("DELETE", "/work-completions/{completion_id}/photos/{file_id}"):
         "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",

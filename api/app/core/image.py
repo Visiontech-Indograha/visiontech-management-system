@@ -3,8 +3,13 @@ import logging
 
 from PIL import Image, ImageOps
 from PIL.Image import Image as PILImage
+from pillow_heif import register_heif_opener
 
 logger = logging.getLogger(__name__)
+
+# Dekoder HEIC/HEIF untuk Pillow (foto iPhone/Android): setelah ini `Image.open` menerima HEIC asli.
+# HEIC palsu/terpotong tetap gagal didekode dan ditolak (415/422) oleh `is_decodable_image`.
+register_heif_opener()
 
 # Constants for image resizing
 SIZES = {

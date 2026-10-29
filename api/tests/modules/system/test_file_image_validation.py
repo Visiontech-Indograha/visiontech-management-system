@@ -1,11 +1,12 @@
 """
 A5/A6 · Validasi gambar dan header penyajian berkas.
-- Gambar harus bisa didekode utuh (Pillow): PNG terpotong → 422; HEIC palsu (tanpa dekoder) → 415.
+- Gambar harus bisa didekode utuh (Pillow): PNG terpotong → 422; HEIC asli (pillow-heif) diterima; HEIC palsu → 415.
 - Penyajian berkas: `X-Content-Type-Options: nosniff`; non-gambar (PDF/dokumen) selalu `attachment`.
 """
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -38,6 +39,13 @@ def test_truncated_png_is_rejected(client, world: World, cut):
     response = _upload(client, world, "rusak.png", body, "image/png")
     assert response.status_code == 422, response.text
     assert response.json()["error"]["code"] == "IMAGE_CORRUPT"
+
+
+def test_genuine_heic_is_accepted(client, world: World):
+    """HEIC asli (berkas uji 408 byte, dibuat pillow-heif) harus lolos dekode dan diterima."""
+    heic = (Path(__file__).parent / "data" / "uji_valid.heic").read_bytes()
+    response = _upload(client, world, "foto.heic", heic, "image/heic")
+    assert response.status_code == 200, response.text
 
 
 def test_fake_heic_is_rejected(client, world: World):

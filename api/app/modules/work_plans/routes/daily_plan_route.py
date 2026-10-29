@@ -27,6 +27,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanUpdate,
     DailyStatus,
     GeoResult,
+    OrderScheduleOut,
     RecentSiteOut,
     RejectIn,
 )
@@ -193,10 +194,10 @@ async def get_daily_report(
     return await controller.handle_get_report(current_user, daily_plan_id)
 
 
-@router.get("/orders/{completion_id}/schedule", response_model=list[DailyPlanOut])
+@router.get("/orders/{completion_id}/schedule", response_model=OrderScheduleOut)
 async def order_schedule(completion_id: UUID, current_user: CurrentUser = _LOGIN,
-                         controller: DailyPlanController = Depends()) -> list[DailyPlanOut]:
-    """Jadwal harian yang memuat item order klien ini (proyek multi-minggu)."""
+                         controller: DailyPlanController = Depends()) -> OrderScheduleOut:
+    """Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order."""
     return await controller.handle_order_schedule(current_user, completion_id)
 
 

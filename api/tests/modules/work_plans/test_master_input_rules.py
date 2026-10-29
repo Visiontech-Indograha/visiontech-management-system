@@ -25,14 +25,15 @@ def _client(client, world: World, name: str) -> dict:
 
 def test_client_name_is_trimmed_and_blank_name_is_refused(client, world: World):
     assert _client(client, world, "      ").status_code == 422
-    made = _client(client, world, "  Klien Uji Spasi  ")
+    tag = uuid.uuid4().hex[:8]
+    made = _client(client, world, f"  Klien Uji Spasi {tag}  ")
     assert made.status_code == 201, made.text
-    assert made.json()["name"] == "Klien Uji Spasi"
+    assert made.json()["name"] == f"Klien Uji Spasi {tag}"
 
 
 def test_project_total_target_keeps_two_decimals(client, world: World):
     pm = world.headers(client, "pm")
-    client_id = _client(client, world, "Klien proyek uji").json()["client_id"]
+    client_id = _client(client, world, f"Klien proyek uji {uuid.uuid4().hex[:8]}").json()["client_id"]
     body = {"client_id": client_id, "office_id": world.org_id, "division_id": world.unit_id,
             "spk_number": f"SPK/UJI/{uuid.uuid4().hex[:6]}", "project_title": "Proyek uji desimal",
             "unit_measure": "Unit", "start_date": "2026-11-01", "end_date": "2026-12-01"}

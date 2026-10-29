@@ -128,6 +128,22 @@ export const useCreatePlanItem = (dailyPlanId: string) =>
   useDailyMutation(async (body: PlanItemCreate) =>
     (await api.post<PlanItem>(`/work-plans/daily/${dailyPlanId}/items`, body)).data);
 
+/** Ringkasan target order: total, sudah dijadwalkan, dan sisa yang belum dijadwalkan (GET /work-plans/orders/{id}/schedule). */
+export interface OrderScheduleSummary {
+  total_target_unit: number;
+  completed_target_unit: number;
+  scheduled_target_qty: number;
+  unscheduled_target_qty: number;
+}
+
+export const useOrderSchedule = (completionId: string) =>
+  useQuery({
+    queryKey: ["order-schedule", completionId],
+    enabled: !!completionId,
+    queryFn: async () =>
+      (await api.get<OrderScheduleSummary>(`/work-plans/orders/${completionId}/schedule`)).data,
+  });
+
 export const useDeletePlanItem = () =>
   useDailyMutation(async (itemId: string) => (await api.delete(`/work-plans/items/${itemId}`)).data);
 

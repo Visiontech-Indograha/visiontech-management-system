@@ -151,6 +151,15 @@ class DailyPlanDetail(DailyPlanOut):
     attachment_file_ids: list[UUID] = []
 
 
+class OrderScheduleOut(BaseModel):
+    """Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target)."""
+    total_target_unit: int
+    completed_target_unit: int
+    scheduled_target_qty: float = Field(description="Jumlah target item yang sudah dijadwalkan untuk order ini")
+    unscheduled_target_qty: float = Field(description="Sisa target yang belum dijadwalkan (total - terjadwal)")
+    plans: list[DailyPlanOut]
+
+
 class TeamOption(BaseModel):
     team_id: UUID
     name: str

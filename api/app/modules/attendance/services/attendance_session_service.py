@@ -173,23 +173,26 @@ class AttendanceSessionService:
     async def meal_allowance(self, user: Any, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
         """Rekap uang makan (docs/35 §5): pemegang export:attendance semua divisi; PM hanya divisi yang dipimpinnya
         (keputusan pemilik 2026-10-21). Lainnya → 403."""
+        divisions: list[str] | None = None  # None = semua divisi (pemegang export:attendance)
+        if division_id is not None:
+            divisions = [str(division_id)]
         if "export:attendance" not in user.permissions:
             if not user.has_role("PROJECT_MANAGER") or not user.employee_id:
                 raise ForbiddenError("Rekap uang makan hanya untuk PM divisi atau pengelola absensi.")
-            own = await self.repo.scalar(
-                "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL LIMIT 1",
+            own = [str(r.division_id) for r in await self.repo.fetchall(
+                "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL",
                 {"e": user.employee_id},
-            )
-            if own is None:
+            )]
+            if not own:
                 raise ForbiddenError("Anda belum memimpin divisi mana pun.")
-            if division_id is not None and str(division_id) != str(own):
+            if divisions is not None and divisions[0] not in own:
                 raise ForbiddenError("PM hanya dapat melihat rekap uang makan divisinya.")
-            division_id = own
+            divisions = divisions or own  # PM dengan >1 divisi: rekap seluruh divisi yang dipimpinnya
         if end < start:
             raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
         if (end - start).days > 62:
             raise ValidationError("Rentang rekap paling lama 62 hari.")
-        return await self.repo.meal_allowance_recap(start, end, division_id)
+        return await self.repo.meal_allowance_recap(start, end, divisions)
 
     async def my_recap(self, user: Any, month: str | None) -> dict[str, Any]:
         """Rekap absensi bulanan milik sendiri: hari hadir, terlambat, pulang awal, uang makan (hanya absensi sah)."""

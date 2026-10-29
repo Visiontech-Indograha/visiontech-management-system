@@ -39,6 +39,14 @@ class ClientRepository(BaseRepository):
             {"id": str(client_id), "emp": employee_id},
         ))
 
+    async def find_by_name(self, name: str, exclude: UUID | None = None) -> Any:
+        """Klien aktif dengan nama yang sama (lower/trim, tanpa memperhatikan huruf besar-kecil)."""
+        return await self.fetchone(
+            "SELECT client_id, name FROM client WHERE lower(trim(name)) = :name AND delete_at IS NULL "
+            "AND (CAST(:ex AS uuid) IS NULL OR client_id <> CAST(:ex AS uuid)) ORDER BY create_at LIMIT 1",
+            {"name": name.strip().lower(), "ex": str(exclude) if exclude else None},
+        )
+
     async def code_taken(self, code: str, exclude: UUID | None = None) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM client WHERE lower(client_code) = lower(:code) AND delete_at IS NULL "

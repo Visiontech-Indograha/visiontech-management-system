@@ -118,8 +118,8 @@ GUARDED_IN_HANDLER = {
     ("GET", "/work-completions/{completion_id}/signatures/{role}"): "WorkCompletionService._access (tim/PM order)",
     ("DELETE", "/work-completions/{completion_id}/photos/{file_id}"):
         "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",
-    # Daftar master hanya-baca untuk pilihan formulir; terbatas organisasi pengguna.
-    ("GET", "/clients"): "master hanya-baca untuk formulir (organisasi pengguna)",
+    # Daftar klien: create:plan atau PM/OM/HR (ClientService.can_read_clients); lapangan & ketua tidak.
+    ("GET", "/clients"): "ClientService.can_read_clients: create:plan atau PM/OM/HR (diuji)",
     ("GET", "/projects"): "master hanya-baca untuk formulir (organisasi pengguna)",
     ("GET", "/job-positions"): "master hanya-baca untuk formulir (organisasi pengguna)",
     # Manajemen cuti & izin karyawan

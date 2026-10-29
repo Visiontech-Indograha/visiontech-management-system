@@ -74,7 +74,7 @@ export interface paths {
         };
         /**
          * List Clients
-         * @description Daftar klien.
+         * @description Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.
          */
         get: operations["list_clients_api_v1_clients_get"];
         put?: never;
@@ -763,7 +763,7 @@ export interface paths {
         };
         /**
          * Order Schedule
-         * @description Jadwal harian yang memuat item order klien ini (proyek multi-minggu).
+         * @description Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.
          */
         get: operations["order_schedule_api_v1_work_plans_orders__completion_id__schedule_get"];
         put?: never;
@@ -7469,6 +7469,28 @@ export interface components {
             division_id?: string | null;
         };
         /**
+         * OrderScheduleOut
+         * @description Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target).
+         */
+        OrderScheduleOut: {
+            /** Total Target Unit */
+            total_target_unit: number;
+            /** Completed Target Unit */
+            completed_target_unit: number;
+            /**
+             * Scheduled Target Qty
+             * @description Jumlah target item yang sudah dijadwalkan untuk order ini
+             */
+            scheduled_target_qty: number;
+            /**
+             * Unscheduled Target Qty
+             * @description Sisa target yang belum dijadwalkan (total - terjadwal)
+             */
+            unscheduled_target_qty: number;
+            /** Plans */
+            plans: components["schemas"]["DailyPlanOut"][];
+        };
+        /**
          * OvertimeCreate
          * @description Schema for reporting overtime (domain.js REPORT_OVERTIME).
          *
@@ -9045,13 +9067,11 @@ export interface components {
             pm_id?: string | null;
             /** Project Id */
             project_id?: string | null;
-            /** Client Id */
-            client_id?: string | null;
             /**
-             * Client Name
-             * @description Nama klien (kosong = dari proyek)
+             * Client Id
+             * @description Klien dari master (wajib, kecuali lewat proyek)
              */
-            client_name?: string | null;
+            client_id?: string | null;
             /**
              * Project Title
              * @description Judul (kosong = dari proyek)
@@ -9296,8 +9316,6 @@ export interface components {
         WorkCompletionUpdate: {
             /** Client Id */
             client_id?: string | null;
-            /** Client Name */
-            client_name?: string | null;
             /** Project Title */
             project_title?: string | null;
             /** Order Number */
@@ -10997,7 +11015,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DailyPlanOut"][];
+                    "application/json": components["schemas"]["OrderScheduleOut"];
                 };
             };
             /** @description Validation Error */

@@ -124,6 +124,7 @@ def test_photo_refs_accepts_v2_objects_and_legacy_ids():
 def _service(order: dict) -> es.ExportService:
     orders = MagicMock()
     orders.get_order_detail = AsyncMock(return_value=order)
+    orders.export_access = AsyncMock(return_value=(order, True))  # pengelola = akses penuh
     repo = MagicMock()
     repo.completion_items = AsyncMock(return_value=[])
     repo.team_roster = AsyncMock(return_value=[])

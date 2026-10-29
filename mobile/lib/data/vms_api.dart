@@ -382,6 +382,19 @@ class VmsApi {
     return res.data ?? const <int>[];
   }
 
+  /// Work completion (BAST .docx). Ketua tim: hanya berisi item timnya sendiri (server membatasi per peran).
+  Future<List<int>> completionBastDocx(String completionId) async {
+    final res = await _dio.post<List<int>>(
+      '$_p/exports/work-completions/$completionId',
+      data: {'template': 'BAST'},
+      options: Options(
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 3),
+      ),
+    );
+    return res.data ?? const <int>[];
+  }
+
   /// Slide laporan pekerjaan klien (.pptx): foto per pekerjaan + keterangan + status berwarna.
   Future<List<int>> completionSlides(String completionId) async {
     final res = await _dio.post<List<int>>(

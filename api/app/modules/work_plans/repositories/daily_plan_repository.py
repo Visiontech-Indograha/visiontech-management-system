@@ -356,6 +356,24 @@ class DailyPlanRepository(BaseRepository):
             {"c": str(completion_id)},
         ))
 
+    async def order_target_totals(self, completion_id: UUID | str) -> Any:
+        """Target total & selesai order (selesai = item utama, seperti ringkasan order) serta target yang terjadwal."""
+        return await self.fetchone(
+            """
+            SELECT wc.total_target_unit,
+                   COALESCE((SELECT SUM(wpi.completed_qty)::int FROM work_plan_item wpi
+                             WHERE wpi.completion_id = wc.completion_id AND wpi.is_main_deliverable = TRUE
+                               AND wpi.delete_at IS NULL), 0) AS completed_target_unit,
+                   COALESCE((SELECT SUM(i.target_qty)::float FROM work_plan_item i
+                             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
+                             WHERE i.completion_id = wc.completion_id AND i.delete_at IS NULL),
+                            0) AS scheduled_target_qty
+            FROM work_completion wc
+            WHERE wc.completion_id = CAST(:c AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"c": str(completion_id)},
+        )
+
     async def count_items(self, daily_plan_id: UUID | str) -> int:
         """Jumlah item jadwal yang belum dihapus (jadwal tanpa item tidak boleh diajukan/disetujui)."""
         return int(await self.scalar(

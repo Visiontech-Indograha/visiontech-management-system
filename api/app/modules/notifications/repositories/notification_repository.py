@@ -63,6 +63,19 @@ class NotificationRepository(BaseRepository):
         )
         return [str(r.id) for r in rows]
 
+    async def division_manager_user_ids(self, division_id: UUID | str, roles: Iterable[str]) -> list[str]:
+        """Akun PM/OM yang tercatat di divisi itu (division.pm_id / om_id), bukan divisi 'rumah' karyawannya:
+        PM yang memimpin beberapa divisi tetap menerima notifikasi tiap divisinya."""
+        rows = await self.fetchall(
+            "SELECT DISTINCT CAST(u.user_id AS text) AS id FROM division d "
+            "JOIN users u ON u.employee_id IN (d.pm_id, d.om_id) "
+            "WHERE d.division_id = CAST(:div AS uuid) AND d.delete_at IS NULL "
+            "AND u.is_active AND u.delete_at IS NULL "
+            "AND CAST(u.system_role AS text) = ANY(CAST(:roles AS text[]))",
+            {"div": str(division_id), "roles": sorted(set(roles))},
+        )
+        return [str(r.id) for r in rows]
+
     async def employee_name(self, employee_id: UUID | str) -> str:
         """Nama lengkap karyawan (untuk judul notifikasi)."""
         name = await self.scalar(

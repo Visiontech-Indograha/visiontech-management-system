@@ -49,7 +49,7 @@ def _service(record=None, employee=None, item=None):
     repo = MagicMock()
     repo.get = AsyncMock(return_value=record)
     repo.items = AsyncMock(return_value=[])
-    repo.scalar = AsyncMock(return_value=DIV)  # divisi yang dipimpin PM
+    repo.fetchall = AsyncMock(return_value=[SimpleNamespace(division_id=DIV)])  # divisi yang dipimpin PM
     repo.employee_for_offboarding = AsyncMock(return_value=employee)
     repo.open_for_employee = AsyncMock(return_value=None)
     repo.create = AsyncMock(return_value=uuid4())
@@ -151,6 +151,17 @@ async def test_both_approvals_finalize_when_effective_date_has_come():
 
 async def test_pm_sees_only_own_division_and_cannot_cancel_completed():
     svc, _, _ = _service(record=_record(division_id=str(uuid4())))
+    with pytest.raises(NotFoundError):
+        await svc.detail(PM_USER, uuid4())
+
+
+async def test_pm_with_two_divisions_sees_both_but_not_a_third():
+    other = str(uuid4())
+    svc, repo, _ = _service(record=_record(division_id=other))
+    repo.fetchall = AsyncMock(return_value=[SimpleNamespace(division_id=DIV), SimpleNamespace(division_id=other)])
+    assert (await svc.detail(PM_USER, uuid4()))["clearance_items"] == []  # divisi kedua tetap terlihat
+    svc, repo, _ = _service(record=_record(division_id=str(uuid4())))
+    repo.fetchall = AsyncMock(return_value=[SimpleNamespace(division_id=DIV), SimpleNamespace(division_id=other)])
     with pytest.raises(NotFoundError):
         await svc.detail(PM_USER, uuid4())
     svc, _, _ = _service(record=_record(status="COMPLETED"))

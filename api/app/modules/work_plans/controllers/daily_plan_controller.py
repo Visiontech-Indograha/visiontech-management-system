@@ -20,6 +20,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanOut,
     DailyPlanUpdate,
     GeoResult,
+    OrderScheduleOut,
     RecentSiteOut,
 )
 from app.modules.work_plans.schemas.daily_report_schema import (
@@ -64,8 +65,18 @@ class DailyPlanController:
     async def handle_form_options(self, user: CurrentUser) -> DailyFormOptions:
         return DailyFormOptions(**await self.service.form_options(user))
 
-    async def handle_order_schedule(self, user: CurrentUser, completion_id: UUID) -> list[DailyPlanOut]:
-        return [self._out(r) for r in await self.service.plans_of_order(user, completion_id)]
+    async def handle_order_schedule(self, user: CurrentUser, completion_id: UUID) -> OrderScheduleOut:
+        plans = await self.service.plans_of_order(user, completion_id)  # 404 bila order tak boleh dilihat
+        totals = await self.service.order_target_totals(completion_id)
+        total = int(totals.total_target_unit or 0)
+        scheduled = float(totals.scheduled_target_qty or 0)
+        return OrderScheduleOut(
+            total_target_unit=total,
+            completed_target_unit=int(totals.completed_target_unit or 0),
+            scheduled_target_qty=scheduled,
+            unscheduled_target_qty=max(total - scheduled, 0.0),
+            plans=[self._out(r) for r in plans],
+        )
 
     async def handle_create(self, user: CurrentUser, data: DailyPlanCreate) -> DailyPlanOut:
         return self._out(await self.service.create(user, data))

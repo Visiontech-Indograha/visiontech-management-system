@@ -55,12 +55,14 @@ describe("pekerjaan klien: lintang dan bujur", () => {
 
   it("lintang di luar -90..90 ditolak di web dan tidak dikirim", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/clients") return { data: [] };
+      if (c.url === "/clients") return { data: clients };
       if (c.url === "/projects") return { data: [] };
       if (c.url === "/work-completions" && c.method === "post") return { data: order };
     });
     renderWithProviders(<WorkCompletionFormDialog onClose={() => {}} />);
-    fireEvent.change(await screen.findByLabelText("Nama Klien / Perusahaan"), { target: { value: "PT Gardu" } });
+    const select = (await screen.findByLabelText("Pilih Klien Master")) as HTMLSelectElement;
+    await waitFor(() => expect(select.options.length).toBe(2));
+    fireEvent.change(select, { target: { value: "c1" } });
     fireEvent.change(screen.getByLabelText("Judul Pekerjaan / Proyek"), { target: { value: "Pasang CCTV" } });
     fireEvent.change(screen.getByLabelText("Latitude Lokasi (Opsional)"), { target: { value: "95" } });
     fireEvent.change(screen.getByLabelText("Longitude Lokasi (Opsional)"), { target: { value: "106.8" } });
@@ -70,24 +72,20 @@ describe("pekerjaan klien: lintang dan bujur", () => {
   });
 });
 
-describe("pekerjaan klien: nama klien", () => {
+describe("pekerjaan klien: klien dari master", () => {
   beforeEach(() => {
     useSession.setState({ me: { ...mockMe("PM")!, division_id: "d1" }, ready: true });
   });
 
-  it.each([
-    ["tag HTML", "<b>PT Gardu</b>", /tidak boleh memuat tanda < atau >/],
-    ["emoji", "PT Gardu 🚀", /tidak boleh memuat emoji/],
-  ])("nama dengan %s ditolak dan tidak dikirim", async (_label, name, pesan) => {
+  it("tanpa klien terpilih tidak dikirim: diminta memilih klien master", async () => {
     const calls = mockApi((c) => {
-      if (c.url === "/clients") return { data: [] };
+      if (c.url === "/clients") return { data: clients };
       if (c.url === "/projects") return { data: [] };
     });
     renderWithProviders(<WorkCompletionFormDialog onClose={() => {}} />);
-    fireEvent.change(await screen.findByLabelText("Nama Klien / Perusahaan"), { target: { value: name } });
-    fireEvent.change(screen.getByLabelText("Judul Pekerjaan / Proyek"), { target: { value: "Pasang CCTV" } });
+    fireEvent.change(await screen.findByLabelText("Judul Pekerjaan / Proyek"), { target: { value: "Pasang CCTV" } });
     fireEvent.click(screen.getByRole("button", { name: /simpan/i }));
-    expect(await screen.findByText(pesan)).toBeInTheDocument();
+    expect(await screen.findByText("Pilih klien dari master klien.")).toBeInTheDocument();
     expect(calls.some((c) => c.method === "post" && c.url === "/work-completions")).toBe(false);
   });
 });
@@ -103,7 +101,8 @@ describe("pekerjaan klien: ubah", () => {
       if (c.url === "/projects") return { data: [] };
       if (c.url === "/work-completions/wc1" && c.method === "put") return { data: order };
     });
-    const query = { data: [order], isPending: false, isError: false, isSuccess: true, refetch: () => {} } as never;
+    const linked = { ...order, client_id: "c1" };
+    const query = { data: [linked], isPending: false, isError: false, isSuccess: true, refetch: () => {} } as never;
     renderWithProviders(<WorkCompletionList query={query} canManage onAdd={() => {}} />);
     fireEvent.click(await screen.findByRole("button", { name: "Ubah" }));
     const dialog = await screen.findByRole("dialog", { name: "Ubah pekerjaan klien" });
@@ -111,7 +110,7 @@ describe("pekerjaan klien: ubah", () => {
     fireEvent.change(within(dialog).getByLabelText("Judul Pekerjaan / Proyek"), { target: { value: "Pasang CCTV 2" } });
     fireEvent.click(within(dialog).getByRole("button", { name: /simpan/i }));
     await waitFor(() => expect(calls.some((c) => c.method === "put" && c.url === "/work-completions/wc1")).toBe(true));
-    expect(calls.find((c) => c.method === "put")?.data).toMatchObject({ project_title: "Pasang CCTV 2", client_name: "PT Gardu Nusantara" });
+    expect(calls.find((c) => c.method === "put")?.data).toMatchObject({ project_title: "Pasang CCTV 2", client_id: "c1" });
   });
 });
 

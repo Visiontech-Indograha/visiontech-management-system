@@ -16,6 +16,7 @@ import {
   addDays,
   useDailyFormOptions,
   useCreatePlanItem,
+  useOrderSchedule,
   usePrerequisiteOptions,
   useDecideRollover,
   useDeletePlanItem,
@@ -170,6 +171,12 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
   const [error, setError] = useState<string | null>(null);
   // Galat per kolom: dari validasi lokal dan dari 422 API (dipetakan ke kolom, bukan hanya satu pesan umum).
   const [fe, setFe] = useState<Record<string, string>>({});
+  // Order terpilih: sisa target yang belum dijadwalkan; target item yang diisi dibandingkan dengan sisa itu.
+  const [orderId, setOrderId] = useState("");
+  const [qtyText, setQtyText] = useState("1");
+  const schedule = useOrderSchedule(orderId).data;
+  const qtyNow = parseTargetQty(qtyText);
+  const overBy = schedule && qtyNow.ok ? Number(qtyNow.value) - schedule.unscheduled_target_qty : 0;
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -235,7 +242,8 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
     <FormBlock className="mt-3 space-y-1 rounded-control border border-line p-3" onSubmit={submit} noValidate>
       {error && <TextBlock role="alert" className="text-danger">{error}</TextBlock>}
       {orders.length > 0 && (
-        <SelectField name="completion_id" label="Pekerjaan Klien / Order SPK (opsional)" defaultValue="">
+        <SelectField name="completion_id" label="Pekerjaan Klien / Order SPK (opsional)" value={orderId}
+          onChange={(e) => setOrderId(e.target.value)}>
           <ControlOption value="">Bukan bagian order tertentu</ControlOption>
           {orders.map((o) => (
             <ControlOption key={o.completion_id} value={o.completion_id}>
@@ -243,6 +251,17 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
             </ControlOption>
           ))}
         </SelectField>
+      )}
+      {schedule && (
+        <TextBlock className="rounded-control border border-dashed border-line p-2 text-sm text-mist">
+          Target order {schedule.total_target_unit} · sudah dijadwalkan {schedule.scheduled_target_qty} · sisa belum
+          dijadwalkan {schedule.unscheduled_target_qty}
+        </TextBlock>
+      )}
+      {overBy > 0 && (
+        <TextBlock role="alert" className="text-sm text-danger">
+          Alokasi melebihi sisa target order ({overBy} di atas sisa). Periksa kembali target volume.
+        </TextBlock>
       )}
       <SelectField name="work_type_id" label="Template (jenis pekerjaan divisi)" defaultValue="" error={fe.work_type_id}>
         <ControlOption value="">Pilih template</ControlOption>
@@ -266,6 +285,7 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           label="Target volume"
           inputMode="decimal"
           defaultValue="1"
+          onChange={(e) => setQtyText(e.target.value)}
           hint="Angka, paling besar 99.999.999, boleh 2 angka di belakang koma."
           error={fe.target_qty}
         />

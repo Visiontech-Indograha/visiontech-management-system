@@ -12,6 +12,17 @@ SIZES = {
     "view": 1024
 }
 
+def is_decodable_image(image_bytes: bytes) -> bool:
+    """Gambar benar-benar bisa didekode seluruhnya (PNG/JPEG/WebP). Berkas terpotong atau bertanda tipe palsu
+    (mis. HEIC tanpa pustaka dekoder) → False. Hanya magic bytes tidak cukup untuk memeriksa gambar."""
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as src:
+            src.load()
+        return True
+    except Exception:
+        return False
+
+
 def compress_image(image_bytes: bytes) -> dict[str, bytes] | None:
     """
     Mengkompresi gambar ke WebP dalam 3 ukuran: thumb, view, dan full.

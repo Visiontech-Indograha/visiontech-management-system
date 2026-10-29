@@ -151,9 +151,11 @@ class AssetRepository(BaseRepository):
                    (t.leader_employee_id = CAST(:emp AS uuid)
                     OR EXISTS (SELECT 1 FROM member m
                                WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
-                                 AND m.is_active AND m.delete_at IS NULL)) AS on_team
+                                 AND m.is_active AND m.delete_at IS NULL)) AS on_team,
+                   (d.pm_id = CAST(:emp AS uuid) OR d.om_id = CAST(:emp AS uuid)) AS manages
             FROM work_plan_daily wpd
             JOIN team t ON t.team_id = wpd.team_id
+            JOIN division d ON d.division_id = wpd.division_id
             WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND wpd.delete_at IS NULL
             """,
             {"id": str(daily_plan_id), "emp": str(employee_id)},
@@ -366,18 +368,25 @@ class AssetRepository(BaseRepository):
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
     async def loans(
-        self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None
+        self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None,
+        managed_by: UUID | str | None,
     ) -> list[Any]:
+        """`managed_by` (PM/OM): batasi ke pinjaman karyawan di divisi yang ia pimpin/kelola, atau miliknya sendiri."""
         return list(await self.fetchall(
             _LOAN_SELECT + """
             WHERE aa.delete_at IS NULL
               AND (NOT CAST(:open AS boolean) OR aa.returned_at IS NULL)
               AND (CAST(:emp AS uuid) IS NULL OR aa.employee_id = CAST(:emp AS uuid))
               AND (CAST(:plan AS uuid) IS NULL OR aa.daily_plan_id = CAST(:plan AS uuid))
+              AND (CAST(:mgr AS uuid) IS NULL OR aa.employee_id = CAST(:mgr AS uuid)
+                   OR aa.employee_id IN (
+                       SELECT e.employee_id FROM employee e JOIN division d ON d.division_id = e.division_id
+                       WHERE d.pm_id = CAST(:mgr AS uuid) OR d.om_id = CAST(:mgr AS uuid)))
             ORDER BY aa.returned_at IS NULL DESC, aa.loaned_at DESC
             """,
             {"open": open_only, "emp": str(employee_id) if employee_id else None,
-             "plan": str(daily_plan_id) if daily_plan_id else None},
+             "plan": str(daily_plan_id) if daily_plan_id else None,
+             "mgr": str(managed_by) if managed_by else None},
         ))
 
     async def get_loan(self, assignment_id: UUID | str) -> Any:

@@ -25,9 +25,15 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.exports.repositories.export_repository import ExportRepository, photo_refs
-from app.modules.exports.services.builders.docx_builders import bast_docx, survey_report_docx
+from app.modules.exports.services.builders.docx_builders import (
+    bast_docx,
+    daily_report_docx,
+    order_sheet_docx,
+    survey_report_docx,
+)
 from app.modules.exports.services.builders.model import (
     CompletionReport,
+    DailyReport,
     PeriodicReport,
     ReportPhoto,
     ReportPoint,
@@ -51,7 +57,7 @@ from app.modules.exports.services.builders.survey_template import (
 )
 from app.modules.work_completion.services.work_completion_service import WorkCompletionService, verify_url
 from app.modules.work_plans.services.survey_service import SurveyService
-from app.shared.access.access_service import check_division_manager, is_admin
+from app.shared.access.access_service import DailyNeed, check_daily_access, check_division_manager, is_admin
 from app.shared.documents import branding
 from app.shared.documents.office_convert import docx_to_pdf
 from app.shared.documents.static_map import MapPoint, render_point_map
@@ -68,6 +74,7 @@ COMPLETION_TEMPLATES: dict[str, tuple[str, Callable[[CompletionReport], bytes], 
     "BAST": ("WORD_DOCX", bast_docx, "builtin:bast-docx-v2"),
     "SURVEY_REPORT": ("WORD_DOCX", survey_report_docx, "builtin:survey-report-docx-v1"),
     "BAST_PDF": ("PDF", completion_pdf, "templates/completion_report.html"),
+    "ORDER_SHEET": ("WORD_DOCX", order_sheet_docx, "builtin:order-sheet-docx-v1"),
     "BOQ": ("EXCEL_XLSX", completion_xlsx, "builtin:boq-xlsx-v1"),
     "PROGRESS_SLIDES": ("PPTX", completion_pptx, "builtin:progress-pptx-v1"),
 }
@@ -100,9 +107,14 @@ def _slug(text: str | None) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "-", text or "").strip("-")[:40] or "dokumen"
 
 
+# Nama berkas unduhan yang informatif (dokumen baru); jenis lain tetap memakai kode templatnya.
+FILE_LABEL = {"ORDER_SHEET": "Surat-tugas-order", "DAILY_REPORT": "Laporan-harian-tim"}
+
+
 def file_name(record: Any) -> str:
     stamp = record.create_at.strftime("%Y%m%d-%H%M")
-    return f"{record.template_type}_{stamp}.{EXT.get(record.export_format, 'bin')}"
+    label = FILE_LABEL.get(record.template_type, record.template_type)
+    return f"{label}_{stamp}.{EXT.get(record.export_format, 'bin')}"
 
 
 class ExportService:
@@ -241,6 +253,29 @@ class ExportService:
         await self.orders.get_order_detail(user, completion_id)
         return await self.repo.list_exports(completion_id=completion_id)
 
+    # ── Laporan harian satu jadwal (cetak per hari) ──────────────────────────
+    async def export_daily_report(self, user: CurrentUser, daily_plan_id: UUID) -> tuple[Any, bytes]:
+        await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)  # tak terlihat → 404
+        header = await self.repo.daily_header(daily_plan_id)
+        if header is None:
+            raise NotFoundError("Jadwal harian")
+        items = await self.repo.daily_items(daily_plan_id)
+        points, _ = await self._points(items, [], [], MAX_PHOTOS)
+        report = DailyReport(
+            team_name=header.team_name, division_name=header.division_name, work_date=header.work_date,
+            site_name=header.site_name, status=header.status, leader_name=header.leader_name, points=points,
+            roster=await self.repo.team_roster([str(header.team_id)]), summary=header.summary,
+            obstacles=header.obstacles, generated_by=user.email, generated_at=jakarta_now(),
+            report_submitted_at=header.report_submitted_at,
+        )
+        content = daily_report_docx(report)
+        key = (f"exports/daily-report/{daily_plan_id}/{jakarta_now():%Y%m%d-%H%M%S}_daily_report_"
+               f"{_slug(header.team_name)}_{header.work_date:%Y%m%d}.docx")
+        record = await self._store(user, key, content, "WORD_DOCX", source_type="WORK_PLAN_DAILY",
+                                   template_type="DAILY_REPORT", master="builtin:daily-report-docx-v1",
+                                   daily_plan_id=daily_plan_id)
+        return record, content
+
     # ── Rekap periodik divisi ────────────────────────────────────────────────
     async def export_periodic(self, user: CurrentUser, division_id: UUID, start: date, end: date,
                               export_format: str) -> tuple[Any, bytes]:
@@ -289,7 +324,7 @@ class ExportService:
     # ── Internal ─────────────────────────────────────────────────────────────
     async def _store(self, user: CurrentUser, key: str, content: bytes, export_format: str, *, source_type: str,
                      template_type: str, master: str, completion_id: UUID | None = None,
-                     period: tuple[date, date] | None = None) -> Any:
+                     period: tuple[date, date] | None = None, daily_plan_id: UUID | None = None) -> Any:
         if not user.employee_id:
             raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
         if not storage.upload_file(key, content, MIME[export_format]):
@@ -298,6 +333,7 @@ class ExportService:
             source_type=source_type, completion_id=completion_id, period_start=period[0] if period else None,
             period_end=period[1] if period else None, template_type=template_type, master_template=master,
             export_format=export_format, storage_key=key, generated_by=user.employee_id,
+            daily_plan_id=daily_plan_id,
         )
 
     async def _points(
@@ -365,9 +401,15 @@ class ExportService:
         points, photos = await self._points(items, bom, order_refs, MAX_PHOTOS)
         roster = await self.repo.team_roster(list(dict.fromkeys(str(i.team_id) for i in items)))
         leader_key, pm_key = order.get("leader_signature_path"), order.get("pm_signature_path")
+        # Peta lokasi: penanda per titik berkoordinat (hijau = selesai). Tanpa koneksi → None (ditandai di dokumen).
+        marks = [MapPoint(p.title, float(p.lat), float(p.lng), next((ph.image for ph in p.photos), None),
+                          status="EXISTING" if p.status == "DONE" else "PROPOSED")
+                 for p in points if p.lat is not None and p.lng is not None]
+        map_image = await asyncio.to_thread(render_point_map, marks) if marks else None
         return CompletionReport(
             order=order, points=points, roster=roster, bom=bom, generated_by=user.email,
             generated_at=jakarta_now(), verify_url=verify_url(order), photos=photos(order_refs, "Foto realisasi"),
             leader_signature=storage.get_image_bytes(leader_key) if leader_key else None,
             pm_signature=storage.get_image_bytes(pm_key) if pm_key else None,
+            map_image=map_image, has_coordinates=bool(marks),
         )

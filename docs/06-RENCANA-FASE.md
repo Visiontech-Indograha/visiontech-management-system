@@ -218,7 +218,7 @@ tidak ada satu pun foto wajah tersimpan di luar ketentuan.
 > absen = `face_probe` sementara; pekerja lapangan (HP, boleh luring) **dan** kantor (web, hanya online); karyawan
 > terdaftar yang absen tanpa data wajah → Perlu review. `FACE_ENROLLMENT_REQUIRED` mewajibkan pendaftaran setelah login
 > (bawaan mati). **Belum:** pencocokan wajah di HP saat luring (model ONNX + template), kalibrasi P8-5, pemasangan
-> face-service di server. Laporan spike dan daftar kerja operasional: `docs/30-LAPORAN-SPIKE-WAJAH.md`.
+> face-service di server. (laporan spike lama sudah dihapus; riwayat ada di git).
 
 > **Butuh dari Anda:** persetujuan tertulis dari karyawan yang ikut kalibrasi, dan kesepakatan
 > bahwa wajah tidak akan dipakai untuk hal lain selain absensi.

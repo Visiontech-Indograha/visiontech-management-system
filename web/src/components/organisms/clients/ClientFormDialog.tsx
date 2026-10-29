@@ -9,6 +9,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useSaveClient, type Client, type ClientInput } from "@/services/clientService";
+import { namaKlienError } from "@/lib/inputRules";
 
 export function ClientFormDialog({
   client,
@@ -91,9 +92,7 @@ export function ClientFormDialog({
             placeholder="cth. PT Telekomunikasi Seluler"
             error={errors.name?.message}
             {...register("name", {
-              required: "Nama klien wajib diisi.",
-              minLength: { value: 2, message: "Nama klien minimal 2 karakter." },
-              maxLength: { value: 150, message: "Maksimal 150 karakter." },
+              validate: (v) => (v.trim() === "" ? "Nama klien wajib diisi." : (namaKlienError(v) ?? true)),
             })}
           />
         </div>

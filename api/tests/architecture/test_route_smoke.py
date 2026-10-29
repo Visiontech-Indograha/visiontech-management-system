@@ -18,7 +18,7 @@ from tests.route_inventory import all_routes
 
 # Rute yang sengaja dapat dipanggil tanpa login. Menambah baris di sini = keputusan keamanan.
 PUBLIC_ROUTES = {
-    ("GET", "/api/v1/version"),  # versi API (SemVer) publik, tanpa data
+    ("GET", "/version"),  # versi API (SemVer) publik, tanpa data
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),

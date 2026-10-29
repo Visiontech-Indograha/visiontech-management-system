@@ -20,6 +20,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanOut,
     DailyPlanUpdate,
     GeoResult,
+    RecentSiteOut,
 )
 from app.modules.work_plans.schemas.daily_report_schema import (
     DailyReportCreate,
@@ -55,6 +56,10 @@ class DailyPlanController:
 
     async def handle_detail(self, daily_plan_id: UUID) -> DailyPlanDetail:
         return DailyPlanDetail(**await self.service.detail(daily_plan_id))
+
+    async def handle_recent_sites(self, user: CurrentUser, team_id: UUID, limit: int) -> list[RecentSiteOut]:
+        rows = await self.service.recent_sites(user, team_id, limit)
+        return [RecentSiteOut(**r._mapping) for r in rows]
 
     async def handle_form_options(self, user: CurrentUser) -> DailyFormOptions:
         return DailyFormOptions(**await self.service.form_options(user))

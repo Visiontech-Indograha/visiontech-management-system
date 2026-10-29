@@ -10,6 +10,7 @@ export type DailyPlanCreate = S["DailyPlanCreate"];
 export type DailyPlanUpdate = S["DailyPlanUpdate"];
 export type DailyFormOptions = S["DailyFormOptions"];
 export type GeoResult = S["GeoResult"];
+export type RecentSite = S["RecentSiteOut"];
 export type Correction = S["CorrectionOut"];
 export type CorrectionDecision = S["CorrectionDecide"]["decision"];
 export type DailyAction = "submit" | "approve" | "start" | "complete";
@@ -60,6 +61,16 @@ export const useDailyFormOptions = (enabled: boolean) =>
     enabled,
     staleTime: 60_000,
     queryFn: async () => (await api.get<DailyFormOptions>("/work-plans/form-options")).data,
+  });
+
+/** Lokasi site yang pernah dipakai tim (untuk dipilih ulang di form); hanya diminta bila tim sudah dipilih. */
+export const useRecentSites = (teamId: string) =>
+  useQuery({
+    queryKey: [...KEY, "recent-sites", teamId],
+    enabled: !!teamId,
+    staleTime: 60_000,
+    queryFn: async () =>
+      (await api.get<RecentSite[]>("/work-plans/daily/recent-sites", { params: { team_id: teamId, limit: 6 } })).data,
   });
 
 function useDailyMutation<V, D>(fn: (v: V) => Promise<D>) {

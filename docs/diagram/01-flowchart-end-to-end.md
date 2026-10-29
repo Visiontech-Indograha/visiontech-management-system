@@ -33,7 +33,7 @@ flowchart TD
     subgraph JADWAL["D. Jadwal harian (web)"]
         D1["Buat jadwal harian DRAFT per tim per tanggal<br/>Peran: PM, OM divisinya, SUPER_ADMIN<br/>Web: /work-plans, POST /work-plans/daily<br/>Salin ke tanggal lain: POST /work-plans/daily/:id/copy (item ikut disalin)"]
         D2["Tambah item pekerjaan per titik<br/>Jenis pekerjaan, order, tim, lokasi<br/>POST /work-plans/daily/:id/items"]
-        D3["Submit: DRAFT ke SUBMITTED<br/>Peran: PM, OM divisinya<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)"]
+        D3["Setujui langsung dari DRAFT (satu langkah)<br/>Peran: PM, OM divisinya saja (ketua & anggota tidak melihat tombol)<br/>POST /work-plans/daily/:id/approve; audit mencatat SUBMITTED dan APPROVED<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)"]
         D4{"Setujui atau tolak"}
         D5["Jadwal APPROVED, dirilis ke tim<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)<br/>Notifikasi ke tim"]
     end

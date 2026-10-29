@@ -78,6 +78,8 @@ COMPLETION_TEMPLATES: dict[str, tuple[str, Callable[[CompletionReport], bytes], 
     "BOQ": ("EXCEL_XLSX", completion_xlsx, "builtin:boq-xlsx-v1"),
     "PROGRESS_SLIDES": ("PPTX", completion_pptx, "builtin:progress-pptx-v1"),
 }
+# Ketua tim (bukan pengelola) hanya boleh dokumen ini, dan hanya berisi item timnya sendiri.
+LEADER_TEMPLATES = frozenset({"BAST", "PROGRESS_SLIDES"})
 PERIODIC = {
     "EXCEL_XLSX": ("PERIODIC_RECAP", periodic_xlsx, "builtin:periodic-xlsx-v1"),
     "PPTX": ("PERIODIC_SLIDES", periodic_pptx, "builtin:periodic-pptx-v1"),
@@ -240,12 +242,23 @@ class ExportService:
         return self.survey_logos(user)
 
     # ── Dokumen order ─────────────────────────────────────────────────────────
+    async def _order_scope(self, user: CurrentUser, completion_id: UUID,
+                           template: str | None) -> tuple[dict[str, Any], set[str] | None]:
+        """(order, team_ids). team_ids None = seluruh order (pengelola); set = ketua tim, hanya item tim-tim ini.
+        `template` None = daftar/riwayat (tanpa pembatasan templat)."""
+        order, full = await self.orders.export_access(user, completion_id)
+        if full:
+            return order, None
+        if template is not None and template not in LEADER_TEMPLATES:
+            raise ForbiddenError("Ketua tim hanya dapat mengunduh BAST dan slide progres untuk timnya.")
+        return order, await self.repo.led_team_ids(user.employee_id)
+
     async def export_completion(self, user: CurrentUser, completion_id: UUID, template: str) -> tuple[Any, bytes]:
-        order = await self.orders.get_order_detail(user, completion_id)
+        order, team_ids = await self._order_scope(user, completion_id, template)
         export_format, build, master = COMPLETION_TEMPLATES[template]
         if template == "BAST_PDF" and not order.get("signature_hash"):
             raise AppError("NOT_SIGNED", "PDF resmi tersedia setelah serah terima disetujui PM.", status=409)
-        report = await self._completion_report(order, user)
+        report = await self._completion_report(order, user, team_ids)
         if template == "SURVEY_REPORT" and not report.survey_points:
             raise AppError("NO_SURVEY_ITEMS", "Order ini belum punya item fase Survei.", status=422)
         content = build(report)
@@ -256,8 +269,11 @@ class ExportService:
         return record, content
 
     async def list_for_completion(self, user: CurrentUser, completion_id: UUID) -> list[Any]:
-        await self.orders.get_order_detail(user, completion_id)
-        return await self.repo.list_exports(completion_id=completion_id)
+        _, team_ids = await self._order_scope(user, completion_id, None)
+        rows = await self.repo.list_exports(completion_id=completion_id)
+        if team_ids is not None:  # ketua hanya melihat riwayat ekspornya sendiri
+            rows = [r for r in rows if str(r.generated_by_id) == str(user.employee_id)]
+        return rows
 
     # ── Laporan harian satu jadwal (cetak per hari) ──────────────────────────
     async def export_daily_report(self, user: CurrentUser, daily_plan_id: UUID) -> tuple[Any, bytes]:
@@ -318,7 +334,10 @@ class ExportService:
         if record is None:
             raise NotFoundError("Dokumen")
         if record.completion_id is not None:
-            await self.orders.get_order_detail(user, record.completion_id)  # tak terlihat → 404
+            # tak terlihat → 404; ketua tim hanya berkas buatannya sendiri (berkas PM memuat seluruh order)
+            _, team_ids = await self._order_scope(user, record.completion_id, record.template_type)
+            if team_ids is not None and str(record.generated_by_id) != str(user.employee_id):
+                raise NotFoundError("Dokumen")
         elif not (is_admin(user) or user.has_role("OPERATIONAL_MANAGER")
                   or str(record.generated_by_id) == str(user.employee_id)):
             raise NotFoundError("Dokumen")
@@ -416,8 +435,13 @@ class ExportService:
         name = await self.repo.employee_name(user.employee_id) if user.employee_id else None
         return name or "-"
 
-    async def _completion_report(self, order: dict[str, Any], user: CurrentUser) -> CompletionReport:
+    async def _completion_report(self, order: dict[str, Any], user: CurrentUser,
+                                 team_ids: set[str] | None = None) -> CompletionReport:
         items = await self.repo.completion_items(order["completion_id"])
+        if team_ids is not None:  # ketua tim: hanya item timnya (roster ikut terbatas)
+            items = [i for i in items if str(i.team_id) in team_ids]
+            if not items:
+                raise ForbiddenError("Order ini tidak memiliki pekerjaan untuk tim yang Anda pimpin.")
         order_refs = photo_refs(order.get("realization_photos_json"))[:MAX_PHOTOS_PER_POINT * 2]
         bom = list(order.get("bom_items") or [])
         points, photos = await self._points(items, bom, order_refs, MAX_PHOTOS)

@@ -172,6 +172,19 @@ class WorkCompletionService:
             raise NotFoundError("Tanda tangan")
         return png
 
+    async def export_access(self, user: CurrentUser, completion_id: UUID) -> tuple[dict[str, Any], bool]:
+        """Akses ekspor dokumen order: (order, penuh). Pengelola (PM order / PM-OM divisi) dan Super Admin = penuh.
+        Ketua tim yang punya item di order = terbatas (False). Selain itu 403 (404 bila order tak terlihat)."""
+        order = await self._access(user, completion_id, manage=False)
+        on_team = order.pop("_on_team", False)
+        standing = await self.crud.standing(completion_id, user.employee_id)
+        if user.has_role("SUPER_ADMIN") or (standing is not None and standing.manages):
+            return order, True
+        if on_team and user.has_role("TEAM_LEADER"):
+            return order, False
+        raise ForbiddenError("Dokumen order ini hanya untuk PM/OM divisi. Ketua tim hanya dapat mengunduh "
+                             "BAST dan slide progres untuk timnya.")
+
     async def get_order_detail(self, current_user: CurrentUser, completion_id: UUID) -> dict[str, Any]:
         """Mengambil rincian order proyek (yang terlihat oleh pengguna)."""
         order = await self._access(current_user, completion_id, manage=False)

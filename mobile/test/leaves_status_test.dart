@@ -8,10 +8,10 @@ void main() {
     expect(leaveStatusLabel('CANCELLED'), 'Dibatalkan');
   });
 
-  test('hanya PENDING dan APPROVED_BY_PM yang bisa dibatalkan', () {
+  test('PENDING, APPROVED_BY_PM, dan APPROVED_BY_HR bisa dibatalkan', () {
     expect(leaveCancellable('PENDING'), isTrue);
     expect(leaveCancellable('APPROVED_BY_PM'), isTrue);
-    expect(leaveCancellable('APPROVED_BY_HR'), isFalse);
+    expect(leaveCancellable('APPROVED_BY_HR'), isTrue);
     expect(leaveCancellable('REJECTED'), isFalse);
   });
 }

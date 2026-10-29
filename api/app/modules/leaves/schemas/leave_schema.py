@@ -38,6 +38,22 @@ class LeaveCreate(BaseModel):
 class LeaveReview(BaseModel):
     decision: Literal["APPROVED", "REJECTED"]
     note: str | None = Field(default=None, max_length=1000)
+    # Wajib true bila pemohon masih terjadwal di tim pada hari cuti (lihat LeaveConflict)
+    acknowledge_conflicts: bool = False
+
+
+class LeaveCancel(BaseModel):
+    # Opsional: APK lapangan lama membatalkan tanpa body (lihat aturan kompatibilitas daftar API)
+    reason: str | None = Field(default=None, min_length=3, max_length=1000)
+
+
+class LeaveConflict(BaseModel):
+    """Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan."""
+
+    plan_id: UUID
+    work_date: date
+    team_name: str
+    status: str
 
 
 class LeaveResponse(BaseModel):
@@ -57,6 +73,8 @@ class LeaveResponse(BaseModel):
     reviewed_by_name: str | None = None
     reviewed_at: datetime | None = None
     rejection_note: str | None = None
+    cancel_note: str | None = None
+    conflicts: list[LeaveConflict] = Field(default_factory=list)
     create_at: datetime
 
 

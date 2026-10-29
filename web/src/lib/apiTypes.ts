@@ -1883,7 +1883,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Leave
-         * @description Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).
+         * @description Pembatalan cuti oleh pemohon, HR, atau OM (status PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).
          */
         post: operations["cancel_leave_api_v1_leaves__leave_id__cancel_post"];
         delete?: never;
@@ -6222,6 +6222,31 @@ export interface components {
             /** Remaining Quota */
             remaining_quota: number;
         };
+        /** LeaveCancel */
+        LeaveCancel: {
+            /** Reason */
+            reason?: string | null;
+        };
+        /**
+         * LeaveConflict
+         * @description Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan.
+         */
+        LeaveConflict: {
+            /**
+             * Plan Id
+             * Format: uuid
+             */
+            plan_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /** Team Name */
+            team_name: string;
+            /** Status */
+            status: string;
+        };
         /** LeaveCreate */
         LeaveCreate: {
             /** Employee Id */
@@ -6298,6 +6323,10 @@ export interface components {
             reviewed_at?: string | null;
             /** Rejection Note */
             rejection_note?: string | null;
+            /** Cancel Note */
+            cancel_note?: string | null;
+            /** Conflicts */
+            conflicts?: components["schemas"]["LeaveConflict"][];
             /**
              * Create At
              * Format: date-time
@@ -6313,6 +6342,11 @@ export interface components {
             decision: "APPROVED" | "REJECTED";
             /** Note */
             note?: string | null;
+            /**
+             * Acknowledge Conflicts
+             * @default false
+             */
+            acknowledge_conflicts: boolean;
         };
         /** LeaveTypeOption */
         LeaveTypeOption: {
@@ -13433,7 +13467,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["LeaveCancel"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

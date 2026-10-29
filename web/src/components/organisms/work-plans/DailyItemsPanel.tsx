@@ -57,7 +57,7 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
             <div className="flex flex-wrap items-center justify-between gap-2">
               <TextBlock as="span">
                 {PHASE[i.task_phase] ?? i.task_phase} · {i.title}
-                {i.location_name ? ` · ${i.location_name}` : ""}
+                {i.location_name && !i.title.includes(i.location_name) ? ` · ${i.location_name}` : ""}
               </TextBlock>
               <div className="flex items-center gap-2">
                 <Pill tone={i.status === "DONE" ? "success" : i.status === "PENDING_ROLLOVER" ? "warning" : "neutral"}>
@@ -166,6 +166,15 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
     };
     if (!body.work_type_id) return setError("Pilih template (jenis pekerjaan) divisi ini.");
     if (body.title.length < 3) return setError("Nama pekerjaan minimal 3 huruf.");
+    if (Number(body.target_qty) <= 0 || isNaN(Number(body.target_qty))) {
+      return setError("Target volume harus lebih dari 0.");
+    }
+    if ((latVal && !lngVal) || (!latVal && lngVal)) {
+      return setError("Lintang dan bujur lokasi harus diisi berpasangan.");
+    }
+    if (startTimeVal && endTimeVal && endTimeVal <= startTimeVal) {
+      return setError("Jam selesai item harus setelah jam mulai.");
+    }
     create.mutate(body, { onSuccess: () => { toast.success("Item ditambahkan."); onDone(); }, onError: (err) => setError(message(err)) });
   };
 

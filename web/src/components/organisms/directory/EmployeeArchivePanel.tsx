@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useArchiveEmployee, useDeleteEmployee, useRestoreEmployee, type Employee } from "@/services/employeeService";
@@ -16,6 +17,7 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
   const archive = useArchiveEmployee(employee.employee_id);
   const restore = useRestoreEmployee(employee.employee_id);
   const remove = useDeleteEmployee(employee.employee_id);
+  const navigate = useNavigate();
   const [archived, setArchived] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,10 @@ export function EmployeeArchivePanel({ employee }: { employee: Employee }) {
             title="Hapus permanen karyawan?"
             description={`${employee.full_name} beserta akun login dan data terkaitnya dihapus dari database.`}
             successText="Karyawan dihapus permanen."
-            onDelete={() => remove.mutateAsync()}
+            onDelete={async () => {
+              await remove.mutateAsync();
+              navigate("/directory", { replace: true }); // detail karyawan yang sudah tidak ada jangan tetap terbuka
+            }}
           />
         </div>
       ) : (

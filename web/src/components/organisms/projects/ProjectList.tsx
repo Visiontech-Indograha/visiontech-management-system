@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { formatDate } from "@/lib/format";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
@@ -14,7 +15,7 @@ import type { Division } from "@/services/employeeService";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   ONGOING: { label: "Berjalan", className: "bg-lens/15 text-lens font-medium" },
-  DRAFT: { label: "Draft", className: "bg-hover text-mist font-medium" },
+  DRAFT: { label: "Persiapan", className: "bg-hover text-mist font-medium" },
   COMPLETED: { label: "Selesai", className: "bg-leaf/15 text-leaf font-medium" },
   CANCELLED: { label: "Dibatalkan", className: "bg-danger/15 text-danger font-medium" },
 };
@@ -83,10 +84,10 @@ export function ProjectList({
           onChange={(e) => onFilterChange({ status: e.target.value || undefined })}
         >
           <ControlOption value="">-- Semua Status --</ControlOption>
-          <ControlOption value="ONGOING">Berjalan (Ongoing)</ControlOption>
-          <ControlOption value="DRAFT">Persiapan (Draft)</ControlOption>
-          <ControlOption value="COMPLETED">Selesai (Completed)</ControlOption>
-          <ControlOption value="CANCELLED">Dibatalkan (Cancelled)</ControlOption>
+          <ControlOption value="ONGOING">Berjalan</ControlOption>
+          <ControlOption value="DRAFT">Persiapan</ControlOption>
+          <ControlOption value="COMPLETED">Selesai</ControlOption>
+          <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
         </SelectField>
       </div>
 
@@ -164,7 +165,7 @@ export function ProjectList({
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-mist shrink-0" />
                       <TextBlock as="span">
-                        {String(p.start_date).slice(0, 10)} s/d {String(p.end_date).slice(0, 10)}
+                        {formatDate(String(p.start_date))} s/d {formatDate(String(p.end_date))}
                       </TextBlock>
                     </div>
                   </div>

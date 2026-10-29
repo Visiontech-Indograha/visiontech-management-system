@@ -5,6 +5,7 @@ bukan SQLite — separuh aturan hidup di fungsi, trigger, dan RLS.
 from __future__ import annotations
 
 import contextlib
+import functools
 import os
 import socket
 import sys
@@ -27,7 +28,7 @@ from tests.db_guard import unsafe_test_database, unsafe_test_storage, use_test_d
 use_test_database()   # harus sebelum app.* diimpor: pengaturan dibaca saat impor
 
 from app.core.config import settings
-from app.core.security import hash_password
+from app.core.security import hash_password as _hash_password
 from app.database.session import SEARCH_PATH, AsyncSessionLocal, make_engine
 from app.main import API_PREFIX, app
 
@@ -86,6 +87,12 @@ def _main_office() -> None:
         "VALUES ('Kantor utama uji', 'Jl. Uji No. 1', -6.2000000, 106.8000000, TRUE) RETURNING office_id")
 
 
+@functools.cache
+def hash_password(password: str) -> str:
+    """Argon2 sengaja lambat; sandi uji sama -> hash sama dipakai ulang sepanjang sesi."""
+    return _hash_password(password)
+
+
 def _sync_conn():
     return psycopg2.connect(
         host=_DB.hostname, port=_DB.port, dbname=_DB.path.lstrip("/"),
@@ -96,11 +103,34 @@ def _sync_conn():
     )
 
 
+_SYNC_CONN = None   # satu koneksi per proses (tiap worker xdist punya sendiri): DB uji di server jauh
+
+
+def _shared_conn():
+    global _SYNC_CONN
+    if _SYNC_CONN is None or _SYNC_CONN.closed:
+        _SYNC_CONN = _sync_conn()
+        _SYNC_CONN.autocommit = True   # sama dengan perilaku lama: tiap kueri langsung commit
+    return _SYNC_CONN
+
+
 def sync_query(sql: str, params: tuple = ()) -> list[tuple]:
-    """Kueri langsung ke DB uji di luar aplikasi (persiapan & pemeriksaan hasil)."""
-    with _sync_conn() as conn, conn.cursor() as cur:
-        cur.execute(sql, params)
-        return cur.fetchall() if cur.description else []
+    """Kueri langsung ke DB uji di luar aplikasi (persiapan & pemeriksaan hasil). Koneksi dipakai ulang."""
+    global _SYNC_CONN
+    for attempt in (1, 2):
+        try:
+            with _shared_conn().cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchall() if cur.description else []
+        except psycopg2.OperationalError:
+            # koneksi putus (jaringan/idle): buang lalu sekali lagi dengan koneksi baru
+            if _SYNC_CONN is not None:
+                with contextlib.suppress(Exception):
+                    _SYNC_CONN.close()
+            _SYNC_CONN = None
+            if attempt == 2:
+                raise
+    return []
 
 
 class SeededUser:

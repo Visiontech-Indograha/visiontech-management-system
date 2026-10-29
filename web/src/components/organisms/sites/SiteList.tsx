@@ -1,3 +1,7 @@
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { Site } from "@/services/siteService";
 import { SiteAddButton } from "./SiteAddButton";
@@ -9,11 +13,13 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { RetryNotice } from "@/components/molecules/RetryNotice";
 
 /** Daftar lokasi kerja dengan keadaan memuat, galat (+ coba lagi), kosong (+ tambah), dan berhasil. */
-export function SiteList({ sites, onAdd, onRemove }: {
-  sites: UseQueryResult<Site[]>;
+export function SiteList({ controls, sites, onAdd, onRemove }: {
+  controls: ListControls;
+  sites: UseQueryResult<Paged<Site>>;
   onAdd: () => void;
   onRemove: (site: Site) => void;
 }) {
+  const view = pagedView(sites, controls);
   return (
     <>
       {sites.isPending && (
@@ -25,15 +31,18 @@ export function SiteList({ sites, onAdd, onRemove }: {
       {sites.isError && (
         <RetryNotice message="Lokasi kerja tidak dapat dimuat." onRetry={() => sites.refetch()} />
       )}
-      {sites.data?.length === 0 && (
+      {sites.data && sites.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface shadow-card p-6 text-center">
           <TextBlock className="mb-3 text-mist">Belum ada lokasi kerja. Tambahkan lokasi agar absensi bisa memeriksa radius.</TextBlock>
           <SiteAddButton onAdd={onAdd} />
         </div>
       )}
-      {sites.data && sites.data.length > 0 && (
+      {sites.data && (sites.data.total > 0 || view.active) && (
+        <>
+        <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama atau alamat lokasi..." active={view.active} onReset={view.reset} />
+        {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}
         <ListBlock className="grid gap-3 md:grid-cols-2">
-          {sites.data.map((s) => (
+          {view.rows.map((s) => (
             <ListEntry key={s.id} className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4">
               <MapPin className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
@@ -41,7 +50,7 @@ export function SiteList({ sites, onAdd, onRemove }: {
                 <TextBlock className="text-xs text-mist">{s.unit_id ? "Lokasi proyek" : "Lokasi kantor"}</TextBlock>
                 {s.address && <TextBlock className="text-sm text-mist">{s.address}</TextBlock>}
                 <TextBlock className="text-sm text-mist">
-                  {s.location.lat.toFixed(6)}, {s.location.lng.toFixed(6)} · radius {s.radius_m} m
+                  {s.location?.lat != null && s.location?.lng != null ? `${s.location.lat.toFixed(6)}, ${s.location.lng.toFixed(6)}` : "Koordinat belum diatur"} · radius {s.radius_m} m
                 </TextBlock>
               </div>
               {s.can_manage && (
@@ -52,6 +61,8 @@ export function SiteList({ sites, onAdd, onRemove }: {
             </ListEntry>
           ))}
         </ListBlock>
+        {view.total > 0 && <ListPagination total={view.total} noun="lokasi" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
+        </>
       )}
     </>
   );

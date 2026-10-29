@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api_client.dart' show NetworkHint;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../auth/auth_controller.dart';
@@ -9,6 +10,8 @@ import 'face_flow.dart';
 /// Status wajah akun ini. Galat (mis. tanpa sinyal) TIDAK memblokir: pekerja lapangan harus tetap bisa masuk saat
 /// offline; gerbang hanya menutup bila server SECARA EKSPLISIT menyatakan wajib (`required`) dan belum terdaftar.
 final faceGateProvider = FutureProvider.autoDispose<bool>((ref) async {
+  // Sudah diketahui offline: jangan menahan seluruh aplikasi menunggu timeout sambung.
+  if (NetworkHint.probablyOffline) return false;
   try {
     final st = await ref.read(syncEngineProvider).api.faceStatus();
     return st['required'] == true && st['enrolled'] != true;

@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { Pill } from "@/components/molecules/Pill";
 import { PlainAction } from "@/components/molecules/PlainAction";
@@ -6,6 +7,10 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { formatDate } from "@/lib/format";
 import { REASON_LABEL, STATUS_LABEL, type Offboarding } from "@/services/offboardingService";
+import { ListPagination } from "@/components/organisms/ListPagination";
+import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { pagedView, type ListControls } from "@/hooks/usePagedList";
+import type { Paged } from "@/lib/paged";
 import { OffboardingAddButton } from "./OffboardingAddButton";
 
 const TONE: Record<string, "warning" | "neutral" | "success"> = {
@@ -16,26 +21,31 @@ const TONE: Record<string, "warning" | "neutral" | "success"> = {
 };
 
 /** Daftar offboarding: karyawan, alasan, tanggal efektif, status clearance/persetujuan. Klik → detail. */
-export function OffboardingList({ offboardings, canManage, onAdd, onOpen }: {
-  offboardings: UseQueryResult<Offboarding[]>;
+export function OffboardingList({ controls, offboardings, canManage, onAdd, onOpen }: {
+  controls: ListControls;
+  offboardings: UseQueryResult<Paged<Offboarding>>;
   canManage: boolean;
   onAdd: () => void;
   onOpen: (id: string) => void;
 }) {
+  const view = pagedView(offboardings, controls);
   return (
     <QueryState
       query={offboardings}
       errorText="Daftar offboarding gagal dimuat."
-      empty={(offboardings.data?.length ?? 0) === 0}
+      empty={(offboardings.data?.total ?? 0) === 0 && !view.active}
       emptyText="Belum ada proses offboarding."
       emptyAction={canManage ? <OffboardingAddButton onAdd={onAdd} /> : undefined}
     >
+      <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama, NIP, divisi, atau alasan..." active={view.active} onReset={view.reset} />
+      {view.total === 0 && <TextBlock className="rounded-panel border border-line bg-surface p-6 text-center text-mist">Tidak ada offboarding yang cocok dengan pencarian.</TextBlock>}
       <ListBlock className="space-y-2">
-        {(offboardings.data ?? []).map((o) => (
+        {view.rows.map((o) => (
           <ListEntry key={o.offboarding_id} className="rounded-panel border border-line bg-surface p-4 shadow-card">
             <PlainAction className="flex w-full flex-wrap items-center justify-between gap-2 text-left"
                          onClick={() => onOpen(o.offboarding_id)}>
-              <div>
+              <UserAvatar name={o.employee_name} fileId={o.employee_photo_file_id} size="sm" />
+              <div className="min-w-0 flex-1">
                 <TextBlock className="font-semibold">{`${o.employee_name ?? "-"} · ${o.employee_no ?? ""}`}</TextBlock>
                 <TextBlock className="text-xs text-mist">
                   {`${REASON_LABEL[o.reason_type] ?? o.reason_type} · efektif ${formatDate(o.effective_date)}`}
@@ -52,6 +62,7 @@ export function OffboardingList({ offboardings, canManage, onAdd, onOpen }: {
           </ListEntry>
         ))}
       </ListBlock>
+      {view.total > 0 && <ListPagination total={view.total} noun="offboarding" page={view.shownPage} shownPage={view.shownPage} lastPage={view.lastPage} onPageChange={view.setPage} />}
     </QueryState>
   );
 }

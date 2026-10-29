@@ -16,6 +16,7 @@ class NotificationOut(BaseModel):
     title: str
     body: str
     daily_plan_id: UUID | None = None
+    target: str | None = None
     created_at: datetime
     read_at: datetime | None = None
 

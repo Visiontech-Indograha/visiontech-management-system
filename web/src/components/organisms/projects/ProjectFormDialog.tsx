@@ -11,6 +11,7 @@ import { useClients } from "@/services/clientService";
 import { useOffices, useUserDivisions } from "@/services/employeeService";
 import { useSaveProject, type Project, type ProjectInput, type ProjectStatus } from "@/services/projectService";
 import { useSession } from "@/stores/sessionStore";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 
 export function ProjectFormDialog({
   project,
@@ -21,7 +22,7 @@ export function ProjectFormDialog({
 }) {
   const save = useSaveProject(project?.project_id);
   const { me } = useSession();
-  const { data: clients } = useClients(true);
+  const { data: clients, isSuccess: clientsLoaded } = useClients(true);
   const { data: offices } = useOffices();
   const { data: divisions } = useUserDivisions();
 
@@ -40,7 +41,8 @@ export function ProjectFormDialog({
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    setError,
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ProjectInput>({
     defaultValues: {
       client_id: project?.client_id ?? "",
@@ -79,13 +81,17 @@ export function ProjectFormDialog({
       });
       toast.success(project ? "Data proyek berhasil diperbarui." : "Proyek baru berhasil didaftarkan.");
       onClose();
-    } catch {
-      setFormError("Gagal menyimpan data proyek. Pastikan nomor SPK unik dan seluruh kolom wajib terisi.");
+    } catch (err) {
+      if (applyFieldErrors(err, setError)) {
+        setFormError("Periksa kolom yang ditandai.");
+        return;
+      }
+      setFormError(errorMessage(err, "Gagal menyimpan data proyek. Pastikan nomor SPK unik dan seluruh kolom wajib terisi."));
     }
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title={project ? "Ubah data proyek" : "Daftarkan proyek baru"}
       onClose={onClose}
@@ -146,12 +152,18 @@ export function ProjectFormDialog({
             ))}
           </SelectField>
         </div>
+        {clientsLoaded && (clients ?? []).length === 0 && (
+          <TextBlock className="text-xs text-warning">
+            Belum ada klien terdaftar. Tambahkan dulu di tab “Master Klien”.
+          </TextBlock>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <TextField
             label="Nomor Kontrak / SPK"
             placeholder="cth. SPK/VT/TELKOM/2026/001"
             error={errors.spk_number?.message}
+            maxLength={100}
             {...register("spk_number", { required: "Nomor SPK wajib diisi." })}
           />
 
@@ -159,6 +171,7 @@ export function ProjectFormDialog({
             label="Judul Proyek / Pekerjaan"
             placeholder="cth. Penarikan Kabel Feeder FTTx Riau Segmen 1"
             error={errors.project_title?.message}
+            maxLength={255}
             {...register("project_title", { required: "Judul proyek wajib diisi." })}
           />
         </div>
@@ -180,6 +193,7 @@ export function ProjectFormDialog({
             label="Satuan Ukuran"
             placeholder="cth. Titik, Meter, Tiang, Site"
             error={errors.unit_measure?.message}
+            maxLength={50}
             {...register("unit_measure", { required: "Satuan ukuran wajib diisi." })}
           />
 
@@ -188,10 +202,10 @@ export function ProjectFormDialog({
             error={errors.status?.message}
             {...register("status")}
           >
-            <ControlOption value="ONGOING">ONGOING (Berjalan)</ControlOption>
-            <ControlOption value="DRAFT">DRAFT (Persiapan)</ControlOption>
-            <ControlOption value="COMPLETED">COMPLETED (Selesai)</ControlOption>
-            <ControlOption value="CANCELLED">CANCELLED (Dibatalkan)</ControlOption>
+            <ControlOption value="ONGOING">Berjalan</ControlOption>
+            <ControlOption value="DRAFT">Persiapan</ControlOption>
+            <ControlOption value="COMPLETED">Selesai</ControlOption>
+            <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
           </SelectField>
         </div>
 

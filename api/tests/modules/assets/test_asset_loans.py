@@ -64,14 +64,14 @@ def test_shared_tool_for_daily_plan_is_allocated(client, world: World):
 
 def test_plan_rules(client, world: World):
     personal = create_tool(client, world, ownership="PERSONAL_LOAN").json()["tool_id"]
-    assert _lend(client, world, asset_type="TOOL", tool_id=personal, daily_plan_id=_daily_plan(world)).status_code \
-        == 422
+    today_plan = _daily_plan(world)
+    assert _lend(client, world, asset_type="TOOL", tool_id=personal, daily_plan_id=today_plan).status_code == 422
     shared = create_tool(client, world).json()["tool_id"]
     assert _lend(client, world, asset_type="TOOL", tool_id=shared, daily_plan_id=_daily_plan(world, -1)).status_code \
         == 422
     outsider = client.post("/assets/loans", headers=world.headers(client, "hr"), json={
         "asset_type": "TOOL", "tool_id": shared, "employee_id": world.employees["hr"],
-        "daily_plan_id": _daily_plan(world)})
+        "daily_plan_id": today_plan})
     assert outsider.status_code == 422  # bukan anggota tim jadwal
 
 

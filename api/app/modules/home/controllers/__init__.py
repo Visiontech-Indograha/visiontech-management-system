@@ -1,0 +1,3 @@
+"""
+Paket controller modul home.
+"""

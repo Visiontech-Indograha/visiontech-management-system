@@ -14,6 +14,8 @@ interface SessionState {
   /** Terapkan token baru (mis. setelah ganti password) lalu muat ulang /auth/me. */
   applyToken: (token: TokenOut) => Promise<Me>;
   initSession: () => Promise<void>;
+  /** Muat ulang /auth/me (mis. setelah foto profil diganti) tanpa mengubah token. */
+  refreshMe: () => Promise<void>;
 }
 
 function parseAuthTime(token: string | null): number | null {
@@ -92,6 +94,10 @@ export const useSession = create<SessionState>((set, get) => {
       const profile = await fetchMe();
       set({ me: profile, ready: true });
       return profile;
+    },
+    refreshMe: async () => {
+      if (!getAccessToken()) return;
+      set({ me: await fetchMe() });
     },
     initSession: async () => {
       if (get().ready || getAccessToken()) return;

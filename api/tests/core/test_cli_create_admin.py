@@ -12,6 +12,14 @@ from tests.conftest import requires_db, sync_query
 pytestmark = requires_db
 
 
+@pytest.fixture(autouse=True)
+def _cli_uses_test_database(monkeypatch):
+    """CLI operator memakai MIGRATION_DATABASE_URL; di uji harus menunjuk DB uji, bukan DB dev."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "MIGRATION_DATABASE_URL", "")
+
+
 @pytest.fixture
 def org_id():
     # V2: satu perusahaan — "organisasi" = kantor (office).

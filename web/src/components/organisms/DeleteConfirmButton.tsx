@@ -27,6 +27,7 @@ export function DeleteConfirmButton({ label, title, description, successText, on
   if (!allowed) return null;
 
   const close = () => {
+    if (busy) return; // jangan tutup selagi penghapusan berjalan
     setOpen(false);
     setTyped("");
     setError(null);
@@ -37,7 +38,8 @@ export function DeleteConfirmButton({ label, title, description, successText, on
     try {
       await onDelete();
       toast.success(successText);
-      close();
+      setOpen(false);
+      setTyped("");
     } catch (err) {
       setError(errorMessage(err));
     } finally {

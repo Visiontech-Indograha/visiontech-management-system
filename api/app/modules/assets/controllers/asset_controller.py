@@ -18,6 +18,10 @@ from app.modules.assets.schemas.asset_schema import (
     InspectionOut,
     LoanCreate,
     LoanOut,
+    LoanRequestCreate,
+    LoanRequestOut,
+    LoanRequestReview,
+    LoanReturnRequest,
     ToolCreate,
     ToolOut,
     ToolUpdate,
@@ -94,3 +98,23 @@ class AssetController:
 
     async def handle_return(self, assignment_id: UUID, condition: str) -> LoanOut:
         return LoanOut(**(await self.service.return_loan(assignment_id, condition))._mapping)
+
+    # Pengajuan pinjam & pengembalian
+    async def handle_request_loan(self, user: CurrentUser, data: LoanRequestCreate) -> LoanRequestOut:
+        return LoanRequestOut(**(await self.service.request_loan(user, data))._mapping)
+
+    async def handle_requests(self, user: CurrentUser, status: str | None) -> list[LoanRequestOut]:
+        return [LoanRequestOut(**r._mapping) for r in await self.service.requests(user, status=status)]
+
+    async def handle_cancel_request(self, user: CurrentUser, request_id: UUID) -> LoanRequestOut:
+        return LoanRequestOut(**(await self.service.cancel_request(user, request_id))._mapping)
+
+    async def handle_review_request(
+        self, user: CurrentUser, request_id: UUID, data: LoanRequestReview
+    ) -> LoanRequestOut:
+        return LoanRequestOut(**(await self.service.review_request(user, request_id, data))._mapping)
+
+    async def handle_return_request(
+        self, user: CurrentUser, assignment_id: UUID, data: LoanReturnRequest
+    ) -> LoanOut:
+        return LoanOut(**(await self.service.request_return(user, assignment_id, data))._mapping)

@@ -4,7 +4,7 @@ import { useForm, type FieldErrors, type UseFormRegister } from "react-hook-form
 import { toast } from "sonner";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
-import { errorMessage } from "@/lib/errors";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { toolSchema, vehicleSchema, type ToolValues, type VehicleValues } from "@/schemas/assetSchemas";
 import { useCreateTool, useCreateVehicle, type AssetKind } from "@/services/assetService";
 import { useDivisions } from "@/services/employeeService";
@@ -53,6 +53,7 @@ function ToolForm({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<ToolValues>({
     resolver: zodResolver(toolSchema),
@@ -65,7 +66,7 @@ function ToolForm({ onClose }: { onClose: () => void }) {
       toast.success("Alat ditambahkan.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
   return (
@@ -94,6 +95,7 @@ function VehicleForm({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<VehicleValues>({
     resolver: zodResolver(vehicleSchema),
@@ -106,7 +108,7 @@ function VehicleForm({ onClose }: { onClose: () => void }) {
       toast.success("Kendaraan ditambahkan. Lengkapi STNK/KIR-nya lewat tombol Berkas.");
       onClose();
     } catch (err) {
-      setFormError(errorMessage(err));
+      setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
   return (

@@ -48,9 +48,9 @@ def _state(message: str) -> AppError:
 class PlanItemService:
     """Use case item pekerjaan per titik."""
 
-    def __init__(self, db: AsyncSession, repo: PlanItemRepository) -> None:
+    def __init__(self, db: AsyncSession, repo: PlanItemRepository | None = None) -> None:
         self.db = db
-        self.repo = repo
+        self.repo = repo if repo is not None else PlanItemRepository(db)
 
     async def _item(self, user: CurrentUser, item_id: UUID, need: DailyNeed) -> tuple[Any, DailyAccess]:
         item = await self.repo.get(item_id)

@@ -9,7 +9,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.hard_delete import purge_row
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 
 _SELECT = """
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
@@ -67,7 +67,7 @@ class EmployeeRepository(BaseRepository):
                 position_id: UUID | None, q: str | None) -> dict[str, Any]:
         return {"status": status, "div": str(division_id) if division_id else None,
                 "office": str(office_id) if office_id else None, "pos": str(position_id) if position_id else None,
-                "q": q}
+                "q": escape_like(q)}
 
     async def count(self, **filters: Any) -> int:
         n = await self.scalar(
@@ -92,6 +92,13 @@ class EmployeeRepository(BaseRepository):
         ))
 
     # ── Validasi referensi ────────────────────────────────────────────────────
+    async def recent_employee_nos(self, limit: int = 300) -> list[str]:
+        """Nomor karyawan terbaru (termasuk yang diarsipkan, agar nomor tidak dipakai ulang)."""
+        rows = await self.fetchall(
+            "SELECT employee_no FROM employee ORDER BY create_at DESC LIMIT :n", {"n": limit}
+        )
+        return [str(r.employee_no) for r in rows]
+
     async def employee_no_taken(self, employee_no: str, exclude: UUID | None = None) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM employee WHERE employee_no = :no AND delete_at IS NULL "
@@ -122,6 +129,33 @@ class EmployeeRepository(BaseRepository):
             {"id": str(file_id)},
         )
         return key
+
+    async def uploaded_image_key(self, file_id: UUID, user_id: UUID | str) -> str | None:
+        """
+        storage_key gambar yang boleh dijadikan foto sendiri: unggahan pengguna ini, atau gambar yang sudah menjadi foto
+        profil karyawan lain. Unggahan dideduplikasi per kantor (SHA-256): gambar yang sama persis dari akun kedua
+        mengembalikan baris milik pengunggah pertama, dan foto profil memang sudah terlihat oleh pemegang `view:users`,
+        jadi memakainya tidak membuka akses baru. Berkas selfie/dokumen orang lain tetap tidak bisa dipakai.
+        """
+        key: str | None = await self.scalar(
+            """
+            SELECT f.storage_key FROM file_object f
+            WHERE f.id = CAST(:id AS uuid) AND f.mime_type LIKE 'image/%'
+              AND (f.uploaded_by = CAST(:uid AS uuid)
+                   OR EXISTS (SELECT 1 FROM employee e
+                              WHERE e.profile_photo_path = f.storage_key OR e.photo_path = f.storage_key))
+            """,
+            {"id": str(file_id), "uid": str(user_id)},
+        )
+        return key
+
+    async def profile_photo_file_id(self, employee_id: UUID) -> UUID | None:
+        photo_id: UUID | None = await self.scalar(
+            "SELECT f.id FROM file_object f JOIN employee e ON e.profile_photo_path = f.storage_key "
+            "WHERE e.employee_id = CAST(:id AS uuid)",
+            {"id": str(employee_id)},
+        )
+        return photo_id
 
     # ── Tulis ─────────────────────────────────────────────────────────────────
     async def insert(self, data: dict[str, Any]) -> UUID:

@@ -5,16 +5,16 @@ Request and response schemas for authentication processes.
 """
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
     """
     Schema for a user login request.
     """
-    email: str
-    password: str
-    platform: str | None = "web"
+    email: str = Field(max_length=254)
+    password: str = Field(max_length=256)
+    platform: str | None = Field(default="web", max_length=20)
 
 
 class TokenResponse(BaseModel):
@@ -44,8 +44,8 @@ class ChangePasswordRequest(BaseModel):
     """
     Schema for a user requesting to change their password.
     """
-    current_password: str
-    new_password: str
+    current_password: str = Field(max_length=256)
+    new_password: str = Field(max_length=128)
 
 
 class MessageResponse(BaseModel):

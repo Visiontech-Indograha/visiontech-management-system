@@ -34,3 +34,24 @@ export function formatDate(iso: string | null | undefined): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return `${d} ${MONTHS[m - 1]} ${y}`;
 }
+
+/** Jarak dalam meter → "711 m" atau "463,8 km" bila ≥ 1 km. */
+export function formatDistance(meters: number | null | undefined): string {
+  if (meters === null || meters === undefined || Number.isNaN(meters)) return "-";
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toLocaleString("id-ID", { maximumFractionDigits: 1 })} km`;
+}
+
+const FACE_RESULT_LABEL: Record<string, string> = {
+  MATCH: "Cocok",
+  NO_MATCH: "Tidak cocok",
+  MISMATCH: "Tidak cocok",
+  SKIPPED: "Tidak diperiksa",
+  NOT_ENROLLED: "Wajah belum terdaftar",
+  LOW_QUALITY: "Foto kurang jelas",
+};
+
+export function faceResultLabel(result: string | null | undefined): string {
+  if (!result) return "-";
+  return FACE_RESULT_LABEL[result] ?? result;
+}

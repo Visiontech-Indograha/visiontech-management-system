@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { RouteObject } from "react-router-dom";
-import { Briefcase, Building2 } from "lucide-react";
 import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
@@ -10,6 +9,7 @@ import { HomePage } from "@/pages/home/HomePage";
 import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
 import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
 import { NotFoundPage } from "@/pages/system/NotFoundPage";
+import { UuidParamGuard } from "@/app/UuidParamGuard";
 import { NAV_ITEMS } from "./navigation";
 import {
   AccountPage,
@@ -46,6 +46,8 @@ const PAGES: Record<string, ReactNode> = {
   "/work-types": <WorkTypesPage />,
   "/work-plans": <DailyPlansPage />,
   "/work-completions": <WorkCompletionsPage />,
+  "/clients": <ClientsPage />,
+  "/projects": <ProjectsPage />,
   "/surveys": <SurveysPage />,
   "/teams": <TeamsPage />,
   "/mess": <MessPage />,
@@ -64,8 +66,24 @@ export const routes: RouteObject[] = [
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
-      { path: "/verify/work-completion/:id", element: <VerifyCompletionPage /> }, // QR BAST resmi, publik
-      { path: "/work-completion/:id", element: <VerifyCompletionPage /> }, // Alias URL QR dokumen resmi, publik
+      // QR BAST resmi, publik
+      {
+        path: "/verify/work-completion/:id",
+        element: (
+          <UuidParamGuard>
+            <VerifyCompletionPage />
+          </UuidParamGuard>
+        ),
+      },
+      // Alias URL QR dokumen resmi, publik
+      {
+        path: "/work-completion/:id",
+        element: (
+          <UuidParamGuard>
+            <VerifyCompletionPage />
+          </UuidParamGuard>
+        ),
+      },
       {
         element: <RequireAuth />,
         children: [
@@ -84,7 +102,9 @@ export const routes: RouteObject[] = [
                 path: "/surveys/:id",
                 element: (
                   <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/surveys")!}>
-                    <SurveyDetailPage />
+                    <UuidParamGuard>
+                      <SurveyDetailPage />
+                    </UuidParamGuard>
                   </RequireAccess>
                 ),
               },
@@ -92,23 +112,9 @@ export const routes: RouteObject[] = [
                 path: "/directory/:id",
                 element: (
                   <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/directory")!}>
-                    <EmployeeDetailPage />
-                  </RequireAccess>
-                ),
-              },
-              {
-                path: "/clients",
-                element: (
-                  <RequireAccess item={{ path: "/clients", label: "Klien", icon: Building2, requires: ["create:plan"] }}>
-                    <ClientsPage />
-                  </RequireAccess>
-                ),
-              },
-              {
-                path: "/projects",
-                element: (
-                  <RequireAccess item={{ path: "/projects", label: "Proyek", icon: Briefcase, requires: ["create:plan"] }}>
-                    <ProjectsPage />
+                    <UuidParamGuard>
+                      <EmployeeDetailPage />
+                    </UuidParamGuard>
                   </RequireAccess>
                 ),
               },

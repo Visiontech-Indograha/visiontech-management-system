@@ -25,6 +25,8 @@ from app.modules.attendance.schemas.attendance_schema import (
     DeviceKeyRequest,
     ExplanationRequest,
     MealAllowanceRow,
+    MyRecapItem,
+    MyRecapResponse,
     OfflineAttendanceEvent,
     OfflineAttendanceResult,
     ReviewRequest,
@@ -63,6 +65,7 @@ class AttendanceController:
         scope: str = "all",
         page: int = 1,
         size: int = 50,
+        q: str | None = None,
     ) -> AttendanceListResponse:
         """Mengambil daftar riwayat absensi berdasarkan filter dan kewenangan pengguna."""
         rows, total = await self.session_service.list_attendance(
@@ -76,6 +79,7 @@ class AttendanceController:
             scope=scope,
             page=page,
             size=size,
+            q=q,
         )
         today, required_out, pending, pending_plan = await self.session_service.day_hints(
             current_user.organization_id, current_user.employee_id
@@ -124,7 +128,9 @@ class AttendanceController:
         data: CheckInRequest,
     ) -> AttendanceResponse:
         """Memproses absensi masuk (check-in) pengguna."""
-        await self.session_service.ensure_check_in_refs(current_user.organization_id, data.site_id, data.selfie_file_id)
+        await self.session_service.ensure_check_in_refs(
+            current_user.organization_id, data.site_id, data.selfie_file_id, user_id=current_user.user_id
+        )
         row = await self.session_service.check_in(
             current_user.organization_id,
             current_user.user_id,
@@ -145,7 +151,9 @@ class AttendanceController:
         data: CheckOutRequest,
     ) -> AttendanceResponse:
         """Memproses absensi pulang (check-out) pengguna."""
-        await self.session_service.ensure_check_in_refs(current_user.organization_id, None, data.selfie_file_id)
+        await self.session_service.ensure_check_in_refs(
+            current_user.organization_id, None, data.selfie_file_id, user_id=current_user.user_id
+        )
         row = await self.session_service.check_out(
             current_user.user_id,
             data.channel,
@@ -206,6 +214,11 @@ class AttendanceController:
     ) -> list[MealAllowanceRow]:
         rows = await self.session_service.meal_allowance(current_user, start_date, end_date, division_id)
         return [MealAllowanceRow(**dict(r._mapping)) for r in rows]
+
+    async def handle_my_recap(self, current_user: CurrentUser, month: str | None) -> MyRecapResponse:
+        data = await self.session_service.my_recap(current_user, month)
+        data["items"] = [MyRecapItem(**dict(r._mapping)) for r in data["items"]]
+        return MyRecapResponse(**data)
 
 
 __all__ = ["AttendanceController"]

@@ -7,9 +7,10 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.documents.controllers.document_controller import DocumentController
@@ -26,11 +27,22 @@ _MANAGE = Depends(require_permission(Permission.MANAGE_EMPLOYEE_DOCUMENTS))
 @router.get("", response_model=DocumentListResponse)
 async def get_employee_documents(
     emp_id: UUID,
+    response: Response,
+    params: ListParams = Depends(),
+    doc_status: str | None = Query(None, alias="status", max_length=30, description="Filter status dokumen"),
     current_user: CurrentUser = Depends(require_permission(Permission.VIEW_DOCUMENTS)),
     controller: DocumentController = Depends(),
 ) -> DocumentListResponse:
     """Daftar dokumen karyawan (milik sendiri, atau semua bagi pengelola dokumen)."""
-    return await controller.handle_get_employee_documents(current_user, emp_id)
+    res = await controller.handle_get_employee_documents(current_user, emp_id)
+    items = apply_list(
+        res.items,
+        params,
+        response,
+        lambda d: (d.doc_type,),
+        extra=lambda d: doc_status is None or str(getattr(d.status, "value", d.status)) == doc_status,
+    )
+    return DocumentListResponse(items=list(items), total=int(response.headers["X-Total-Count"]))
 
 
 @router.post("", response_model=EmployeeDocumentResponse, status_code=status.HTTP_201_CREATED)

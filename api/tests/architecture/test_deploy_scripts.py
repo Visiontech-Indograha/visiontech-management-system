@@ -128,3 +128,22 @@ def test_restore_drill_uses_the_real_backup_path_and_never_touches_prod():
     for forbidden in ("DROP DATABASE", "pg_restore -U \"$OWNER\" -d \"$DB\" < \"$FILE\"", "--clean"):
         assert forbidden not in text                                           # prod tidak pernah ditimpa
     assert 'docker exec -i "$DB_CT" pg_restore' not in text
+
+
+def test_autodeploy_backs_off_after_a_failed_deploy_of_the_same_commit():
+    """Insiden 2026-10-23..28: deploy gagal diulang tiap menit (±650/hari). Gagal → jeda; sukses → hapus penanda."""
+    text = read(DEPLOY / "autodeploy.sh")
+    assert 'FAILED_FILE="$BASE/.last-failed"' in text
+    assert "VMS_DEPLOY_RETRY_AFTER:-900" in text
+    assert 'echo "$NEW $(date +%s)" > "$FAILED_FILE"' in text   # fail() menandai
+    assert 'rm -f "$FAILED_FILE"' in text                          # sukses membersihkan
+    assert text.index("FAILED_FILE=") < text.index("Checkout") if "Checkout" in text else True
+
+
+def test_autodeploy_rolls_back_images_when_new_containers_are_unhealthy():
+    text = read(DEPLOY / "autodeploy.sh")
+    assert 'docker tag "${IMG}-$c" "${IMG}-$c:rollback"' in text         # simpan sebelum build
+    assert "up -d --force-recreate --no-build" in text                   # pulihkan tanpa membangun ulang
+    assert "case $RC in 14|16|17|18) rollback_images || true ;; esac" in text
+    # rollback hanya setelah kontainer dinyalakan: tidak untuk kegagalan checkout/build/backup/migrasi (11-13, 15)
+    assert text.index("rollback_images()") > text.index("Jalankan kontainer baru")

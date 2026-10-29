@@ -7,6 +7,7 @@ import { FormBlock } from "@/components/molecules/FormBlock";
 import { CheckCircle2, ClipboardCheck, Download, Send } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { errorMessage } from "@/lib/errors";
 import { useOfficialSurveyReport, useReviewSurvey, type Survey } from "@/services/surveyService";
 
@@ -15,6 +16,7 @@ export function SurveyReviewBar({ survey, onPlan }: { survey: Survey; onPlan: ()
   const review = useReviewSurvey(survey.task_id);
   const official = useOfficialSurveyReport(survey.task_id);
   const [returning, setReturning] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [note, setNote] = useState("");
 
   const approve = async () => {
@@ -49,7 +51,7 @@ export function SurveyReviewBar({ survey, onPlan }: { survey: Survey; onPlan: ()
     <div className="flex flex-wrap gap-2">
       {survey.can_review && (
         <>
-          <ActionButton onClick={approve} disabled={review.isPending}>
+          <ActionButton onClick={() => setApproving(true)} disabled={review.isPending}>
             <CheckCircle2 className="mr-1.5 h-4 w-4" /> Setujui survei
           </ActionButton>
           <ActionButton variant="outline" onClick={() => setReturning(true)} disabled={review.isPending}>
@@ -97,6 +99,18 @@ export function SurveyReviewBar({ survey, onPlan }: { survey: Survey; onPlan: ()
           </FormBlock>
         </VmsDialog>
       )}
+      <ConfirmDialog
+        open={approving}
+        title="Setujui survei?"
+        message="Survei akan disetujui dan laporan resmi dapat diunduh. Setelah itu pekerjaan dapat direncanakan."
+        confirmLabel="Setujui survei"
+        busy={review.isPending}
+        onConfirm={async () => {
+          await approve();
+          setApproving(false);
+        }}
+        onClose={() => setApproving(false)}
+      />
     </div>
   );
 }

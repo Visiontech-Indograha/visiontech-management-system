@@ -14,6 +14,8 @@ from app.core.repository import BaseRepository
 
 _LEAVE_SELECT = """
     SELECT lr.leave_id, lr.employee_id, e.full_name AS employee_name, e.employee_no,
+           (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
+               AS employee_photo_file_id,
            d.name AS division_name, lr.leave_type::text AS leave_type, lr.start_date,
            lr.end_date, lr.total_days, lr.reason, lr.status::text AS status,
            lr.attachment_path,
@@ -62,16 +64,23 @@ class LeaveRepository(BaseRepository):
             {"emp": str(employee_id), "year": year},
         )
 
-    async def deduct_balance(self, employee_id: UUID | str, year: int, days: int) -> None:
-        """Tambah used_quota pada leave_balance."""
-        await self.execute(
+    async def deduct_balance(self, employee_id: UUID | str, year: int, days: int) -> bool:
+        """
+        Ubah used_quota secara atomik (satu UPDATE mengunci barisnya, jadi dua persetujuan bersamaan tidak
+        melewati batas). Pemotongan (days > 0) ditolak bila sisa kuota kurang; pengembalian (days < 0) tidak
+        pernah membuat used_quota negatif. Mengembalikan False bila tak ada baris yang berubah.
+        """
+        row = await self.fetchone(
             """
             UPDATE leave_balance
-            SET used_quota = used_quota + :days, update_at = now()
+            SET used_quota = GREATEST(used_quota + :days, 0), update_at = now()
             WHERE employee_id = CAST(:emp AS uuid) AND period_year = :year AND delete_at IS NULL
+              AND (:days <= 0 OR total_quota - used_quota >= :days)
+            RETURNING balance_id
             """,
             {"emp": str(employee_id), "year": year, "days": days},
         )
+        return row is not None
 
     async def has_overlapping_leave(
         self, employee_id: UUID | str, start_date: date, end_date: date
@@ -126,10 +135,11 @@ class LeaveRepository(BaseRepository):
         )
         return leave_id
 
-    async def get_leave(self, leave_id: UUID | str) -> Any:
-        """Mengambil detail satu permohonan cuti."""
+    async def get_leave(self, leave_id: UUID | str, *, for_update: bool = False) -> Any:
+        """Mengambil detail satu permohonan cuti; `for_update` mengunci barisnya sampai transaksi selesai."""
         return await self.fetchone(
-            _LEAVE_SELECT + " WHERE lr.leave_id = CAST(:id AS uuid) AND lr.delete_at IS NULL",
+            _LEAVE_SELECT + " WHERE lr.leave_id = CAST(:id AS uuid) AND lr.delete_at IS NULL"
+            + (" FOR UPDATE OF lr" if for_update else ""),
             {"id": str(leave_id)},
         )
 
@@ -139,22 +149,36 @@ class LeaveRepository(BaseRepository):
         employee_id: UUID | str | None = None,
         status: str | None = None,
         year: int | None = None,
+        pm_id: UUID | str | None = None,
     ) -> Sequence[Any]:
-        """Daftar permohonan cuti dengan filter."""
+        """Daftar permohonan cuti dengan filter (pm_id: hanya karyawan divisi PM tsb + dirinya)."""
         return await self.fetchall(
             _LEAVE_SELECT + """
             WHERE lr.delete_at IS NULL
               AND (CAST(:emp AS uuid) IS NULL OR lr.employee_id = CAST(:emp AS uuid))
               AND (CAST(:st AS text) IS NULL OR lr.status::text = :st)
               AND (CAST(:yr AS integer) IS NULL OR EXTRACT(YEAR FROM lr.start_date) = :yr)
+              AND (CAST(:pm AS uuid) IS NULL OR d.pm_id = CAST(:pm AS uuid) OR lr.employee_id = CAST(:pm AS uuid))
             ORDER BY lr.create_at DESC
             """,
             {
                 "emp": str(employee_id) if employee_id else None,
                 "st": status,
                 "yr": year,
+                "pm": str(pm_id) if pm_id else None,
             },
         )
+
+    async def division_pm_of(self, employee_id: UUID | str) -> Any:
+        """pm_id divisi tempat karyawan bernaung (None bila tanpa divisi)."""
+        row = await self.fetchone(
+            """
+            SELECT d.pm_id FROM employee e LEFT JOIN division d ON d.division_id = e.division_id
+            WHERE e.employee_id = CAST(:id AS uuid)
+            """,
+            {"id": str(employee_id)},
+        )
+        return row.pm_id if row else None
 
     async def update_review(
         self,
@@ -179,4 +203,15 @@ class LeaveRepository(BaseRepository):
             WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
             {"id": str(leave_id), "st": status, "rev": str(reviewer_id), "note": note},
+        )
+
+    async def cancel_leave(self, leave_id: UUID | str) -> None:
+        """Pembatalan cuti oleh pemohon sendiri."""
+        await self.execute(
+            """
+            UPDATE leave_request
+            SET status = CAST('CANCELLED' AS approval_status_enum), update_at = now()
+            WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {"id": str(leave_id)},
         )

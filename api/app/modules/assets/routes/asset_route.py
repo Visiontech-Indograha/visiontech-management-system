@@ -7,9 +7,10 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import get_current_user, require_permission
+from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.assets.controllers.asset_controller import AssetController
@@ -20,7 +21,11 @@ from app.modules.assets.schemas.asset_schema import (
     InspectionOut,
     LoanCreate,
     LoanOut,
+    LoanRequestCreate,
+    LoanRequestOut,
+    LoanRequestReview,
     LoanReturn,
+    LoanReturnRequest,
     ToolCreate,
     ToolOut,
     ToolUpdate,
@@ -39,13 +44,16 @@ _LOGIN = Depends(get_current_user)
 # ── Alat ───────────────────────────────────────────────────────────────────────
 @router.get("/tools", response_model=list[ToolOut])
 async def list_tools(
+    response: Response,
+    params: ListParams = Depends(),
     office_id: UUID | None = None,
     asset_status: AssetStatus | None = Query(None, alias="status"),
     current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
 ) -> list[ToolOut]:
     """Daftar alat (pribadi & umum) beserta pemegangnya saat ini."""
-    return await controller.handle_list_tools(office_id, asset_status)
+    rows = await controller.handle_list_tools(office_id, asset_status)
+    return list(apply_list(rows, params, response, lambda r: (r.name, r.tool_code, r.office_name, r.division_name)))
 
 
 @router.post("/tools", response_model=ToolOut, status_code=status.HTTP_201_CREATED)
@@ -84,13 +92,16 @@ async def delete_tool(
 # ── Kendaraan ──────────────────────────────────────────────────────────────────
 @router.get("/vehicles", response_model=list[VehicleOut])
 async def list_vehicles(
+    response: Response,
+    params: ListParams = Depends(),
     office_id: UUID | None = None,
     asset_status: AssetStatus | None = Query(None, alias="status"),
     current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
 ) -> list[VehicleOut]:
     """Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini."""
-    return await controller.handle_list_vehicles(office_id, asset_status)
+    rows = await controller.handle_list_vehicles(office_id, asset_status)
+    return list(apply_list(rows, params, response, lambda r: (r.name, r.number_plate, r.office_name, r.division_name)))
 
 
 @router.post("/vehicles", response_model=VehicleOut, status_code=status.HTTP_201_CREATED)
@@ -164,6 +175,8 @@ async def add_inspection(
 # ── Peminjaman ────────────────────────────────────────────────────────────────
 @router.get("/loans", response_model=list[LoanOut])
 async def list_loans(
+    response: Response,
+    params: ListParams = Depends(),
     open_only: bool = Query(True, alias="open"),
     employee_id: UUID | None = None,
     daily_plan_id: UUID | None = None,
@@ -171,9 +184,10 @@ async def list_loans(
     controller: AssetController = Depends(),
 ) -> list[LoanOut]:
     """Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya."""
-    return await controller.handle_loans(
+    rows = await controller.handle_loans(
         current_user, open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id
     )
+    return list(apply_list(rows, params, response, lambda r: (r.asset_name, r.asset_code, r.employee_name)))
 
 
 @router.post("/loans", response_model=LoanOut, status_code=status.HTTP_201_CREATED)
@@ -191,3 +205,48 @@ async def return_asset(
 ) -> LoanOut:
     """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
     return await controller.handle_return(assignment_id, data.condition)
+
+
+# ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────
+@router.get("/loan-requests", response_model=list[LoanRequestOut])
+async def list_loan_requests(
+    status_filter: str | None = Query(None, alias="status", pattern="^(PENDING|APPROVED|REJECTED|CANCELLED)$"),
+    current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+) -> list[LoanRequestOut]:
+    """Pengajuan pinjam aset. Pengelola aset melihat semua; karyawan hanya miliknya."""
+    return await controller.handle_requests(current_user, status_filter)
+
+
+@router.post("/loan-requests", response_model=LoanRequestOut, status_code=status.HTTP_201_CREATED)
+async def request_loan(
+    data: LoanRequestCreate, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> LoanRequestOut:
+    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri."""
+    return await controller.handle_request_loan(current_user, data)
+
+
+@router.post("/loan-requests/{request_id}/cancel", response_model=LoanRequestOut)
+async def cancel_loan_request(
+    request_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
+) -> LoanRequestOut:
+    """Pemohon membatalkan pengajuan yang masih menunggu."""
+    return await controller.handle_cancel_request(current_user, request_id)
+
+
+@router.post("/loan-requests/{request_id}/review", response_model=LoanRequestOut)
+async def review_loan_request(
+    request_id: UUID, data: LoanRequestReview, current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+) -> LoanRequestOut:
+    """HR/GA menyetujui (langsung serah terima) atau menolak pengajuan."""
+    return await controller.handle_review_request(current_user, request_id, data)
+
+
+@router.post("/loans/{assignment_id}/return-request", response_model=LoanOut)
+async def request_return(
+    assignment_id: UUID, data: LoanReturnRequest, current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+) -> LoanOut:
+    """Pemegang aset mengajukan pengembalian dengan kondisi dan foto; pengelola yang mengonfirmasi."""
+    return await controller.handle_return_request(current_user, assignment_id, data)

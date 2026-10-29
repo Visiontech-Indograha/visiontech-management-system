@@ -9,10 +9,55 @@ import 'package:geolocator/geolocator.dart';
 
 import 'geofence_confirm.dart';
 import 'location_helper.dart';
+import 'reverse_geocode.dart';
 import 'system_ui.dart';
 
 /// Logo Visiontech di watermark setiap foto (R-11) — versi putih transparan di atas kotak gelap (R-14).
+/// Bila tim punya logo sendiri, logo itu yang dipakai (lihat team_logo.dart).
 const watermarkLogoAsset = 'assets/branding/logo_visiontech_white.png';
+
+/// Kotak logo standar di panel watermark: logo dimuat 'contain', jadi logo persegi tampil lebih kecil.
+const watermarkLogoBoxWidth = 96.0;
+const watermarkLogoBoxHeight = 30.0;
+
+/// Flash hanya tersedia di kamera belakang; kamera depan (swafoto) tidak punya lampu flash.
+@visibleForTesting
+bool flashAvailableFor(CameraLensDirection lens) =>
+    lens == CameraLensDirection.back;
+
+/// Siklus tombol flash: mati ⇄ nyala (nyala = lampu menyala saat rana ditekan).
+@visibleForTesting
+FlashMode nextFlashMode(FlashMode current) =>
+    current == FlashMode.off ? FlashMode.always : FlashMode.off;
+
+/// Tombol flash di layar kamera dengan status yang terlihat ("Flash mati" / "Flash nyala").
+class CameraFlashToggle extends StatelessWidget {
+  const CameraFlashToggle({
+    required this.mode,
+    required this.onPressed,
+    super.key,
+  });
+
+  final FlashMode mode;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = mode != FlashMode.off;
+    return Tooltip(
+      message: on ? 'Matikan flash' : 'Nyalakan flash',
+      child: TextButton.icon(
+        key: const Key('camera-flash-toggle'),
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          foregroundColor: on ? Colors.yellowAccent : Colors.white,
+        ),
+        icon: Icon(on ? Icons.flash_on : Icons.flash_off, size: 20),
+        label: Text(on ? 'Flash nyala' : 'Flash mati'),
+      ),
+    );
+  }
+}
 
 /// Hasil satu kali pemotretan lewat [WatermarkCameraScreen]. [position] dan
 /// [capturedAt] di sini PERSIS sama dengan yang ditampilkan di overlay saat
@@ -26,11 +71,15 @@ class WatermarkCaptureResult {
     required this.capturedAt,
     this.overlayPng,
     this.overlayWidthFraction = 1,
+    this.address,
   });
 
   final String imagePath;
   final Position position;
   final DateTime capturedAt;
+
+  /// Alamat hasil reverse-geocoding saat rana ditekan (null bila belum/tidak tersedia).
+  final String? address;
 
   /// Panel watermark PERSIS seperti di layar saat rana ditekan (PNG). Dibakar apa adanya ke foto
   /// supaya hasil = tampilan kamera (R-14). Null → cadangan: digambar ulang di photo_capture.dart.
@@ -53,8 +102,12 @@ class WatermarkCameraScreen extends StatefulWidget {
     this.locationCaption,
     this.preferFrontCamera = false,
     this.geofenceCheck,
+    this.logo,
     super.key,
   });
+
+  /// Logo di panel watermark (PNG/JPEG/WebP). Null → logo default Visiontech.
+  final Uint8List? logo;
 
   /// Label slot foto (mis. "Foto odometer kendaraan") -- ditampilkan sebagai
   /// judul pita panduan di atas layar kamera.
@@ -100,6 +153,9 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
   final _panelKey = GlobalKey();
   bool _proximityLoading = false;
   GeofenceProximity? _proximity;
+  String? _address; // alamat dari GPS; null = belum ada / gagal (watermark tetap pakai koordinat)
+  FlashMode _flash = FlashMode.off; // default mati
+  bool _flashAvailable = false;
 
   @override
   void initState() {
@@ -120,6 +176,7 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
       _locationError = null;
       _proximity = null;
       _proximityLoading = false;
+      _address = null;
     });
     final result = await getCurrentPositionSafely();
     if (!mounted) return;
@@ -130,6 +187,7 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
 
     final geofenceCheck = widget.geofenceCheck;
     final position = result.position;
+    if (position != null) unawaited(_loadAddress(position));
     if (geofenceCheck == null || position == null) return;
     setState(() => _proximityLoading = true);
     final proximity = await geofenceCheck(
@@ -141,6 +199,17 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
       _proximity = proximity;
       _proximityLoading = false;
     });
+  }
+
+  /// Alamat dicari terpisah dan tidak menahan pengambilan foto: bila geocoder
+  /// lambat/gagal, panel tetap koordinat + waktu + nama lokasi tugas.
+  Future<void> _loadAddress(Position position) async {
+    final address = await reverseGeocodeCached(
+      position.latitude,
+      position.longitude,
+    );
+    if (!mounted || !identical(_position, position)) return;
+    setState(() => _address = address);
   }
 
   Future<void> _initCamera() async {
@@ -177,10 +246,38 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
       await controller.dispose();
       return;
     }
+    var flashOk = false;
+    if (flashAvailableFor(description.lensDirection)) {
+      try {
+        await controller.setFlashMode(_flash);
+        flashOk = true;
+      } catch (_) {
+        flashOk = false; // perangkat tanpa flash: tombol disembunyikan
+      }
+    }
     setState(() {
       _controller = controller;
       _lensDirection = description.lensDirection;
+      _flashAvailable = flashOk;
     });
+  }
+
+  /// Ganti flash mati ⇄ nyala. Galat dari plugin → tombol disembunyikan, foto tetap bisa diambil.
+  Future<void> _toggleFlash() async {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    final next = nextFlashMode(_flash);
+    try {
+      await controller.setFlashMode(next);
+      if (mounted) setState(() => _flash = next);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _flashAvailable = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Flash tidak didukung di perangkat ini.')),
+        );
+      }
+    }
   }
 
   /// Putar kamera depan/belakang -- hilang di alur sebelumnya (image_picker
@@ -198,7 +295,10 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
     if (match.lensDirection == _lensDirection) return;
 
     final old = _controller;
-    setState(() => _controller = null);
+    setState(() {
+      _controller = null;
+      _flash = FlashMode.off; // kamera berganti: flash kembali mati
+    });
     await old?.dispose();
     await _open(match);
   }
@@ -270,6 +370,7 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
           capturedAt: capturedAt,
           overlayPng: overlay?.$1,
           overlayWidthFraction: overlay == null ? 1 : overlay.$2 / screenWidth,
+          address: _address,
         ),
       );
     } catch (e) {
@@ -378,6 +479,11 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
                       ),
                     ),
                   ),
+                  if (_flashAvailable)
+                    CameraFlashToggle(
+                      mode: _flash,
+                      onPressed: _toggleFlash,
+                    ),
                   if (_availableCameras.length > 1)
                     IconButton(
                       icon: const Icon(
@@ -421,6 +527,17 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
                               fontFamily: 'monospace',
                             ),
                           ),
+                          if (_address != null)
+                            Text(
+                              _address!,
+                              key: const Key('watermark-address'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12.5,
+                              ),
+                            ),
                           Text(
                             _formattedTime,
                             style: const TextStyle(
@@ -475,7 +592,22 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
                     ),
                     const SizedBox(width: 10),
                     // Logo yang sama persis ikut tertangkap bersama panel (R-11/R-14).
-                    Image.asset(watermarkLogoAsset, height: 30),
+                    SizedBox(
+                      key: const Key('watermark-logo'),
+                      width: watermarkLogoBoxWidth,
+                      height: watermarkLogoBoxHeight,
+                      child: widget.logo != null
+                          ? Image.memory(
+                              widget.logo!,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerRight,
+                            )
+                          : Image.asset(
+                              watermarkLogoAsset,
+                              fit: BoxFit.contain,
+                              alignment: Alignment.centerRight,
+                            ),
+                    ),
                   ],
                 ),
               ),

@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 
 import 'geofence_confirm.dart';
 import 'local_storage.dart';
+import 'team_logo.dart';
 import 'watermark_camera_screen.dart';
 
 /// Satu slot foto wajib dalam form -- label + panduan singkat apa yang harus
@@ -62,8 +64,11 @@ Future<(File?, String?)> captureWatermarkedPhoto({
 }) async {
   final override = photoCaptureOverride;
   if (override != null) return override(label);
-  final result = await Navigator.of(context, rootNavigator: true)
-      .push<WatermarkCaptureResult>(
+
+  // Logo tim (bila ada & tersedia cepat) menggantikan logo default di kamera DAN di foto.
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final logo = await _watermarkLogo(context);
+  final result = await navigator.push<WatermarkCaptureResult>(
         MaterialPageRoute(
           fullscreenDialog: true,
           builder: (_) => WatermarkCameraScreen(
@@ -72,13 +77,13 @@ Future<(File?, String?)> captureWatermarkedPhoto({
             locationCaption: locationCaption,
             preferFrontCamera: preferFrontCamera,
             geofenceCheck: geofenceCheck,
+            logo: logo,
           ),
         ),
       );
   if (result == null) return (null, null); // dibatalkan user
 
   final bytes = await File(result.imagePath).readAsBytes();
-  final logo = (await rootBundle.load(watermarkLogoAsset)).buffer.asUint8List();
   final watermarked = await compute(
     _drawWatermark,
     _WatermarkArgs(
@@ -88,6 +93,7 @@ Future<(File?, String?)> captureWatermarkedPhoto({
       timestamp: result.capturedAt,
       isMocked: result.position.isMocked,
       locationCaption: locationCaption,
+      address: result.address,
       logo: logo,
       overlay: result.overlayPng,
       overlayWidthFraction: result.overlayWidthFraction,
@@ -100,6 +106,20 @@ Future<(File?, String?)> captureWatermarkedPhoto({
   return (file, null);
 }
 
+/// Logo watermark: logo tim bila tersedia (cache/server dengan batas waktu singkat), selain itu logo default.
+Future<Uint8List> _watermarkLogo(BuildContext context) async {
+  Uint8List? teamLogo;
+  try {
+    teamLogo = await teamLogoForWatermark(
+      ProviderScope.containerOf(context, listen: false),
+    );
+  } catch (_) {
+    teamLogo = null; // tanpa ProviderScope (mis. uji) → logo default
+  }
+  return teamLogo ??
+      (await rootBundle.load(watermarkLogoAsset)).buffer.asUint8List();
+}
+
 class _WatermarkArgs {
   const _WatermarkArgs({
     required this.bytes,
@@ -109,6 +129,7 @@ class _WatermarkArgs {
     required this.isMocked,
     required this.locationCaption,
     required this.logo,
+    this.address,
     this.overlay,
     this.overlayWidthFraction = 1,
   });
@@ -120,6 +141,9 @@ class _WatermarkArgs {
   final bool isMocked;
   final String? locationCaption;
   final Uint8List logo;
+
+  /// Alamat dari GPS (null bila tidak tersedia) -- hanya dipakai pada jalur cadangan.
+  final String? address;
 
   /// Panel watermark hasil tangkapan layar kamera (PNG) — bila ada, dibakar apa adanya (R-14).
   final Uint8List? overlay;
@@ -136,6 +160,23 @@ String _twoDigits(int n) => n.toString().padLeft(2, '0');
 /// pernah selesai/melempar error yang tertangkap.
 String _formatTimestamp(DateTime dt) =>
     '${_twoDigits(dt.day)}/${_twoDigits(dt.month)}/${dt.year} ${_twoDigits(dt.hour)}:${_twoDigits(dt.minute)}';
+
+/// Baris teks watermark pada jalur cadangan: koordinat, alamat (bila ada), waktu, keterangan, peringatan GPS palsu.
+@visibleForTesting
+List<String> watermarkTextLines({
+  required double latitude,
+  required double longitude,
+  required DateTime timestamp,
+  required bool isMocked,
+  String? locationCaption,
+  String? address,
+}) => [
+  '${latitude.toStringAsFixed(6)}, ${longitude.toStringAsFixed(6)}',
+  if (address != null && address.isNotEmpty) address,
+  _formatTimestamp(timestamp),
+  ?locationCaption,
+  if (isMocked) 'PERINGATAN: lokasi mock/fake GPS',
+];
 
 Uint8List _drawWatermark(_WatermarkArgs args) {
   var image = img.decodeImage(args.bytes);
@@ -172,12 +213,14 @@ Uint8List _drawWatermark(_WatermarkArgs args) {
   }
 
   // Cadangan (tangkapan panel gagal): gambar ulang ringkas.
-  final lines = [
-    '${args.latitude.toStringAsFixed(6)}, ${args.longitude.toStringAsFixed(6)}',
-    _formatTimestamp(args.timestamp),
-    if (args.locationCaption != null) args.locationCaption!,
-    if (args.isMocked) 'PERINGATAN: lokasi mock/fake GPS',
-  ];
+  final lines = watermarkTextLines(
+    latitude: args.latitude,
+    longitude: args.longitude,
+    timestamp: args.timestamp,
+    isMocked: args.isMocked,
+    locationCaption: args.locationCaption,
+    address: args.address,
+  );
 
   const padding = 14;
   const lineHeight = 20;
@@ -203,12 +246,20 @@ Uint8List _drawWatermark(_WatermarkArgs args) {
     );
   }
 
-  // Logo putih transparan di sisi kanan kotak watermark (dibaur dengan alpha, tanpa kotak putih).
-  final logo = img.decodePng(args.logo);
+  // Logo di sisi kanan kotak watermark, 'contain' di dalam kotak standar (logo persegi tampil lebih kecil).
+  final logo = img.decodeImage(args.logo);
   if (logo != null) {
+    final maxH = boxHeight - 20;
+    const maxW = watermarkLogoBoxWidth;
+    final scale = [
+      1.0,
+      maxW / logo.width,
+      maxH / logo.height,
+    ].reduce((a, b) => a < b ? a : b);
     final badge = img.copyResize(
       logo,
-      height: boxHeight - 20,
+      width: (logo.width * scale).round().clamp(1, maxW.toInt()),
+      height: (logo.height * scale).round().clamp(1, maxH.toInt()),
       interpolation: img.Interpolation.average,
     );
     img.compositeImage(

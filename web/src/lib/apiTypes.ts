@@ -1520,6 +1520,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/{team_id}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Team Logo
+         * @description Isi logo tim (gambar). Anggota tim, PM/OM divisi, HR, dan SUPER_ADMIN; selain itu/tanpa logo → 404.
+         */
+        get: operations["get_team_logo_api_v1_teams__team_id__logo_get"];
+        /**
+         * Set Team Logo
+         * @description Mengganti logo tim (PNG/JPEG/WebP, maks 2 MB). Hanya ketua tim tersebut (SUPER_ADMIN darurat).
+         */
+        put: operations["set_team_logo_api_v1_teams__team_id__logo_put"];
+        post?: never;
+        /**
+         * Delete Team Logo
+         * @description Menghapus logo tim → kembali ke logo default. Hanya ketua tim tersebut.
+         */
+        delete: operations["delete_team_logo_api_v1_teams__team_id__logo_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mess/places": {
         parameters: {
             query?: never;
@@ -4566,6 +4594,11 @@ export interface components {
         };
         /** Body_set_survey_logo_api_v1_exports_survey_logos__role__put */
         Body_set_survey_logo_api_v1_exports_survey_logos__role__put: {
+            /** File */
+            file: string;
+        };
+        /** Body_set_team_logo_api_v1_teams__team_id__logo_put */
+        Body_set_team_logo_api_v1_teams__team_id__logo_put: {
             /** File */
             file: string;
         };
@@ -8341,6 +8374,10 @@ export interface components {
              * Format: date-time
              */
             create_at: string;
+            /** Logo File Id */
+            logo_file_id?: string | null;
+            /** Logo Url */
+            logo_url?: string | null;
             /**
              * Members
              * @default []
@@ -8389,6 +8426,25 @@ export interface components {
              * Format: date-time
              */
             create_at: string;
+            /** Logo File Id */
+            logo_file_id?: string | null;
+            /** Logo Url */
+            logo_url?: string | null;
+        };
+        /** TeamLogoOut */
+        TeamLogoOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Logo File Id
+             * Format: uuid
+             */
+            logo_file_id: string;
+            /** Logo Url */
+            logo_url: string;
         };
         /** TeamOption */
         TeamOption: {
@@ -12542,6 +12598,99 @@ export interface operations {
                         [key: string]: string;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_team_logo_api_v1_teams__team_id__logo_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_team_logo_api_v1_teams__team_id__logo_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_set_team_logo_api_v1_teams__team_id__logo_put"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamLogoOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_team_logo_api_v1_teams__team_id__logo_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

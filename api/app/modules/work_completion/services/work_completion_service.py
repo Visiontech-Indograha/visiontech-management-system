@@ -124,9 +124,9 @@ class WorkCompletionService:
     def _list_scope(user: CurrentUser) -> tuple[UUID | None, UUID | None]:
         """(pengelola, lapangan) untuk penyaring daftar; (None, None) = semua (SUPER_ADMIN, ADMIN_HR_GA)."""
         emp = UUID(user.employee_id) if user.employee_id else UUID(int=0)
-        if user.role in ("SUPER_ADMIN", "ADMIN_HR_GA"):
+        if user.has_role("SUPER_ADMIN", "ADMIN_HR_GA"):
             return None, None
-        if user.role in FIELD_ROLES:
+        if user.has_role(*FIELD_ROLES):
             return None, emp
         return emp, None
 
@@ -135,9 +135,9 @@ class WorkCompletionService:
         standing = await self.crud.standing(completion_id, user.employee_id)
         if not order or standing is None:
             raise NotFoundError("Order Proyek Klien")
-        admin = user.role == "SUPER_ADMIN"
+        admin = user.has_role("SUPER_ADMIN")
         manages = admin or bool(standing.manages)
-        visible = manages or user.role == "ADMIN_HR_GA" or bool(standing.on_team)
+        visible = manages or user.has_role("ADMIN_HR_GA") or bool(standing.on_team)
         if not visible:
             raise NotFoundError("Order Proyek Klien")
         if manage and not manages:
@@ -158,7 +158,7 @@ class WorkCompletionService:
         on_team = order.pop("_on_team", False)
         if order.get("pm_signed_at"):
             raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
-        if not (current_user.role == "TEAM_LEADER" and on_team):
+        if not (current_user.has_role("TEAM_LEADER") and on_team):
             await self._access(current_user, completion_id, manage=True)
         if not await self.crud.remove_photo(completion_id, str(file_id)):
             raise NotFoundError("Foto hasil kerja")
@@ -180,9 +180,9 @@ class WorkCompletionService:
 
     async def create_order(self, current_user: CurrentUser, data: dict[str, Any]) -> dict[str, Any]:
         """Membuat order proyek baru."""
-        if current_user.role not in ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER"):
+        if not current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Order Klien.")
-        if current_user.role == "PROJECT_MANAGER":
+        if current_user.has_role("PROJECT_MANAGER"):
             if not current_user.employee_id:
                 raise ForbiddenError("Akun PM ini belum tertaut ke data karyawan.")
             if data.get("pm_id") and str(data["pm_id"]) != str(current_user.employee_id):
@@ -199,7 +199,7 @@ class WorkCompletionService:
                     data["division_id"] = pm_div
         if not data.get("division_id"):
             raise ValidationError("Divisi order wajib ditentukan.")
-        if current_user.role != "SUPER_ADMIN" and (
+        if not current_user.has_role("SUPER_ADMIN") and (
             not current_user.employee_id
             or not await self.crud.is_division_manager(data["division_id"], current_user.employee_id)
         ):
@@ -216,7 +216,7 @@ class WorkCompletionService:
             data["order_number"] = data.get("order_number") or project.spk_number[:50]
             data.setdefault("start_work_date", project.start_date)
             data.setdefault("end_work_date", project.end_date)
-            if current_user.role != "PROJECT_MANAGER" and not data.get("pm_id"):
+            if not current_user.has_role("PROJECT_MANAGER") and not data.get("pm_id"):
                 data["pm_id"] = project.pm_id
         if not data.get("client_name") or not data.get("project_title"):
             raise ValidationError("Isi nama klien dan judul pekerjaan, atau pilih proyek.")
@@ -237,7 +237,7 @@ class WorkCompletionService:
     async def delete_order(self, current_user: CurrentUser, completion_id: UUID) -> None:
         """Menghapus order proyek klien (soft delete)."""
         existing = await self._editable(current_user, completion_id)
-        if existing.get("leader_signed_at") and current_user.role != "SUPER_ADMIN":
+        if existing.get("leader_signed_at") and not current_user.has_role("SUPER_ADMIN"):
             raise AppError("ORDER_LOCKED", "Order yang sudah ditandatangani ketua tim tidak dapat dihapus.", status=409)
         await self.crud.delete_completion(completion_id)
 
@@ -285,7 +285,7 @@ class WorkCompletionService:
         on_team = existing.pop("_on_team", False)
         if existing.get("pm_signed_at"):
             raise AppError("ORDER_LOCKED", ORDER_LOCKED, status=409)
-        as_leader = current_user.role == "TEAM_LEADER"
+        as_leader = current_user.has_role("TEAM_LEADER")
         photo_ids: list[str] = []
         if as_leader:
             if not on_team:
@@ -295,7 +295,7 @@ class WorkCompletionService:
             photo_ids = [str(p) for p in dict.fromkeys(realization_photos)]
             if photo_ids and await self.crud.existing_images(photo_ids) != len(photo_ids):
                 raise ValidationError("Ada foto hasil kerja yang belum diunggah atau bukan gambar.")
-        elif current_user.role in FIELD_ROLES or current_user.role == "ADMIN_HR_GA":
+        elif current_user.has_role(*FIELD_ROLES) or current_user.has_role("ADMIN_HR_GA"):
             raise ForbiddenError("Peran Anda tidak diizinkan menandatangani serah terima.")
         else:
             await self._access(current_user, completion_id, manage=True)

@@ -282,6 +282,17 @@ class DailyPlanRepository(BaseRepository):
             {"mgr": managed_by},
         ))
 
+    async def order_scope(self, completion_id: UUID | str) -> Any:
+        """PM order & PM/OM divisinya; None bila order tidak ada / sudah dihapus."""
+        return await self.fetchone(
+            """
+            SELECT wc.pm_id, d.pm_id AS div_pm_id, d.om_id AS div_om_id
+            FROM work_completion wc JOIN division d ON d.division_id = wc.division_id
+            WHERE wc.completion_id = CAST(:c AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"c": str(completion_id)},
+        )
+
     async def plans_of_order(self, completion_id: UUID | str) -> list[Any]:
         """Jadwal yang memuat item order ini (proyek multi-minggu dilacak per hari/titik)."""
         return list(await self.fetchall(

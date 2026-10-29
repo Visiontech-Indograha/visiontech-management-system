@@ -39,6 +39,7 @@ from app.modules.assets.schemas.asset_schema import (
     VehicleUpdate,
 )
 from app.modules.notifications.services.notification_service import NotificationService
+from app.shared.access.access_service import DailyNeed, check_daily_access
 
 LICENCES = {
     "Motorcycle": ({"SIM_C"}, "SIM C"),
@@ -52,6 +53,9 @@ def _in_use(asset_type: str) -> AppError:
     return AppError(
         "ASSET_IN_USE", f"{_LABEL[asset_type]} sedang dipinjam. Selesaikan pengembaliannya dulu.", status=409
     )
+
+
+_NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class AssetService:
@@ -193,16 +197,30 @@ class AssetService:
     async def loans(
         self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None
     ) -> list[Any]:
-        """Pengelola aset & peran kantor (view:teams) melihat semua; anggota tim melihat aset jadwal timnya;
-        selain itu hanya pinjaman miliknya sendiri."""
-        if not ({Permission.MANAGE_ASSETS.value, Permission.VIEW_TEAMS.value} & set(user.permissions)):
-            own = await self.repo.employee_of_user(user.user_id)
-            if own is None:
-                return []
-            plan = await self.repo.plan_for_loan(daily_plan_id, own) if daily_plan_id else None
-            if plan is None or not plan.on_team:
-                employee_id = UUID(own)
-        return await self.repo.loans(open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id)
+        """Pengelola aset (MANAGE_ASSETS) melihat semua. Pemegang VIEW_TEAMS hanya melihat pinjaman jadwal yang
+        ia kelola (atau tim jadwalnya sendiri) dan pinjaman karyawan di divisi yang ia pimpin; selain itu hanya
+        pinjaman miliknya sendiri."""
+        perms = set(user.permissions)
+        own = await self.repo.employee_of_user(user.user_id)
+        if Permission.MANAGE_ASSETS.value in perms:
+            if daily_plan_id and await self.repo.plan_for_loan(daily_plan_id, own or _NIL_UUID) is None:
+                raise NotFoundError("Jadwal harian")
+            return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                         daily_plan_id=daily_plan_id, managed_by=None)
+        if own is None:
+            return []
+        if daily_plan_id:
+            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)
+            plan = await self.repo.plan_for_loan(daily_plan_id, own)
+            if plan is not None and (plan.on_team or (Permission.VIEW_TEAMS.value in perms and plan.manages)):
+                return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                             daily_plan_id=daily_plan_id, managed_by=None)
+            return await self.repo.loans(open_only=open_only, employee_id=UUID(own),
+                                         daily_plan_id=daily_plan_id, managed_by=None)
+        if Permission.VIEW_TEAMS.value in perms:
+            return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                         daily_plan_id=None, managed_by=own)
+        return await self.repo.loans(open_only=open_only, employee_id=UUID(own), daily_plan_id=None, managed_by=None)
 
     async def _check_vehicle_papers(self, vehicle_id: UUID, vehicle_type: str, employee_id: UUID) -> None:
         vehicle = await self._vehicle(vehicle_id)

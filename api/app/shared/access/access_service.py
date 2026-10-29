@@ -65,7 +65,7 @@ def require_daily_status(access: DailyAccess, *allowed: str) -> None:
 
 
 def is_admin(user: CurrentUser) -> bool:
-    return user.role == SystemRole.SUPER_ADMIN
+    return user.has_role(SystemRole.SUPER_ADMIN)
 
 
 async def check_daily_access(
@@ -76,7 +76,7 @@ async def check_daily_access(
         raise NotFoundError("Jadwal harian")
     manages = is_admin(user) or bool(row.manages)
     is_leader, is_member = bool(row.is_leader), bool(row.is_member) or bool(row.is_leader)
-    office_logistics = user.role == SystemRole.ADMIN_HR_GA
+    office_logistics = user.has_role(SystemRole.ADMIN_HR_GA)
     visible = manages or office_logistics or ((is_leader or is_member) and row.status in RELEASED)
     if not visible:
         raise NotFoundError("Jadwal harian")

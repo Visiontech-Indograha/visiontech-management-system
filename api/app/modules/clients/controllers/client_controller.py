@@ -24,8 +24,8 @@ class ClientController:
         return ClientOut(**dict((await self.service.create(data))._mapping))
 
     async def update(self, user: CurrentUser, item_id: UUID, data: ClientUpdate) -> ClientOut:
-        return ClientOut(**dict((await self.service.update(item_id, data))._mapping))
+        return ClientOut(**dict((await self.service.update(item_id, data, user))._mapping))
 
     async def delete(self, user: CurrentUser, item_id: UUID) -> dict[str, str]:
-        await self.service.delete(item_id)
+        await self.service.delete(item_id, user)
         return {"message": "Klien dihapus."}

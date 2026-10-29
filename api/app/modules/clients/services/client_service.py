@@ -7,9 +7,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError, ForbiddenError, NotFoundError
+from app.core.security import CurrentUser
 from app.modules.clients.repositories.client_repository import ClientRepository
 from app.modules.clients.schemas.client_schema import ClientCreate, ClientUpdate
+from app.shared.access.access_service import is_admin
 
 CODE_TAKEN = "Kode klien sudah dipakai."
 
@@ -33,8 +35,16 @@ class ClientService:
             raise AppError("CLIENT_CODE_TAKEN", CODE_TAKEN, status=409)
         return await self.repo.insert({**data.model_dump(), "client_code": code, "name": data.name.strip()})
 
-    async def update(self, client_id: UUID, data: ClientUpdate) -> Any:
-        await self.get(client_id)
+    async def _check_manage(self, client_id: UUID, user: CurrentUser) -> None:
+        """Klien yang sudah punya proyek hanya diubah/dihapus PM/OM divisi pemilik proyek (atau SUPER_ADMIN)."""
+        row = await self.get(client_id)
+        if is_admin(user) or not row.project_count:
+            return
+        if not await self.repo.manages_via_project(client_id, user.employee_id):
+            raise ForbiddenError("Klien ini punya proyek di divisi lain; hanya PM/OM divisi itu yang mengubahnya.")
+
+    async def update(self, client_id: UUID, data: ClientUpdate, user: CurrentUser) -> Any:
+        await self._check_manage(client_id, user)
         fields = data.model_dump(exclude_unset=True)
         if fields.get("client_code"):
             fields["client_code"] = fields["client_code"].strip().upper()
@@ -42,7 +52,8 @@ class ClientService:
                 raise AppError("CLIENT_CODE_TAKEN", CODE_TAKEN, status=409)
         return await self.repo.update(client_id, fields)
 
-    async def delete(self, client_id: UUID) -> None:
+    async def delete(self, client_id: UUID, user: CurrentUser) -> None:
+        await self._check_manage(client_id, user)
         row = await self.get(client_id)
         if row.project_count:
             raise AppError("CLIENT_IN_USE", f"Klien masih punya {row.project_count} proyek. Nonaktifkan saja.",

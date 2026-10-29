@@ -55,7 +55,7 @@ class DailyPlanService:
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:
         """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN/HR (semua)."""
-        if is_admin(user) or user.role == "ADMIN_HR_GA":
+        if is_admin(user) or user.has_role("ADMIN_HR_GA"):
             return None
         return user.employee_id or "00000000-0000-0000-0000-000000000000"
 
@@ -71,7 +71,7 @@ class DailyPlanService:
             start, end = _week(jakarta_now().date())
         if end < start or (end - start).days > 62:
             raise ValidationError("Rentang tanggal tidak valid (maksimal 62 hari).")
-        field = user.role in FIELD_ROLES
+        field = user.has_role(*FIELD_ROLES)
         return await self.repo.list_plans(
             start=start, end=end, division_id=division_id, team_id=team_id, status=status,
             managed_by=None if field else self._manager_scope(user),
@@ -99,6 +99,11 @@ class DailyPlanService:
         }
 
     async def plans_of_order(self, user: CurrentUser, completion_id: UUID) -> list[Any]:
+        """Jadwal yang memuat item order ini. Order tak ada, atau tak boleh dilihat pengguna (bukan pengelola order
+        /divisinya dan tak punya jadwal yang terlihat), → 404 seperti detail order."""
+        scope = await self.repo.order_scope(completion_id)
+        if scope is None:
+            raise NotFoundError("Order Proyek Klien")
         rows = await self.repo.plans_of_order(completion_id)
         visible = []
         for row in rows:
@@ -107,7 +112,17 @@ class DailyPlanService:
                 visible.append(row)
             except (NotFoundError, AppError):
                 continue
+        if not visible and not self._manages_order(user, scope):
+            raise NotFoundError("Order Proyek Klien")
         return visible
+
+    @staticmethod
+    def _manages_order(user: CurrentUser, scope: Any) -> bool:
+        """Super Admin, HR/GA, PM order, atau PM/OM divisi order."""
+        if is_admin(user) or user.has_role("ADMIN_HR_GA"):
+            return True
+        emp = user.employee_id
+        return bool(emp) and emp in {str(scope.pm_id), str(scope.div_pm_id), str(scope.div_om_id)}
 
     # ── Tulis ─────────────────────────────────────────────────────────────────
     async def _check_team_day(self, division_id: UUID, team_id: UUID, work_date: date, exclude: UUID | None) -> None:

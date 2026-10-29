@@ -15,12 +15,13 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import NotFoundError, ValidationError
-from app.core.permissions import Permission
+from app.core.permissions import Permission, SystemRole
 from app.core.security import CurrentUser
 from app.modules.documents.repositories.document_repository import DocumentRepository
 from app.modules.documents.schemas.document_schema import EmployeeDocumentCreate
 
 NOT_FOUND = "Dokumen"
+FILE_NOT_OWNED = "Berkas tidak ditemukan atau bukan milik Anda. Unggah ulang berkasnya."
 
 
 class DocumentService:
@@ -46,8 +47,20 @@ class DocumentService:
         path_file = await self.repo.file_key(data.file_id)
         if path_file is None:
             raise ValidationError("Berkas belum diunggah atau sudah dihapus. Unggah ulang berkasnya.")
+        await self._owns_file(user, emp_id, data.file_id)
         doc_id = await self.repo.insert(emp_id, data.doc_type, path_file, data.active_at, data.expired_at)
         return await self.repo.get(doc_id, emp_id)
+
+    async def _owns_file(self, user: CurrentUser, emp_id: UUID, file_id: UUID) -> None:
+        """Berkas yang dilampirkan harus milik pengunggah yang sah: pengunggah itu sendiri, akun karyawan
+        yang bersangkutan, atau SUPER_ADMIN. Berkas milik orang lain ditolak seperti berkas tak dikenal."""
+        uploader = await self.repo.file_uploader(file_id)
+        if uploader is None:
+            raise ValidationError(FILE_NOT_OWNED)
+        if uploader == user.user_id or user.has_role(SystemRole.SUPER_ADMIN):
+            return
+        if uploader != await self.repo.user_of_employee(emp_id):
+            raise ValidationError(FILE_NOT_OWNED)
 
     async def _doc(self, emp_id: UUID, doc_id: UUID) -> Any:
         doc = await self.repo.get(doc_id, emp_id)

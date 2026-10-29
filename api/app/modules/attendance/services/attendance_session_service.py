@@ -318,7 +318,7 @@ class AttendanceSessionService:
             )
         local_clock = await self.clock.local_now(org_id)
         today = work_date or (local_clock.today if local_clock else None)
-        # Validasi jam masuk: dibuka mulai pukul 07:00 (keputusan pemilik 2026-10-14).
+        # Validasi jam masuk: dibuka mulai pukul 06:45 (ATTENDANCE_OPEN_TIME; dikonfirmasi pemilik 2026-10-29).
 
         is_test_env = "pytest" in sys.modules
         is_mocked_clock = hasattr(self.clock, "assert_called") or hasattr(self.clock, "return_value")

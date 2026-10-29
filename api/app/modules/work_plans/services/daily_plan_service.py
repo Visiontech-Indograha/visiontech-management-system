@@ -29,9 +29,11 @@ from app.modules.notifications.services.notification_service import Notification
 from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
 from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyActivateIn,
+    DailyBulkAsset,
     DailyBulkCellOut,
     DailyBulkIn,
     DailyBulkOut,
+    DailyBulkWarning,
     DailyPlanCreate,
     DailyPlanUpdate,
 )
@@ -291,6 +293,7 @@ class DailyPlanService:
         if not user.employee_id:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
         cells: list[DailyBulkCellOut] = []
+        leaders = {team_id: await self.repo.team_leader(team_id) for team_id in dict.fromkeys(data.team_ids)}
         for team_id in dict.fromkeys(data.team_ids):
             for work_date in sorted(set(data.work_dates)):
                 problem = await self._bulk_cell_problem(data, team_id, work_date)
@@ -298,6 +301,8 @@ class DailyPlanService:
                     cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="SKIPPED",
                                                   reason=problem[0], message=problem[1]))
                     continue
+                # Peringatan hanya memberi tahu; sel tetap dibuat.
+                warnings = await self._cell_warnings(leaders.get(team_id), work_date, data.assets)
                 new_id = await self.repo.insert({
                     "division_id": str(data.division_id), "team_id": str(team_id), "project_id": None,
                     "work_date": work_date, "site_name": data.site_name.strip() if data.site_name else None,
@@ -308,9 +313,78 @@ class DailyPlanService:
                 if data.target == "APPROVED":
                     await self.repo.set_status(new_id, "APPROVED", approver=user.employee_id)
                 cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="CREATED",
-                                              daily_plan_id=new_id))
+                                              daily_plan_id=new_id, warnings=warnings))
         created = sum(1 for c in cells if c.status == "CREATED")
         return DailyBulkOut(created=created, skipped=len(cells) - created, cells=cells)
+
+    async def _cell_warnings(self, leader_id: str | None, work_date: date,
+                             assets: list[DailyBulkAsset]) -> list[DailyBulkWarning]:
+        """Peringatan satu sel: ketua cuti pada tanggal itu; aset yang dipinjam pada tanggal itu (atau tanpa jadwal)."""
+        warnings: list[DailyBulkWarning] = []
+        if leader_id and await self.repo.leader_on_leave(leader_id, work_date):
+            warnings.append(DailyBulkWarning(code="LEADER_CUTI", message="Ketua tim sedang cuti pada tanggal ini."))
+        for asset in assets:
+            loan = await self.repo.asset_loan_conflict(asset.asset_type, asset.asset_id, work_date)
+            if loan is not None:
+                holder = f"tim {loan.team_name}" if loan.team_name else "peminjaman tanpa jadwal"
+                warnings.append(DailyBulkWarning(code="ASET_BENTROK",
+                                                 message=f"Aset sedang dipinjam ({holder}) pada tanggal ini."))
+        return warnings
+
+    # ── Matriks mingguan ───────────────────────────────────────────────────────
+    async def weekly_matrix(self, user: CurrentUser, week_start: date, division_id: UUID | None) -> dict[str, Any]:
+        """Tim (baris) × 7 hari Senin–Minggu (kolom) untuk divisi yang dikelola pengguna. `division_id` opsional
+        (None = semua divisi PM/OM; SUPER_ADMIN/HR semua divisi). Satu tim paling banyak satu jadwal per tanggal."""
+        if week_start.weekday() != 0:
+            raise ValidationError("Awal minggu (week_start) harus hari Senin.")
+        scope = self._manager_scope(user)
+        divisions = [dict(r._mapping) for r in await self.repo.divisions(scope)]
+        if division_id is not None and str(division_id) not in {str(d["division_id"]) for d in divisions}:
+            raise NotFoundError("Divisi")
+        days = [week_start + timedelta(days=i) for i in range(7)]
+        plans = await self.repo.list_plans(start=days[0], end=days[-1], division_id=division_id, team_id=None,
+                                           status=None, managed_by=scope, field_employee=None)
+        plan_by_cell = {(str(p.team_id), p.work_date): p for p in plans}
+        items_by_plan: dict[str, list[dict[str, Any]]] = {}
+        completion_ids: list[str] = []
+        for row in await self.repo.weekly_items([str(p.daily_plan_id) for p in plans]):
+            item = dict(row._mapping)
+            items_by_plan.setdefault(str(item["daily_plan_id"]), []).append(item)
+            if item["completion_id"] and str(item["completion_id"]) not in completion_ids:
+                completion_ids.append(str(item["completion_id"]))
+        orders = {str(o.completion_id): dict(o._mapping) for o in await self.repo.orders_brief(completion_ids)}
+        division_names = {str(d["division_id"]): d["name"] for d in divisions}
+
+        rows = []
+        for team in await self.repo.teams(scope, division_id):
+            cells = []
+            for day in days:
+                cell: dict[str, Any] = {"work_date": day}
+                plan = plan_by_cell.get((str(team.team_id), day))
+                if plan is not None:
+                    items = items_by_plan.get(str(plan.daily_plan_id), [])
+                    cell_orders: list[dict[str, Any]] = []
+                    for cid in dict.fromkeys(str(i["completion_id"]) for i in items if i["completion_id"]):
+                        order = orders.get(cid)
+                        if order is None:
+                            continue
+                        total = order["total_target_unit"] or 0
+                        cell_orders.append({
+                            "completion_id": cid, "client_name": order["client_name"],
+                            "project_title": order["project_title"], "order_number": order["order_number"],
+                            "total_target_unit": total,
+                            "remaining_qty": max(total - order["completed_target_unit"], 0),
+                            "unscheduled_qty": max(total - (order["scheduled_qty"] or 0), 0),
+                        })
+                    cell.update(daily_plan_id=plan.daily_plan_id, status=plan.status, kind=plan.kind,
+                                item_count=plan.item_count, items=items[:20], orders=cell_orders)
+                cells.append(cell)
+            rows.append({"team_id": team.team_id, "team_name": team.name, "division_id": team.division_id,
+                         "division_name": division_names.get(str(team.division_id), ""),
+                         "leader_name": team.leader_name, "cells": cells})
+        return {"week_start": days[0], "week_end": days[-1], "days": days,
+                "divisions": [{"division_id": d["division_id"], "name": d["name"]} for d in divisions],
+                "rows": rows}
 
     async def bulk_standby_empty_days(self, user: CurrentUser, team_ids: list[UUID], work_dates: list[date],
                                       division_id: UUID) -> DailyBulkOut:

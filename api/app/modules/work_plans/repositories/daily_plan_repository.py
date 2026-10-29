@@ -148,6 +148,47 @@ class DailyPlanRepository(BaseRepository):
             {"t": str(team_id), "d": str(division_id)},
         ))
 
+    async def team_leader(self, team_id: UUID | str) -> str | None:
+        """Karyawan ketua tim (untuk peringatan cuti pada alokasi massal)."""
+        value = await self.scalar("SELECT leader_employee_id FROM team WHERE team_id = CAST(:t AS uuid)",
+                                  {"t": str(team_id)})
+        return str(value) if value else None
+
+    async def weekly_items(self, daily_plan_ids: list[str]) -> list[Any]:
+        """Item (pekerjaan) dari jadwal-jadwal matriks mingguan, urut mulai kerja."""
+        if not daily_plan_ids:
+            return []
+        return list(await self.fetchall(
+            """
+            SELECT i.daily_plan_id, i.item_id, i.title, wt.name AS work_type_name, i.completion_id,
+                   i.target_qty, i.completed_qty, i.status
+            FROM work_plan_item i
+            LEFT JOIN work_type wt ON wt.work_type_id = i.work_type_id
+            WHERE i.daily_plan_id = ANY(CAST(:ids AS uuid[])) AND i.delete_at IS NULL
+            ORDER BY i.start_time NULLS LAST, i.create_at
+            """,
+            {"ids": daily_plan_ids},
+        ))
+
+    async def orders_brief(self, completion_ids: list[str]) -> list[Any]:
+        """Order klien beserta total target, target selesai (item utama), dan target yang sudah dijadwalkan."""
+        if not completion_ids:
+            return []
+        return list(await self.fetchall(
+            """
+            SELECT wc.completion_id, wc.client_name, wc.project_title, wc.order_number, wc.total_target_unit,
+                   COALESCE((SELECT SUM(wpi.completed_qty)::int FROM work_plan_item wpi
+                             WHERE wpi.completion_id = wc.completion_id AND wpi.is_main_deliverable = TRUE
+                               AND wpi.delete_at IS NULL), 0) AS completed_target_unit,
+                   COALESCE((SELECT SUM(i.target_qty)::float FROM work_plan_item i
+                             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
+                             WHERE i.completion_id = wc.completion_id AND i.delete_at IS NULL), 0) AS scheduled_qty
+            FROM work_completion wc
+            WHERE wc.completion_id = ANY(CAST(:ids AS uuid[])) AND wc.delete_at IS NULL
+            """,
+            {"ids": completion_ids},
+        ))
+
     async def team_day_taken(self, team_id: UUID | str, work_date: date, exclude: UUID | str | None = None) -> bool:
         """Satu jadwal per tim per tanggal (titik absen tim hari itu)."""
         return bool(await self.scalar(
@@ -157,6 +198,41 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"t": str(team_id), "d": work_date, "ex": str(exclude) if exclude else None},
         ))
+
+    async def leader_on_leave(self, employee_id: str, work_date: date) -> bool:
+        """Ketua tim punya permohonan cuti aktif/pending yang mencakup tanggal itu (peringatan alokasi massal)."""
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (SELECT 1 FROM leave_request
+                           WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL
+                             AND status IN ('PENDING', 'APPROVED_BY_PM', 'APPROVED_BY_HR')
+                             AND start_date <= :d AND end_date >= :d)
+            """,
+            {"emp": employee_id, "d": work_date},
+        ))
+
+    async def asset_loan_conflict(self, asset_type: str, asset_id: UUID | str, work_date: date) -> Any:
+        """Peminjaman aset yang bentrok pada tanggal itu: peminjaman tanpa jadwal atau berjadwal pada tanggal sama.
+        Mengembalikan baris (nama tim pemegang) atau None."""
+        if asset_type == "TOOL":
+            sql = """
+                SELECT t.name AS team_name FROM asset_assignment aa
+                LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                LEFT JOIN team t ON t.team_id = wpd.team_id
+                WHERE aa.tool_id = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                  AND (aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:d AS date))
+                ORDER BY aa.loaned_at DESC LIMIT 1
+            """
+        else:
+            sql = """
+                SELECT t.name AS team_name FROM asset_assignment aa
+                LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                LEFT JOIN team t ON t.team_id = wpd.team_id
+                WHERE aa.vehicle_id = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                  AND (aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:d AS date))
+                ORDER BY aa.loaned_at DESC LIMIT 1
+            """
+        return await self.fetchone(sql, {"id": str(asset_id), "d": work_date})
 
     async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
         """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""
@@ -316,7 +392,7 @@ class DailyPlanRepository(BaseRepository):
             {"mgr": managed_by},
         ))
 
-    async def teams(self, managed_by: str | None) -> list[Any]:
+    async def teams(self, managed_by: str | None, division_id: UUID | str | None = None) -> list[Any]:
         return list(await self.fetchall(
             """
             SELECT t.team_id, t.name, t.division_id, t.leader_employee_id, e.full_name AS leader_name
@@ -324,9 +400,10 @@ class DailyPlanRepository(BaseRepository):
             JOIN employee e ON e.employee_id = t.leader_employee_id
             WHERE t.delete_at IS NULL AND t.status AND d.delete_at IS NULL
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+              AND (CAST(:div AS uuid) IS NULL OR t.division_id = CAST(:div AS uuid))
             ORDER BY d.name, t.name
             """,
-            {"mgr": managed_by},
+            {"mgr": managed_by, "div": str(division_id) if division_id else None},
         ))
 
     async def open_orders(self, managed_by: str | None) -> list[Any]:

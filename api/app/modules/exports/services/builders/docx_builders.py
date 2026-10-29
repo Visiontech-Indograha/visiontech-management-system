@@ -75,9 +75,10 @@ def _daily_summary(doc: DocxDocument, points: list[ReportPoint], start_no: int) 
 
 def _map_section(doc: DocxDocument, r: CompletionReport, no: int) -> None:
     """Halaman peta lokasi: citra satelit dengan penanda bernomor (sama dengan nomor pada tabel)."""
-    if not r.has_coordinates:
-        return
     kit.heading(doc, f"{no}. Peta Lokasi")
+    if not r.has_coordinates:
+        kit.para(doc, "Koordinat lokasi belum diisi.", italic=True)
+        return
     if r.map_image:
         doc.add_paragraph().add_run().add_picture(io.BytesIO(r.map_image), width=Cm(16.5))
         kit.para(

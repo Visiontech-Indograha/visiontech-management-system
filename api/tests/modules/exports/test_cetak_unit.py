@@ -213,9 +213,10 @@ def test_bast_says_map_unavailable_without_connection():
     assert "Peta tidak tersedia (tanpa koneksi ke citra satelit)." in text
 
 
-def test_bast_omits_map_section_without_coordinates():
+def test_bast_keeps_map_page_with_placeholder_without_coordinates():
     text = _text(bast_docx(_completion([_point("Tanpa koordinat")])))
-    assert "Peta Lokasi" not in text
+    assert "Peta Lokasi" in text
+    assert "Koordinat lokasi belum diisi." in text
     assert "Ringkasan Laporan Harian" in text
 
 

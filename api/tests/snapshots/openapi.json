@@ -5803,6 +5803,56 @@
     "title": "LeaveBalanceResponse",
     "type": "object"
    },
+   "LeaveCancel": {
+    "properties": {
+     "reason": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "title": "LeaveCancel",
+    "type": "object"
+   },
+   "LeaveConflict": {
+    "description": "Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan.",
+    "properties": {
+     "plan_id": {
+      "format": "uuid",
+      "title": "Plan Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "plan_id",
+     "work_date",
+     "team_name",
+     "status"
+    ],
+    "title": "LeaveConflict",
+    "type": "object"
+   },
    "LeaveCreate": {
     "properties": {
      "attachment_file_id": {
@@ -5878,6 +5928,24 @@
        }
       ],
       "title": "Attachment Path"
+     },
+     "cancel_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cancel Note"
+     },
+     "conflicts": {
+      "items": {
+       "$ref": "#/components/schemas/LeaveConflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
      },
      "create_at": {
       "format": "date-time",
@@ -6025,6 +6093,11 @@
    },
    "LeaveReview": {
     "properties": {
+     "acknowledge_conflicts": {
+      "default": false,
+      "title": "Acknowledge Conflicts",
+      "type": "boolean"
+     },
      "decision": {
       "enum": [
        "APPROVED",
@@ -21112,7 +21185,7 @@
   },
   "/api/v1/leaves/{leave_id}/cancel": {
    "post": {
-    "description": "Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).",
+    "description": "Pembatalan cuti oleh pemohon, HR, atau OM (PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).",
     "operationId": "cancel_leave_api_v1_leaves__leave_id__cancel_post",
     "parameters": [
      {
@@ -21126,6 +21199,23 @@
       }
      }
     ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/LeaveCancel"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Data"
+       }
+      }
+     }
+    },
     "responses": {
      "200": {
       "content": {

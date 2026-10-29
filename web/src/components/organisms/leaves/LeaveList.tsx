@@ -42,8 +42,10 @@ export function LeaveList({
   onResetFilters,
   canReview,
   canFinalReview,
+  canCancel,
   onApply,
   onReview,
+  onCancel,
 }: {
   leaves: UseQueryResult<Paged<LeaveRequest>>;
   statusFilter: string;
@@ -56,8 +58,10 @@ export function LeaveList({
   onResetFilters: () => void;
   canReview: boolean;
   canFinalReview: boolean;
+  canCancel: (leave: LeaveRequest) => boolean;
   onApply: () => void;
   onReview: (leave: LeaveRequest) => void;
+  onCancel: (leave: LeaveRequest) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -160,6 +164,22 @@ export function LeaveList({
                     </div>
                   </div>
 
+                  {(l.conflicts?.length ?? 0) > 0 && (
+                    <div role="status" className="mt-2 p-2 rounded-control bg-amber-500/10 text-xs text-amber-700 flex items-start gap-1.5">
+                      <Clock size={14} className="shrink-0 mt-0.5" />
+                      <TextBlock as="span">
+                        Bertabrakan dengan jadwal tim: {l.conflicts?.map((c) => `${c.team_name} (${formatDate(c.work_date)})`).join(", ")}
+                      </TextBlock>
+                    </div>
+                  )}
+
+                  {l.cancel_note && (
+                    <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
+                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Alasan pembatalan:</TextBlock>
+                      <TextBlock as="span">{l.cancel_note}</TextBlock>
+                    </div>
+                  )}
+
                   {l.rejection_note && (
                     <div className="mt-2 p-2 rounded-control bg-danger/10 text-xs text-danger flex items-start gap-1.5">
                       <XCircle size={14} className="shrink-0 mt-0.5" />
@@ -181,16 +201,28 @@ export function LeaveList({
                   <TextBlock as="span" className="text-mist">
                     Diajukan {formatDate(String(l.create_at))}
                   </TextBlock>
-                  {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
-                    <ActionButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onReview(l)}
-                      aria-label={`Tinjau cuti ${l.employee_name}`}
-                    >
-                      Tinjau Permohonan
-                    </ActionButton>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReview(l)}
+                        aria-label={`Tinjau cuti ${l.employee_name}`}
+                      >
+                        Tinjau Permohonan
+                      </ActionButton>
+                    )}
+                    {canCancel(l) && (
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onCancel(l)}
+                        aria-label={`Batalkan cuti ${l.employee_name}`}
+                      >
+                        Batalkan cuti
+                      </ActionButton>
+                    )}
+                  </div>
                 </div>
               </ListEntry>
             );

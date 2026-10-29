@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.access.pm_reach import pm_reaches_employee
 
 
 class FileAccessRepository(BaseRepository):
@@ -18,7 +19,7 @@ class FileAccessRepository(BaseRepository):
     async def links(self, file_id: UUID | str, employee_id: UUID | str | None) -> Any:
         """Metadata berkas + jenis tautannya; None bila berkas tidak ada."""
         return await self.fetchone(
-            """
+            f"""
             SELECT f.id, f.storage_key, f.mime_type, f.file_name, f.uploaded_by,
                    (EXISTS (SELECT 1 FROM image_requirement ir
                            WHERE ir.path_image IN (f.storage_key, f.id::text) AND ir.delete_at IS NULL)
@@ -38,10 +39,8 @@ class FileAccessRepository(BaseRepository):
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path))
                        AS selfie,
                    EXISTS (SELECT 1 FROM attendance a
-                           JOIN employee pe ON pe.employee_id = a.employee_id
-                           JOIN division d ON d.division_id = pe.division_id
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
-                           AND d.pm_id = CAST(:emp AS uuid)) AS selfie_pm,
+                           AND {pm_reaches_employee('CAST(:emp AS uuid)', 'a.employee_id')}) AS selfie_pm,
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND a.employee_id = CAST(:emp AS uuid)) AS own_selfie,

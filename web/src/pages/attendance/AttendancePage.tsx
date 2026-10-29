@@ -32,6 +32,7 @@ export function AttendancePage() {
       teamLabel={teamLabel}
       onScopeChange={(key) => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "", page: 1 }))}
       meEmployeeId={me?.employee_id}
+      canExport={!!me?.permissions.includes("export:attendance")}
       open={open}
       onOpen={setOpen}
       onClose={() => setOpen(null)}

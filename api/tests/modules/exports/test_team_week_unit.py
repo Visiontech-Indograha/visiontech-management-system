@@ -16,6 +16,7 @@ from PIL import Image
 from pptx import Presentation
 
 from app.core.errors import AppError
+from app.core.security import CurrentUser
 from app.modules.exports.services import export_service as es
 from app.modules.exports.services.builders.model import ReportPhoto, ReportPoint, TeamWeekReport
 from app.modules.exports.services.builders.office_builders import team_week_pptx
@@ -94,9 +95,10 @@ async def test_team_week_rejects_outsider_who_is_not_division_manager(monkeypatc
     svc = _service(member=False)
     check = AsyncMock(side_effect=AppError("FORBIDDEN", "bukan PM divisi ini", status=403))
     monkeypatch.setattr(es, "check_division_manager", check)
-    user = SimpleNamespace(employee_id=str(uuid4()), role="PROJECT_MANAGER", email="pm@x")
+    user = CurrentUser(user_id=str(uuid4()), organization_id=str(uuid4()), email="pm@x", role="PROJECT_MANAGER",
+                       roles=["PROJECT_MANAGER"], session_id="s", permissions=[], employee_id=str(uuid4()))
     with pytest.raises(AppError):
-        await svc.export_team_week(user, uuid4(), date(2026, 10, 26))  # type: ignore[arg-type]
+        await svc.export_team_week(user, uuid4(), date(2026, 10, 26))
     check.assert_awaited_once()
 
 

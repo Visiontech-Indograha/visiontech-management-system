@@ -57,7 +57,8 @@ def test_shared_tool_for_daily_plan_is_allocated(client, world: World):
     plan_id = _daily_plan(world)
     loan = _lend(client, world, asset_type="TOOL", tool_id=tool_id, daily_plan_id=plan_id)
     assert loan.json()["assignment_status"] == "allocated"
-    # ketua tim melihat aset jadwalnya
+    # ketua tim melihat aset jadwal yang sudah disetujui (jadwal draf belum terlihat tim)
+    sync_query("UPDATE work_plan_daily SET status = 'APPROVED' WHERE daily_plan_id = %s", (plan_id,))
     listed = client.get(f"/work-plans/daily/{plan_id}/assets", headers=world.headers(client, "leader"))
     assert [a["asset_id"] for a in listed.json()] == [tool_id]
 

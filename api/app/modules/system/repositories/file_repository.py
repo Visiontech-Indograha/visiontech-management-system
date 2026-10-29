@@ -15,17 +15,25 @@ class FileRepository(BaseRepository):
     """Repositori pendaftaran dan metadata berkas storage."""
     """Pencatatan berkas baru Master Schema V2."""
 
-    async def find_by_hash(self, org_id: UUID | str, sha256: bytes) -> Any:
-        """Mencari berkas di organisasi dengan hash SHA256 yang sama untuk deduplikasi."""
+    async def find_own_by_hash(self, org_id: UUID | str, user_id: UUID | str, keys: list[bytes]) -> Any:
+        """Berkas milik pengunggah ini (bukan pengguna lain) yang kuncinya termasuk `keys` — deduplikasi per pemilik."""
         return await self.fetchone(
             """
             SELECT CAST(id AS text) AS id, storage_key, file_name, mime_type, byte_size
             FROM file_object
-            WHERE office_id = CAST(:org AS uuid) AND sha256 = :hash
+            WHERE office_id = CAST(:org AS uuid) AND uploaded_by = CAST(:uid AS uuid) AND sha256 = ANY(:keys)
             LIMIT 1
             """,
-            {"org": org_id, "hash": sha256},
+            {"org": org_id, "uid": str(user_id), "keys": keys},
         )
+
+    async def key_held_by_other(self, org_id: UUID | str, user_id: UUID | str, key: bytes) -> bool:
+        """Kunci (sha256) dipakai berkas milik pengguna lain di organisasi ini."""
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM file_object WHERE office_id = CAST(:org AS uuid) AND sha256 = :key "
+            "AND uploaded_by <> CAST(:uid AS uuid))",
+            {"org": org_id, "key": key, "uid": str(user_id)},
+        ))
 
     async def insert(
         self,

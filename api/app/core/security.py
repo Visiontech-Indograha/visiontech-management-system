@@ -186,3 +186,8 @@ class CurrentUser(BaseModel):
     session_id: str
     permissions: list[str]
     employee_id: str | None = None
+
+    def has_role(self, *names: str) -> bool:
+        """Pengguna memegang salah satu peran `names`. Pemeriksaan peran memakai daftar `roles` (bukan `role`
+        yang hanya turunan `roles[0]`)."""
+        return any(name in self.roles for name in names)

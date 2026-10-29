@@ -30,6 +30,15 @@ class ClientRepository(BaseRepository):
         return await self.fetchone(_SELECT + " WHERE c.client_id = CAST(:id AS uuid) AND c.delete_at IS NULL",
                                    {"id": str(client_id)})
 
+    async def manages_via_project(self, client_id: UUID | str, employee_id: str | None) -> bool:
+        """Pengguna adalah PM/OM divisi dari salah satu proyek klien ini (proyek belum dihapus)."""
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM project p JOIN division d ON d.division_id = p.division_id "
+            "WHERE p.client_id = CAST(:id AS uuid) AND p.delete_at IS NULL "
+            "AND CAST(:emp AS uuid) IN (d.pm_id, d.om_id))",
+            {"id": str(client_id), "emp": employee_id},
+        ))
+
     async def code_taken(self, code: str, exclude: UUID | None = None) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM client WHERE lower(client_code) = lower(:code) AND delete_at IS NULL "

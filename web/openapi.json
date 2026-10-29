@@ -17990,13 +17990,15 @@
      },
      "default_qty": {
       "type": "number",
-      "minimum": 0.0,
+      "maximum": 99999999.99,
+      "exclusiveMinimum": 0.0,
       "title": "Default Qty",
       "default": 1.0
      },
      "unit": {
       "type": "string",
       "maxLength": 50,
+      "minLength": 1,
       "title": "Unit",
       "default": "Unit"
      },
@@ -18142,7 +18144,8 @@
       "anyOf": [
        {
         "type": "number",
-        "minimum": 0.0
+        "maximum": 99999999.99,
+        "exclusiveMinimum": 0.0
        },
        {
         "type": "null"
@@ -18154,7 +18157,8 @@
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 50
+        "maxLength": 50,
+        "minLength": 1
        },
        {
         "type": "null"
@@ -23682,16 +23686,22 @@
       "title": "Title"
      },
      "task_phase": {
-      "type": "string",
-      "enum": [
-       "SURVEY",
-       "PREPARATION",
-       "INSTALLATION",
-       "REPLACEMENT",
-       "MAINTENANCE"
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ]
+       },
+       {
+        "type": "null"
+       }
       ],
-      "title": "Task Phase",
-      "default": "INSTALLATION"
+      "title": "Task Phase"
      },
      "is_main_deliverable": {
       "type": "boolean",
@@ -23726,7 +23736,7 @@
       "anyOf": [
        {
         "type": "number",
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "exclusiveMinimum": 0.0
        },
        {
@@ -24216,7 +24226,7 @@
       "anyOf": [
        {
         "type": "number",
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "exclusiveMinimum": 0.0
        },
        {
@@ -24819,7 +24829,7 @@
       "anyOf": [
        {
         "type": "number",
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "exclusiveMinimum": 0.0
        },
        {
@@ -25049,7 +25059,7 @@
       "anyOf": [
        {
         "type": "number",
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "exclusiveMinimum": 0.0
        },
        {

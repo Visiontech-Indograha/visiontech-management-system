@@ -30,7 +30,7 @@ class TeamService:
     @staticmethod
     def _pm_scope(user: CurrentUser) -> str | None:
         """employee_id PM bila pengguna dibatasi ke divisinya sendiri; None = tanpa batas."""
-        return user.employee_id if user.role == "PROJECT_MANAGER" else None
+        return user.employee_id if user.has_role("PROJECT_MANAGER") else None
 
     async def list_teams(self, user: CurrentUser, division_id: UUID | None) -> list[Any]:
         return await self.repo.list_teams(division_id, self._pm_scope(user))

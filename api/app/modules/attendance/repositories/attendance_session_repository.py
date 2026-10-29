@@ -13,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
+from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
 from app.shared.attendance_sql import IS_LATE, IS_LATE_A
 
 
@@ -28,14 +29,10 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     return round(r * c)
 
 
-def _pm_division_of(emp_expr: str) -> str:
-    """Karyawan `emp_expr` ada di divisi yang dipimpin peninjau (division.pm_id = karyawan viewer).
-    Sama dengan `reviewer_employee_ids`: PM hanya melihat & meninjau karyawan divisinya sendiri."""
-    return f"""EXISTS (
-        SELECT 1 FROM employee pe JOIN division d ON d.division_id = pe.division_id
-        WHERE pe.employee_id = {emp_expr}
-          AND d.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
-    )"""
+def _pm_reach(emp_expr: str) -> str:
+    """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
+    dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
+    return pm_reaches_employee(VIEWER_EMPLOYEE_BY_USER, emp_expr)
 
 
 class AttendanceSessionRepository(BaseRepository):
@@ -491,18 +488,17 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, dan PM divisi karyawan itu saja."""
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu."""
         rows = await self.fetchall(
-            """
+            f"""
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
             FROM users u
             WHERE u.employee_id IS NOT NULL
               AND u.employee_id <> CAST(:emp AS uuid)
               AND u.delete_at IS NULL
-              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
-                   OR (u.system_role = 'PROJECT_MANAGER' AND EXISTS (
-                        SELECT 1 FROM employee e JOIN division d ON d.division_id = e.division_id
-                        WHERE e.employee_id = CAST(:emp AS uuid) AND d.pm_id = u.employee_id)))
+              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
+                   OR (u.system_role = 'PROJECT_MANAGER'
+                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')}))
             """,
             {"emp": str(employee_id)},
         )
@@ -618,14 +614,14 @@ class AttendanceSessionRepository(BaseRepository):
                        EXISTS (
                            SELECT 1 FROM users
                            WHERE user_id = CAST(:viewer AS uuid)
-                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')
+                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
                        )
                        OR (
                            EXISTS (
                                SELECT 1 FROM users
                                WHERE user_id = CAST(:viewer AS uuid) AND system_role = 'PROJECT_MANAGER'
                            )
-                           AND {_pm_division_of('CAST(:emp AS uuid)')}
+                           AND {_pm_reach('CAST(:emp AS uuid)')}
                        )
                    )
                 """,
@@ -672,14 +668,14 @@ class AttendanceSessionRepository(BaseRepository):
                 CAST(:view_all AS boolean)
                 OR EXISTS (
                     SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                 )
                 OR (
                     EXISTS (
                         SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
                           AND v.system_role = 'PROJECT_MANAGER'
                     )
-                    AND {_pm_division_of('a.employee_id')}
+                    AND {_pm_reach('a.employee_id')}
                 )
                 OR a.employee_id IS NOT DISTINCT FROM (
                     SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
@@ -764,14 +760,14 @@ class AttendanceSessionRepository(BaseRepository):
                            EXISTS (
                                SELECT 1 FROM users u
                                WHERE u.user_id = CAST(:viewer AS uuid)
-                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')
+                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
                            )
                            OR (
                                EXISTS (
                                    SELECT 1 FROM users u
                                    WHERE u.user_id = CAST(:viewer AS uuid) AND u.system_role = 'PROJECT_MANAGER'
                                )
-                               AND {_pm_division_of('a.employee_id')}
+                               AND {_pm_reach('a.employee_id')}
                            )
                        )
                        AND a.employee_id IS DISTINCT FROM (

@@ -3480,7 +3480,8 @@
      },
      "default_qty": {
       "default": 1.0,
-      "minimum": 0.0,
+      "exclusiveMinimum": 0.0,
+      "maximum": 99999999.99,
       "title": "Default Qty",
       "type": "number"
      },
@@ -3522,6 +3523,7 @@
      "unit": {
       "default": "Unit",
       "maxLength": 50,
+      "minLength": 1,
       "title": "Unit",
       "type": "string"
      }
@@ -3624,7 +3626,8 @@
      "default_qty": {
       "anyOf": [
        {
-        "minimum": 0.0,
+        "exclusiveMinimum": 0.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -3685,6 +3688,7 @@
       "anyOf": [
        {
         "maxLength": 50,
+        "minLength": 1,
         "type": "string"
        },
        {
@@ -9287,7 +9291,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -9298,16 +9302,22 @@
       "title": "Target Qty"
      },
      "task_phase": {
-      "default": "INSTALLATION",
-      "enum": [
-       "SURVEY",
-       "PREPARATION",
-       "INSTALLATION",
-       "REPLACEMENT",
-       "MAINTENANCE"
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
       ],
-      "title": "Task Phase",
-      "type": "string"
+      "title": "Task Phase"
      },
      "title": {
       "maxLength": 200,
@@ -9764,7 +9774,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -10335,7 +10345,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "type": "number"
        },
        {
@@ -10585,7 +10595,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "type": "number"
        },
        {

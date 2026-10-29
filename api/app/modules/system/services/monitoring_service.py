@@ -99,10 +99,10 @@ class MonitoringService:
         """
         label, starts, ends = _month_range(month, await self._today(user.organization_id))
         # Logika aksesibilitas rekap absensi berdasarkan peran pengguna:
-        # R-33: Finance & OPS semua; PM hanya bawahan lapangan di unitnya; selain itu milik sendiri.
+        # R-33: Finance & OPS semua; PM bawahan timnya (divisi & jadwal/proyek yang dikelola); selain itu milik sendiri.
         if Permission.VIEW_ALL_ATTENDANCE.value in user.permissions:
             scope = "all"
-        elif {"PM", "PROJECT_MANAGER"} & set(user.roles):
+        elif user.has_role("PM", "PROJECT_MANAGER"):
             scope = "subordinates"
         else:
             scope = "own"

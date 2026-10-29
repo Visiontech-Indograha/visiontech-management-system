@@ -7942,6 +7942,8 @@ export interface components {
             title: string;
             /** Task Phase */
             task_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
+            /** Unit Measure */
+            unit_measure?: string | null;
             /**
              * Is Main Deliverable
              * @default false
@@ -8002,6 +8004,8 @@ export interface components {
              * @enum {string}
              */
             task_phase: "SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            /** Unit Measure */
+            unit_measure?: string | null;
             /** Is Main Deliverable */
             is_main_deliverable: boolean;
             /** Completion Id */
@@ -8081,6 +8085,8 @@ export interface components {
             title?: string | null;
             /** Task Phase */
             task_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
+            /** Unit Measure */
+            unit_measure?: string | null;
             /** Is Main Deliverable */
             is_main_deliverable?: boolean | null;
             /** Completion Id */
@@ -9766,6 +9772,13 @@ export interface components {
             kind: "WORK" | "INSTALLATION" | "SURVEY_TASK" | "SURVEY_POINT" | "MAINTENANCE" | "REPLACEMENT" | "PREPARATION" | "DISMANTLE" | "COMMISSIONING" | "TROUBLESHOOTING";
             /** Follow Up Work Type Id */
             follow_up_work_type_id?: string | null;
+            /**
+             * Unit Measure
+             * @default Unit
+             */
+            unit_measure: string;
+            /** Default Phase */
+            default_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
         };
         /**
          * WorkTypeOut
@@ -9800,6 +9813,13 @@ export interface components {
             follow_up_work_type_id?: string | null;
             /** Follow Up Name */
             follow_up_name?: string | null;
+            /**
+             * Unit Measure
+             * @default Unit
+             */
+            unit_measure: string;
+            /** Default Phase */
+            default_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
             /**
              * Photos
              * @default []

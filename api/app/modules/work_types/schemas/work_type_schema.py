@@ -5,6 +5,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EvidenceSource = Literal["CAMERA", "GALLERY"]
+# Fase item jadwal (sama dengan `TaskPhase` di work_plans); bawaan jenis pekerjaan = `default_phase`.
+WorkTypePhase = Literal["SURVEY", "PREPARATION", "INSTALLATION", "REPLACEMENT", "MAINTENANCE"]
 # WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
 WorkTypeKind = Literal[
     "WORK",
@@ -94,6 +96,8 @@ class WorkTypeIn(BaseModel):
     photos: list[WorkTypePhotoIn] = []  # Template foto, urut sesuai daftar
     kind: WorkTypeKind = "WORK"
     follow_up_work_type_id: UUID | None = None  # SURVEY_POINT → jenis pekerjaan pemasangannya (rencana dari survei)
+    unit_measure: str = Field("Unit", min_length=1, max_length=50)  # Satuan bawaan item dari template
+    default_phase: WorkTypePhase | None = None  # Fase bawaan item dari template (None = ikut jenis)
 
 
 class WorkTypeOut(BaseModel):
@@ -107,6 +111,8 @@ class WorkTypeOut(BaseModel):
     kind: WorkTypeKind = "WORK"
     follow_up_work_type_id: UUID | None = None
     follow_up_name: str | None = None
+    unit_measure: str = "Unit"  # Satuan bawaan item
+    default_phase: WorkTypePhase | None = None  # Fase bawaan item (None = ikut jenis)
     photos: list[WorkTypePhotoOut] = []  # Template foto
     default_materials: list[DefaultMaterialOut] = []  # Template material default BoM
 

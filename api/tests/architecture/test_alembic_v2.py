@@ -11,7 +11,7 @@ def test_default_alembic_chain_targets_master_schema_v2() -> None:
     scripts = ScriptDirectory.from_config(config)
 
     assert config.get_main_option("script_location").endswith("alembic_v2")
-    assert scripts.get_heads() == ["v2_0015"]
+    assert scripts.get_heads() == ["v2_0016"]
     assert scripts.get_revision("v2_0001").down_revision is None
     assert scripts.get_revision("v2_0002").down_revision == "v2_0001"
     assert scripts.get_revision("v2_0003").down_revision == "v2_0002"
@@ -26,6 +26,7 @@ def test_default_alembic_chain_targets_master_schema_v2() -> None:
     assert scripts.get_revision("v2_0013").down_revision == "v2_0012"
     assert scripts.get_revision("v2_0014").down_revision == "v2_0013"
     assert scripts.get_revision("v2_0015").down_revision == "v2_0014"
+    assert scripts.get_revision("v2_0016").down_revision == "v2_0015"
 
 
 def test_legacy_v1_chain_remains_explicitly_available() -> None:

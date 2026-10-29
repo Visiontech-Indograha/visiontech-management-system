@@ -291,6 +291,10 @@ CREATE TABLE IF NOT EXISTS work_type (
     -- WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
     kind VARCHAR(20) NOT NULL DEFAULT 'WORK' CHECK (kind IN ('WORK', 'INSTALLATION', 'SURVEY_TASK', 'SURVEY_POINT', 'MAINTENANCE', 'REPLACEMENT')),
     follow_up_work_type_id UUID NULL REFERENCES work_type(work_type_id) ON DELETE SET NULL,  -- pemasangan lanjutan
+    -- Bawaan template (v2_0016): satuan item & fase item saat dibuat dari template; fase NULL = ikut jenis (kind)
+    unit_measure VARCHAR(50) NOT NULL DEFAULT 'Unit',
+    default_phase VARCHAR(30) NULL
+        CONSTRAINT ck_work_type_default_phase CHECK (default_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
@@ -370,6 +374,7 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     title VARCHAR(200) NOT NULL,
     task_phase VARCHAR(30) NOT NULL DEFAULT 'INSTALLATION'
         CONSTRAINT ck_work_plan_item_phase CHECK (task_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
+    unit_measure VARCHAR(50) NULL,  -- satuan item (v2_0016): diisi dari jenis pekerjaan bila tidak diisi
     is_main_deliverable BOOLEAN NOT NULL DEFAULT TRUE,
     depends_on_item_id UUID NULL REFERENCES work_plan_item(item_id),
     point_status VARCHAR(10) NULL CHECK (point_status IN ('EXISTING', 'PROPOSED')),  -- titik survei: sudah terpasang / usulan baru

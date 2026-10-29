@@ -35,6 +35,7 @@ class PlanItemCreate(BaseModel):
     title: str = Field(min_length=3, max_length=200)
     # Kosong = fase mengikuti jenis pekerjaan (template work type), lihat `PlanItemService.create`.
     task_phase: TaskPhase | None = None
+    unit_measure: str | None = Field(default=None, min_length=1, max_length=50)  # kosong = satuan jenis pekerjaan
     is_main_deliverable: bool = False
     completion_id: UUID | None = None  # order klien
     depends_on_item_id: UUID | None = None  # prasyarat (mis. survei titik ini)
@@ -58,6 +59,7 @@ class PlanItemUpdate(BaseModel):
     work_type_id: UUID | None = None
     title: str | None = Field(default=None, min_length=3, max_length=200)
     task_phase: TaskPhase | None = None
+    unit_measure: str | None = Field(default=None, min_length=1, max_length=50)
     is_main_deliverable: bool | None = None
     completion_id: UUID | None = None
     depends_on_item_id: UUID | None = None
@@ -122,6 +124,7 @@ class PlanItemOut(BaseModel):
     work_type_name: str
     title: str
     task_phase: TaskPhase
+    unit_measure: str | None = None  # satuan item (dari jenis pekerjaan bila tidak diisi saat dibuat)
     is_main_deliverable: bool
     completion_id: UUID | None = None
     order_title: str | None = None

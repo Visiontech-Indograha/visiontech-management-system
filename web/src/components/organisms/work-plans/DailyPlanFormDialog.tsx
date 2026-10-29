@@ -6,6 +6,7 @@ import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
 import { SiteMapPicker } from "@/components/organisms/sites/SiteMapPicker";
 import {
@@ -89,9 +90,10 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
     }
   };
 
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
-      <FormBlock id="daily-plan-form" onSubmit={submit} noValidate>
+    <VmsDialog dirty={dirtyForm.dirty} open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
+      <FormBlock {...dirtyForm.formProps} id="daily-plan-form" onSubmit={submit} noValidate>
         <FormErrorText message={formError} />
         <SelectField label="Tim" value={teamId} onChange={(e) => setTeamId(e.target.value)} error={errors.team_id}>
           <ControlOption value="">Pilih tim</ControlOption>

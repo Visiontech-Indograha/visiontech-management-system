@@ -10,11 +10,13 @@ Unit test logika bisnis dan aturan otorisasi cuti:
 - Peninjau bukan manajerial/HR/Admin (ForbiddenError)
 - PM me-review cuti yang sudah disetujui PM (ALREADY_APPROVED_BY_PM -> 409)
 - Refund kuota cuti tahunan saat persetujuan awal PM ditolak oleh HR
+- Persetujuan cuti yang bertabrakan dengan jadwal tim wajib dikonfirmasi (LEAVE_CONFLICT -> 409)
+- Pembatalan cuti: pemohon/HR/OM, hanya sebelum hari cuti berakhir, kuota dikembalikan
 """
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -22,7 +24,8 @@ import pytest
 
 from app.core.errors import AppError, ForbiddenError, ValidationError
 from app.core.security import CurrentUser
-from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
+from app.core.time import jakarta_now
+from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, LeaveReview
 from app.modules.leaves.services.leave_service import LeaveService
 
 
@@ -252,43 +255,166 @@ def test_pm_cannot_review_leave_outside_division():
     asyncio.run(run())
 
 
+def _future_leave(status: str, *, employee_id, leave_type: str = "ANNUAL") -> MagicMock:
+    today = jakarta_now().date()
+    return MagicMock(
+        leave_id=uuid4(), employee_id=employee_id, status=status, leave_type=leave_type,
+        start_date=today + timedelta(days=28), end_date=today + timedelta(days=30), total_days=3,
+    )
+
+
+def _conflict_row(work_date, team: str = "Tim Alfa", status: str = "ONGOING") -> MagicMock:
+    return MagicMock(plan_id=uuid4(), work_date=work_date, team_name=team, status=status)
+
+
+def test_approval_blocked_when_leave_clashes_with_team_schedule():
+    """Persetujuan cuti pada hari jadwal tim berjalan ditolak (409 LEAVE_CONFLICT) sampai dikonfirmasi."""
+    async def run():
+        repo = AsyncMock()
+        leave = _future_leave("PENDING", employee_id=uuid4())
+        repo.get_leave.return_value = leave
+        repo.schedule_conflicts.return_value = [_conflict_row(leave.start_date)]
+
+        with pytest.raises(AppError) as exc:
+            await LeaveService(repo).review(
+                make_user("ADMIN_HR_GA", employee_id=uuid4()), leave.leave_id, LeaveReview(decision="APPROVED"),
+            )
+        assert exc.value.code == "LEAVE_CONFLICT"
+        assert exc.value.status == 409
+        assert exc.value.details["conflicts"][0]["team_name"] == "Tim Alfa"
+        assert exc.value.details["conflicts"][0]["work_date"] == leave.start_date.isoformat()
+        repo.update_review.assert_not_awaited()
+        repo.deduct_balance.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_acknowledged_conflict_approves_and_notifies_division_pm():
+    """Setelah konflik dikonfirmasi, persetujuan berjalan dan PM divisi diberi tahu."""
+    async def run():
+        repo = AsyncMock()
+        leave = _future_leave("PENDING", employee_id=uuid4(), leave_type="SICK")
+        repo.get_leave.return_value = leave
+        repo.schedule_conflicts.return_value = [_conflict_row(leave.start_date)]
+        notifier = AsyncMock()
+        notifier.employee_name.return_value = "Budi"
+        service = LeaveService(repo)
+        service._notify = lambda: notifier  # type: ignore[method-assign]
+
+        await service.review(
+            make_user("ADMIN_HR_GA", employee_id=uuid4()), leave.leave_id,
+            LeaveReview(decision="APPROVED", acknowledge_conflicts=True),
+        )
+        repo.update_review.assert_awaited_once()
+        kwargs = notifier.notify_division_managers.await_args.kwargs
+        assert kwargs["roles"] == ("PROJECT_MANAGER",)
+        assert kwargs["target"] == "leave"
+
+    asyncio.run(run())
+
+
+def test_approval_without_schedule_clash_skips_conflict_gate():
+    async def run():
+        repo = AsyncMock()
+        leave = _future_leave("PENDING", employee_id=uuid4())
+        repo.get_leave.return_value = leave
+        repo.schedule_conflicts.return_value = []
+        await LeaveService(repo).review(
+            make_user("ADMIN_HR_GA", employee_id=uuid4()), leave.leave_id, LeaveReview(decision="APPROVED"),
+        )
+        repo.update_review.assert_awaited_once()
+
+    asyncio.run(run())
+
+
+def test_owner_cancels_hr_approved_annual_leave_with_refund():
+    """Pemohon membatalkan cuti tahunan yang sudah disetujui HR; kuota dikembalikan dan alasan tersimpan."""
+    async def run():
+        user = make_user("EMPLOYEE")
+        leave = _future_leave("APPROVED_BY_HR", employee_id=user.employee_id)
+        repo = AsyncMock()
+        repo.get_leave.return_value = leave
+        await LeaveService(repo).cancel(user, leave.leave_id, LeaveCancel(reason="Rencana berubah"))
+        repo.cancel_leave.assert_awaited_once_with(leave.leave_id, "Rencana berubah")
+        repo.deduct_balance.assert_awaited_once_with(user.employee_id, leave.start_date.year, -3)
+
+    asyncio.run(run())
+
+
 def test_owner_cancels_pm_approved_annual_leave_with_refund():
     """Pemohon membatalkan cuti tahunan yang sudah disetujui PM; kuota dikembalikan."""
     async def run():
         user = make_user("EMPLOYEE")
-        leave = MagicMock(
-            employee_id=user.employee_id, status="APPROVED_BY_PM", leave_type="ANNUAL",
-            start_date=date(2026, 5, 4), total_days=3,
-        )
+        leave = _future_leave("APPROVED_BY_PM", employee_id=user.employee_id)
         repo = AsyncMock()
         repo.get_leave.return_value = leave
-        await LeaveService(repo).cancel(user, uuid4())
+        await LeaveService(repo).cancel(user, leave.leave_id, LeaveCancel(reason="Batal ikut kegiatan"))
         repo.cancel_leave.assert_awaited_once()
-        repo.deduct_balance.assert_awaited_once_with(user.employee_id, 2026, -3)
+        repo.deduct_balance.assert_awaited_once_with(user.employee_id, leave.start_date.year, -3)
+
+    asyncio.run(run())
+
+
+def test_hr_cancels_employee_leave_and_employee_is_notified():
+    """HR dapat membatalkan cuti karyawan; karyawan pemohon diberi notifikasi beserta alasannya."""
+    async def run():
+        emp_id = uuid4()
+        leave = _future_leave("APPROVED_BY_HR", employee_id=emp_id, leave_type="SICK")
+        repo = AsyncMock()
+        repo.get_leave.return_value = leave
+        notifier = AsyncMock()
+        notifier.employee_name.return_value = "Budi"
+        service = LeaveService(repo)
+        service._notify = lambda: notifier  # type: ignore[method-assign]
+
+        await service.cancel(make_user("ADMIN_HR_GA", employee_id=uuid4()), leave.leave_id,
+                             LeaveCancel(reason="Dibatalkan HR"))
+        repo.cancel_leave.assert_awaited_once()
+        repo.deduct_balance.assert_not_awaited()  # cuti sakit tidak memotong kuota
+        notifier.notify_employees.assert_awaited_once()
+        assert notifier.notify_employees.await_args.args[0] == [emp_id]
 
     asyncio.run(run())
 
 
 def test_other_employee_cannot_cancel_leave():
-    """Karyawan lain tidak boleh membatalkan cuti milik orang lain."""
+    """Karyawan lain (bukan HR/OM) tidak boleh membatalkan cuti orang lain."""
     async def run():
         repo = AsyncMock()
         repo.get_leave.return_value = MagicMock(employee_id=str(uuid4()), status="PENDING")
         with pytest.raises(ForbiddenError):
-            await LeaveService(repo).cancel(make_user("EMPLOYEE"), uuid4())
+            await LeaveService(repo).cancel(make_user("EMPLOYEE"), uuid4(), LeaveCancel(reason="Mencoba batal"))
         repo.cancel_leave.assert_not_awaited()
 
     asyncio.run(run())
 
 
-def test_decided_leave_cannot_be_cancelled():
-    """Cuti yang sudah final (disetujui HR) tidak dapat dibatalkan."""
+def test_leave_cannot_be_cancelled_after_its_last_day():
+    """Cuti yang hari terakhirnya sudah lewat tidak dapat dibatalkan lagi."""
     async def run():
         user = make_user("EMPLOYEE")
+        past = jakarta_now().date() - timedelta(days=1)
         repo = AsyncMock()
-        repo.get_leave.return_value = MagicMock(employee_id=user.employee_id, status="APPROVED_BY_HR")
+        repo.get_leave.return_value = MagicMock(
+            employee_id=user.employee_id, status="APPROVED_BY_HR", leave_type="ANNUAL",
+            start_date=past - timedelta(days=2), end_date=past, total_days=3,
+        )
         with pytest.raises(AppError) as exc:
-            await LeaveService(repo).cancel(user, uuid4())
+            await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Terlambat"))
         assert exc.value.code == "NOT_CANCELLABLE"
+        repo.cancel_leave.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_rejected_or_cancelled_leave_cannot_be_cancelled_again():
+    async def run():
+        user = make_user("EMPLOYEE")
+        for status in ("REJECTED", "CANCELLED"):
+            repo = AsyncMock()
+            repo.get_leave.return_value = _future_leave(status, employee_id=user.employee_id)
+            with pytest.raises(AppError) as exc:
+                await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Ulang"))
+            assert exc.value.code == "NOT_CANCELLABLE"
 
     asyncio.run(run())

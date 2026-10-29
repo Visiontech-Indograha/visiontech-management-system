@@ -60,7 +60,8 @@ class ProjectService:
     async def update(self, user: CurrentUser, project_id: UUID, data: ProjectUpdate) -> Any:
         current = await self.get(user, project_id)
         await check_division_manager(self.repo.db, current.division_id, user)
-        fields = data.model_dump(exclude_unset=True)
+        # Null eksplisit dari form (mis. pm_id kosong) berarti "tidak diubah", bukan menimpa kolom dengan NULL/'None'.
+        fields = {k: v for k, v in data.model_dump(exclude_unset=True).items() if v is not None}
         if current.status in ("COMPLETED", "CANCELLED") and set(fields) - {"status"}:
             raise AppError("PROJECT_CLOSED", "Proyek sudah selesai/dibatalkan; hanya status yang bisa diubah.",
                            status=409)

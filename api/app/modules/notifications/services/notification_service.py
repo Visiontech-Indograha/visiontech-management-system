@@ -19,6 +19,9 @@ from app.modules.notifications.repositories.notification_repository import Notif
 _MONTH = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
 
 
+NO_SITE = "Lokasi belum ditentukan"  # notification.body NOT NULL; jadwal boleh tanpa nama lokasi
+
+
 class NotificationService:
     """Pengiriman notifikasi realtime ke pihak yang terikat."""
 
@@ -44,14 +47,15 @@ class NotificationService:
         p = await self._daily(daily_plan_id)
         if p:
             await self.repo.insert_many(p.office_id, [p.pm, p.om], "DAILY_SUBMITTED",
-                                        f"{self._day_label(p)} menunggu persetujuan", p.site_name,
+                                        f"{self._day_label(p)} menunggu persetujuan", p.site_name or NO_SITE,
                                         daily_plan_id, "plan")
 
     async def daily_approved(self, daily_plan_id: UUID | str) -> None:
         p = await self._daily(daily_plan_id)
         if p:
             await self.repo.insert_many(p.office_id, [p.leader, *p.members], "DAILY_APPROVED",
-                                        f"{self._day_label(p)} disetujui", p.site_name, daily_plan_id, "plan")
+                                        f"{self._day_label(p)} disetujui", p.site_name or NO_SITE,
+                                        daily_plan_id, "plan")
 
     async def daily_rejected(self, daily_plan_id: UUID | str, reason: str) -> None:
         p = await self._daily(daily_plan_id)

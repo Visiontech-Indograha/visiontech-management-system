@@ -461,6 +461,21 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ],
                     ),
                   ),
+                  if (plan['kind'] == 'STANDBY') ...[
+                    const SizedBox(height: 12),
+                    SurfaceCard(
+                      key: const Key('standby-card'),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.hourglass_top_rounded),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('Siaga — menunggu perintah PM', style: theme.textTheme.titleSmall),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (assets != null) ...[
                     const SizedBox(height: 12),
                     DayAssetsCard(assets: assets),
@@ -469,7 +484,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                     const SizedBox(height: 12),
                     DayMessCard(stay: messStay),
                   ],
-                  if (_isLeader && plan['status'] == 'APPROVED') ...[
+                  if (_isLeader && plan['status'] == 'APPROVED' && plan['kind'] != 'STANDBY') ...[
                     const SizedBox(height: 12),
                     if (_checkedIn != true)
                       Padding(

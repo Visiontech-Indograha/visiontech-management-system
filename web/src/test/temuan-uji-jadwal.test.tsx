@@ -13,7 +13,7 @@ const plan = (over: Partial<DailyPlan> = {}): DailyPlan => ({
   daily_plan_id: "p1", kind: "WORK", division_id: "d1", division_name: "Sipil", team_id: "t1", team_name: "Tim Alpha",
   leader_employee_id: "e-lead", leader_name: "Agus", work_date: todayIso, site_name: "Gardu Induk Minas",
   site_lat: "1.4700000", site_lng: "101.4500000", attendance_radius_m: 150, clock_in_time: "07:00:00",
-  clock_out_time: "16:00:00", status: "DRAFT", created_by_id: "e-pm", item_count: 0, done_count: 0, progress_pct: 0, phases: [], can_manage: true, ...over,
+  clock_out_time: "16:00:00", status: "DRAFT", created_by_id: "e-pm", item_count: 0, done_count: 0, progress_pct: 0, phases: [], can_manage: true, kind: "WORK", ...over,
 });
 
 const item = {

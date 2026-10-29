@@ -296,6 +296,59 @@ class AssetRepository(BaseRepository):
             {"id": str(asset_id)},
         ))
 
+    async def open_loan_conflict(self, asset_type: str, asset_id: UUID | str, work_date: date | None) -> Any:
+        """Peminjaman berjalan yang bentrok. `work_date` None (pinjaman biasa): bentrok bila ada peminjaman apa pun.
+        Dengan tanggal (jadwal harian): hanya peminjaman tanpa jadwal atau berjadwal pada tanggal yang sama.
+        Mengembalikan baris (nama tim pemegang, tanggal) atau None bila tidak bentrok."""
+        col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
+        return await self.fetchone(
+            f"""
+            SELECT t.name AS team_name, wpd.work_date
+            FROM asset_assignment aa
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+            LEFT JOIN team t ON t.team_id = wpd.team_id
+            WHERE aa.{col} = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+              AND (CAST(:date AS date) IS NULL OR aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:date AS date))
+            ORDER BY aa.loaned_at DESC
+            LIMIT 1
+            """,
+            {"id": str(asset_id), "date": work_date},
+        )
+
+    async def availability(self, work_date: date) -> list[Any]:
+        """Setiap alat & kendaraan aktif beserta tim pemakai pada `work_date` (NULL bila tidak dipakai tanggal itu)."""
+        return list(await self.fetchall(
+            """
+            SELECT 'TOOL' AS asset_type, t.tool_id AS asset_id, t.name AS asset_name, t.status::text AS status,
+                   (SELECT wpd.team_id FROM asset_assignment aa
+                      JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                    WHERE aa.tool_id = t.tool_id AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                      AND wpd.work_date = CAST(:date AS date)
+                    ORDER BY aa.loaned_at DESC LIMIT 1) AS team_id
+            FROM tool t
+            WHERE t.delete_at IS NULL
+            UNION ALL
+            SELECT 'VEHICLE', v.vehicle_id, v.name, v.status::text,
+                   (SELECT wpd.team_id FROM asset_assignment aa
+                      JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                    WHERE aa.vehicle_id = v.vehicle_id AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                      AND wpd.work_date = CAST(:date AS date)
+                    ORDER BY aa.loaned_at DESC LIMIT 1)
+            FROM vehicle v
+            WHERE v.delete_at IS NULL
+            ORDER BY 3
+            """,
+            {"date": work_date},
+        ))
+
+    async def team_names(self, team_ids: list[Any]) -> dict[str, str]:
+        ids = sorted({str(t) for t in team_ids if t})
+        if not ids:
+            return {}
+        rows = await self.fetchall(
+            "SELECT team_id::text AS team_id, name FROM team WHERE team_id = ANY(CAST(:ids AS uuid[]))", {"ids": ids})
+        return {r.team_id: r.name for r in rows}
+
     async def archive(self, asset_type: str, asset_id: UUID | str) -> None:
         table, col = ("tool", "tool_id") if asset_type == "TOOL" else ("vehicle", "vehicle_id")
         await self.execute(

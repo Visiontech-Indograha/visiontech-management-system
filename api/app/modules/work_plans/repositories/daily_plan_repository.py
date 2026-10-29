@@ -193,6 +193,31 @@ class DailyPlanRepository(BaseRepository):
             {**fields, "id": str(daily_plan_id)},
         )
 
+    async def release_plan_assets(self, daily_plan_id: UUID | str) -> None:
+        """Jadwal selesai: peminjaman alat/kendaraan yang masih berjalan untuk jadwal ini otomatis dikembalikan
+        (siap dipakai lagi). Status aset dikembalikan ke `ready` bila tidak ada peminjaman lain yang berjalan."""
+        released = await self.fetchall(
+            "UPDATE asset_assignment SET returned_at = now(), assignment_status = 'ready' "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL "
+            "RETURNING tool_id, vehicle_id",
+            {"id": str(daily_plan_id)},
+        )
+        for row in released:
+            if row.tool_id is not None:
+                await self.execute(
+                    "UPDATE tool SET status = 'ready', update_at = now() WHERE tool_id = CAST(:id AS uuid) "
+                    "AND status IN ('allocated', 'loaned') AND NOT EXISTS (SELECT 1 FROM asset_assignment "
+                    "WHERE tool_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL)",
+                    {"id": str(row.tool_id)},
+                )
+            if row.vehicle_id is not None:
+                await self.execute(
+                    "UPDATE vehicle SET status = 'ready', update_at = now() WHERE vehicle_id = CAST(:id AS uuid) "
+                    "AND status IN ('allocated', 'loaned') AND NOT EXISTS (SELECT 1 FROM asset_assignment "
+                    "WHERE vehicle_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL)",
+                    {"id": str(row.vehicle_id)},
+                )
+
     async def set_status(
         self,
         daily_plan_id: UUID | str,

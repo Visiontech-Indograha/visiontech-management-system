@@ -20,7 +20,9 @@ ubah() {   # ubah DIR BERKAS POLA GANTI "compose -f ..." LAYANAN CEK_URL
   echo "ubah $dir/$file : $from  →  $to"
   [ "$MODE" = "--cek" ] && return
   cp -p "$file" "$file.bak-$STAMP"
-  sed -i "s|$(printf '%s' "$from" | sed 's/[][\.*^$|/]/\&/g')|$to|" "$file"
+  local isi; isi=$(cat "$file"); printf '%s
+' "${isi/"$from"/$to}" > "$file"      # ganti literal (tanpa regex/sed)
+  grep -qF -- "$to" "$file" || { echo "!! penggantian tidak tertulis, dipulihkan"; cp -p "$file.bak-$STAMP" "$file"; rc=1; return; }
   # shellcheck disable=SC2086
   if ! docker compose $cf config -q; then echo "!! compose tidak valid, dipulihkan"; cp -p "$file.bak-$STAMP" "$file"; rc=1; return; fi
   # shellcheck disable=SC2086

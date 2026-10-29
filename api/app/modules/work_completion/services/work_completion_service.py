@@ -207,9 +207,12 @@ class WorkCompletionService:
                 if proj:
                     data["division_id"] = proj.division_id
             elif current_user.employee_id:
-                pm_div = await self.crud.get_pm_division(current_user.employee_id)
-                if pm_div:
-                    data["division_id"] = pm_div
+                pm_divs = await self.crud.get_pm_divisions(current_user.employee_id)
+                if len(pm_divs) > 1:  # PM multi-divisi: order tidak boleh masuk ke divisi yang acak
+                    raise AppError("DIVISION_REQUIRED", "Anda memimpin lebih dari satu divisi. Pilih divisi order ini.",
+                                   status=422, details={"divisions": pm_divs})
+                if pm_divs:
+                    data["division_id"] = pm_divs[0]["division_id"]
         if not data.get("division_id"):
             raise ValidationError("Divisi order wajib ditentukan.")
         if not current_user.has_role("SUPER_ADMIN") and (

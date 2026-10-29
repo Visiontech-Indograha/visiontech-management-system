@@ -294,6 +294,15 @@ class DailyPlanRepository(BaseRepository):
             {"c": str(completion_id)},
         ))
 
+    async def has_open_correction(self, daily_plan_id: UUID | str) -> bool:
+        """Ada koreksi laporan yang belum diputuskan akhir (diminta, direvisi, atau menunggu tinjauan)."""
+        val = await self.scalar(
+            "SELECT 1 FROM daily_report_correction WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status IN ('REQUESTED', 'REVISING', 'IN_REVIEW') LIMIT 1",
+            {"id": str(daily_plan_id)},
+        )
+        return bool(val)
+
     async def has_daily_report(self, daily_plan_id: UUID | str) -> bool:
         """Apakah laporan harian sudah ada dan belum dihapus."""
         val = await self.scalar(

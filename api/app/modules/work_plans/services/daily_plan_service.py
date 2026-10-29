@@ -259,6 +259,12 @@ class DailyPlanService:
         if not (access.is_leader or access.manages):
             raise AppError("FORBIDDEN", "Hanya ketua tim atau PM/OM divisi yang dapat menutup jadwal.", status=403)
         require_daily_status(access, "ONGOING")
+        if await self.repo.has_open_correction(daily_plan_id):
+            raise AppError(
+                "CORRECTION_OPEN",
+                "Ada koreksi laporan yang belum selesai; kirim koreksinya, bukan menutup jadwal langsung.",
+                status=409,
+            )
         if not await self.repo.has_daily_report(daily_plan_id):
             raise AppError(
                 "REPORT_REQUIRED",

@@ -14,6 +14,8 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 DailyStatus = Literal["DRAFT", "SUBMITTED", "APPROVED", "ONGOING", "COMPLETED"]
+# WORK = jadwal kerja; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib).
+DailyKind = Literal["WORK", "STANDBY"]
 
 
 def _check_hours(clock_in: time | None, clock_out: time | None) -> None:
@@ -26,6 +28,7 @@ class DailyPlanCreate(BaseModel):
     team_id: UUID
     project_id: UUID | None = None  # proyek/SPK divisi yang sama (Milestone 10)
     work_date: date
+    kind: DailyKind = "WORK"
     site_name: str | None = Field(default=None, min_length=2, max_length=150)
     site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
     site_lng: Decimal | None = Field(default=None, ge=-180, le=180)
@@ -132,6 +135,7 @@ class DailyPlanOut(BaseModel):
     clock_in_time: time
     clock_out_time: time
     status: DailyStatus
+    kind: DailyKind = "WORK"
     created_by_id: UUID
     approved_by_pm_id: UUID | None = None
     approved_at: datetime | None = None

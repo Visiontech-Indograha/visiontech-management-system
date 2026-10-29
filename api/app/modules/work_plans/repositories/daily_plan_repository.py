@@ -20,7 +20,7 @@ _SELECT = """
            d.pm_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
-           wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status,
+           wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL))
@@ -162,10 +162,11 @@ class DailyPlanRepository(BaseRepository):
         daily_plan_id: UUID = await self.scalar(
             """
             INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
-                                         attendance_radius_m, clock_in_time, clock_out_time, status, created_by_id)
+                                         attendance_radius_m, clock_in_time, clock_out_time, status, kind,
+                                         created_by_id)
             VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), CAST(:project_id AS uuid), :work_date,
                     :site_name, :site_lat, :site_lng, :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT',
-                    CAST(:created_by_id AS uuid))
+                    :kind, CAST(:created_by_id AS uuid))
             RETURNING daily_plan_id
             """,
             {"project_id": None, **fields},

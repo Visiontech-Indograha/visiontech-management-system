@@ -232,7 +232,8 @@ class DailyPlanService:
             await self._check_team_day(access.plan.division_id, source.team_id, work_date, None)
             await self._check_project(source.project_id, source.division_id, work_date)
             fields = {k: getattr(source, k) for k in ("work_date", "site_name", "site_lat", "site_lng",
-                                                      "attendance_radius_m", "clock_in_time", "clock_out_time")}
+                                                      "attendance_radius_m", "clock_in_time", "clock_out_time",
+                                                      "kind")}
             fields.update(work_date=work_date, division_id=str(source.division_id), team_id=str(source.team_id),
                           created_by_id=user.employee_id,
                           project_id=str(source.project_id) if source.project_id else None)
@@ -256,6 +257,12 @@ class DailyPlanService:
         return await self.repo.attachment_ids(daily_plan_id)
 
     # ── Status ────────────────────────────────────────────────────────────────
+    async def _require_items_unless_standby(self, access: DailyAccess, daily_plan_id: UUID | str) -> None:
+        """Jadwal STANDBY (tim siaga) boleh diajukan/disetujui tanpa item; jadwal WORK wajib berisi pekerjaan."""
+        if access.plan.kind == "STANDBY":
+            return
+        await self._require_items(daily_plan_id)
+
     async def _require_items(self, daily_plan_id: UUID | str) -> None:
         if await self.repo.count_items(daily_plan_id) == 0:
             raise AppError("PLAN_EMPTY", "Jadwal belum berisi pekerjaan; tambahkan item sebelum diajukan.", status=422)
@@ -263,7 +270,7 @@ class DailyPlanService:
     async def submit(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT")
-        await self._require_items(daily_plan_id)
+        await self._require_items_unless_standby(access, daily_plan_id)
         await self.repo.set_status(daily_plan_id, "SUBMITTED")
         await NotificationService(self.db).daily_submitted(daily_plan_id)
         return await self.repo.get(daily_plan_id)
@@ -275,7 +282,7 @@ class DailyPlanService:
         today = jakarta_now().date()
         if work_date < today - timedelta(days=BACKDATE_DAYS):
             raise ValidationError(f"Jadwal lebih dari {BACKDATE_DAYS} hari yang lalu tidak dapat disetujui.")
-        await self._require_items(daily_plan_id)
+        await self._require_items_unless_standby(access, daily_plan_id)
         await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
         if work_date < today:
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "BACKDATE_APPROVED",

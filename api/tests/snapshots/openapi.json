@@ -2757,6 +2757,15 @@
       "title": "Division Id",
       "type": "string"
      },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
      "project_id": {
       "anyOf": [
        {
@@ -2925,6 +2934,15 @@
       },
       "title": "Items",
       "type": "array"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
      },
      "leader_employee_id": {
       "format": "uuid",
@@ -3166,6 +3184,15 @@
       "default": 0,
       "title": "Item Count",
       "type": "integer"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
      },
      "leader_employee_id": {
       "format": "uuid",

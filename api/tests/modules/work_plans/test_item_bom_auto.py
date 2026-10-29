@@ -11,9 +11,13 @@ pytestmark = requires_db
 
 
 def _order(client, world: World) -> str:
+    admin = world.headers(client, "admin")
+    made = client.post("/clients", headers=admin,
+                       json={"client_code": f"BOM-{world.tag}", "name": f"Klien BoM {world.tag}", "pic_name": "Budi"})
+    assert made.status_code == 201, made.text
     created = client.post(
-        "/work-completions", headers=world.headers(client, "admin"),
-        json={"division_id": world.unit_id, "client_name": "Klien BoM", "project_title": f"BoM {world.tag}"},
+        "/work-completions", headers=admin,
+        json={"division_id": world.unit_id, "client_id": made.json()["client_id"], "project_title": f"BoM {world.tag}"},
     )
     assert created.status_code in (200, 201), created.text
     return created.json().get("completion_id") or created.json()["id"]

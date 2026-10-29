@@ -6,9 +6,12 @@ export type ExportRecord = components["schemas"]["ExportOut"];
 export type CompletionTemplate = components["schemas"]["CompletionExportRequest"]["template"];
 export type PeriodicExportBody = components["schemas"]["PeriodicExportRequest"];
 export type CompletionVerification = components["schemas"]["WorkCompletionVerifyOut"];
+export type DailyReportBody = components["schemas"]["DailyReportExportRequest"];
+export type TeamWeekBody = components["schemas"]["TeamWeekExportRequest"];
 
 /** Dokumen per order (docs/35 §8). `needsSignature`: hanya setelah disahkan PM. */
 export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string; needsSignature?: boolean }[] = [
+  { template: "ORDER_SHEET", label: "Surat tugas / lembar order (.docx)" },
   { template: "BAST", label: "Serah terima (.docx)" },
   { template: "SURVEY_REPORT", label: "Laporan survei (.docx)" },
   { template: "BAST_PDF", label: "Serah terima resmi (.pdf)", needsSignature: true },
@@ -59,6 +62,26 @@ export function useExportPeriodic() {
     mutationFn: async (body: PeriodicExportBody) => {
       const res = await api.post<Blob>("/exports/periodic", body, { responseType: "blob" });
       saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "rekap.bin");
+    },
+  });
+}
+
+/** POST /exports/daily-report: laporan harian satu jadwal (.docx), siap cetak. */
+export function useExportDailyReport() {
+  return useMutation({
+    mutationFn: async (body: DailyReportBody) => {
+      const res = await api.post<Blob>("/exports/daily-report", body, { responseType: "blob" });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-harian.docx");
+    },
+  });
+}
+
+/** POST /exports/team-week: laporan mingguan tim (.pptx); start_date = Senin minggu yang tampil. */
+export function useExportTeamWeek() {
+  return useMutation({
+    mutationFn: async (body: TeamWeekBody) => {
+      const res = await api.post<Blob>("/exports/team-week", body, { responseType: "blob" });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-mingguan-tim.pptx");
     },
   });
 }

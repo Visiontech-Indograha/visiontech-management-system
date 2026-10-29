@@ -18,6 +18,7 @@ from app.core.security import CurrentUser
 from app.modules.exports.controllers.export_controller import ExportController
 from app.modules.exports.schemas.export_schema import (
     CompletionExportRequest,
+    DailyReportExportRequest,
     ExportOut,
     PeriodicExportRequest,
     SurveyLogoOut,
@@ -121,6 +122,17 @@ async def export_team_week(
     """Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
     atau PM/OM divisinya."""
     return await controller.export_team_week(current_user, body)
+
+
+@router.post("/daily-report", response_class=Response, responses=_FILE)
+async def export_daily_report(
+    body: DailyReportExportRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: ExportController = Depends(),
+) -> Response:
+    """Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan
+    ketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis)."""
+    return await controller.export_daily_report(current_user, body)
 
 
 @router.get("/periodic", response_model=list[ExportOut])

@@ -1367,6 +1367,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/daily-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Daily Report
+         * @description Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan
+         *     ketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+         */
+        post: operations["export_daily_report_api_v1_exports_daily_report_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{export_id}/file": {
         parameters: {
             query?: never;
@@ -4808,7 +4829,7 @@ export interface components {
              * Template
              * @enum {string}
              */
-            template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES";
+            template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES" | "ORDER_SHEET";
         };
         /** CorrectionCreate */
         CorrectionCreate: {
@@ -5219,6 +5240,14 @@ export interface components {
             photos_json?: ({
                 [key: string]: unknown;
             } | string)[];
+        };
+        /** DailyReportExportRequest */
+        DailyReportExportRequest: {
+            /**
+             * Daily Plan Id
+             * Format: uuid
+             */
+            daily_plan_id: string;
         };
         /** DailyReportOut */
         DailyReportOut: {
@@ -12166,6 +12195,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TeamWeekExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_daily_report_api_v1_exports_daily_report_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyReportExportRequest"];
             };
         };
         responses: {

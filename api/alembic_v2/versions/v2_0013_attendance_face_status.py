@@ -5,7 +5,7 @@ eksplisit alih-alih hanya skor 0. Data lama diisi dari skor: 0 → NOT_CHECKED, 
 Idempoten: db/06 sudah memuat kolom ini untuk pemasangan baru.
 
 Revision ID: v2_0013
-Revises: v2_0011
+Revises: v2_0012
 """
 
 from collections.abc import Sequence
@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "v2_0013"
-down_revision: str | None = "v2_0011"
+down_revision: str | None = "v2_0012"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

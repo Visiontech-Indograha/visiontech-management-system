@@ -23,7 +23,7 @@ def test_default_alembic_chain_targets_master_schema_v2() -> None:
     assert scripts.get_revision("v2_0009").down_revision == "v2_0008"
     assert scripts.get_revision("v2_0010").down_revision == "v2_0009"
     assert scripts.get_revision("v2_0011").down_revision == "v2_0010"
-    assert scripts.get_revision("v2_0013").down_revision == "v2_0011"  # v2_0012 dipakai cuti (B13)
+    assert scripts.get_revision("v2_0013").down_revision == "v2_0012"
 
 
 def test_legacy_v1_chain_remains_explicitly_available() -> None:

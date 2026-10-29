@@ -11,6 +11,7 @@ import '../../data/sync_engine.dart' show OfflineOp;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
+import 'item_state.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
 /// Alasan hasil kerja belum boleh disimpan, atau null bila valid. Jumlah tidak boleh melebihi target; menandai
@@ -290,11 +291,12 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     // Status & persen dihitung dari hasil yang SUDAH tersimpan; isian yang belum disimpan hanya pratinjau.
     final saved = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
     final pct = target <= 0 ? 0.0 : (saved / target).clamp(0, 1).toDouble();
-    final state = item['status'] == 'DONE' || (target > 0 && saved >= target)
-        ? 'DONE'
-        : saved > 0
-        ? 'PARTIAL'
-        : 'TODO';
+    final state = itemDisplayState(
+      raw: '${item['status']}',
+      done: saved,
+      target: target,
+      photoCount: _photos.length,
+    );
     final stateAccent = statusStyle(state).accent;
     final unsaved = qty != saved;
     final overTarget = target > 0 && qty > target;

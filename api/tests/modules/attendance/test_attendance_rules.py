@@ -6,13 +6,16 @@ jam perangkat tidak dipakai. Swafoto selalu wajib; anggota & ketua tim absen lew
 from __future__ import annotations
 
 import io
-from datetime import timedelta
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
+
+WIB = ZoneInfo("Asia/Jakarta")
 
 pytestmark = requires_db
 
@@ -79,25 +82,54 @@ def _count(world: World, who: str = "member") -> int:
 
 
 # ── CHECK_IN ──────────────────────────────────────────────────────────────────────────────────
-def test_open_session_blocks_check_in_until_it_is_checked_out(client, world):
-    """Sesi kemarin yang lupa ditutup: check-in ditolak, tetapi check-out tetap bisa menutupnya."""
+def _open_stale(world, who: str, clock_in_hm: str) -> str:
+    """Sisipkan sesi tanggal kemarin (WIB) yang belum ditutup, masuk pukul `clock_in_hm`; kembalikan id-nya."""
     yesterday = jakarta_now().date() - timedelta(days=1)
-    open_id = str(sync_query(
+    clock_in = datetime.combine(yesterday, time.fromisoformat(clock_in_hm), tzinfo=WIB)
+    return str(sync_query(
         "INSERT INTO attendance (employee_id, attendance_date, target_location_type, office_id, scheduled_in, "
         "scheduled_out, clock_in_at, in_lat, in_lng, face_match_score, face_photo_path, distance_to_target_m, "
         "is_within_attendance_radius, distance_from_main_office_m, city_zone_status, meal_allowance_amount) "
-        "VALUES (%s, %s, 'OFFICE', %s, '07:00', '16:00', now() - interval '1 day', -6.2, 106.8, 0, 'uji.webp', "
+        "VALUES (%s, %s, 'OFFICE', %s, '07:00', '16:00', %s, -6.2, 106.8, 0, 'uji.webp', "
         "0, TRUE, 0, 'DALAM_KOTA', 0) RETURNING attendance_id",
-        (world.employees["member"], yesterday, world.site_id))[0][0])
+        (world.employees[who], yesterday, world.site_id, clock_in))[0][0])
 
-    blocked = _check_in(client, world)
-    assert blocked.status_code == 409, blocked.text
-    assert blocked.json()["error"]["code"] == "OPEN_SESSION"
 
-    closed = _check_out(client, world)
-    assert closed.status_code == 200, closed.text
-    assert closed.json()["id"] == open_id and _row(open_id)[3] is True
+def test_stale_session_is_closed_on_next_day_check_in(client, world):
+    """Sesi kemarin yang lupa absen pulang tidak mengunci absen masuk hari ini: ditutup otomatis (19:00 kemarin)."""
+    open_id = _open_stale(world, "member", "08:00")
+    assert _row(open_id)[3] is False
+
+    # Pulang online untuk sesi lintas hari ditolak: sesi itu sudah berakhir pada tengah malam.
+    refused = _check_out(client, world)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "NO_OPEN_SESSION"
+
+    checked_in = _check_in(client, world)
+    assert checked_in.status_code == 200, checked_in.text
+    assert _row(open_id)[3] is True
+    assert "Lupa absen pulang" in _row(open_id)[5]
+    closed_at = sync_query(
+        "SELECT (clock_out_at AT TIME ZONE 'Asia/Jakarta')::text FROM attendance WHERE attendance_id = %s", (open_id,))
+    assert closed_at[0][0].startswith(str(jakarta_now().date() - timedelta(days=1)) + " 19:00")
+
+
+def test_night_shift_session_ends_at_midnight_when_checking_in_next_day(client, world):
+    """Kerja malam (masuk 22:04 kemarin): sesi berakhir 00:00 WIB hari ini, bukan 19:00 kemarin (sebelum masuk)."""
+    open_id = _open_stale(world, "member", "22:04")
     assert _check_in(client, world).status_code == 200
+    closed_at = sync_query(
+        "SELECT (clock_out_at AT TIME ZONE 'Asia/Jakarta')::text FROM attendance WHERE attendance_id = %s", (open_id,))
+    assert closed_at[0][0].startswith(str(jakarta_now().date()) + " 00:00")
+
+
+def test_stale_session_does_not_show_a_checkout_reminder(client, world):
+    """Pengingat pulang (required_out_at) hanya untuk sesi hari ini; sesi kemarin tidak menjadi 'Absen pulang'."""
+    _open_stale(world, "member", "08:00")
+    response = client.get("/attendance", headers=world.headers(client, "member"))
+    assert response.status_code == 200, response.text
+    assert response.json()["required_out_at"] is None
+
 
 
 def test_one_attendance_per_day_unless_the_previous_one_was_rejected(client, world):

@@ -15,7 +15,7 @@ bcrypt==4.2.1  # verifikasi hash $2b$ dari seed DB V2 (login), hash baru tetap a
 PyJWT==2.14.0
 cryptography==50.0.1
 minio==7.2.5
-Pillow>=10.2.0
+Pillow>=10.4.0
 filetype==1.2.0
 python-multipart==0.0.31
 tzdata==2026.4

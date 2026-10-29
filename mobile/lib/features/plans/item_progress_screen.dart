@@ -81,6 +81,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   final _qty = TextEditingController();
   final _notes = TextEditingController();
   String? _error;
+  /// Galat simpan ditampilkan di atas tombol Simpan (bukan toast di bawah, yang menutupi tombol).
+  String? _saveError;
   bool _busy = false;
 
   bool get _editable =>
@@ -145,8 +147,9 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
 
   Future<void> _save() async {
     if (_busy) return;
+    setState(() => _saveError = null);
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
-    if (qty == null || qty < 0) return _snack('Isi jumlah yang sudah selesai dengan angka.');
+    if (qty == null || qty < 0) return setState(() => _saveError = 'Isi jumlah yang sudah selesai dengan angka.');
     final problem = progressProblem(
       qty: qty,
       target: num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0,
@@ -156,7 +159,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           .where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id']))
           .length,
     );
-    if (problem != null) return _snack(problem, error: true);
+    if (problem != null) return setState(() => _saveError = problem);
     setState(() => _busy = true);
     try {
       final engine = ref.read(syncEngineProvider);
@@ -175,8 +178,10 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           ],
           notes: notes,
         );
-        _snack('Hasil kerja tersimpan.');
-        await _load();
+        if (!mounted) return;
+        showVmsToast(context, 'Tersimpan');
+        Navigator.of(context).pop();
+        return;
       } on DioException catch (e) {
         if (!isNetworkFailure(e)) rethrow;
         // Tidak ada koneksi: simpan di antrean HP (foto ikut), dikirim otomatis saat online.
@@ -195,10 +200,13 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           },
           localFiles: [for (final p in local) p.path!],
         );
-        _snack('Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
+        if (!mounted) return;
+        showVmsToast(context, 'Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
+        Navigator.of(context).pop();
+        return;
       }
     } catch (e) {
-      _snack(apiErrorMessage(e), error: true);
+      if (mounted) setState(() => _saveError = apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -279,13 +287,16 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     final phase = phaseAccent['${item['task_phase']}'] ?? Accent.slate;
     final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
     final qty = num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0;
-    final pct = target <= 0 ? 0.0 : (qty / target).clamp(0, 1).toDouble();
-    final state = item['status'] == 'DONE' || (target > 0 && qty >= target)
+    // Status & persen dihitung dari hasil yang SUDAH tersimpan; isian yang belum disimpan hanya pratinjau.
+    final saved = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
+    final pct = target <= 0 ? 0.0 : (saved / target).clamp(0, 1).toDouble();
+    final state = item['status'] == 'DONE' || (target > 0 && saved >= target)
         ? 'DONE'
-        : qty > 0
+        : saved > 0
         ? 'PARTIAL'
         : 'TODO';
     final stateAccent = statusStyle(state).accent;
+    final unsaved = qty != saved;
     final overTarget = target > 0 && qty > target;
     final barColor = overTarget ? theme.colorScheme.error : stateAccent.strong;
     final mandatory = _slots.where((s) => s['is_mandatory'] == true).toList();
@@ -298,11 +309,21 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: PrimaryAction(
-                  label: 'Simpan hasil kerja',
-                  icon: Icons.check_circle_rounded,
-                  busy: _busy,
-                  onTap: _save,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_saveError != null) ...[
+                      NoticeBanner(icon: Icons.error_outline, text: _saveError!, accent: Accent.rose),
+                      const SizedBox(height: 8),
+                    ],
+                    PrimaryAction(
+                      label: 'Simpan hasil kerja',
+                      icon: Icons.check_circle_rounded,
+                      busy: _busy,
+                      onTap: _save,
+                    ),
+                  ],
                 ),
               ),
             )
@@ -449,6 +470,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                 Text(
                   overTarget
                       ? 'Melebihi target (${qtyText(target)})'
+                      : unsaved
+                      ? 'Belum disimpan · isian ${qtyText(qty)}'
                       : '${statusStyle(state).label} · ${(pct * 100).round()}%',
                   style: theme.textTheme.bodySmall?.copyWith(color: barColor, fontWeight: FontWeight.w700),
                 ),

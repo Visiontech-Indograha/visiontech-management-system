@@ -40,9 +40,8 @@ export const WORK_STATE: Record<WorkState, { label: string; dot: string; text: s
   PARTIAL: { label: "Selesai sebagian", dot: "bg-warning-solid", text: "text-warning", bar: "bg-warning-solid" },
   DONE: { label: "Selesai", dot: "bg-success-solid", text: "text-success", bar: "bg-success-solid" },
 };
-/** Persen yang ditampilkan. API menghitung persen tanpa item yang dipindah hari (SHIFTED_DAY), sehingga
- * bisa mencapai 100 walau sebagian pekerjaan belum selesai; 100% hanya bila semua item (termasuk yang
- * dipindah/menunggu pindah) sudah DONE. */
+/** Persen yang ditampilkan. API menghitung rata-rata per item (DONE 100%, pindah hari 0%, lainnya
+ * dikerjakan/target, dibulatkan ke bawah); klien hanya membatasi ke 99 selama belum semua item DONE. */
 export function displayPct(p: { done_count: number; item_count: number; progress_pct?: number }): number {
   const raw = p.progress_pct ?? (p.item_count ? (p.done_count / p.item_count) * 100 : 0);
   const pct = Math.max(0, Math.min(100, Math.round(raw)));

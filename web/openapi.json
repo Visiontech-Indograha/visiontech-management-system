@@ -7180,7 +7180,7 @@
      "Leaves"
     ],
     "summary": "Cancel Leave",
-    "description": "Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).",
+    "description": "Pembatalan cuti oleh pemohon, HR, atau OM (status PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).",
     "operationId": "cancel_leave_api_v1_leaves__leave_id__cancel_post",
     "security": [
      {
@@ -7199,6 +7199,23 @@
       }
      }
     ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/LeaveCancel"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Data"
+       }
+      }
+     }
+    },
     "responses": {
      "200": {
       "description": "Successful Response",
@@ -20470,6 +20487,56 @@
     ],
     "title": "LeaveBalanceResponse"
    },
+   "LeaveCancel": {
+    "properties": {
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000,
+        "minLength": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "type": "object",
+    "title": "LeaveCancel"
+   },
+   "LeaveConflict": {
+    "properties": {
+     "plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Plan Id"
+     },
+     "work_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Work Date"
+     },
+     "team_name": {
+      "type": "string",
+      "title": "Team Name"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     }
+    },
+    "type": "object",
+    "required": [
+     "plan_id",
+     "work_date",
+     "team_name",
+     "status"
+    ],
+    "title": "LeaveConflict",
+    "description": "Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan."
+   },
    "LeaveCreate": {
     "properties": {
      "employee_id": {
@@ -20669,6 +20736,24 @@
       ],
       "title": "Rejection Note"
      },
+     "cancel_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cancel Note"
+     },
+     "conflicts": {
+      "items": {
+       "$ref": "#/components/schemas/LeaveConflict"
+      },
+      "type": "array",
+      "title": "Conflicts"
+     },
      "create_at": {
       "type": "string",
       "format": "date-time",
@@ -20711,6 +20796,11 @@
        }
       ],
       "title": "Note"
+     },
+     "acknowledge_conflicts": {
+      "type": "boolean",
+      "title": "Acknowledge Conflicts",
+      "default": false
      }
     },
     "type": "object",

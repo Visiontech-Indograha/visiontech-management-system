@@ -24,8 +24,19 @@ export function LeavesPage() {
   const statusFilter = controls.filter("status", LEAVE_STATUSES);
   const [applying, setApplying] = useState(false);
   const [reviewing, setReviewing] = useState<LeaveRequest | null>(null);
+  const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
 
   const currentYear = new Date().getFullYear();
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Pemohon sendiri, HR, atau OM dapat membatalkan cuti yang sudah disetujui selama hari cutinya belum lewat
+  const canCancelLeave = (l: LeaveRequest) =>
+    (l.status === "APPROVED_BY_PM" || l.status === "APPROVED_BY_HR") &&
+    String(l.end_date).slice(0, 10) >= today &&
+    (l.employee_id === me?.employee_id ||
+      me?.role === "ADMIN_HR_GA" ||
+      me?.role === "HR" ||
+      me?.role === "OPERATIONAL_MANAGER");
 
   // Jika bukan reviewer/admin, batasi daftar ke pengajuan diri sendiri; jika reviewer, tampilkan semua
   const leavesQuery = useLeaves({
@@ -53,12 +64,16 @@ export function LeavesPage() {
       onResetFilters={controls.reset}
       canReview={canReview}
       canFinalReview={canFinalReview}
+      canCancel={canCancelLeave}
       applying={applying}
       reviewing={reviewing}
+      cancelling={cancelling}
       onApply={() => setApplying(true)}
       onReview={setReviewing}
+      onCancel={setCancelling}
       onCloseApply={() => setApplying(false)}
       onCloseReview={() => setReviewing(null)}
+      onCloseCancel={() => setCancelling(null)}
     />
   );
 }

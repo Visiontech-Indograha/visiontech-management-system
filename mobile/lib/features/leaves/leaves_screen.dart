@@ -24,9 +24,10 @@ String leaveStatusLabel(String status) => switch (status) {
   _ => status,
 };
 
-/// Cuti masih bisa dibatalkan pemohon selama belum final.
+/// Cuti masih bisa dibatalkan pemohon selama belum ditolak/dibatalkan (disetujui HR pun bisa dibatalkan).
+/// Batas hari cuti terakhir ditegakkan server.
 bool leaveCancellable(String status) =>
-    status == 'PENDING' || status == 'APPROVED_BY_PM';
+    status == 'PENDING' || status == 'APPROVED_BY_PM' || status == 'APPROVED_BY_HR';
 
 class LeavesScreen extends ConsumerStatefulWidget {
   const LeavesScreen({super.key});

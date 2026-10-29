@@ -50,7 +50,7 @@ describe("label status cuti sesuai pemberi persetujuan (W4)", () => {
         leaves={query({ items: rows, total: rows.length, page: 1, size: 10 })}
         statusFilter="" onStatusFilterChange={noop} q="" onQChange={noop} page={1} onPageChange={noop}
         filtersActive={false} onResetFilters={noop} canReview={false} canFinalReview={false}
-        onApply={noop} onReview={noop}
+        canCancel={() => false} onApply={noop} onReview={noop} onCancel={noop}
       />,
     );
 

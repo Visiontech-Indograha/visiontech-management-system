@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { ProjectsTemplate } from "@/components/templates/projects/ProjectsTemplate";
 import { useProjects, type Project, type ProjectFilter } from "@/services/projectService";
 import { useClients } from "@/services/clientService";
@@ -13,8 +14,11 @@ export function ProjectsPage() {
     me?.role === "OPERATIONAL_MANAGER" ||
     me?.role === "SUPER_ADMIN";
 
+  // Dari "Buat SPK untuk klien ini" (halaman Pekerjaan klien): daftar langsung disaring ke klien itu.
+  const [params] = useSearchParams();
   const [filter, setFilter] = useState<ProjectFilter>({
     division_id: me?.division_id || undefined,
+    client_id: params.get("client_id") || undefined,
   });
   const [editing, setEditing] = useState<Project | "new" | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);

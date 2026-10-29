@@ -8,7 +8,9 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { useCreateWorkCompletion } from "@/services/workCompletionService";
+import { InlineLink } from "@/components/molecules/Links";
+import { koordinatError, namaKlienError } from "@/lib/inputRules";
+import { useCreateWorkCompletion, useUpdateWorkCompletion, type WorkCompletionOrder } from "@/services/workCompletionService";
 import { useUserDivisions } from "@/services/employeeService";
 import { useClients } from "@/services/clientService";
 import { useProjects } from "@/services/projectService";
@@ -29,29 +31,26 @@ interface FormValues {
   site_lng?: string | number | null;
 }
 
-const cleanCoord = (val: unknown, maxVal: number): number | undefined => {
-  if (val === undefined || val === null || val === "") return undefined;
-  const str = String(val).replace(",", ".").trim();
-  let num = Number(str);
-  if (Number.isNaN(num)) return undefined;
-  if (Math.abs(num) > maxVal) {
-    for (const scale of [1e6, 1e7, 1e5]) {
-      if (Math.abs(num / scale) <= maxVal) {
-        num = num / scale;
-        break;
-      }
-    }
-  }
-  return Math.abs(num) <= maxVal ? Number(num.toFixed(7)) : undefined;
+/** Koordinat dari isian teks (koma atau titik); kosong menjadi undefined. Batas dicek koordinatError. */
+const parseCoord = (val: unknown): number | undefined => {
+  const str = String(val ?? "").replace(",", ".").trim();
+  return str === "" ? undefined : Number(str);
 };
 
-export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
+const clientNameRules = {
+  validate: (v: string) => (v.trim() === "" ? "Nama klien wajib diisi." : (namaKlienError(v) ?? true)),
+};
+
+/** Tanpa `order` = buat baru; dengan `order` = ubah (PUT) memakai isian awal dari order. */
+export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => void; order?: WorkCompletionOrder }) {
+  const editing = !!order;
   const create = useCreateWorkCompletion();
+  const update = useUpdateWorkCompletion();
   const { me } = useSession();
   const { data: divisions } = useUserDivisions();
   const { data: clients } = useClients(true);
   const [formError, setFormError] = useState<string | null>(null);
-  const [isManualInput, setIsManualInput] = useState(false);
+  const [isManualInput, setIsManualInput] = useState(editing);
   const [clientQuery, setClientQuery] = useState("");
 
   const {
@@ -61,20 +60,35 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
-    defaultValues: {
-      division_id: me?.division_id ?? "",
-      client_id: "",
-      client_name: "",
-      project_id: "",
-      project_title: "",
-      order_number: "",
-      total_target_unit: 1,
-      unit_measure: "Titik / Unit",
-      priority_level: "NORMAL",
-      site_address: "",
-      site_lat: null,
-      site_lng: null,
-    },
+    defaultValues: order
+      ? {
+          division_id: order.division_id ?? "",
+          client_id: order.client_id ?? "",
+          client_name: order.client_name ?? "",
+          project_id: "",
+          project_title: order.project_title,
+          order_number: order.order_number ?? "",
+          total_target_unit: order.total_target_unit,
+          unit_measure: order.unit_measure,
+          priority_level: order.priority_level,
+          site_address: order.site_address ?? "",
+          site_lat: order.site_lat ?? null,
+          site_lng: order.site_lng ?? null,
+        }
+      : {
+          division_id: me?.division_id ?? "",
+          client_id: "",
+          client_name: "",
+          project_id: "",
+          project_title: "",
+          order_number: "",
+          total_target_unit: 1,
+          unit_measure: "Titik / Unit",
+          priority_level: "NORMAL",
+          site_address: "",
+          site_lat: null,
+          site_lng: null,
+        },
   });
 
   const divisionValue = useWatch({ control, name: "division_id" });
@@ -124,42 +138,53 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
 
   const onSubmit = async (values: FormValues) => {
     setFormError(null);
+    // Batas sama dengan API untuk lintang/bujur (-90..90, -180..180); isian di luar batas tidak dikirim.
+    const coordErr = koordinatError(String(values.site_lat ?? ""), String(values.site_lng ?? ""));
+    if (coordErr) return setFormError(coordErr);
+    const parsedLat = parseCoord(values.site_lat);
+    const parsedLng = parseCoord(values.site_lng);
     try {
-      const parsedLat = cleanCoord(values.site_lat, 90);
-      const parsedLng = cleanCoord(values.site_lng, 180);
-
-      if (values.site_lat && parsedLat === undefined) {
-        setFormError("Latitude tidak valid. Harus antara -90 dan 90.");
-        return;
+      if (order) {
+        await update.mutateAsync({
+          id: order.completion_id,
+          payload: {
+            client_name: values.client_name,
+            project_title: values.project_title,
+            order_number: values.order_number || null,
+            total_target_unit: Number(values.total_target_unit),
+            unit_measure: values.unit_measure,
+            priority_level: values.priority_level,
+            site_address: values.site_address || null,
+            site_lat: parsedLat ?? null,
+            site_lng: parsedLng ?? null,
+          },
+        });
+        toast.success("Pekerjaan klien diperbarui.");
+      } else {
+        await create.mutateAsync({
+          division_id: values.division_id || me?.division_id || undefined,
+          client_name: values.client_name,
+          project_title: values.project_title,
+          order_number: values.order_number || undefined,
+          total_target_unit: Number(values.total_target_unit),
+          unit_measure: values.unit_measure,
+          priority_level: values.priority_level,
+          site_address: values.site_address || undefined,
+          site_lat: parsedLat,
+          site_lng: parsedLng,
+        });
+        toast.success("Pekerjaan klien berhasil dibuat.");
       }
-      if (values.site_lng && parsedLng === undefined) {
-        setFormError("Longitude tidak valid. Harus antara -180 dan 180.");
-        return;
-      }
-
-      await create.mutateAsync({
-        division_id: values.division_id || me?.division_id || undefined,
-        client_name: values.client_name,
-        project_title: values.project_title,
-        order_number: values.order_number || undefined,
-        total_target_unit: Number(values.total_target_unit),
-        unit_measure: values.unit_measure,
-        priority_level: values.priority_level,
-        site_address: values.site_address || undefined,
-        site_lat: parsedLat,
-        site_lng: parsedLng,
-      });
-      toast.success("Pekerjaan klien berhasil dibuat.");
       onClose();
     } catch {
-      setFormError("Gagal membuat order proyek klien. Pastikan input terisi dengan benar.");
+      setFormError(editing ? "Gagal memperbarui pekerjaan klien. Periksa input." : "Gagal membuat order proyek klien. Pastikan input terisi dengan benar.");
     }
   };
 
   return (
     <VmsDialog dirty={isDirty}
       open
-      title="Pekerjaan klien baru"
+      title={editing ? "Ubah pekerjaan klien" : "Pekerjaan klien baru"}
       onClose={onClose}
     >
       <TextBlock className="mb-4 text-sm text-mist">
@@ -169,35 +194,39 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
       <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)} onChange={() => setFormError(null)}>
         {formError && <FormErrorText message={formError} />}
 
-        <SelectField
-          label="Divisi Penanggung Jawab"
-          error={errors.division_id?.message}
-          {...register("division_id", {
-            required: !me?.division_id ? "Divisi wajib dipilih." : false,
-          })}
-        >
-          <ControlOption value="">-- Pilih Divisi --</ControlOption>
-          {(divisions ?? []).map((d) => (
-            <ControlOption key={d.id} value={d.id}>
-              {d.name}
-            </ControlOption>
-          ))}
-        </SelectField>
-
-        <div className="flex items-center justify-between my-1">
-          <TextBlock as="span" className="text-xs text-mist">
-            Sumber Data Klien & Proyek:
-          </TextBlock>
-          <ActionButton
-            type="button"
-            variant="link"
-            size="xs"
-            className="text-primary font-medium p-0 h-auto"
-            onClick={() => setIsManualInput(!isManualInput)}
+        {!editing && (
+          <SelectField
+            label="Divisi Penanggung Jawab"
+            error={errors.division_id?.message}
+            {...register("division_id", {
+              required: !me?.division_id ? "Divisi wajib dipilih." : false,
+            })}
           >
-            {isManualInput ? "Pilih dari Master Klien/Proyek" : "Ganti ke Input Bebas Manual"}
-          </ActionButton>
-        </div>
+            <ControlOption value="">-- Pilih Divisi --</ControlOption>
+            {(divisions ?? []).map((d) => (
+              <ControlOption key={d.id} value={d.id}>
+                {d.name}
+              </ControlOption>
+            ))}
+          </SelectField>
+        )}
+
+        {!editing && (
+          <div className="flex items-center justify-between my-1">
+            <TextBlock as="span" className="text-xs text-mist">
+              Sumber Data Klien & Proyek:
+            </TextBlock>
+            <ActionButton
+              type="button"
+              variant="link"
+              size="xs"
+              className="text-primary font-medium p-0 h-auto"
+              onClick={() => setIsManualInput(!isManualInput)}
+            >
+              {isManualInput ? "Pilih dari Master Klien/Proyek" : "Ganti ke Input Bebas Manual"}
+            </ActionButton>
+          </div>
+        )}
 
         {!isManualInput && (clients?.length ?? 0) > 0 ? (
           <>
@@ -234,13 +263,27 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
                 ))}
               </SelectField>
             </div>
+            {(projects ?? []).length === 0 && (
+              <TextBlock className="rounded-control border border-dashed border-line p-3 text-sm text-mist">
+                {clientValue ? (
+                  <>
+                    <TextBlock as="span">Klien ini belum punya SPK aktif.</TextBlock>{" "}
+                    <InlineLink to={`/projects?client_id=${clientValue}`} className="text-primary underline">
+                      Buat SPK untuk klien ini
+                    </InlineLink>
+                  </>
+                ) : (
+                  "Belum ada SPK aktif di divisi ini. Pilih klien atau isi manual."
+                )}
+              </TextBlock>
+            )}
 
             <TextField
               label="Nama Klien / Perusahaan"
               placeholder="misal: PT Pertamina EP, PT PLN Persero"
               error={errors.client_name?.message}
               maxLength={150}
-              {...register("client_name", { required: "Nama klien wajib diisi." })}
+              {...register("client_name", clientNameRules)}
             />
 
             <TextField
@@ -258,7 +301,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
               placeholder="misal: PT Pertamina EP, PT PLN Persero"
               error={errors.client_name?.message}
               maxLength={150}
-              {...register("client_name", { required: "Nama klien wajib diisi." })}
+              {...register("client_name", clientNameRules)}
             />
 
             <TextField

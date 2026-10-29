@@ -247,7 +247,12 @@ class SurveyRepository(BaseRepository):
         )
 
     async def set_task_state(self, task_id: UUID | str, *, done: bool, approver: str | None) -> None:
-        """Kirim (done) / kembalikan (tidak done) / setujui (approver). Titik ikut status tugas."""
+        """Kirim (done) / kembalikan (tidak done) / setujui (approver). Titik ikut status tugas.
+
+        Pemetaan status survei (tugas survei = item jadwal fase SURVEY): DONE = dikirim (SUBMITTED) atau disetujui
+        (APPROVED, dibedakan lewat approved_by_pm_id); IN_PROGRESS = DRAFT. Pemetaan SQL ada di daftar survei
+        (kolom `state`) dan di survey_service.survey_state; keduanya harus tetap sama.
+        """
         params = {"id": str(task_id), "done": done, "pm": approver}
         await self.execute(
             """

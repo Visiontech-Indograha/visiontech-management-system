@@ -12,15 +12,14 @@ String itemDisplayState({
   return raw;
 }
 
-/// Alasan tombol "Kirim laporan untuk menutup hari" nonaktif, atau null bila tombol bisa dipakai.
+/// Alasan tombol "Kirim laporan untuk menutup hari" nonaktif yang belum dijelaskan di layar, atau null.
 String? closeDayBlockReason({
   required bool hasReport,
   required bool reportPending,
   required int pendingRollovers,
 }) {
-  if (pendingRollovers > 0) {
-    return '$pendingRollovers pekerjaan menunggu keputusan PM untuk pindah hari. Hari kerja belum bisa ditutup.';
-  }
+  // Pindah hari yang menunggu PM sudah dijelaskan spanduk di atas tombol; tidak diulang di sini.
+  if (pendingRollovers > 0) return null;
   if (!hasReport) return 'Kirim laporan harian di atas dulu. Setelah terkirim, hari kerja bisa ditutup.';
   if (reportPending) return 'Menunggu koneksi untuk mengirim laporan.';
   return null;

@@ -27,9 +27,8 @@ void main() {
       expect(closeDayBlockReason(hasReport: false, reportPending: false, pendingRollovers: 0),
           'Kirim laporan harian di atas dulu. Setelah terkirim, hari kerja bisa ditutup.');
     });
-    test('pindah hari yang menunggu PM lebih dulu', () {
-      expect(closeDayBlockReason(hasReport: false, reportPending: false, pendingRollovers: 2),
-          startsWith('2 pekerjaan menunggu keputusan PM'));
+    test('pindah hari yang menunggu PM dijelaskan spanduk, tidak diulang sebagai alasan', () {
+      expect(closeDayBlockReason(hasReport: false, reportPending: false, pendingRollovers: 2), isNull);
     });
     test('siap ditutup tidak memberi alasan', () {
       expect(closeDayBlockReason(hasReport: true, reportPending: false, pendingRollovers: 0), isNull);

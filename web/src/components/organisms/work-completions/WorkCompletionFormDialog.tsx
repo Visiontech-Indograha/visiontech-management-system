@@ -52,6 +52,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   const { data: clients } = useClients(true);
   const [formError, setFormError] = useState<string | null>(null);
   const [isManualInput, setIsManualInput] = useState(false);
+  const [clientQuery, setClientQuery] = useState("");
 
   const {
     register,
@@ -87,6 +88,11 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     client_id: selectedClientId,
     status: "ONGOING",
   });
+
+  const q = clientQuery.trim().toLowerCase();
+  const visibleClients = (clients ?? []).filter(
+    (c) => !q || c.name.toLowerCase().includes(q) || c.client_code.toLowerCase().includes(q),
+  );
 
   // Ketika klien dipilih dari dropdown
   const handleClientSelect = (clientId: string) => {
@@ -159,7 +165,8 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
       <TextBlock className="mb-4 text-sm text-mist">
         Catat pekerjaan dari klien; nanti dibagi ke jadwal tim lapangan.
       </TextBlock>
-      <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)}>
+      {/* Galat formulir (mis. latitude) hilang begitu ada kolom yang diubah, tidak menunggu kirim ulang. */}
+      <FormBlock id="work-completion-form" onSubmit={handleSubmit(onSubmit)} onChange={() => setFormError(null)}>
         {formError && <FormErrorText message={formError} />}
 
         <SelectField
@@ -194,6 +201,12 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
 
         {!isManualInput && (clients?.length ?? 0) > 0 ? (
           <>
+            <TextField
+              label="Cari klien"
+              placeholder="Ketik kode atau nama klien..."
+              value={clientQuery}
+              onChange={(e) => setClientQuery(e.target.value)}
+            />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <SelectField
                 label="Pilih Klien Master"
@@ -201,7 +214,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
                 onChange={(e) => handleClientSelect(e.target.value)}
               >
                 <ControlOption value="">-- Pilih Klien Terdaftar --</ControlOption>
-                {(clients ?? []).map((c) => (
+                {visibleClients.map((c) => (
                   <ControlOption key={c.client_id} value={c.client_id}>
                     {c.client_code} - {c.name}
                   </ControlOption>

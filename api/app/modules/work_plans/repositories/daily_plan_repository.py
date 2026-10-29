@@ -305,6 +305,54 @@ class DailyPlanRepository(BaseRepository):
             {"c": str(completion_id)},
         ))
 
+    async def count_items(self, daily_plan_id: UUID | str) -> int:
+        """Jumlah item jadwal yang belum dihapus (jadwal tanpa item tidak boleh diajukan/disetujui)."""
+        return int(await self.scalar(
+            "SELECT count(*) FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id)},
+        ) or 0)
+
+    async def has_pending_rollover(self, daily_plan_id: UUID | str) -> bool:
+        """Ada item yang menunggu keputusan pemindahan hari (PENDING_ROLLOVER) — jadwal belum boleh ditutup."""
+        return bool(await self.scalar(
+            "SELECT 1 FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status = 'PENDING_ROLLOVER' LIMIT 1",
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def leader_checked_in(self, daily_plan_id: UUID | str) -> bool:
+        """Ketua tim sudah absen masuk pada tanggal jadwal (absensi yang belum dihapus)."""
+        return bool(await self.scalar(
+            """
+            SELECT 1 FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            JOIN attendance a ON a.employee_id = t.leader_employee_id AND a.attendance_date = wpd.work_date
+            WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND a.delete_at IS NULL
+            LIMIT 1
+            """,
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def copy_items(self, source_id: UUID | str, target_id: UUID | str) -> None:
+        """Salin item jadwal ke jadwal lain (hari lain). Progres direset; item survei dan item yang bergantung
+        pada prasyarat (depends_on_item_id) dilewati karena konteks harinya tidak ikut disalin."""
+        await self.execute(
+            """
+            INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
+                                        completion_id, target_qty, completed_qty, progress_percent, status,
+                                        start_time, end_time, location_name, site_lat, site_lng,
+                                        assigned_employee_ids, notes)
+            SELECT CAST(:target AS uuid), i.work_type_id, i.title, i.task_phase, i.is_main_deliverable,
+                   i.completion_id, i.target_qty, 0, 0, 'TODO', i.start_time, i.end_time, i.location_name,
+                   i.site_lat, i.site_lng, i.assigned_employee_ids, i.notes
+            FROM work_plan_item i
+            WHERE i.daily_plan_id = CAST(:source AS uuid) AND i.delete_at IS NULL
+              AND i.task_phase <> 'SURVEY' AND i.depends_on_item_id IS NULL
+            ORDER BY i.start_time NULLS LAST, i.create_at
+            """,
+            {"source": str(source_id), "target": str(target_id)},
+        )
+
     async def has_open_correction(self, daily_plan_id: UUID | str) -> bool:
         """Ada koreksi laporan yang belum diputuskan akhir (diminta, direvisi, atau menunggu tinjauan)."""
         val = await self.scalar(

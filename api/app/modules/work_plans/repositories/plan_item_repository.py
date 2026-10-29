@@ -85,6 +85,14 @@ class PlanItemRepository(BaseRepository):
         )
         return str(val) if val else None
 
+    async def work_type_kind(self, work_type_id: UUID | str) -> str | None:
+        """Jenis (kind) jenis pekerjaan — menentukan fase default item."""
+        val = await self.scalar(
+            "SELECT kind FROM work_type WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(work_type_id)},
+        )
+        return str(val) if val else None
+
     async def order_division(self, completion_id: UUID | str) -> Any:
         """(division_id, terbuka?) order klien."""
         return await self.fetchone(

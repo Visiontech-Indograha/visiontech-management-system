@@ -197,7 +197,8 @@ class DailyPlanService:
         return await self.repo.get(daily_plan_id)
 
     async def copy(self, user: CurrentUser, daily_plan_id: UUID, work_dates: list[date]) -> list[Any]:
-        """Salin lokasi, jam, & tim ke tanggal lain sebagai DRAFT (item tidak ikut — dijadwalkan per hari)."""
+        """Salin lokasi, jam, tim, dan item ke tanggal lain sebagai DRAFT. Progres item direset; item survei dan item
+        yang bergantung pada prasyarat tidak disalin (lihat `DailyPlanRepository.copy_items`)."""
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         source = await self.repo.get(daily_plan_id)
         created = []
@@ -209,7 +210,9 @@ class DailyPlanService:
             fields.update(work_date=work_date, division_id=str(source.division_id), team_id=str(source.team_id),
                           created_by_id=user.employee_id,
                           project_id=str(source.project_id) if source.project_id else None)
-            created.append(await self.repo.get(await self.repo.insert(fields)))
+            new_id = await self.repo.insert(fields)
+            await self.repo.copy_items(daily_plan_id, new_id)
+            created.append(await self.repo.get(new_id))
         return created
 
     async def delete(self, user: CurrentUser, daily_plan_id: UUID) -> None:
@@ -227,9 +230,14 @@ class DailyPlanService:
         return await self.repo.attachment_ids(daily_plan_id)
 
     # ── Status ────────────────────────────────────────────────────────────────
+    async def _require_items(self, daily_plan_id: UUID | str) -> None:
+        if await self.repo.count_items(daily_plan_id) == 0:
+            raise AppError("PLAN_EMPTY", "Jadwal belum berisi pekerjaan; tambahkan item sebelum diajukan.", status=422)
+
     async def submit(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT")
+        await self._require_items(daily_plan_id)
         await self.repo.set_status(daily_plan_id, "SUBMITTED")
         await NotificationService(self.db).daily_submitted(daily_plan_id)
         return await self.repo.get(daily_plan_id)
@@ -239,6 +247,7 @@ class DailyPlanService:
         require_daily_status(access, *EDITABLE)
         if access.plan.work_date < jakarta_now().date():
             raise ValidationError("Jadwal untuk tanggal yang sudah lewat tidak dapat disetujui.")
+        await self._require_items(daily_plan_id)
         await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
         await NotificationService(self.db).daily_approved(daily_plan_id)
         return await self.repo.get(daily_plan_id)
@@ -266,6 +275,12 @@ class DailyPlanService:
         require_daily_status(access, "APPROVED")
         if access.plan.work_date > jakarta_now().date():
             raise ValidationError("Jadwal baru bisa dimulai pada tanggalnya.")
+        if not await self.repo.leader_checked_in(daily_plan_id):
+            raise AppError(
+                "CHECKIN_REQUIRED",
+                "Ketua tim harus absen masuk hari ini sebelum jadwal dimulai.",
+                status=409,
+            )
         await self.repo.set_status(daily_plan_id, "ONGOING")
         return await self.repo.get(daily_plan_id)
 
@@ -278,6 +293,12 @@ class DailyPlanService:
             raise AppError(
                 "CORRECTION_OPEN",
                 "Ada koreksi laporan yang belum selesai; kirim koreksinya, bukan menutup jadwal langsung.",
+                status=409,
+            )
+        if await self.repo.has_pending_rollover(daily_plan_id):
+            raise AppError(
+                "ROLLOVER_PENDING",
+                "Ada pekerjaan yang menunggu keputusan pemindahan hari; selesaikan keputusannya dulu.",
                 status=409,
             )
         if not await self.repo.has_daily_report(daily_plan_id):

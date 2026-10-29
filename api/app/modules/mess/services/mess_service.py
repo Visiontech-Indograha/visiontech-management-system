@@ -141,9 +141,9 @@ class MessService:
         return stay
 
     async def _can_decide(self, user: CurrentUser, employee_id: UUID | str) -> bool:
-        if user.role in ORG_WIDE_ROLES:
+        if user.has_role(*ORG_WIDE_ROLES):
             return True
-        if user.role == "PROJECT_MANAGER":
+        if user.has_role("PROJECT_MANAGER"):
             pm_id = await self.repo.division_pm_of(employee_id)
             return pm_id is not None and str(pm_id) == str(user.employee_id)
         return False
@@ -183,7 +183,7 @@ class MessService:
     async def cancel(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
         """Pemohon membatalkan pengajuan (atau hunian yang belum dimulai); HR/GA boleh membatalkan siapa pun."""
         stay = await self.get_stay(mess_stay_id)
-        if not (self._is_owner(user, stay) or user.role in MANAGER_ROLES):
+        if not (self._is_owner(user, stay) or user.has_role(*MANAGER_ROLES)):
             raise ForbiddenError("Hanya pemohon atau HR/GA yang dapat membatalkan hunian ini.")
         not_started = stay.stay_start_date > jakarta_now().date()
         cancellable = stay.status == "REQUESTED" or (stay.status == "APPROVED" and not_started)
@@ -201,7 +201,7 @@ class MessService:
     async def end_stay(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
         """Selesai inap: tanggal selesai dimajukan ke hari ini (riwayat tetap ada)."""
         stay = await self.get_stay(mess_stay_id)
-        if not (self._is_owner(user, stay) or user.role in MANAGER_ROLES):
+        if not (self._is_owner(user, stay) or user.has_role(*MANAGER_ROLES)):
             raise ForbiddenError("Hanya penghuni atau HR/GA yang dapat menyelesaikan hunian ini.")
         today = jakarta_now().date()
         if stay.status != "APPROVED" or stay.stay_start_date > today or stay.stay_end_date < today:

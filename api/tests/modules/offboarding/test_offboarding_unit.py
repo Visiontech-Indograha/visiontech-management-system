@@ -28,7 +28,9 @@ def _today(monkeypatch):
 
 
 def _user(role: str, employee_id: str, permissions: tuple[str, ...] = ()) -> SimpleNamespace:
-    return SimpleNamespace(role=role, employee_id=employee_id, permissions=list(permissions))
+    held = {role}
+    return SimpleNamespace(role=role, roles=[role], employee_id=employee_id, permissions=list(permissions),
+                           has_role=lambda *names: any(name in held for name in names))
 
 
 HR_USER = _user("ADMIN_HR_GA", HR, ("manage:offboarding", "view:offboarding"))

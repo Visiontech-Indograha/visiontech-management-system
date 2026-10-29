@@ -24,7 +24,7 @@ class ProjectService:
         self.repo = repo
 
     def _scope(self, user: CurrentUser) -> dict[str, Any]:
-        return {"see_all": user.role in SEE_ALL, "employee_id": user.employee_id}
+        return {"see_all": user.has_role(*SEE_ALL), "employee_id": user.employee_id}
 
     async def list(self, user: CurrentUser, *, division_id: UUID | None, client_id: UUID | None,
                    status: str | None, q: str | None) -> list[Any]:

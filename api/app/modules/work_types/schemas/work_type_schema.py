@@ -2,7 +2,7 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 EvidenceSource = Literal["CAMERA", "GALLERY"]
 # WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
@@ -38,26 +38,39 @@ class WorkTypePhotoOut(BaseModel):
     example_file_id: str | None = None  # Foto contoh dari PM (None = tanpa contoh atau path)
 
 
+def _two_decimals(value: float | None) -> float | None:
+    """Kolom default_qty NUMERIC(10,2): maksimal dua desimal."""
+    if value is not None and round(value, 2) != value:
+        raise ValueError("Jumlah bawaan maksimal 2 angka di belakang koma.")
+    return value
+
+
 class DefaultMaterialIn(BaseModel):
     """Schema input template material default untuk jenis pekerjaan."""
+    model_config = ConfigDict(str_strip_whitespace=True)
     material_code: str | None = Field(None, max_length=50)
     material_name: str = Field(..., min_length=1, max_length=255)
-    default_qty: float = Field(default=1.0, ge=0.0)
-    unit: str = Field(default="Unit", max_length=50)
+    default_qty: float = Field(default=1.0, gt=0.0, le=99999999.99)
+    unit: str = Field(default="Unit", min_length=1, max_length=50)
     category: str | None = Field(None, max_length=100)
     description: str | None = Field(None, max_length=2000)
     sort_order: int = 0
 
+    _qty_decimals = field_validator("default_qty")(_two_decimals)
+
 
 class DefaultMaterialUpdate(BaseModel):
     """Schema perbaikan template material default."""
+    model_config = ConfigDict(str_strip_whitespace=True)
     material_code: str | None = Field(None, max_length=50)
     material_name: str | None = Field(None, min_length=1, max_length=255)
-    default_qty: float | None = Field(None, ge=0.0)
-    unit: str | None = Field(None, max_length=50)
+    default_qty: float | None = Field(None, gt=0.0, le=99999999.99)
+    unit: str | None = Field(None, min_length=1, max_length=50)
     category: str | None = Field(None, max_length=100)
     description: str | None = Field(None, max_length=2000)
     sort_order: int | None = None
+
+    _qty_decimals = field_validator("default_qty")(_two_decimals)
 
 
 class DefaultMaterialOut(BaseModel):

@@ -20,6 +20,7 @@ from app.modules.exports.services.builders.model import (
     CompletionReport,
     PeriodicReport,
     TeamWeekReport,
+    plan_status_label,
     qty,
     tgl,
 )
@@ -73,7 +74,8 @@ def periodic_xlsx(r: PeriodicReport) -> bytes:
     wb = Workbook()
     _sheet(wb.active, "Rekap Jadwal Harian", sub,
            ["Tanggal", "Tim", "Lokasi", "Status", "Item", "Selesai", "Digeser", "Rata-rata progres %", "Pekerjaan"],
-           [(d.work_date, d.team_name, d.site_name, d.status, d.items, d.items_done, d.items_shifted, d.avg_progress,
+           [(d.work_date, d.team_name, d.site_name, plan_status_label(d.status), d.items, d.items_done,
+             d.items_shifted, d.avg_progress,
              d.titles) for d in r.days],
            [12, 20, 24, 12, 7, 8, 8, 12, 60])
     wb.active.title = "Jadwal"

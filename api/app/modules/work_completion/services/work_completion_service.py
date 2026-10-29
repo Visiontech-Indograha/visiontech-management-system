@@ -191,6 +191,17 @@ class WorkCompletionService:
         order.pop("_on_team", None)
         return order
 
+    async def _client_name(self, client_id: Any, project: Any) -> str:
+        """Nama klien order diambil dari master klien: order wajib memilih klien (atau lewat proyek)."""
+        if not client_id:
+            raise ValidationError("Pilih klien dari daftar klien. Buat klien baru di menu Klien bila belum ada.")
+        client = await self.crud.client_snapshot(client_id)
+        if client is None:
+            raise ValidationError("Klien tidak ditemukan.")
+        if project is not None and str(project.client_id) != str(client.client_id):
+            raise ValidationError("Klien order tidak sesuai dengan klien proyek.")
+        return client.name
+
     async def create_order(self, current_user: CurrentUser, data: dict[str, Any]) -> dict[str, Any]:
         """Membuat order proyek baru."""
         if not current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER"):
@@ -227,15 +238,16 @@ class WorkCompletionService:
                 raise ValidationError("Proyek tidak ditemukan di divisi order ini.")
             if project.status != "ONGOING":
                 raise ValidationError("Proyek tidak sedang berjalan.")
-            data["client_name"] = data.get("client_name") or project.client_name
+            data["client_id"] = data.get("client_id") or project.client_id
             data["project_title"] = data.get("project_title") or project.project_title
             data["order_number"] = data.get("order_number") or project.spk_number[:50]
             data.setdefault("start_work_date", project.start_date)
             data.setdefault("end_work_date", project.end_date)
             if not current_user.has_role("PROJECT_MANAGER") and not data.get("pm_id"):
                 data["pm_id"] = project.pm_id
-        if not data.get("client_name") or not data.get("project_title"):
-            raise ValidationError("Isi nama klien dan judul pekerjaan, atau pilih proyek.")
+        data["client_name"] = await self._client_name(data.get("client_id"), project)
+        if not data.get("project_title"):
+            raise ValidationError("Isi judul pekerjaan, atau pilih proyek.")
         pm_id = data.get("pm_id")
         if pm_id and await self.crud.employee_role(pm_id) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
@@ -264,6 +276,9 @@ class WorkCompletionService:
         existing = await self._editable(current_user, completion_id)
         if data.get("pm_id") and await self.crud.employee_role(data["pm_id"]) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
+        data.pop("client_name", None)  # nama klien selalu diambil dari master klien
+        if "client_id" in data:
+            data["client_name"] = await self._client_name(data["client_id"], None)
 
         await self.crud.update_completion(completion_id, data)
         updated = await self.crud.get_completion(completion_id)

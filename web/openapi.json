@@ -74,7 +74,7 @@
      "Clients"
     ],
     "summary": "List Clients",
-    "description": "Daftar klien.",
+    "description": "Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.",
     "operationId": "list_clients_api_v1_clients_get",
     "security": [
      {
@@ -28039,21 +28039,8 @@
         "type": "null"
        }
       ],
-      "title": "Client Id"
-     },
-     "client_name": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 150,
-        "minLength": 2
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Client Name",
-      "description": "Nama klien (kosong = dari proyek)"
+      "title": "Client Id",
+      "description": "Klien dari master (wajib, kecuali lewat proyek)"
      },
      "project_title": {
       "anyOf": [
@@ -28781,18 +28768,6 @@
        }
       ],
       "title": "Client Id"
-     },
-     "client_name": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 150
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Client Name"
      },
      "project_title": {
       "anyOf": [

@@ -35,8 +35,7 @@ class WorkCompletionCreate(BaseModel):
     division_id: UUID | None = None
     pm_id: UUID | None = None
     project_id: UUID | None = None
-    client_id: UUID | None = None
-    client_name: str | None = Field(None, min_length=2, max_length=150, description="Nama klien (kosong = dari proyek)")
+    client_id: UUID | None = Field(None, description="Klien dari master (wajib, kecuali lewat proyek)")
     project_title: str | None = Field(None, min_length=3, max_length=255, description="Judul (kosong = dari proyek)")
     order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
     total_target_unit: int = Field(default=1, ge=1, description="Total target unit volume pekerjaan")
@@ -64,7 +63,6 @@ class WorkCompletionCreate(BaseModel):
 class WorkCompletionUpdate(BaseModel):
     """Schema pembaruan detail Order Klien."""
     client_id: UUID | None = None
-    client_name: str | None = Field(None, max_length=150)
     project_title: str | None = Field(None, max_length=255)
     order_number: str | None = Field(None, max_length=50)
     total_target_unit: int | None = None

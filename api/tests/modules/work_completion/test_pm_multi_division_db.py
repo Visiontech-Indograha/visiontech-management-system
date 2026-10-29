@@ -5,12 +5,13 @@ dengan pilihan), tidak lagi masuk ke divisi yang kebetulan terpilih.
 from __future__ import annotations
 
 from tests.conftest import World, requires_db
+from tests.orders import make_client
 
 pytestmark = requires_db
 
 
 def _body(world: World, **extra: str) -> dict[str, str]:
-    return {"client_name": f"Klien pm-dua-divisi {world.tag}", "project_title": "Pekerjaan uji", **extra}
+    return {"client_id": make_client(), "project_title": "Pekerjaan uji", **extra}
 
 
 def test_pm_with_one_division_gets_it_automatically(client, world: World, fake_storage):

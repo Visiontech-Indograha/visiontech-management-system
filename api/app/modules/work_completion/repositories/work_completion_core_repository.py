@@ -51,6 +51,13 @@ class WorkCompletionCoreRepository(BaseRepository):
             {"id": str(completion_id), "emp": str(employee_id) if employee_id else None},
         )
 
+    async def client_snapshot(self, client_id: UUID | str) -> Any:
+        """Klien dari master (sumber tunggal nama klien pada order)."""
+        return await self.fetchone(
+            "SELECT client_id, name FROM client WHERE client_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(client_id)},
+        )
+
     async def project_snapshot(self, project_id: UUID | str) -> Any:
         """Data proyek untuk mengisi order: divisi, status, klien, judul, SPK, target."""
         return await self.fetchone(

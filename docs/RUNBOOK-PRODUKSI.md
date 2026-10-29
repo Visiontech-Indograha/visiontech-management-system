@@ -38,3 +38,6 @@ Pulihkan DB: `deploy/uji-pulih-cadangan.sh` (latihan, tidak menyentuh prod) lalu
 
 ## 6. Kontak/rujukan
 Webhook Discord ada di `notify.env` (`DISCORD_WEBHOOK_DEPLOY`, opsional `DISCORD_WEBHOOK_ALERT` untuk healthcheck). Rahasia (`*.env`) berizin 600 dan tidak di Git.
+
+## 7. Menutup port DB ke localhost
+`bash ~/deploy/vms-mvp/src/deploy/tutup-port-db.sh --cek` lalu `--ya` (jam sepi; DB restart beberapa detik). Mengikat `5433` ke `127.0.0.1`; aplikasi, backup, dan deploy tidak terpengaruh. Pulihkan dengan berkas `docker-compose.prod.yml.bak-*` yang dicetak skrip.

@@ -200,9 +200,9 @@ export function ProjectList({
                         size="sm"
                         className="text-danger hover:text-danger"
                         onClick={() => onDelete(p)}
-                        aria-label={`Hapus ${p.project_title}`}
+                        aria-label={`Arsipkan ${p.project_title}`}
                       >
-                        Hapus
+                        Arsipkan
                       </ActionButton>
                     </div>
                   )}

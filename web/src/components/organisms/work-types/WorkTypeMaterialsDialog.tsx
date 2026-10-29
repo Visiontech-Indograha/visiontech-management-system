@@ -52,12 +52,12 @@ export function WorkTypeMaterialsDialog({
   const updateMaterial = useUpdateWorkTypeMaterial();
   const deleteMaterial = useDeleteWorkTypeMaterial();
 
-  const { register, handleSubmit, reset } = useForm<NewMaterialValues>({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<NewMaterialValues>({
     defaultValues: {
       material_code: "",
       material_name: "",
       default_qty: 1,
-      unit: "Unit",
+      unit: "",
       category: "Kabel & Aksesoris",
       description: "",
     },
@@ -85,7 +85,7 @@ export function WorkTypeMaterialsDialog({
       material_code: "",
       material_name: "",
       default_qty: 1,
-      unit: "Unit",
+      unit: "",
       category: "Kabel & Aksesoris",
       description: "",
     });
@@ -161,7 +161,7 @@ export function WorkTypeMaterialsDialog({
                   material_code: "",
                   material_name: "",
                   default_qty: 1,
-                  unit: "Unit",
+                  unit: "",
                   category: "Kabel & Aksesoris",
                   description: "",
                 });
@@ -185,7 +185,10 @@ export function WorkTypeMaterialsDialog({
                 label="Nama Material"
                 placeholder="misal: Kabel Fiber Optic Drop Core"
                 maxLength={255}
-                {...register("material_name", { required: true })}
+                error={errors.material_name?.message}
+                {...register("material_name", {
+                  validate: (v) => v.trim().length > 0 || "Nama material wajib diisi.",
+                })}
               />
               <div className="grid grid-cols-2 gap-2">
                 <TextField
@@ -207,13 +210,19 @@ export function WorkTypeMaterialsDialog({
                   min={0}
                   step="any"
                   label="Kebutuhan Default"
-                  {...register("default_qty", { required: true })}
+                  error={errors.default_qty?.message}
+                  {...register("default_qty", {
+                    validate: (v) => Number(v) > 0 || "Kebutuhan default harus lebih dari 0.",
+                  })}
                 />
                 <TextField
                   label="Satuan"
                   placeholder="Meter, Unit, Batang"
                   maxLength={50}
-                  {...register("unit", { required: true })}
+                  error={errors.unit?.message}
+                  {...register("unit", {
+                    validate: (v) => v.trim().length > 0 || "Satuan wajib diisi.",
+                  })}
                 />
               </div>
               <TextAreaField

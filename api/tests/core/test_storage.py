@@ -108,8 +108,16 @@ def test_logo_belum_diunggah_fallback_tanpa_error(monkeypatch, caplog):
     monkeypatch.setattr(storage, "ensure_bucket", lambda: True)
 
     def no_such_key(bucket: str, object_name: str):
-        raise S3Error("NoSuchKey", "The specified key does not exist.", object_name, "rid", "hid",
-                      SimpleNamespace(status=404, headers={}), bucket_name=bucket, object_name=object_name)
+        raise S3Error(
+            code="NoSuchKey",
+            message="The specified key does not exist.",
+            resource=object_name,
+            request_id="rid",
+            host_id="hid",
+            response=SimpleNamespace(status=404, headers={}),
+            bucket_name=bucket,
+            object_name=object_name,
+        )
 
     monkeypatch.setattr(storage.minio_client, "get_object", no_such_key)
     with caplog.at_level(logging.DEBUG, logger="app.core.storage"):

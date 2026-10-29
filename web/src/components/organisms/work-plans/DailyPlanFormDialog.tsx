@@ -76,6 +76,8 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
     )) {
       return setErrors({ site_lat: "Koordinat tidak valid (latitude -90..90, longitude -180..180)." });
     }
+    // Koordinat tanpa nama membuat kartu "Lokasi belum ditentukan": nama wajib bila koordinat diisi.
+    if (latitude && !siteName.trim()) return setErrors({ site_name: "Isi nama lokasi bila koordinat diisi (mis. Gudang Cikarang)." });
     const body = {
       site_name: siteName.trim() || null,
       site_lat: latitude ? Number(latitude) : null,
@@ -140,7 +142,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
             hint="Dicatat di audit. Jadwal dibuat sebagai draf dan tetap perlu diajukan/disetujui."
           />
         )}
-        <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui; koordinat wajib dilengkapi sebelum presensi." />
+        <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui. Bila koordinat diisi, nama lokasi wajib diisi." />
         <ChoiceChips
           label="Lokasi terakhir tim:"
           testId="recent-sites"
@@ -160,7 +162,8 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           onPick={(p, label) => {
             setLat(p[0].toFixed(7));
             setLng(p[1].toFixed(7));
-            if (label && !siteName.trim()) setSiteName(label.split(",")[0]!.trim());
+            // Nama dari hasil cari; bila klik peta tanpa hasil cari, pakai teks koordinat agar nama tidak kosong.
+            if (!siteName.trim()) setSiteName(label ? label.split(",")[0]!.trim() : `Titik ${p[0].toFixed(5)},${p[1].toFixed(5)}`);
           }}
         />
         <div className="grid gap-x-3 md:grid-cols-2">

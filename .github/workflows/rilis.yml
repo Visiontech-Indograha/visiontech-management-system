@@ -1,0 +1,66 @@
+# Rilis (docs/RILIS.md): setiap push ke prod membuat tag vX.Y.Z dan GitHub Release dari VERSION.
+# Catatan: bagian [X.Y.Z] CHANGELOG.md bila ada (lokal, opsional), selain itu otomatis dari PR (--generate-notes).
+# Gagal jelas bila VERSION belum naik atau tag sudah ada. Hanya memakai GITHUB_TOKEN (izin contents: write), tanpa secret baru.
+name: Rilis
+
+on:
+  push:
+    branches: [prod]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rilis-prod
+  cancel-in-progress: false
+
+jobs:
+  rilis:
+    name: Tag & GitHub Release dari VERSION
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Baca dan validasi VERSION
+        run: |
+          v=$(tr -d '[:space:]' < VERSION)
+          if ! [[ $v =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::VERSION '$v' bukan SemVer X.Y.Z"; exit 1
+          fi
+          echo "VERSI=$v" >> "$GITHUB_ENV"
+
+      - name: Pastikan tag belum ada (VERSION harus naik)
+        run: |
+          git fetch --tags --force --quiet
+          if git rev-parse -q --verify "refs/tags/v$VERSI" >/dev/null; then
+            echo "::error::Tag v$VERSI sudah ada tetapi VERSION masih $VERSI. Naikkan VERSION lewat PR ke development (lihat docs/RILIS.md)."
+            exit 1
+          fi
+
+      - name: Siapkan catatan rilis (CHANGELOG bila ada, selain itu otomatis dari PR)
+        run: |
+          : > "$RUNNER_TEMP/notes.md"
+          if [ -f CHANGELOG.md ]; then
+            awk -v h="## [$VERSI]" 'index($0, h) == 1 {f = 1; next} f && /^## / {exit} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          fi
+          if grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "CATATAN=file" >> "$GITHUB_ENV"
+            echo "Catatan dari bagian [$VERSI] CHANGELOG.md."
+          else
+            echo "CATATAN=otomatis" >> "$GITHUB_ENV"
+            echo "Bagian [$VERSI] di CHANGELOG.md tidak ada; catatan dibuat otomatis dari PR."
+          fi
+
+      - name: Buat tag dan GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$CATATAN" = file ]; then
+            gh release create "v$VERSI" --target "$GITHUB_SHA" --title "v$VERSI" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "v$VERSI" --target "$GITHUB_SHA" --title "v$VERSI" --generate-notes
+          fi

@@ -123,6 +123,18 @@ class CompletionReport:
 
 
 @dataclass
+class AssetLine:
+    """Kendaraan atau alat yang dipinjam untuk jadwal/tim (satu baris di laporan)."""
+
+    kind: str  # "Kendaraan" | "Alat"
+    name: str
+    code: str | None
+    holder: str | None
+    work_date: date | None
+    status: str | None
+
+
+@dataclass
 class DailyReport:
     """Laporan harian satu jadwal: tim, ketua, item (progres, catatan, alasan tunda) dan laporan ketua."""
 
@@ -140,6 +152,7 @@ class DailyReport:
     generated_at: datetime
     report_submitted_at: datetime | None = None
     team_logo: bytes | None = None
+    assets: list[AssetLine] = field(default_factory=list)
 
 
 @dataclass
@@ -167,6 +180,7 @@ class TeamWeekReport:
     generated_by: str
     generated_at: datetime
     team_logo: bytes | None = None
+    assets: list[AssetLine] = field(default_factory=list)
 
 
 def plan_status_label(value: str | None) -> str:

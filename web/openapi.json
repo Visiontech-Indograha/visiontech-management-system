@@ -1626,6 +1626,71 @@
     }
    }
   },
+  "/api/v1/work-plans/daily/recent-sites": {
+   "get": {
+    "tags": [
+     "Work Plans (Daily-First)"
+    ],
+    "summary": "Recent Sites",
+    "description": "Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).",
+    "operationId": "recent_sites_api_v1_work_plans_daily_recent_sites_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "team_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Team Id"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 30,
+       "minimum": 1,
+       "default": 10,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/RecentSiteOut"
+         },
+         "title": "Response Recent Sites Api V1 Work Plans Daily Recent Sites Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-plans/daily": {
    "get": {
     "tags": [
@@ -24995,6 +25060,47 @@
     },
     "type": "object",
     "title": "ProjectUpdate"
+   },
+   "RecentSiteOut": {
+    "properties": {
+     "site_name": {
+      "type": "string",
+      "title": "Site Name"
+     },
+     "site_lat": {
+      "type": "string",
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "type": "string",
+      "title": "Site Lng"
+     },
+     "attendance_radius_m": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Radius M"
+     },
+     "last_used": {
+      "type": "string",
+      "format": "date",
+      "title": "Last Used"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_name",
+     "site_lat",
+     "site_lng",
+     "last_used"
+    ],
+    "title": "RecentSiteOut",
+    "description": "Lokasi site yang pernah dipakai tim (untuk dipilih ulang di form Jadwal harian)."
    },
    "RejectIn": {
     "properties": {

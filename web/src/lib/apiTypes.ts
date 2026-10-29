@@ -477,6 +477,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/recent-sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent Sites
+         * @description Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).
+         */
+        get: operations["recent_sites_api_v1_work_plans_daily_recent_sites_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily": {
         parameters: {
             query?: never;
@@ -7919,6 +7939,25 @@ export interface components {
             /** Status */
             status?: ("DRAFT" | "ONGOING" | "COMPLETED" | "CANCELLED") | null;
         };
+        /**
+         * RecentSiteOut
+         * @description Lokasi site yang pernah dipakai tim (untuk dipilih ulang di form Jadwal harian).
+         */
+        RecentSiteOut: {
+            /** Site Name */
+            site_name: string;
+            /** Site Lat */
+            site_lat: string;
+            /** Site Lng */
+            site_lng: string;
+            /** Attendance Radius M */
+            attendance_radius_m?: number | null;
+            /**
+             * Last Used
+             * Format: date
+             */
+            last_used: string;
+        };
         /** RejectIn */
         RejectIn: {
             /** Reason */
@@ -10149,6 +10188,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GeoResult"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recent_sites_api_v1_work_plans_daily_recent_sites_get: {
+        parameters: {
+            query: {
+                team_id: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecentSiteOut"][];
                 };
             };
             /** @description Validation Error */

@@ -85,6 +85,23 @@ class DailyPlanRepository(BaseRepository):
              "field": field_employee},
         ))
 
+    async def recent_sites(self, *, team_id: UUID, managed_by: str | None, limit: int) -> list[Any]:
+        """Lokasi (nama + koordinat) jadwal terakhir sebuah tim, terbaru dulu, tanpa duplikat."""
+        return list(await self.fetchall(
+            """
+            SELECT wpd.site_name, wpd.site_lat, wpd.site_lng, wpd.attendance_radius_m,
+                   MAX(wpd.work_date) AS last_used
+            FROM work_plan_daily wpd JOIN division d ON d.division_id = wpd.division_id
+            WHERE wpd.delete_at IS NULL AND wpd.team_id = CAST(:team AS uuid)
+              AND wpd.site_name IS NOT NULL AND wpd.site_lat IS NOT NULL AND wpd.site_lng IS NOT NULL
+              AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+            GROUP BY wpd.site_name, wpd.site_lat, wpd.site_lng, wpd.attendance_radius_m
+            ORDER BY last_used DESC, wpd.site_name
+            LIMIT :lim
+            """,
+            {"team": str(team_id), "mgr": managed_by, "lim": limit},
+        ))
+
     async def get(self, daily_plan_id: UUID | str) -> Any:
         return await self.fetchone(
             _SELECT + " WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND wpd.delete_at IS NULL",

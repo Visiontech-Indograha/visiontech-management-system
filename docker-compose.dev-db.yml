@@ -37,5 +37,22 @@ services:
     ports:
       - "127.0.0.1:55432:5432"
 
+  # MinIO lokal untuk dev (bucket dibuat otomatis oleh API). Tidak perlu MinIO server lagi.
+  # API: 127.0.0.1:19000 · Konsol: http://127.0.0.1:19001 (vmsdev / vmsdev-secret)
+  vms-dev-minio:
+    image: bitnamilegacy/minio:2025.4.22   # server memakai quay.io/minio/minio; quay.io sering 401 dari PC dev
+    container_name: vms-dev-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: vmsdev
+      MINIO_ROOT_PASSWORD: vmsdev-secret
+      MINIO_DEFAULT_BUCKETS: vms-files
+    ports:
+      - "127.0.0.1:19000:9000"
+      - "127.0.0.1:19001:9001"
+    volumes:
+      - vms-dev-minio:/bitnami/minio/data
+
 volumes:
   vms-dev-pgdata:
+  vms-dev-minio:

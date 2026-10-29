@@ -142,3 +142,11 @@ def test_recent_sites_lists_distinct_team_sites_newest_first(client, world: Worl
     assert other.status_code == 200 and other.json() == []
     assert client.get("/work-plans/daily/recent-sites", params={"team_id": world.team_id},
                       headers=world.headers(client, "member")).status_code == 403
+
+
+def test_plan_without_site_name_can_be_submitted_and_approved(client, world: World):
+    """Temuan uji nyata 29-10-2026: jadwal tanpa nama lokasi memberi 500 (notification.body NULL)."""
+    pid = _create(client, world, days=3, site_name=None).json()["daily_plan_id"]
+    pm = world.headers(client, "pm")
+    assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).status_code == 200
+    assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).status_code == 200

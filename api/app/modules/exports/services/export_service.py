@@ -207,7 +207,7 @@ class ExportService:
             format=s["format"], client=s["client_name"], date_text=date_text,
             activity_date_text=date_text.replace(" ", "-") if s["format"] == "ACS" else date_text,
             location=location, purpose=s.get("purpose") or "-", activities=activities, narrative=narrative,
-            auto_layout=auto,
+            auto_layout=auto, project_title=s.get("project_title") or "",
             points=points,
             bom=[(b["name"], b["qty"], b["unit"], b["group"]) for b in s["bom"]],
             team_name=s.get("team_name") or "", leader_name=leader, member_names=members,

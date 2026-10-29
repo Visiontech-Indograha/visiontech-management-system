@@ -173,3 +173,11 @@ def test_autodeploy_updates_itself_once_from_repo():
 def test_builds_are_serialized_across_environments():
     text = read(DEPLOY / "autodeploy.sh")
     assert "flock -w" in text and "BUILD_LOCK" in text and "compose --progress=plain build" in text
+
+
+def test_port_closing_script_replaces_literally_and_verifies_the_write():
+    """Insiden 29-10-2026: pola `sed` tak cocok, berkas tak berubah, tetapi skrip melapor sukses."""
+    text = read(DEPLOY / "tutup-port-layanan.sh")
+    assert 'sed -i "s|' not in text
+    assert '${isi/"$from"/$to}' in text
+    assert 'grep -qF -- "$to" "$file" || {' in text.split("cp -p", 1)[1]    # hasil tulis diverifikasi

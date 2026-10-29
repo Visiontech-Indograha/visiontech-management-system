@@ -40,6 +40,7 @@ from app.modules.work_plans.schemas.daily_report_schema import (
     DailyReportOut,
     WeeklyPresentationOut,
 )
+from app.modules.work_plans.schemas.weekly_schema import WeeklyMatrixOut
 from app.shared.access.access_service import DailyAccess, DailyNeed
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans (Daily-First)"])
@@ -53,6 +54,17 @@ async def form_options(current_user: CurrentUser = _PLANNER, controller: DailyPl
                        ) -> DailyFormOptions:
     """Pilihan divisi, tim, dan order terbuka yang dikelola pengguna."""
     return await controller.handle_form_options(current_user)
+
+
+@router.get("/weekly", response_model=WeeklyMatrixOut)
+async def weekly_matrix(week_start: date = Query(description="Senin awal minggu (YYYY-MM-DD)"),
+                        division_id: UUID | None = Query(default=None),
+                        current_user: CurrentUser = _PLANNER,
+                        controller: DailyPlanController = Depends()) -> WeeklyMatrixOut:
+    """Matriks alokasi mingguan: tim × 7 hari (Senin–Minggu) untuk divisi yang dikelola PM/OM. `division_id` opsional
+    (kosong = semua divisi yang dikelola). Sel memuat status, jenis (WORK/STANDBY), ringkasan item, dan sisa target
+    order."""
+    return await controller.handle_weekly(current_user, week_start, division_id)
 
 
 @router.get("/geo/search", response_model=list[GeoResult])

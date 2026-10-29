@@ -28,6 +28,16 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     return round(r * c)
 
 
+def _pm_division_of(emp_expr: str) -> str:
+    """Karyawan `emp_expr` ada di divisi yang dipimpin peninjau (division.pm_id = karyawan viewer).
+    Sama dengan `reviewer_employee_ids`: PM hanya melihat & meninjau karyawan divisinya sendiri."""
+    return f"""EXISTS (
+        SELECT 1 FROM employee pe JOIN division d ON d.division_id = pe.division_id
+        WHERE pe.employee_id = {emp_expr}
+          AND d.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
+    )"""
+
+
 class AttendanceSessionRepository(BaseRepository):
     """Repositori sesi absensi (tabel attendance)."""
     """
@@ -600,14 +610,23 @@ class AttendanceSessionRepository(BaseRepository):
         """Mengecek apakah peninjau memiliki wewenang untuk meninjau absensi."""
         return bool(
             await self.scalar(
-                """
+                f"""
                 SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (
                     SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid)
                 ))
-                   AND EXISTS (
-                       SELECT 1 FROM users
-                       WHERE user_id = CAST(:viewer AS uuid)
-                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                   AND (
+                       EXISTS (
+                           SELECT 1 FROM users
+                           WHERE user_id = CAST(:viewer AS uuid)
+                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')
+                       )
+                       OR (
+                           EXISTS (
+                               SELECT 1 FROM users
+                               WHERE user_id = CAST(:viewer AS uuid) AND system_role = 'PROJECT_MANAGER'
+                           )
+                           AND {_pm_division_of('CAST(:emp AS uuid)')}
+                       )
                    )
                 """,
                 {"viewer": str(viewer_user_id), "emp": str(employee_id)},
@@ -647,12 +666,20 @@ class AttendanceSessionRepository(BaseRepository):
 
         where_clauses = [
             "a.delete_at IS NULL",
-            # Peninjau (sama dengan can_review) & pemegang VIEW_ALL melihat semua; pekerja lapangan hanya miliknya.
-            """(
+            # OM/SUPER_ADMIN & pemegang VIEW_ALL melihat semua; PM hanya karyawan divisinya (pm_id);
+            # selain itu hanya absensi miliknya sendiri.
+            f"""(
                 CAST(:view_all AS boolean)
                 OR EXISTS (
                     SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
+                )
+                OR (
+                    EXISTS (
+                        SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                          AND v.system_role = 'PROJECT_MANAGER'
+                    )
+                    AND {_pm_division_of('a.employee_id')}
                 )
                 OR a.employee_id IS NOT DISTINCT FROM (
                     SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
@@ -733,12 +760,19 @@ class AttendanceSessionRepository(BaseRepository):
                    a.meal_allowance_amount::float AS meal_allowance_amount,
                    a.is_within_attendance_radius AS is_within_attendance_radius,
                    (
-                       EXISTS (
-                           SELECT 1 FROM users u
-                           WHERE u.user_id = CAST(:viewer AS uuid)
-                             AND u.system_role IN (
-                                  'SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA'
-                              )
+                       (
+                           EXISTS (
+                               SELECT 1 FROM users u
+                               WHERE u.user_id = CAST(:viewer AS uuid)
+                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA')
+                           )
+                           OR (
+                               EXISTS (
+                                   SELECT 1 FROM users u
+                                   WHERE u.user_id = CAST(:viewer AS uuid) AND u.system_role = 'PROJECT_MANAGER'
+                               )
+                               AND {_pm_division_of('a.employee_id')}
+                           )
                        )
                        AND a.employee_id IS DISTINCT FROM (
                            SELECT u2.employee_id FROM users u2 WHERE u2.user_id = CAST(:viewer AS uuid)

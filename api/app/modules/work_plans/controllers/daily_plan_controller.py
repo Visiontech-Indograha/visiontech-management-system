@@ -32,6 +32,7 @@ from app.modules.work_plans.schemas.daily_report_schema import (
     DailyReportOut,
     WeeklyPresentationOut,
 )
+from app.modules.work_plans.schemas.weekly_schema import WeeklyMatrixOut
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.geocode_service import GeocodeService
 
@@ -68,6 +69,9 @@ class DailyPlanController:
 
     async def handle_form_options(self, user: CurrentUser) -> DailyFormOptions:
         return DailyFormOptions(**await self.service.form_options(user))
+
+    async def handle_weekly(self, user: CurrentUser, week_start: date, division_id: UUID | None) -> WeeklyMatrixOut:
+        return WeeklyMatrixOut(**await self.service.weekly_matrix(user, week_start, division_id))
 
     async def handle_order_schedule(self, user: CurrentUser, completion_id: UUID) -> OrderScheduleOut:
         plans = await self.service.plans_of_order(user, completion_id)  # 404 bila order tak boleh dilihat

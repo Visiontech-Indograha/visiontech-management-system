@@ -2571,6 +2571,30 @@
     "title": "DailyActivateIn",
     "type": "object"
    },
+   "DailyBulkAsset": {
+    "description": "Aset yang akan dipakai pekerjaan massal; hanya dipakai untuk peringatan bentrok per sel (tidak menulis).",
+    "properties": {
+     "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+     },
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "asset_type",
+     "asset_id"
+    ],
+    "title": "DailyBulkAsset",
+    "type": "object"
+   },
    "DailyBulkCellOut": {
     "properties": {
      "daily_plan_id": {
@@ -2620,6 +2644,13 @@
       "title": "Team Id",
       "type": "string"
      },
+     "warnings": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+     },
      "work_date": {
       "format": "date",
       "title": "Work Date",
@@ -2637,6 +2668,14 @@
    "DailyBulkIn": {
     "description": "Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.",
     "properties": {
+     "assets": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkAsset"
+      },
+      "maxItems": 20,
+      "title": "Assets",
+      "type": "array"
+     },
      "attendance_radius_m": {
       "anyOf": [
        {
@@ -2809,6 +2848,29 @@
      "work_dates"
     ],
     "title": "DailyBulkStandbyIn",
+    "type": "object"
+   },
+   "DailyBulkWarning": {
+    "description": "Peringatan per sel yang tidak menggagalkan pembuatan: LEADER_CUTI (ketua cuti), ASET_BENTROK (aset dipinjam).",
+    "properties": {
+     "code": {
+      "enum": [
+       "LEADER_CUTI",
+       "ASET_BENTROK"
+      ],
+      "title": "Code",
+      "type": "string"
+     },
+     "message": {
+      "title": "Message",
+      "type": "string"
+     }
+    },
+    "required": [
+     "code",
+     "message"
+    ],
+    "title": "DailyBulkWarning",
     "type": "object"
    },
    "DailyFormOptions": {
@@ -13207,6 +13269,281 @@
     "title": "VehicleUpdate",
     "type": "object"
    },
+   "WeeklyCell": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "item_count": {
+      "default": 0,
+      "title": "Item Count",
+      "type": "integer"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyItemBrief"
+      },
+      "maxItems": 20,
+      "title": "Items",
+      "type": "array"
+     },
+     "kind": {
+      "anyOf": [
+       {
+        "enum": [
+         "WORK",
+         "STANDBY"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kind"
+     },
+     "orders": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyOrderRef"
+      },
+      "title": "Orders",
+      "type": "array"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "enum": [
+         "DRAFT",
+         "SUBMITTED",
+         "APPROVED",
+         "ONGOING",
+         "COMPLETED"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_date"
+    ],
+    "title": "WeeklyCell",
+    "type": "object"
+   },
+   "WeeklyDivision": {
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "division_id",
+     "name"
+    ],
+    "title": "WeeklyDivision",
+    "type": "object"
+   },
+   "WeeklyItemBrief": {
+    "properties": {
+     "completed_qty": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completed Qty"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "item_id": {
+      "format": "uuid",
+      "title": "Item Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "target_qty": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Qty"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
+     }
+    },
+    "required": [
+     "item_id",
+     "title",
+     "status"
+    ],
+    "title": "WeeklyItemBrief",
+    "type": "object"
+   },
+   "WeeklyMatrixOut": {
+    "properties": {
+     "days": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "title": "Days",
+      "type": "array"
+     },
+     "divisions": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyDivision"
+      },
+      "title": "Divisions",
+      "type": "array"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyRow"
+      },
+      "title": "Rows",
+      "type": "array"
+     },
+     "week_end": {
+      "format": "date",
+      "title": "Week End",
+      "type": "string"
+     },
+     "week_start": {
+      "format": "date",
+      "title": "Week Start",
+      "type": "string"
+     }
+    },
+    "required": [
+     "week_start",
+     "week_end",
+     "days",
+     "divisions",
+     "rows"
+    ],
+    "title": "WeeklyMatrixOut",
+    "type": "object"
+   },
+   "WeeklyOrderRef": {
+    "description": "Order klien yang dikerjakan pada sel. `remaining_qty` = total - selesai; `unscheduled_qty` = total - sudah\ndijadwalkan di semua jadwal (sisa yang belum dialokasikan).",
+    "properties": {
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "completion_id": {
+      "format": "uuid",
+      "title": "Completion Id",
+      "type": "string"
+     },
+     "order_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Number"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
+     "remaining_qty": {
+      "title": "Remaining Qty",
+      "type": "number"
+     },
+     "total_target_unit": {
+      "title": "Total Target Unit",
+      "type": "integer"
+     },
+     "unscheduled_qty": {
+      "title": "Unscheduled Qty",
+      "type": "number"
+     }
+    },
+    "required": [
+     "completion_id",
+     "total_target_unit",
+     "remaining_qty",
+     "unscheduled_qty"
+    ],
+    "title": "WeeklyOrderRef",
+    "type": "object"
+   },
    "WeeklyPresentationOut": {
     "properties": {
      "completed_plans": {
@@ -13273,6 +13610,55 @@
      "completed_plans"
     ],
     "title": "WeeklyPresentationOut",
+    "type": "object"
+   },
+   "WeeklyRow": {
+    "properties": {
+     "cells": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyCell"
+      },
+      "title": "Cells",
+      "type": "array"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "division_name": {
+      "title": "Division Name",
+      "type": "string"
+     },
+     "leader_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Name"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "team_name",
+     "division_id",
+     "division_name",
+     "cells"
+    ],
+    "title": "WeeklyRow",
     "type": "object"
    },
    "WorkCompletionAccDecision": {
@@ -29296,6 +29682,74 @@
      }
     ],
     "summary": "Get Team Weekly Presentation",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/weekly": {
+   "get": {
+    "description": "Matriks alokasi mingguan: tim × 7 hari (Senin–Minggu) untuk divisi yang dikelola PM/OM. `division_id` opsional\n(kosong = semua divisi yang dikelola). Sel memuat status, jenis (WORK/STANDBY), ringkasan item, dan sisa target\norder.",
+    "operationId": "weekly_matrix_api_v1_work_plans_weekly_get",
+    "parameters": [
+     {
+      "description": "Senin awal minggu (YYYY-MM-DD)",
+      "in": "query",
+      "name": "week_start",
+      "required": true,
+      "schema": {
+       "description": "Senin awal minggu (YYYY-MM-DD)",
+       "format": "date",
+       "title": "Week Start",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyMatrixOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Weekly Matrix",
     "tags": [
      "Work Plans (Daily-First)"
     ]

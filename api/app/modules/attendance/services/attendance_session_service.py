@@ -64,6 +64,19 @@ CHECKOUT_NOT_VALID = (
     "Absen pulang hanya bisa dilakukan setelah absen masuk valid. Absen masuk Anda masih menunggu pemeriksaan."
 )
 FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
+# Hasil pemeriksaan wajah yang disimpan eksplisit di attendance.face_status (tidak pernah diam-diam "lolos").
+FACE_STATUS_OF_RESULT = {
+    "MATCH": "MATCHED",
+    "MISMATCH": "MISMATCH",
+    "UNAVAILABLE": "SERVICE_DOWN",
+    "NOT_ENROLLED": "NOT_ENROLLED",
+    "STALE": "STALE",
+}
+
+
+def face_status_of(outcome: FaceOutcome | None) -> str:
+    """None (pemeriksaan wajah tidak dijalankan) dan hasil tak dikenal → NOT_CHECKED."""
+    return FACE_STATUS_OF_RESULT.get(outcome.result, "NOT_CHECKED") if outcome is not None else "NOT_CHECKED"
 FACE_MISMATCH = "Wajah pada swafoto tidak cocok dengan wajah terdaftar. Ambil ulang swafoto dengan wajah jelas."
 # docs/35 §5: absen di lokasi tugas harian hanya untuk anggota/ketua tim jadwal itu, pada tanggalnya, setelah disetujui.
 DAILY_OPEN_STATUSES = ("APPROVED", "ONGOING")
@@ -228,11 +241,13 @@ class AttendanceSessionService:
         if today is not None and plan.work_date != today:
             raise AppError("SITE_NOT_ALLOWED", "Jadwal kerja ini bukan untuk hari ini.", status=403)
 
-    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool) -> FaceOutcome | None:
+    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool,
+                          mobile: bool = False) -> FaceOutcome | None:
         """Cocokkan swafoto dengan wajah terdaftar SEBELUM absen ditulis. Online & tidak cocok → ditolak (422);
         offline tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
         if self.faces is None or selfie_file_id is None:
-            return None
+            # Absen HP wajib diperiksa: tanpa pemeriksaan ditandai NOT_CHECKED. Absen web tidak memakai wajah.
+            return FaceOutcome("NOT_CHECKED", None) if mobile else None
         outcome = await self.faces.verify_selfie(employee_id, selfie_file_id)
         if online and outcome.result == "MISMATCH":
             raise AppError("FACE_MISMATCH", FACE_MISMATCH, status=422)
@@ -241,18 +256,22 @@ class AttendanceSessionService:
     async def record_face(self, row: Any, event: str, outcome: FaceOutcome | None, *, online: bool) -> Any:
         """Hasil yang tidak bisa dipastikan → PENDING_OM dengan catatan; wajah tidak boleh dilewati diam-diam."""
         label = "masuk" if event == "CHECK_IN" else "pulang"
-        if outcome is None or outcome.result == "MATCH":
+        if outcome is not None and outcome.result == "MATCH":
             return row
-        if outcome.result == "UNAVAILABLE":
+        if outcome is None:  # absen web: wajah tidak dipakai
+            return row
+        if outcome.result == "NOT_CHECKED":
+            note = f"wajah absen {label} tidak diperiksa: pemeriksaan wajah tidak dijalankan"
+        elif outcome.result == "UNAVAILABLE":
             note = f"wajah absen {label} belum diperiksa: layanan pengenalan wajah tidak tersedia"
         elif outcome.result == "STALE":
             note = f"wajah absen {label} belum diperiksa: pendaftaran wajah perlu diulang (model berganti)"
         elif outcome.result == "MISMATCH":
             note = f"wajah absen {label} tidak cocok (skor {outcome.score:.0f})"
-        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen offline
-            note = "belum mendaftar wajah"
+        elif outcome.result == "NOT_ENROLLED":  # selalu ditandai, walau FACE_ENROLLMENT_REQUIRED dimatikan
+            note = f"wajah absen {label} tidak diperiksa: karyawan belum mendaftar wajah"
         else:
-            return row
+            note = f"wajah absen {label} belum diperiksa ({outcome.result})"
         return await self.repo.flag_missing_face(row.id, event, note)
 
     async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
@@ -393,7 +412,7 @@ class AttendanceSessionService:
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         await self._check_daily_target(site, employee_id, today)
-        outcome = await self.verify_face(employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
         try:
             row = await self.repo.insert(
                 org_id=org_id,
@@ -407,6 +426,7 @@ class AttendanceSessionService:
                 selfie_file_id=selfie_file_id,
                 face_result=outcome.result if outcome else None,
                 face_similarity=outcome.similarity if outcome else None,
+                face_status=face_status_of(outcome),
                 source=channel,
                 explanation=note,
                 at=at or (local_clock.local_now if local_clock else None),
@@ -503,7 +523,7 @@ class AttendanceSessionService:
                     status=422,
                 )
 
-        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
 
         # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
         is_under_required_hours = False

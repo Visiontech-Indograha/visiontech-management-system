@@ -546,6 +546,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     in_lng NUMERIC(10,7) NOT NULL,
     face_match_score NUMERIC(5,2) NOT NULL,
     face_photo_path VARCHAR(255) NOT NULL,
+    face_status VARCHAR(20) NULL CHECK (face_status IN ('MATCHED', 'MISMATCH', 'NOT_CHECKED', 'NOT_ENROLLED', 'SERVICE_DOWN', 'STALE')),
     distance_to_target_m INT NOT NULL,
     is_within_attendance_radius BOOLEAN NOT NULL,
     out_of_radius_photo_path VARCHAR(255) NULL,

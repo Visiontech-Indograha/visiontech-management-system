@@ -5601,6 +5601,145 @@
     }
    }
   },
+  "/api/v1/teams/{team_id}/logo": {
+   "put": {
+    "tags": [
+     "Teams"
+    ],
+    "summary": "Set Team Logo",
+    "description": "Mengganti logo tim (PNG/JPEG/WebP, maks 2 MB). Hanya ketua tim tersebut (SUPER_ADMIN darurat).",
+    "operationId": "set_team_logo_api_v1_teams__team_id__logo_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "team_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Team Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_set_team_logo_api_v1_teams__team_id__logo_put"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamLogoOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Teams"
+    ],
+    "summary": "Delete Team Logo",
+    "description": "Menghapus logo tim → kembali ke logo default. Hanya ketua tim tersebut.",
+    "operationId": "delete_team_logo_api_v1_teams__team_id__logo_delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "team_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Team Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Teams"
+    ],
+    "summary": "Get Team Logo",
+    "description": "Isi logo tim (gambar). Anggota tim, PM/OM divisi, HR, dan SUPER_ADMIN; selain itu/tanpa logo → 404.",
+    "operationId": "get_team_logo_api_v1_teams__team_id__logo_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "team_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Team Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/mess/places": {
    "get": {
     "tags": [
@@ -16012,6 +16151,20 @@
     ],
     "title": "Body_set_survey_logo_api_v1_exports_survey_logos__role__put"
    },
+   "Body_set_team_logo_api_v1_teams__team_id__logo_put": {
+    "properties": {
+     "file": {
+      "type": "string",
+      "contentMediaType": "application/octet-stream",
+      "title": "File"
+     }
+    },
+    "type": "object",
+    "required": [
+     "file"
+    ],
+    "title": "Body_set_team_logo_api_v1_teams__team_id__logo_put"
+   },
    "Body_upload_document_api_v1_files_upload_post": {
     "properties": {
      "file": {
@@ -25992,6 +26145,29 @@
       "format": "date-time",
       "title": "Create At"
      },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
+     },
      "members": {
       "items": {
        "$ref": "#/components/schemas/MemberOut"
@@ -26085,6 +26261,29 @@
       "type": "string",
       "format": "date-time",
       "title": "Create At"
+     },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
      }
     },
     "type": "object",
@@ -26098,6 +26297,31 @@
      "create_at"
     ],
     "title": "TeamListItem"
+   },
+   "TeamLogoOut": {
+    "properties": {
+     "team_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Team Id"
+     },
+     "logo_file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "type": "string",
+      "title": "Logo Url"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team_id",
+     "logo_file_id",
+     "logo_url"
+    ],
+    "title": "TeamLogoOut"
    },
    "TeamOption": {
     "properties": {

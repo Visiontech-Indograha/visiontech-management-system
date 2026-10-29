@@ -241,11 +241,13 @@ class AttendanceSessionService:
         if today is not None and plan.work_date != today:
             raise AppError("SITE_NOT_ALLOWED", "Jadwal kerja ini bukan untuk hari ini.", status=403)
 
-    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool) -> FaceOutcome | None:
+    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool,
+                          mobile: bool = False) -> FaceOutcome | None:
         """Cocokkan swafoto dengan wajah terdaftar SEBELUM absen ditulis. Online & tidak cocok → ditolak (422);
         offline tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
         if self.faces is None or selfie_file_id is None:
-            return None
+            # Absen HP wajib diperiksa: tanpa pemeriksaan ditandai NOT_CHECKED. Absen web tidak memakai wajah.
+            return FaceOutcome("NOT_CHECKED", None) if mobile else None
         outcome = await self.faces.verify_selfie(employee_id, selfie_file_id)
         if online and outcome.result == "MISMATCH":
             raise AppError("FACE_MISMATCH", FACE_MISMATCH, status=422)
@@ -256,7 +258,9 @@ class AttendanceSessionService:
         label = "masuk" if event == "CHECK_IN" else "pulang"
         if outcome is not None and outcome.result == "MATCH":
             return row
-        if outcome is None:
+        if outcome is None:  # absen web: wajah tidak dipakai
+            return row
+        if outcome.result == "NOT_CHECKED":
             note = f"wajah absen {label} tidak diperiksa: pemeriksaan wajah tidak dijalankan"
         elif outcome.result == "UNAVAILABLE":
             note = f"wajah absen {label} belum diperiksa: layanan pengenalan wajah tidak tersedia"
@@ -408,7 +412,7 @@ class AttendanceSessionService:
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         await self._check_daily_target(site, employee_id, today)
-        outcome = await self.verify_face(employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
         try:
             row = await self.repo.insert(
                 org_id=org_id,
@@ -519,7 +523,7 @@ class AttendanceSessionService:
                     status=422,
                 )
 
-        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
 
         # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
         is_under_required_hours = False

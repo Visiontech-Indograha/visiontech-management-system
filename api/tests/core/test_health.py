@@ -3,6 +3,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.version import APP_VERSION
 from app.main import app
 
 
@@ -15,13 +16,19 @@ def client() -> Iterator[TestClient]:
 def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "ok", "version": APP_VERSION}
     assert "X-Request-ID" in response.headers
+
+
+def test_version_endpoint(client):
+    response = client.get("/api/v1/version")
+    assert response.status_code == 200
+    assert response.json() == {"version": APP_VERSION}
 
 def test_ready_check(client):
     response = client.get("/ready")
     assert response.status_code == 200
-    assert response.json() == {"status": "ready", "db": "ok"}
+    assert response.json() == {"status": "ready", "db": "ok", "version": APP_VERSION}
     assert "X-Request-ID" in response.headers
 
 

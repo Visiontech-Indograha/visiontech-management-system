@@ -226,3 +226,33 @@ def test_pm_deletes_backdated_draft(client, world: World):
     pid = created.json()["daily_plan_id"]
     assert client.delete(f"/work-plans/daily/{pid}", headers=pm).status_code == 200
     assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s", (pid,))[0][0]
+
+
+def test_pm_moves_approved_unstarted_plan_without_returning_to_draft(client, world: World):
+    """Item uji siklus 3: lokasi jadwal DISETUJUI belum dimulai diubah PM/OM; status tetap APPROVED, tercatat audit."""
+    pid = make_daily_plan(world, status="APPROVED", days_from_today=3)
+    body = {"site_name": "Lokasi HP Uji", "site_lat": "0.4212983", "site_lng": "101.3806115",
+            "attendance_radius_m": 150}
+    moved = client.patch(f"/work-plans/daily/{pid}/location", headers=world.headers(client, "pm"), json=body)
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["status"] == "APPROVED"
+    assert moved.json()["site_name"] == "Lokasi HP Uji"
+    audit = sync_query("SELECT changed_diff->'to'->>'site_name' FROM app_activity_logs "
+                       "WHERE entity_id = %s AND action = 'LOCATION_CHANGED'", (pid,))
+    assert audit == [("Lokasi HP Uji",)]
+
+
+def test_location_change_rejected_for_draft_started_or_non_planner(client, world: World):
+    body = {"site_name": "Lokasi Baru", "site_lat": "0.4", "site_lng": "101.3", "attendance_radius_m": 150}
+    draft = make_daily_plan(world, status="DRAFT", days_from_today=3)
+    r = client.patch(f"/work-plans/daily/{draft}/location", headers=world.headers(client, "pm"), json=body)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "INVALID_STATE"
+    started = make_daily_plan(world, status="APPROVED", days_from_today=0)
+    r = client.patch(f"/work-plans/daily/{started}/location", headers=world.headers(client, "pm"), json=body)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "PLAN_STARTED"
+    approved = make_daily_plan(world, status="APPROVED", days_from_today=4)
+    member = world.headers(client, "member")
+    assert client.patch(f"/work-plans/daily/{approved}/location", headers=member, json=body).status_code == 403
+    no_name = {**body, "site_name": "A"}
+    assert client.patch(f"/work-plans/daily/{approved}/location", headers=world.headers(client, "pm"),
+                        json=no_name).status_code == 422

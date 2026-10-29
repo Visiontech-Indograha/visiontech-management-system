@@ -97,9 +97,9 @@ class AttendanceSessionRepository(BaseRepository):
                    a.update_at AS reviewed_at,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                        AS selfie_file_id,
-                   CASE WHENa.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- a.face_status AS face_status,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -408,9 +408,9 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       CAST(:selfie_id AS uuid) AS selfie_file_id,
-                      CASE WHENface_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- face_status AS face_status,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -481,9 +481,9 @@ class AttendanceSessionRepository(BaseRepository):
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
                           AS selfie_file_id,
-                      CASE WHENface_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- face_status AS face_status,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity,
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
@@ -560,9 +560,9 @@ class AttendanceSessionRepository(BaseRepository):
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
                           AS selfie_file_id,
-                      CASE WHENface_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
+                      CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- face_status AS face_status,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -594,9 +594,9 @@ class AttendanceSessionRepository(BaseRepository):
                    a.update_at AS reviewed_at,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                        AS selfie_file_id,
-                   CASE WHENa.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- a.face_status AS face_status,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -747,9 +747,9 @@ class AttendanceSessionRepository(BaseRepository):
                    e.full_name AS employee_name,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
                        AS employee_photo_file_id,
-                   CASE WHENa.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
- a.face_status AS face_status,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,

@@ -4,7 +4,7 @@ Absen yang tidak diverifikasi wajahnya (tidak diperiksa, belum terdaftar, layana
 eksplisit alih-alih hanya skor 0. Data lama diisi dari skor: 0 → NOT_CHECKED, >= 80 → MATCHED, lainnya → MISMATCH.
 Idempoten: db/06 sudah memuat kolom ini untuk pemasangan baru.
 
-Revision ID: v2_0012
+Revision ID: v2_0013
 Revises: v2_0011
 """
 
@@ -12,7 +12,7 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "v2_0012"
+revision: str = "v2_0013"
 down_revision: str | None = "v2_0011"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None

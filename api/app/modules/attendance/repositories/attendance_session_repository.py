@@ -120,13 +120,48 @@ class AttendanceSessionRepository(BaseRepository):
         """Sesi terbuka terbaru: jam masuk, jam pulang kantor, dan status terlambat (untuk pengingat pulang)."""
         return await self.fetchone(
             f"""
-            SELECT a.clock_in_at, a.scheduled_out, ({IS_LATE_A}) AS is_late
+            SELECT a.clock_in_at, a.scheduled_out, a.attendance_date, ({IS_LATE_A}) AS is_late
             FROM attendance a
             WHERE a.employee_id = CAST(:emp AS uuid) AND a.clock_out_at IS NULL AND a.delete_at IS NULL
               AND a.om_approval_status <> 'REJECTED_BY_OM'
             ORDER BY a.clock_in_at DESC LIMIT 1
             """,
             {"emp": str(employee_id)},
+        )
+
+    async def auto_close_stale_sessions(self, employee_id: UUID | str, work_date: Any, close_time: Any) -> list[Any]:
+        """Menutup sesi tanggal sebelumnya yang lupa absen pulang, saat karyawan absen masuk hari baru.
+
+        Jam pulang = jam tutup (ATTENDANCE_CLOSE_TIME) pada TANGGAL ABSEN itu bila absen masuknya sebelum jam tutup;
+        bila absen masuk sudah lewat jam tutup (kerja malam), sesi berakhir pada 00:00 WIB hari berikutnya.
+        Status persetujuan tidak diubah (tetap masuk peninjauan) dan tidak memicu pemberitahuan pulang cepat."""
+        return list(
+            await self.fetchall(
+                """
+                UPDATE attendance AS a
+                   SET clock_out_at = CASE
+                           WHEN a.clock_in_at < (a.attendance_date + CAST(:close_clock AS time))
+                                                 AT TIME ZONE 'Asia/Jakarta'
+                           THEN (a.attendance_date + CAST(:close_clock AS time)) AT TIME ZONE 'Asia/Jakarta'
+                           ELSE CAST(a.attendance_date + 1 AS timestamp) AT TIME ZONE 'Asia/Jakarta'
+                       END,
+                       out_of_radius_note = COALESCE(a.out_of_radius_note || '; ', '') || :explanation,
+                       update_at = NOW()
+                 WHERE a.employee_id = CAST(:emp AS uuid)
+                   AND a.attendance_date < :work_date
+                   AND a.clock_in_at IS NOT NULL
+                   AND a.clock_out_at IS NULL
+                   AND a.om_approval_status <> 'REJECTED_BY_OM'
+                   AND a.delete_at IS NULL
+                RETURNING a.attendance_id AS id
+                """,
+                {
+                    "emp": str(employee_id),
+                    "work_date": work_date,
+                    "close_clock": close_time,
+                    "explanation": "Lupa absen pulang (ditutup otomatis saat absen masuk hari berikutnya)",
+                },
+            )
         )
 
     async def unreported_items(self, employee_id: UUID | str, work_date: Any) -> Any:

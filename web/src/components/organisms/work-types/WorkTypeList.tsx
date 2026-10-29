@@ -15,6 +15,9 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ImageView } from "@/components/molecules/ImageView";
 import { ExternalLink } from "@/components/molecules/Links";
 import { useFileUrl } from "@/hooks/useFileUrl";
+import { useSession } from "@/stores/sessionStore";
+import { workTypeActions } from "@/lib/aksiPeran";
+import { defaultsLabel, slotSummary } from "@/lib/jenisPekerjaan";
 
 /** Foto panduan pengambilan gambar dari PM (klik → ukuran penuh di tab baru). */
 function ExamplePhoto({ fileId, label }: { fileId: string; label: string }) {
@@ -40,6 +43,9 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
 }) {
   const [selectedForMaterials, setSelectedForMaterials] = useState<WorkType | null>(null);
   const [copyingType, setCopyingType] = useState<WorkType | null>(null);
+  const { me } = useSession();
+  const perms = me?.permissions ?? [];
+  const actionsFor = (t: WorkType) => workTypeActions(perms, t.is_active);
   const view = pagedView(types, controls);
   return (
     <>
@@ -94,6 +100,8 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
                   {`Pemasangan lanjutan: ${t.follow_up_name ?? "belum ditentukan"}`}
                 </TextBlock>
               )}
+              <TextBlock className="mb-1 text-xs text-mist">{defaultsLabel(t.unit_measure, t.default_phase)}</TextBlock>
+              <TextBlock className="mb-1 text-xs text-mist">Pratinjau foto: {slotSummary(t.photos)}</TextBlock>
               {t.photos.length === 0 ? (
                 <TextBlock className="text-sm text-mist">Tanpa template foto.</TextBlock>
               ) : (
@@ -109,18 +117,22 @@ export function WorkTypeList({ controls, types, onAdd, onEdit, onDeactivate }: {
                 </ListBlock>
               )}
               <div className="mt-3 flex gap-2">
-                <ActionButton variant="outline" size="sm" onClick={() => onEdit(t)}>
-                  Ubah
-                </ActionButton>
-                <ActionButton variant="secondary" size="sm" onClick={() => setSelectedForMaterials(t)}>
-                  BoM Standar
-                </ActionButton>
-                {t.is_active && (
+                {actionsFor(t).includes("edit") && (
+                  <ActionButton variant="outline" size="sm" onClick={() => onEdit(t)}>
+                    Ubah
+                  </ActionButton>
+                )}
+                {actionsFor(t).includes("materials") && (
+                  <ActionButton variant="secondary" size="sm" onClick={() => setSelectedForMaterials(t)}>
+                    BoM Standar
+                  </ActionButton>
+                )}
+                {actionsFor(t).includes("copy") && (
                   <ActionButton variant="outline" size="sm" onClick={() => setCopyingType(t)}>
                     Salin ke divisi
                   </ActionButton>
                 )}
-                {t.is_active && (
+                {actionsFor(t).includes("deactivate") && (
                   <ActionButton variant="ghost" size="sm" onClick={() => onDeactivate(t)} aria-label={`Nonaktifkan ${t.name}`}>
                     Nonaktifkan
                   </ActionButton>

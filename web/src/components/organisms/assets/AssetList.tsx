@@ -10,6 +10,7 @@ import { ListBlock, ListEntry, ListPair } from "@/components/molecules/ListBlock
 import { Pill } from "@/components/molecules/Pill";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { assetRowActions } from "@/lib/aksiPeran";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
@@ -158,17 +159,20 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
 }
 
 function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; canManage: boolean; onOpen: (a: AssetAction) => void }) {
+  const actions = assetRowActions(canManage, "VEHICLE", v.status, !!v.assignment_id);
   return (
     <div className="mt-auto flex flex-wrap gap-2 border-t border-line/60 pt-2">
-      {canManage && v.status === "ready" && (
+      {actions.includes("lend") && (
         <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "VEHICLE", id: v.vehicle_id, name: v.name })}>
           Serahkan
         </ActionButton>
       )}
-      <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "files", vehicle: v })}>
-        Berkas
-      </ActionButton>
-      {canManage && !v.assignment_id && (
+      {actions.includes("files") && (
+        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "files", vehicle: v })}>
+          Berkas
+        </ActionButton>
+      )}
+      {actions.includes("status") && (
         <ActionButton size="sm" variant="ghost" onClick={() => onOpen({ kind: "status", asset: "VEHICLE", id: v.vehicle_id, name: v.name, status: v.status })}>
           Status
         </ActionButton>
@@ -178,15 +182,16 @@ function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; c
 }
 
 function ToolActions({ tool: t, canManage, onOpen }: { tool: Tool; canManage: boolean; onOpen: (a: AssetAction) => void }) {
-  if (!canManage) return null;
+  const actions = assetRowActions(canManage, "TOOL", t.status, !!t.assignment_id);
+  if (actions.length === 0) return null;
   return (
     <div className="mt-auto flex flex-wrap gap-2 border-t border-line/60 pt-2">
-      {t.status === "ready" && (
+      {actions.includes("lend") && (
         <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "TOOL", id: t.tool_id, name: t.name })}>
           Serahkan
         </ActionButton>
       )}
-      {!t.assignment_id && (
+      {actions.includes("status") && (
         <ActionButton size="sm" variant="ghost" onClick={() => onOpen({ kind: "status", asset: "TOOL", id: t.tool_id, name: t.name, status: t.status })}>
           Status
         </ActionButton>

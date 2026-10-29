@@ -90,11 +90,17 @@ class PlanItemService:
         return await self.repo.prerequisite_options(daily_plan_id)
 
     # ── Susun ─────────────────────────────────────────────────────────────────
-    async def _validate(self, access: DailyAccess, fields: dict[str, Any], item_id: UUID | None = None) -> None:
+    async def _validate(
+        self, access: DailyAccess, fields: dict[str, Any], item_id: UUID | None = None,
+        extra_divisions: frozenset[str] = frozenset(),
+    ) -> None:
+        """`extra_divisions` = divisi lain milik pengguna (PM multi-divisi): template dari sana boleh dipakai
+        langsung, tanpa salinan, selama jenis pekerjaan itu masih milik pengguna."""
         plan = access.plan
-        if fields.get("work_type_id") and await self.repo.work_type_division(fields["work_type_id"]) != str(
-                plan.division_id):
-            raise ValidationError("Jenis pekerjaan tidak ditemukan atau bukan template divisi jadwal ini.")
+        if fields.get("work_type_id"):
+            template_division = await self.repo.work_type_division(fields["work_type_id"])
+            if template_division is None or template_division not in {str(plan.division_id), *extra_divisions}:
+                raise ValidationError("Jenis pekerjaan tidak ditemukan atau bukan template divisi Anda.")
         if fields.get("completion_id"):
             order = await self.repo.order_division(fields["completion_id"])
             if order is None or not order.open:
@@ -130,19 +136,33 @@ class PlanItemService:
         if phase == "SURVEY" and kind not in SURVEY_KINDS:
             raise ValidationError("Fase survei hanya untuk jenis pekerjaan survei (template survei).")
 
+    async def _extra_divisions(self, user: CurrentUser) -> frozenset[str]:
+        """PM multi-divisi: divisi lain miliknya boleh menjadi sumber template item (lihat `_validate`)."""
+        if not user.has_role("PROJECT_MANAGER"):
+            return frozenset()
+        return frozenset(await self.repo.user_division_ids(user.user_id))
+
     async def create(self, user: CurrentUser, daily_plan_id: UUID, data: PlanItemCreate) -> Any:
         access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT", "SUBMITTED")
-        return await self.add_validated(access, daily_plan_id, data)
+        return await self.add_validated(access, daily_plan_id, data, await self._extra_divisions(user))
 
-    async def add_validated(self, access: DailyAccess, daily_plan_id: UUID | str, data: PlanItemCreate) -> Any:
-        """Menambah item setelah pemeriksaan akses & status oleh pemanggil (dipakai juga oleh aktivasi siaga)."""
+    async def add_validated(
+        self, access: DailyAccess, daily_plan_id: UUID | str, data: PlanItemCreate,
+        extra_divisions: frozenset[str] = frozenset(),
+    ) -> Any:
+        """Menambah item setelah pemeriksaan akses & status oleh pemanggil (dipakai juga oleh aktivasi siaga).
+        Fase & satuan kosong diisi dari bawaan jenis pekerjaan (template), bukan dari tebakan."""
         fields = data.model_dump()
         fields["title"] = data.title.strip()
-        await self._validate(access, fields)
-        kind = await self.repo.work_type_kind(data.work_type_id)
+        await self._validate(access, fields, None, extra_divisions)
+        template = await self.repo.work_type_template(data.work_type_id)
+        kind = template.kind if template else None
         if fields["task_phase"] is None:
-            fields["task_phase"] = PHASE_BY_KIND.get(kind or "", "INSTALLATION")
+            default_phase = template.default_phase if template else None
+            fields["task_phase"] = default_phase or PHASE_BY_KIND.get(kind or "", "INSTALLATION")
+        if fields["unit_measure"] is None:
+            fields["unit_measure"] = (template.unit_measure if template else None) or "Unit"
         await self._check_phase(kind, fields["task_phase"])
         if fields["is_main_deliverable"] and fields["task_phase"] not in MAIN_PHASES:
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
@@ -167,7 +187,8 @@ class PlanItemService:
         main = fields.get("is_main_deliverable", item.is_main_deliverable)
         if main and phase not in ("INSTALLATION", "REPLACEMENT", "MAINTENANCE"):
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
-        await self._validate(access, {"completion_id": item.completion_id, **fields}, item_id)
+        await self._validate(access, {"completion_id": item.completion_id, **fields}, item_id,
+                             await self._extra_divisions(user))
         await self.repo.update(item_id, fields)
         if access.plan.status in ("APPROVED", "ONGOING"):
             await self.repo.log_activity(

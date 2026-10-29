@@ -27,6 +27,11 @@ Kolom:
 | MS-10 | Ubah nama proyek berstatus COMPLETED | PM | 409 PROJECT_CLOSED | API | P2 | |
 | MS-11 | Hapus proyek yang sudah dipakai jadwal | PM | 409 PROJECT_IN_USE | API | P2 | |
 | MS-12 | Buat jadwal memakai proyek berstatus DRAFT | PM | 422 Proyek tidak sedang berjalan | API | P1 | |
+| MS-13 | Buat item dari template tanpa fase/satuan | PM | 201, fase = fase bawaan template, satuan = satuan template | API | P1 | `test_template_defaults.py` |
+| MS-14 | Fase bawaan SURVEY pada jenis bukan survei | PM | 422 | API | P2 | `test_template_defaults.py` |
+| MS-15 | PM dua divisi memakai template divisi kedua (tanpa salin) | PM multi-divisi | 201, jenis pekerjaan tetap satu | API | P1 | `test_template_defaults.py` |
+| MS-16 | Item memakai template divisi yang dipimpin orang lain | PM | 422 | API | P1 | `test_template_defaults.py` |
+| MS-17 | Tombol per peran di Jenis pekerjaan, Aset, Mess | semua peran | sesuai 00 bagian 3b | UI web (vitest) | P1 | `peran-status-matrix.test.ts` |
 
 ## B. Jadwal harian
 

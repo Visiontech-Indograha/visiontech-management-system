@@ -366,11 +366,14 @@ class AttendanceSessionService:
                     status=409,
                 )
 
-        # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
-        # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         await self.repo.lock_employee(employee_id)
         if await self.repo.active_on(employee_id, today):
             raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409)
+        # Sesi tanggal sebelumnya yang lupa absen pulang ditutup otomatis (lihat repositori) sehingga tidak
+        # lagi mengunci absen masuk hari baru (menggantikan O-10). Absen ganda pada hari yang sama tetap ditolak.
+        if isinstance(today, date):
+            close_h, close_m = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
+            await self.repo.auto_close_stale_sessions(employee_id, today, time(close_h, close_m))
         opened = await self.repo.open_session(employee_id)
         if opened is not None and opened.status in VALID_STATUSES:
             raise AppError("OPEN_SESSION", OPEN_SESSION, status=409)
@@ -474,6 +477,16 @@ class AttendanceSessionService:
         effective_org_id = org_id or str(getattr(session, "organization_id", ""))
         local_clock = await self.clock.local_now(effective_org_id) if effective_org_id else None
         now_local = local_clock.local_now if local_clock else jakarta_now()
+        # Sesi tanggal sebelumnya sudah berakhir pada tengah malam (aturan kerja malam, docs/35 §5): pulang
+        # online setelah itu ditolak, agar durasi tidak terhitung lintas hari. Sesi itu ditutup otomatis.
+        if online and isinstance(now_local, datetime) and isinstance(session.work_date, date) \
+                and session.work_date < now_local.date():
+            raise AppError(
+                "NO_OPEN_SESSION",
+                f"Sesi absensi tanggal {session.work_date:%d-%m-%Y} sudah berakhir pada tengah malam dan ditutup "
+                "otomatis. Lakukan absen masuk untuk hari ini bila Anda sedang bekerja.",
+                status=409,
+            )
 
         # Validasi laporan harian: jika ketua tim belum mengisi laporan harian jadwal kerja hari ini
         work_date = getattr(session, "attendance_date", None) or (
@@ -636,7 +649,8 @@ class AttendanceSessionService:
             return today, None, 0, None
         required_out = None
         opened = await self.repo.open_hint(employee_id)
-        if opened is not None:
+        # Sesi tanggal sebelumnya tidak lagi punya jam pulang untuk hari ini (sudah berakhir pada tengah malam).
+        if opened is not None and not (isinstance(today, date) and opened.attendance_date < today):
             checked_in = opened.clock_in_at.astimezone(WIB)
             if opened.is_late and opened.scheduled_out is not None:
                 required_out = datetime.combine(checked_in.date(), opened.scheduled_out, tzinfo=WIB)

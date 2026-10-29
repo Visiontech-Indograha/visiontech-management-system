@@ -652,6 +652,15 @@ class ContactRow extends StatelessWidget {
   }
 }
 
+/// Teks untuk field yang boleh kosong dari API: null/kosong → [fallback], bukan kata 'null' di layar.
+String textOr(Object? value, String fallback) {
+  final s = value?.toString().trim() ?? '';
+  return s.isEmpty ? fallback : s;
+}
+
+/// Judul kartu jadwal: lokasi, lalu nama proyek, lalu 'Tanpa judul' bila keduanya kosong.
+String jadwalTitle(Map<String, dynamic> p) => textOr(p['site_name'], textOr(p['project_title'], 'Tanpa judul'));
+
 /// Keadaan kerja satu jadwal (sama dengan web): biru berjalan, merah terlambat, hijau selesai,
 /// kuning selesai sebagian, abu belum mulai. Hasilnya kode status untuk [StatusPill]/[statusStyle].
 String workState(Map<String, dynamic> p, String today) {
@@ -659,7 +668,8 @@ String workState(Map<String, dynamic> p, String today) {
   final total = (p['item_count'] as num?)?.toInt() ?? 0;
   final pct = workPercent(p);
   final date = '${p['work_date']}';
-  if (total > 0 && (done >= total || pct >= 100)) return 'DONE';
+  // Selesai hanya bila semua item (termasuk yang dipindah/menunggu pindah) DONE — sama dengan web workState.
+  if (total > 0 && done >= total) return 'DONE';
   if (p['status'] == 'COMPLETED') return pct > 0 ? 'PARTIAL' : 'LATE';
   if (date.compareTo(today) < 0) return 'LATE';
   if (p['status'] == 'ONGOING' || pct > 0) return 'ONGOING';
@@ -668,11 +678,13 @@ String workState(Map<String, dynamic> p, String today) {
 
 /// Persen progres nyata jadwal (rata-rata jumlah dikerjakan/target) dari API, 0–100.
 int workPercent(Map<String, dynamic> p) {
-  final v = p['progress_pct'];
-  if (v is num) return v.toInt();
   final done = (p['done_count'] as num?)?.toInt() ?? 0;
   final total = (p['item_count'] as num?)?.toInt() ?? 0;
-  return total == 0 ? 0 : (done * 100 / total).round();
+  final v = p['progress_pct'];
+  final raw = v is num ? v.toInt() : (total == 0 ? 0 : (done * 100 / total).round());
+  // Sama dengan web displayPct: 100 hanya bila semua item DONE; selainnya maksimal 99.
+  final allDone = total > 0 && done >= total;
+  return allDone ? raw.clamp(0, 100).toInt() : raw.clamp(0, 99).toInt();
 }
 
 /// Warna per jenis pekerjaan (sama dengan web).

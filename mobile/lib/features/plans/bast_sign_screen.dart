@@ -191,7 +191,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${order['project_title']}',
+                        textOr(order['project_title'], 'Proyek'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 6),

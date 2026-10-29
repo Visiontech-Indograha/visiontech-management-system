@@ -72,7 +72,7 @@ flowchart TD
     K4 -->|"ya"| K6["Buka tab /plans, pilih jadwal hari ini"]
     K5 --> K6
     K6 --> K7{"Status jadwal?"}
-    K7 -->|"APPROVED"| K8["Mulai hari kerja<br/>POST /work-plans/daily/:id/start<br/>Galat: 409 jika bukan APPROVED; 409 CHECKIN_REQUIRED jika ketua belum absen masuk hari ini"]
+    K7 -->|"APPROVED"| K8["Mulai hari kerja<br/>POST /work-plans/daily/:id/start<br/>Galat: 409 jika bukan APPROVED; 409 CHECKIN_REQUIRED jika ketua belum absen masuk pada tanggal jadwal atau hari ini"]
     K7 -->|"ONGOING"| K9["Kerjakan item"]
     K7 -->|"belum dirilis"| K0
     K8 --> K9

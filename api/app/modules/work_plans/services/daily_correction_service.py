@@ -21,6 +21,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.security import CurrentUser
 from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.work_plans.repositories.daily_correction_repository import DailyCorrectionRepository
+from app.modules.work_plans.repositories.plan_item_repository import PlanItemRepository
 from app.modules.work_plans.schemas.daily_correction_schema import CorrectionCreate, CorrectionDecide
 from app.shared.access.access_service import DailyNeed, check_daily_access, is_admin, require_daily_status
 
@@ -81,6 +82,17 @@ class DailyCorrectionService:
             if row.status != "IN_REVIEW":
                 raise AppError("INVALID_STATE", "Belum ada revisi yang menunggu pemeriksaan.", status=409)
             if data.decision == "ACCEPT":
+                if not data.force:
+                    gaps = await PlanItemRepository(self.db).done_items_photo_gaps(row.daily_plan_id)
+                    if gaps:
+                        detail = "; ".join(f"{title}: {', '.join(missing)}" for title, missing in gaps)
+                        raise AppError(
+                            "PHOTOS_INCOMPLETE",
+                            f"Foto wajib belum lengkap ({detail}). Minta ketua melengkapi, atau terima dengan "
+                            "catatan alasan (force).",
+                            status=409,
+                            details={"items": [{"title": t, "missing": m} for t, m in gaps]},
+                        )
                 await self.repo.set_status(correction_id, "ACCEPTED", reviewer=reviewer, note=note)
                 await self.repo.set_plan_status(row.daily_plan_id, "COMPLETED")
             else:

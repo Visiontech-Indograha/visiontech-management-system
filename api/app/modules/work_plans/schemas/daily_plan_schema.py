@@ -32,6 +32,8 @@ class DailyPlanCreate(BaseModel):
     attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
     clock_in_time: time = time(7, 0)
     clock_out_time: time = time(16, 0)
+    # F10: tanggal lampau (maks. 7 hari) hanya untuk PM/OM dan wajib beralasan; tercatat di audit.
+    backdate_reason: str | None = Field(default=None, max_length=300)
 
     @model_validator(mode="after")
     def _hours(self) -> DailyPlanCreate:

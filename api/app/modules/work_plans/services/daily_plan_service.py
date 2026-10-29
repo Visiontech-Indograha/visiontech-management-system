@@ -3,12 +3,15 @@ app/modules/work_plans/services/daily_plan_service.py
 Jadwal harian daily-first (Milestone 5, docs/35 §3; keputusan pemilik 2026-10-20). Minggu = rentang tanggal.
 
 - Membuat & mengubah: PM/OM divisi (SUPER_ADMIN semua). Tim harus milik divisi itu; satu jadwal per tim per tanggal;
-  tanggal tidak boleh lampau. Ubah hanya saat DRAFT/SUBMITTED.
+  tanggal tidak boleh lampau, kecuali PM/OM membuat jadwal tanggal lampau <= 7 hari dengan `backdate_reason`
+  (tercatat audit BACKDATE_CREATED). Persetujuan tanggal lampau <= 7 hari juga tercatat (BACKDATE_APPROVED).
+  Ubah hanya saat DRAFT/SUBMITTED.
 - Status: DRAFT → (ajukan) SUBMITTED → (setujui PM) APPROVED → (ketua mulai, pada/after tanggalnya) ONGOING →
   (ketua/PM selesai) COMPLETED. Tolak: SUBMITTED → DRAFT + alasan. PM boleh langsung menyetujui DRAFT
   (persetujuan per hari atau sekaligus satu minggu lewat matriks).
 - Lapangan (ketua/anggota) hanya melihat jadwal yang sudah disetujui.
-- Hapus: hanya DRAFT/SUBMITTED yang belum dipakai absensi/peminjaman aset; item ikut terarsip.
+- Hapus (lunak, delete_at): DRAFT/SUBMITTED/APPROVED (belum dimulai) yang belum dipakai absensi/peminjaman aset;
+  item ikut terarsip.
 """
 from __future__ import annotations
 
@@ -40,9 +43,25 @@ EDITABLE = ("DRAFT", "SUBMITTED")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
 
+BACKDATE_DAYS = 7
+DELETABLE = ("DRAFT", "SUBMITTED", "APPROVED")  # APPROVED = belum dimulai (ONGOING belum)
+
+
 def _week(day: date) -> tuple[date, date]:
     start = day - timedelta(days=day.weekday())
     return start, start + timedelta(days=6)
+
+
+def _backdated(work_date: date, reason: str | None) -> bool:
+    """Tanggal lampau: True bila diizinkan (<= BACKDATE_DAYS hari, beralasan). Hari ini/mendatang: False."""
+    today = jakarta_now().date()
+    if work_date >= today:
+        return False
+    if work_date < today - timedelta(days=BACKDATE_DAYS):
+        raise ValidationError(f"Tanggal jadwal lampau paling jauh {BACKDATE_DAYS} hari dari hari ini.")
+    if not (reason and reason.strip()):
+        raise ValidationError("Jadwal untuk tanggal lampau wajib disertai alasan (backdate_reason).")
+    return True
 
 
 class DailyPlanService:
@@ -125,10 +144,11 @@ class DailyPlanService:
         return bool(emp) and emp in {str(scope.pm_id), str(scope.div_pm_id), str(scope.div_om_id)}
 
     # ── Tulis ─────────────────────────────────────────────────────────────────
-    async def _check_team_day(self, division_id: UUID, team_id: UUID, work_date: date, exclude: UUID | None) -> None:
+    async def _check_team_day(self, division_id: UUID, team_id: UUID, work_date: date, exclude: UUID | None,
+                              *, allow_past: bool = False) -> None:
         if not await self.repo.team_of_division(team_id, division_id):
             raise ValidationError("Tim tidak ditemukan, nonaktif, atau bukan milik divisi ini.")
-        if work_date < jakarta_now().date():
+        if work_date < jakarta_now().date() and not allow_past:
             raise ValidationError("Tanggal jadwal tidak boleh sebelum hari ini.")
         if await self.repo.team_day_taken(team_id, work_date, exclude):
             raise AppError("TEAM_DAY_TAKEN", "Tim ini sudah punya jadwal pada tanggal tersebut.", status=409)
@@ -154,15 +174,21 @@ class DailyPlanService:
 
     async def create(self, user: CurrentUser, data: DailyPlanCreate) -> Any:
         await check_division_manager(self.db, data.division_id, user)
-        await self._check_team_day(data.division_id, data.team_id, data.work_date, None)
+        backdated = _backdated(data.work_date, data.backdate_reason)
+        await self._check_team_day(data.division_id, data.team_id, data.work_date, None, allow_past=backdated)
         await self._check_project(data.project_id, data.division_id, data.work_date)
         if not user.employee_id:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
         fields = data.model_dump()
+        reason = fields.pop("backdate_reason", None)
         fields.update(division_id=str(data.division_id), team_id=str(data.team_id), created_by_id=user.employee_id,
                       site_name=data.site_name.strip() if data.site_name else None,
                       project_id=str(data.project_id) if data.project_id else None)
-        return await self.repo.get(await self.repo.insert(fields))
+        new_id = await self.repo.insert(fields)
+        if backdated:
+            await self.repo.log_audit(user.user_id, user.role or "", new_id, "BACKDATE_CREATED",
+                                      {"work_date": str(data.work_date), "reason": reason.strip()})
+        return await self.repo.get(new_id)
 
     async def update(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanUpdate) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
@@ -217,7 +243,7 @@ class DailyPlanService:
 
     async def delete(self, user: CurrentUser, daily_plan_id: UUID) -> None:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        require_daily_status(access, *DELETABLE)
         if await self.repo.has_activity(daily_plan_id):
             raise AppError("DAILY_PLAN_IN_USE", "Jadwal sudah dipakai absensi atau peminjaman aset.", status=409)
         await self.repo.archive(daily_plan_id)
@@ -245,10 +271,15 @@ class DailyPlanService:
     async def approve(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, *EDITABLE)
-        if access.plan.work_date < jakarta_now().date():
-            raise ValidationError("Jadwal untuk tanggal yang sudah lewat tidak dapat disetujui.")
+        work_date = access.plan.work_date
+        today = jakarta_now().date()
+        if work_date < today - timedelta(days=BACKDATE_DAYS):
+            raise ValidationError(f"Jadwal lebih dari {BACKDATE_DAYS} hari yang lalu tidak dapat disetujui.")
         await self._require_items(daily_plan_id)
         await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
+        if work_date < today:
+            await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "BACKDATE_APPROVED",
+                                      {"work_date": str(work_date)})
         await NotificationService(self.db).daily_approved(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
@@ -275,7 +306,7 @@ class DailyPlanService:
         require_daily_status(access, "APPROVED")
         if access.plan.work_date > jakarta_now().date():
             raise ValidationError("Jadwal baru bisa dimulai pada tanggalnya.")
-        if not await self.repo.leader_checked_in(daily_plan_id):
+        if not await self.repo.leader_checked_in(daily_plan_id, jakarta_now().date()):
             raise AppError(
                 "CHECKIN_REQUIRED",
                 "Ketua tim harus absen masuk hari ini sebelum jadwal dimulai.",

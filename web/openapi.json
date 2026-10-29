@@ -17006,6 +17006,11 @@
        }
       ],
       "title": "Note"
+     },
+     "force": {
+      "type": "boolean",
+      "title": "Force",
+      "default": false
      }
     },
     "type": "object",
@@ -17372,6 +17377,18 @@
       "format": "time",
       "title": "Clock Out Time",
       "default": "16:00:00"
+     },
+     "backdate_reason": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 300
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backdate Reason"
      }
     },
     "type": "object",

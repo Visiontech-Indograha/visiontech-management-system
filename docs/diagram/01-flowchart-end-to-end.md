@@ -41,7 +41,7 @@ flowchart TD
     subgraph LAPANGAN["E. Lapangan (HP)"]
         E1["Absen masuk: swafoto wajah dan GPS<br/>Peran: ketua, anggota (kanal MOBILE)<br/>HP: AttendanceScreen, tab /<br/>POST /attendance/check-in"]
         E2{"Absen lolos validasi?"}
-        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start<br/>Syarat: absen masuk ketua hari ini (409 CHECKIN_REQUIRED)"]
+        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start<br/>Syarat: absen masuk ketua pada tanggal jadwal atau hari ini (409 CHECKIN_REQUIRED)"]
         E4["Kerjakan item: isi progres dan foto wajib<br/>Peran: ketua, anggota tim<br/>HP: ItemProgressScreen<br/>PATCH /work-plans/items/:id/progress"]
         E5{"Item selesai (qty tercapai)?"}
         E6["Ajukan pindah hari dengan alasan<br/>Peran: ketua<br/>POST /work-plans/items/:id/request-rollover"]

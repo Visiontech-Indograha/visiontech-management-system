@@ -233,6 +233,28 @@ class PlanItemRepository(BaseRepository):
         )
         return [r.name for r in rows if r.id not in requirement_ids]
 
+    async def done_items_photo_gaps(self, daily_plan_id: UUID | str) -> list[tuple[str, list[str]]]:
+        """Pekerjaan DONE pada jadwal yang syarat foto wajibnya belum terpenuhi: [(judul, nama syarat), ...].
+        Item survei dilewati (fotonya per titik survei, dicek di layanan survei)."""
+        rows = await self.fetchall(
+            """
+            SELECT i.item_id, i.title, i.realization_photos_json
+            FROM work_plan_item i
+            WHERE i.daily_plan_id = CAST(:id AS uuid) AND i.delete_at IS NULL AND i.status = 'DONE'
+              AND i.task_phase IS DISTINCT FROM 'SURVEY'
+            ORDER BY i.title
+            """,
+            {"id": str(daily_plan_id)},
+        )
+        gaps: list[tuple[str, list[str]]] = []
+        for row in rows:
+            given = {str(p.get("requirement_id")) for p in (row.realization_photos_json or [])
+                     if p.get("requirement_id")}
+            missing = await self.missing_required_photos(row.item_id, given)
+            if missing:
+                gaps.append((row.title, missing))
+        return gaps
+
     async def existing_files(self, file_ids: list[str]) -> int:
         return int(await self.scalar(
             "SELECT COUNT(*) FROM file_object WHERE id = ANY(CAST(:ids AS uuid[]))", {"ids": list(set(file_ids))}

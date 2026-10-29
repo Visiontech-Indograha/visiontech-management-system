@@ -11,14 +11,14 @@ Status: DRAFT, SUBMITTED, APPROVED, ONGOING, COMPLETED (`api/app/modules/work_pl
 | Transisi | Endpoint | Siapa | Prasyarat | Efek samping | Bukti |
 |---|---|---|---|---|---|
 | (awal) to DRAFT | POST /work-plans/daily/:id/copy | PM, OM divisi, SUPER_ADMIN (MANAGE jadwal sumber) | Tanggal tujuan tidak lampau; cek tim, proyek. Lokasi, jam, tim, dan item disalin; progres item direset; item survei dan item yang bergantung prasyarat tidak disalin | Satu baris DRAFT per tanggal (`copy_items`) | `daily_plan_service.py` (`copy`); `daily_plan_route.py` (`/copy`) |
-| (awal) to DRAFT | POST /work-plans/daily | PM, OM divisi, SUPER_ADMIN | Divisi aktif; tim milik divisi; tanggal tidak lampau; tim belum punya jadwal di tanggal itu (409 TEAM_DAY_TAKEN); proyek ONGOING bila dipakai | Baris dibuat dengan created_by | `daily_plan_service.py:140-150`, `:113-119`, `:121-138`; `access_service.py:94-100` |
+| (awal) to DRAFT | POST /work-plans/daily | PM, OM divisi, SUPER_ADMIN | Divisi aktif; tim milik divisi; tanggal tidak lampau, kecuali PM/OM dengan `backdate_reason` untuk tanggal <= 7 hari lalu (F10, tercatat `BACKDATE_CREATED` di audit; tanpa alasan 422); tim belum punya jadwal di tanggal itu (409 TEAM_DAY_TAKEN); proyek ONGOING bila dipakai | Baris dibuat dengan created_by | `daily_plan_service.py:140-150`, `:113-119`, `:121-138`; `access_service.py:94-100` |
 | DRAFT to SUBMITTED | POST /work-plans/daily/:id/submit | MANAGE (PM, OM divisi, SUPER_ADMIN) | Status DRAFT (409); minimal 1 item (422 `PLAN_EMPTY`) | Notifikasi `daily_submitted` | `daily_plan_service.py:215-220`; `daily_plan_route.py:131` |
-| DRAFT or SUBMITTED to APPROVED | POST /work-plans/daily/:id/approve, atau POST /work-plans/daily/approve (matriks) | MANAGE | Status DRAFT atau SUBMITTED (409); tanggal tidak lampau (422); minimal 1 item (422 `PLAN_EMPTY`). Matriks melewati item yang gagal dan mengembalikan daftar `skipped`. | `approved_by` diisi, notifikasi `daily_approved` | `daily_plan_service.py:222-240`; `daily_plan_route.py:89,138` |
+| DRAFT or SUBMITTED to APPROVED | POST /work-plans/daily/:id/approve, atau POST /work-plans/daily/approve (matriks) | MANAGE | Status DRAFT atau SUBMITTED (409); tanggal tidak lebih dari 7 hari lalu (422; persetujuan tanggal lampau tercatat `BACKDATE_APPROVED`); minimal 1 item (422 `PLAN_EMPTY`). Matriks melewati item yang gagal dan mengembalikan daftar `skipped`. | `approved_by` diisi, notifikasi `daily_approved` | `daily_plan_service.py:222-240`; `daily_plan_route.py:89,138` |
 | SUBMITTED or APPROVED to DRAFT | POST /work-plans/daily/:id/reject | MANAGE | Status SUBMITTED atau APPROVED (409); alasan wajib | `rejection_reason` disimpan, notifikasi `daily_rejected` | `daily_plan_service.py:242-247`; `daily_plan_route.py:145` |
-| APPROVED to ONGOING | POST /work-plans/daily/:id/start | Ketua jadwal saja (relasi LEADER). SUPER_ADMIN tidak lolos kecuali juga ketua. | Status APPROVED (409); `work_date` tidak lebih dari hari ini (422); ketua sudah absen masuk hari ini (409 `CHECKIN_REQUIRED`) | Tim mulai mengerjakan item | `daily_plan_service.py:249-255`; `access_service.py:87` |
+| APPROVED to ONGOING | POST /work-plans/daily/:id/start | Ketua jadwal saja (relasi LEADER). SUPER_ADMIN tidak lolos kecuali juga ketua. | Status APPROVED (409); `work_date` tidak lebih dari hari ini (422); ketua sudah absen masuk pada tanggal jadwal ATAU pada hari ini WIB (409 `CHECKIN_REQUIRED`; F11, jadwal lampau yang belum dimulai bisa dimulai bila ketua absen hari ini) | Tim mulai mengerjakan item | `daily_plan_service.py:249-255`; `access_service.py:87` |
 | ONGOING to COMPLETED | POST /work-plans/daily/:id/complete | Ketua jadwal atau MANAGE | Status ONGOING (409); tanpa koreksi terbuka (409 `CORRECTION_OPEN`); tanpa pindah hari menunggu keputusan (409 `ROLLOVER_PENDING`); laporan harian sudah ada, bila tidak 422 REPORT_REQUIRED | Hasil dikunci. Perubahan berikutnya lewat koreksi. | `daily_plan_service.py:257-269`; `daily_plan_route.py:159` |
 | COMPLETED to ONGOING | (efek POST /work-plans/corrections/:id/decision APPROVE) | PM, OM divisi | Koreksi berstatus REQUESTED | `set_plan_status(ONGOING)` | `daily_correction_service.py:75-77` |
-| DRAFT or SUBMITTED to (arsip) | DELETE /work-plans/daily/:id | MANAGE | Status DRAFT atau SUBMITTED; belum ada absensi atau peminjaman aset (409 DAILY_PLAN_IN_USE) | Baris diarsipkan (`archive`) | `daily_plan_service.py:200-205` |
+| DRAFT, SUBMITTED, or APPROVED (belum ONGOING) to (arsip) | DELETE /work-plans/daily/:id | MANAGE | Status DRAFT, SUBMITTED, atau APPROVED (F10, hapus lunak dengan konfirmasi di UI); belum ada absensi atau peminjaman aset (409 DAILY_PLAN_IN_USE) | Baris diarsipkan (`archive`) | `daily_plan_service.py:200-205` |
 
 Catatan: ubah jadwal (PUT) hanya saat DRAFT atau SUBMITTED (`daily_plan_service.py:152-154`, `EDITABLE` pada `:39`).
 
@@ -30,11 +30,12 @@ stateDiagram-v2
     SUBMITTED --> APPROVED : POST approve (MANAGE)
     SUBMITTED --> DRAFT : POST reject (MANAGE, alasan wajib)
     APPROVED --> DRAFT : POST reject (MANAGE, alasan wajib)
-    APPROVED --> ONGOING : POST start (ketua jadwal, tanggal hari ini atau lampau, absen masuk hari ini wajib)
+    APPROVED --> ONGOING : POST start (ketua jadwal, tanggal hari ini atau lampau, absen masuk hari ini ATAU pada tanggal jadwal)
     ONGOING --> COMPLETED : POST complete (ketua atau MANAGE, laporan harian wajib, tanpa koreksi atau pindah hari terbuka)
     COMPLETED --> ONGOING : koreksi disetujui PM
     DRAFT --> [*] : DELETE (arsip, belum dipakai)
     SUBMITTED --> [*] : DELETE (arsip, belum dipakai)
+    APPROVED --> [*] : DELETE (arsip, belum dimulai dan belum dipakai)
 ```
 
 ## 2.2 ItemStatus (`work_plan_item.status`) dan RolloverStatus

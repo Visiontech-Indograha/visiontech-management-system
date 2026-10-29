@@ -14225,7 +14225,7 @@
  },
  "info": {
   "title": "Visiontech VMS",
-  "version": "0.1.0"
+  "version": "1.4.0"
  },
  "openapi": "3.1.0",
  "paths": {
@@ -24373,6 +24373,29 @@
     "tags": [
      "Verifikasi Dokumen"
     ]
+   }
+  },
+  "/api/v1/version": {
+   "get": {
+    "description": "Versi API (SemVer) — sama dengan berkas VERSION di root repo.",
+    "operationId": "version_info_api_v1_version_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Version Info Api V1 Version Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Version Info"
    }
   },
   "/api/v1/work-completions": {

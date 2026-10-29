@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "Visiontech VMS",
-  "version": "0.1.0"
+  "version": "1.4.0"
  },
  "paths": {
   "/health": {
@@ -21,6 +21,29 @@
          },
          "type": "object",
          "title": "Response Health Check Health Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/version": {
+   "get": {
+    "summary": "Version Info",
+    "description": "Versi API (SemVer) — sama dengan berkas VERSION di root repo.",
+    "operationId": "version_info_api_v1_version_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "type": "object",
+         "title": "Response Version Info Api V1 Version Get"
         }
        }
       }

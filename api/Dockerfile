@@ -26,4 +26,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Metadata citra (terbaca lewat `docker inspect` / deploy/status-layanan.sh). GIT_SHA & VMS_ENV diisi autodeploy.sh.
+ARG GIT_SHA=tidak-diketahui
+ARG VMS_ENV=tidak-diketahui
+LABEL org.opencontainers.image.title="vms-api"       org.opencontainers.image.description="VMS API (FastAPI)"       org.opencontainers.image.revision="${GIT_SHA}"       org.opencontainers.image.source="https://github.com/Visiontech-Indograha/visiontech-management-system"       vms.layanan="api"       vms.lingkungan="${VMS_ENV}"       vms.port-dalam="8000"
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

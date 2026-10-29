@@ -22,6 +22,14 @@ STATUS_LABEL = {
     "PENDING_ROLLOVER": "Minta pindah hari",
     "SHIFTED_DAY": "Pindah hari",
 }
+PLAN_STATUS_LABEL = {
+    "DRAFT": "Draf",
+    "SUBMITTED": "Diajukan",
+    "APPROVED": "Disetujui",
+    "ONGOING": "Berjalan",
+    "COMPLETED": "Selesai",
+    "REJECTED": "Ditolak",
+}
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
           "November", "Desember"]
 COMPANY = "PT VISIONTECH INDOGRAHA"
@@ -156,3 +164,16 @@ class TeamWeekReport:
     roster: list[Any]
     generated_by: str
     generated_at: datetime
+
+
+def plan_status_label(value: str | None) -> str:
+    """Status jadwal harian dalam Bahasa Indonesia (dokumen cetak tidak memuat kode enum)."""
+    return PLAN_STATUS_LABEL.get(value or "", value or "-")
+
+
+def coord_text(lat: Any, lng: Any) -> str:
+    """Koordinat untuk dokumen cetak: '-6.194400, 106.822900'; tanpa koordinat → '-'."""
+    if lat is None or lng is None:
+        return "-"
+    return f"{float(lat):.6f}, {float(lng):.6f}"
+

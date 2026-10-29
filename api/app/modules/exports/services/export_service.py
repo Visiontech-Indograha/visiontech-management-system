@@ -207,7 +207,7 @@ class ExportService:
             format=s["format"], client=s["client_name"], date_text=date_text,
             activity_date_text=date_text.replace(" ", "-") if s["format"] == "ACS" else date_text,
             location=location, purpose=s.get("purpose") or "-", activities=activities, narrative=narrative,
-            auto_layout=auto,
+            auto_layout=auto, project_title=s.get("project_title") or "",
             points=points,
             bom=[(b["name"], b["qty"], b["unit"], b["group"]) for b in s["bom"]],
             team_name=s.get("team_name") or "", leader_name=leader, member_names=members,
@@ -265,7 +265,7 @@ class ExportService:
             team_name=header.team_name, division_name=header.division_name, work_date=header.work_date,
             site_name=header.site_name, status=header.status, leader_name=header.leader_name, points=points,
             roster=await self.repo.team_roster([str(header.team_id)]), summary=header.summary,
-            obstacles=header.obstacles, generated_by=user.email, generated_at=jakarta_now(),
+            obstacles=header.obstacles, generated_by=await self._printer(user), generated_at=jakarta_now(),
             report_submitted_at=header.report_submitted_at,
         )
         content = daily_report_docx(report)
@@ -290,7 +290,7 @@ class ExportService:
             days=await self.repo.periodic_days(division_id, start, end),
             boq=await self.repo.periodic_boq(division_id, start, end),
             meal=await self.repo.periodic_meal(division_id, start, end),
-            generated_by=user.email, generated_at=jakarta_now(),
+            generated_by=await self._printer(user), generated_at=jakarta_now(),
         )
         content = build(report)
         key = (f"exports/periodic/{division_id}/{start:%Y%m%d}-{end:%Y%m%d}_{jakarta_now():%H%M%S}_"
@@ -376,7 +376,8 @@ class ExportService:
         if team is None:
             raise NotFoundError("Tim")
         in_team = user.employee_id is not None and await self.repo.is_team_member(team_id, user.employee_id)
-        if not (in_team or is_admin(user)):
+        # HR/GA (ADMIN_HR_GA) boleh melihat seperti laporan harian (akses baca, konsisten dengan daily-report).
+        if not (in_team or is_admin(user) or user.has_role("ADMIN_HR_GA")):
             await check_division_manager(self.repo.db, team.division_id, user)
         end = start + timedelta(days=6)
         items = await self.repo.team_week_items(team_id, start, end)
@@ -385,7 +386,8 @@ class ExportService:
         points, _ = await self._points(items, [], [], MAX_PHOTOS_TEAM_WEEK)
         report = TeamWeekReport(
             team_name=team.name, division_name=team.division_name, start=start, end=end, points=points,
-            roster=await self.repo.team_roster([str(team_id)]), generated_by=user.email, generated_at=jakarta_now(),
+            roster=await self.repo.team_roster([str(team_id)]), generated_by=await self._printer(user),
+            generated_at=jakarta_now(),
         )
         content = team_week_pptx(report)
         key = f"exports/team-week/{team_id}/{start:%Y%m%d}_{jakarta_now():%H%M%S}_team_week.pptx"
@@ -393,6 +395,11 @@ class ExportService:
                                    template_type="TEAM_WEEK_SLIDES", master="builtin:team-week-pptx-v1",
                                    period=(start, end))
         return record, content
+
+    async def _printer(self, user: CurrentUser) -> str:
+        """Nama pencetak untuk dokumen (bukan email). Tanpa data karyawan → "-"."""
+        name = await self.repo.employee_name(user.employee_id) if user.employee_id else None
+        return name or "-"
 
     async def _completion_report(self, order: dict[str, Any], user: CurrentUser) -> CompletionReport:
         items = await self.repo.completion_items(order["completion_id"])
@@ -405,9 +412,13 @@ class ExportService:
         marks = [MapPoint(p.title, float(p.lat), float(p.lng), next((ph.image for ph in p.photos), None),
                           status="EXISTING" if p.status == "DONE" else "PROPOSED")
                  for p in points if p.lat is not None and p.lng is not None]
+        # Lokasi order sendiri ikut ditandai (penanda terakhir: nomor titik pada tabel tetap sesuai urutan).
+        if order.get("site_lat") is not None and order.get("site_lng") is not None:
+            marks.append(MapPoint("Lokasi order", float(order["site_lat"]), float(order["site_lng"]), None,
+                                  status="PROPOSED"))
         map_image = await asyncio.to_thread(render_point_map, marks) if marks else None
         return CompletionReport(
-            order=order, points=points, roster=roster, bom=bom, generated_by=user.email,
+            order=order, points=points, roster=roster, bom=bom, generated_by=await self._printer(user),
             generated_at=jakarta_now(), verify_url=verify_url(order), photos=photos(order_refs, "Foto realisasi"),
             leader_signature=storage.get_image_bytes(leader_key) if leader_key else None,
             pm_signature=storage.get_image_bytes(pm_key) if pm_key else None,

@@ -415,32 +415,8 @@ class WorkCompletionCoreRepository(BaseRepository):
             RETURNING completion_id
         """
         photos = data.get("realization_photos_json") or []
-        lat = data.get("site_lat")
+        lat = data.get("site_lat")  # sudah divalidasi skema (rentang -90..90 / -180..180)
         lng = data.get("site_lng")
-        if lat is not None:
-            try:
-                lat = float(lat)
-                if abs(lat) > 90:
-                    for s in (1e6, 1e7, 1e5):
-                        if abs(lat / s) <= 90:
-                            lat = lat / s
-                            break
-                if abs(lat) > 90:
-                    lat = None
-            except (ValueError, TypeError):
-                lat = None
-        if lng is not None:
-            try:
-                lng = float(lng)
-                if abs(lng) > 180:
-                    for s in (1e6, 1e7, 1e5):
-                        if abs(lng / s) <= 180:
-                            lng = lng / s
-                            break
-                if abs(lng) > 180:
-                    lng = None
-            except (ValueError, TypeError):
-                lng = None
 
         res = await self.scalar(
             sql,

@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import io
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
+from typing import Any
 
 from docx.document import Document as DocxDocument
 from docx.shared import Cm
@@ -20,10 +21,13 @@ from app.modules.exports.services.builders.model import (
     CompletionReport,
     DailyReport,
     ReportPoint,
+    coord_text,
+    plan_status_label,
     qty,
     tgl,
 )
 from app.shared.documents import docx_kit as kit
+from app.shared.documents.static_map import STATUS_LABEL
 
 
 def _signature_blocks(r: CompletionReport) -> list[tuple[str, str, str, bytes | None]]:
@@ -44,17 +48,30 @@ def _integrity(doc: object, r: CompletionReport) -> None:
     kit.para(doc, text, italic=True, size=8)  # type: ignore[arg-type]
 
 
-def _daily_summary(doc: DocxDocument, points: list[ReportPoint], start_no: int) -> None:
-    """Ringkasan laporan harian per tanggal kerja: tim, item, progres, catatan, alasan tunda."""
+def _schedule_days(order: dict[str, Any], points: list[ReportPoint]) -> list[date]:
+    """Seluruh tanggal jadwal order: rentang start..end order ditambah tanggal item (urut, tanpa duplikat)."""
+    days: set[date] = {p.work_date for p in points if p.work_date}
+    start, end = order.get("start_work_date"), order.get("end_work_date")
+    if isinstance(start, date) and isinstance(end, date) and start <= end and (end - start).days <= 62:
+        days.update(start + timedelta(days=n) for n in range((end - start).days + 1))
+    return sorted(days)
+
+
+def _daily_summary(doc: DocxDocument, points: list[ReportPoint], start_no: int, days: list[date] | None = None) -> None:
+    """Ringkasan laporan harian per tanggal jadwal: tim, item, progres, catatan, alasan tunda.
+    `days` = semua tanggal jadwal order (tanggal tanpa item tetap tampil)."""
     kit.heading(doc, f"{start_no}. Ringkasan Laporan Harian")
-    if not points:
+    if not points and not days:
         kit.para(doc, "Belum ada laporan harian.", italic=True)
         return
     by_day: dict[date, list[ReportPoint]] = defaultdict(list)
     for p in points:
         by_day[p.work_date].append(p)
-    for day in sorted(by_day):
-        rows = by_day[day]
+    for day in sorted(set(by_day) | set(days or [])):
+        rows = by_day.get(day, [])
+        if not rows:
+            kit.para(doc, f"{tgl(day)} - Tidak ada pekerjaan tercatat.")
+            continue
         teams = ", ".join(sorted({p.team_name for p in rows if p.team_name})) or "-"
         kit.para(doc, f"{tgl(day)} - Tim: {teams}")
         kit.grid(
@@ -75,19 +92,32 @@ def _daily_summary(doc: DocxDocument, points: list[ReportPoint], start_no: int) 
 
 def _map_section(doc: DocxDocument, r: CompletionReport, no: int) -> None:
     """Halaman peta lokasi: citra satelit dengan penanda bernomor (sama dengan nomor pada tabel)."""
-    if not r.has_coordinates:
-        return
     kit.heading(doc, f"{no}. Peta Lokasi")
+    if not r.has_coordinates:
+        kit.para(doc, "Koordinat lokasi belum diisi.", italic=True)
+        return
     if r.map_image:
         doc.add_paragraph().add_run().add_picture(io.BytesIO(r.map_image), width=Cm(16.5))
         kit.para(
             doc,
-            "Hijau = sudah selesai, biru = belum selesai. Nomor sesuai urutan titik pada tabel.",
+            f"Hijau = {STATUS_LABEL['EXISTING']}, biru = {STATUS_LABEL['PROPOSED']}. "
+            "Nomor sesuai urutan titik pada tabel.",
             italic=True,
             size=8,
         )
     else:
         kit.para(doc, "Peta tidak tersedia (tanpa koneksi ke citra satelit).", italic=True)
+
+
+def _work_period(order: dict[str, Any], points: list[ReportPoint]) -> str:
+    """Periode kerja: tanggal order; bila kosong, rentang tanggal item; bila keduanya kosong → belum ditetapkan."""
+    start, end = order.get("start_work_date"), order.get("end_work_date")
+    if not (start or end) and points:
+        dates = [p.work_date for p in points if p.work_date]
+        start, end = (min(dates), max(dates)) if dates else (None, None)
+    if not (start or end):
+        return "Belum ditetapkan"
+    return f"{tgl(start)} s.d. {tgl(end)}"
 
 
 def order_sheet_docx(r: CompletionReport) -> bytes:
@@ -105,7 +135,8 @@ def order_sheet_docx(r: CompletionReport) -> bytes:
             ("Divisi", o.get("division_name")),
             ("Project Manager", o.get("pm_name")),
             ("Lokasi", o.get("site_address")),
-            ("Jadwal kerja", f"{tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}"),
+            ("Koordinat lokasi", coord_text(o.get("site_lat"), o.get("site_lng"))),
+            ("Jadwal kerja", _work_period(o, r.points)),
             ("Target volume", f"{qty(o.get('total_target_unit'))} {o.get('unit_measure') or ''}".strip()),
         ],
     )
@@ -162,7 +193,7 @@ def daily_report_docx(r: DailyReport) -> bytes:
             ("Tim / Divisi", f"{r.team_name} / {r.division_name}"),
             ("Ketua tim", r.leader_name),
             ("Lokasi", r.site_name),
-            ("Status jadwal", r.status),
+            ("Status jadwal", plan_status_label(r.status)),
             ("Anggota", ", ".join(sorted({m.full_name for m in r.roster if not m.is_leader})) or "-"),
         ],
     )
@@ -221,6 +252,7 @@ def bast_docx(r: CompletionReport) -> bytes:
         ("Periode", f"{tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}"),
         ("Realisasi volume",
          f"{qty(o.get('completed_target_unit'))} / {qty(o.get('total_target_unit'))} {o.get('unit_measure') or ''}"),
+        ("Koordinat lokasi", coord_text(o.get("site_lat"), o.get("site_lng"))),
     ])
 
     kit.heading(doc, "2. Rincian Pekerjaan per Titik")
@@ -244,7 +276,7 @@ def bast_docx(r: CompletionReport) -> bytes:
     if o.get("obstacles"):
         kit.para(doc, f"Kendala: {o['obstacles']}")
 
-    _daily_summary(doc, r.points, start_no=5)
+    _daily_summary(doc, r.points, start_no=5, days=_schedule_days(o, r.points))
     _map_section(doc, r, no=6)
 
     photos = r.all_photos

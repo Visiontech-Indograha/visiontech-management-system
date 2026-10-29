@@ -28,7 +28,7 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     # Admin HR/GA = HR + aset + mess + proses keluar (FINANCE/ASSET V1 digabung ke sini).
     SystemRole.ADMIN_HR_GA: {
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS, P.MANAGE_MESS,
-        P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+        P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS, P.VIEW_ALL_ATTENDANCE,
     },
     # Finance melihat, meninjau, dan mengekspor absensi seluruh karyawan; lembur; kelola kantor (sama V1).
     SystemRole.FINANCE: {

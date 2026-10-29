@@ -55,6 +55,13 @@ def test_fake_heic_is_rejected(client, world: World):
     assert response.json()["error"]["code"] == "INVALID_FILE_TYPE"
 
 
+def test_plain_text_named_pdf_gets_message_without_none(client, world: World):
+    response = _upload(client, world, "teks.pdf", b"ini hanya teks biasa, bukan PDF\n", "application/pdf")
+    assert response.status_code == 415, response.text
+    message = response.json()["error"]["message"]
+    assert "None" not in message and message.startswith("Tipe berkas tidak dikenali")
+
+
 def test_served_file_has_nosniff_and_pdf_is_attachment(client, world: World, fake_storage, monkeypatch):
     monkeypatch.setattr(files_ctrl, "get_object_bytes", lambda key: fake_storage.get(key))
     pdf = b"%PDF-1.4\n1 0 obj\n<< >>\nendobj\n%%EOF\n"

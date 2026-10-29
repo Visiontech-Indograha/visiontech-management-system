@@ -37,6 +37,21 @@ if [ ! -d src/.git ]; then
 fi
 git -C src fetch -q origin "$BRANCH" || exit 1
 
+# Perbarui diri sendiri dari commit yang sudah ada di origin/$BRANCH (salinan skrip di server dulu selalu tertinggal dan
+# harus disalin manual). Hanya bila sintaks valid; berjalan sekali (VMS_SELF_UPDATED) agar tidak berputar.
+if [ -z "${VMS_SELF_UPDATED:-}" ]; then
+  new_self=$(mktemp)
+  if git -C src show "origin/$BRANCH:deploy/autodeploy.sh" > "$new_self" 2>/dev/null      && bash -n "$new_self" 2>/dev/null && ! cmp -s "$new_self" "$0"; then
+    cp -p "$0" "$BASE/autodeploy.sh.sebelum"
+    chmod +x "$new_self"
+    if mv "$new_self" "$0"; then
+      echo "$(date '+%F %T') autodeploy.sh diperbarui dari origin/$BRANCH" >> "$LOGDIR/self-update.log"
+      VMS_SELF_UPDATED=1 exec "$0" "$@"
+    fi
+  fi
+  rm -f "$new_self"
+fi
+
 # APK dibangun & ditandatangani GitHub Actions (.github/workflows/apk.yml) → branch `rilis-apk-<env>`.
 # Dipasang tiap menit, terlepas dari deploy kode: APK dulu, latest.json terakhir (HP tidak melihat APK setengah jadi).
 install_apk_release() {

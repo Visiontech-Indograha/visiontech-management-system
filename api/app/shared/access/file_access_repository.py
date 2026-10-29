@@ -38,6 +38,11 @@ class FileAccessRepository(BaseRepository):
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path))
                        AS selfie,
                    EXISTS (SELECT 1 FROM attendance a
+                           JOIN employee pe ON pe.employee_id = a.employee_id
+                           JOIN division d ON d.division_id = pe.division_id
+                           WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
+                           AND d.pm_id = CAST(:emp AS uuid)) AS selfie_pm,
+                   EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND a.employee_id = CAST(:emp AS uuid)) AS own_selfie,
                    ARRAY(

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status  # noqa: F401
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.clients.controllers.client_controller import ClientController
@@ -20,7 +20,7 @@ _MANAGE = Depends(require_permission(Permission.CREATE_PLAN))
 async def list_clients(
     q: str | None = None,
     active_only: bool = True,
-    current_user: CurrentUser = Depends(get_current_user),
+    current_user: CurrentUser = _MANAGE,
     controller: ClientController = Depends(),
 ) -> list[ClientOut]:
     """Daftar klien."""

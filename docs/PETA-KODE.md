@@ -35,7 +35,7 @@ Perintah: `npm run lint` · `npm run typecheck` · `npm test`.
 
 ## Aturan bisnis
 `prototype/js/domain.js` — sumber kebenaran (dihapus dari repo 2026-10-20; baca lewat `git show f3a519f0:prototype/js/domain.js`). Cari dengan `grep -n "case 'NAMA_TRANSAKSI'"`; jangan baca utuh.
-Rencana kerja aktif: `docs/PLAN-VERIFIKASI-MODUL-RINCI.md` (W6 = transaksi yang belum ada).
+Alur Work dan peta pengujian: `docs/diagram/` (dibuat dari kode).
 
 ## Verifikasi branch (Claude)
 `bash scripts/verify-branch.sh <branch> web|api [uji...]` → satu baris LULUS/GAGAL dari salinan bersih.

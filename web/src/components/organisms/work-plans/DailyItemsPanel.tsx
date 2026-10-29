@@ -25,6 +25,8 @@ import {
 import { useWorkTypes } from "@/services/workTypeService";
 import { PHASE_LABEL } from "@/lib/workPhase";
 import { ItemEvidence } from "./ItemEvidence";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { koordinatError } from "@/lib/inputRules";
 
 const PHASE: Record<string, string> = PHASE_LABEL;
 const MAIN = ["INSTALLATION", "REPLACEMENT", "MAINTENANCE"];
@@ -43,6 +45,8 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
   const [adding, setAdding] = useState(false);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [shown, setShown] = useState<string | null>(null);
+  // Hapus item minta konfirmasi dulu (tidak langsung menghapus).
+  const [removing, setRemoving] = useState<{ id: string; title: string } | null>(null);
 
   return (
     <section aria-label="Daftar pekerjaan">
@@ -81,7 +85,7 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
                     size="sm"
                     variant="ghost"
                     disabled={remove.isPending}
-                    onClick={() => remove.mutate(i.item_id, { onSuccess: () => toast.success("Item dihapus."), onError: (e) => toast.error(message(e)) })}
+                    onClick={() => setRemoving({ id: i.item_id, title: i.title })}
                   >
                     Hapus
                   </ActionButton>
@@ -127,6 +131,28 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
         ))}
       </ListBlock>
       {adding && detail && <ItemForm detail={detail} onDone={() => setAdding(false)} />}
+      <ConfirmDialog
+        open={removing !== null}
+        title="Hapus pekerjaan?"
+        message={removing ? `Pekerjaan "${removing.title}" akan dihapus dari jadwal ini.` : ""}
+        confirmLabel="Hapus"
+        danger
+        busy={remove.isPending}
+        onConfirm={() => {
+          if (!removing) return;
+          remove.mutate(removing.id, {
+            onSuccess: () => {
+              toast.success("Item dihapus.");
+              setRemoving(null);
+            },
+            onError: (e) => {
+              toast.error(message(e));
+              setRemoving(null);
+            },
+          });
+        }}
+        onClose={() => setRemoving(null)}
+      />
     </section>
   );
 }
@@ -162,9 +188,12 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
     if (!v("work_type_id")) problems.work_type_id = "Pilih template (jenis pekerjaan) divisi ini.";
     if (title.length < 3) problems.title = "Nama pekerjaan minimal 3 huruf.";
     if (!qty.ok) problems.target_qty = qty.message;
-    if ((latVal && !lngVal) || (!latVal && lngVal)) {
-      problems.site_lat = "Lintang dan bujur lokasi harus diisi berpasangan.";
-      problems.site_lng = "Lintang dan bujur lokasi harus diisi berpasangan.";
+    // Batas koordinat sama dengan API (lintang -90..90, bujur -180..180) dan harus berpasangan.
+    const coordErr = koordinatError(latVal, lngVal);
+    if (coordErr?.startsWith("Bujur")) problems.site_lng = coordErr;
+    else if (coordErr) {
+      problems.site_lat = coordErr;
+      if (coordErr.includes("berpasangan")) problems.site_lng = coordErr;
     }
     if (startTimeVal && endTimeVal && endTimeVal <= startTimeVal) {
       problems.end_time = "Jam selesai item harus setelah jam mulai.";
@@ -184,8 +213,8 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
       location_name: v("location_name") || null,
       start_time: startTimeVal || null,
       end_time: endTimeVal || null,
-      site_lat: latVal ? Number(latVal) : null,
-      site_lng: lngVal ? Number(lngVal) : null,
+      site_lat: latVal ? Number(latVal.replace(",", ".")) : null,
+      site_lng: lngVal ? Number(lngVal.replace(",", ".")) : null,
       depends_on_item_id: v("depends_on_item_id") || null,
       notes: v("notes") || null,
     };

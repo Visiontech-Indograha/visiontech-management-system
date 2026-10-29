@@ -6,6 +6,7 @@ import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { DialogCancelButton } from "@/components/molecules/DialogActions";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { errorMessage } from "@/lib/errors";
 import { useEmployees } from "@/services/employeeService";
@@ -55,7 +56,7 @@ export function OffboardingFormDialog({ employee, onClose }: {
       onClose={onClose}
       footer={
         <>
-          <ActionButton variant="outline" onClick={onClose} disabled={create.isPending}>Batal</ActionButton>
+          <DialogCancelButton onCancel={onClose} disabled={create.isPending} />
           <ActionButton type="submit" form="offboarding-form" variant="destructive" disabled={create.isPending}>
             {create.isPending ? "Memproses..." : "Mulai offboarding"}
           </ActionButton>

@@ -23,6 +23,7 @@ import '../face/face_enroll_gate.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
 import 'nearest_site.dart';
+import 'session_labels.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -897,7 +898,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                       runSpacing: 4,
                                       children: [
                                         if (r['is_late'] == true) _flag('Terlambat', Accent.amber),
-                                        if (r['is_early_leave'] == true) _flag('Pulang awal', Accent.rose),
+                                        if (isAutoClosedSession(r))
+                                          _flag('Lupa absen pulang', Accent.amber)
+                                        else if (r['is_early_leave'] == true)
+                                          _flag('Pulang awal', Accent.rose),
                                         if (r['explanation'] != null) _flag('Dijelaskan', Accent.indigo),
                                         StatusPill(r['status'] as String?),
                                       ],

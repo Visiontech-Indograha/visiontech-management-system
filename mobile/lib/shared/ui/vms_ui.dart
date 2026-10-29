@@ -384,6 +384,7 @@ class SectionTitle extends StatelessWidget {
   'ACCEPTED' => (label: 'Diterima', accent: Accent.indigo),
   'APPEALED' => (label: 'Revisi diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
+  'ITEM_IN_PROGRESS' => (label: 'Sedang dikerjakan', accent: Accent.blue),
   'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (label: 'Pengajuan penutupan', accent: Accent.violet),
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),

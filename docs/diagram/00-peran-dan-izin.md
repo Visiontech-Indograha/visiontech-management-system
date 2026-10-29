@@ -97,6 +97,24 @@ Kode kesalahan: 401 tanpa token. 403 izin atau relasi kurang. 404 jadwal atau or
 | 42 | Verifikasi publik BAST (QR) | `work_completion_route.py:276` (tanpa login) | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Wajib sidik SHA-256 64 hex. Sidik salah atau belum disahkan: 404 (`work_completion_service.py:338-345`) |
 | 43 | Kelola peran, pengguna, dokumen karyawan | modul `employees`, `accounts` | Ya | Ya | Tidak | Tidak | Ya | Tidak | Tidak | Tidak | Tidak | Tidak | `MANAGE_USERS` (lihat bagian 2). Di luar cakupan dokumen alur work ini. |
 
+## 3b. Tombol per peran di web (dengan status)
+
+Fungsi murni di `web/src/lib/aksiPeran.ts`; matriks uji `web/src/test/peran-status-matrix.test.ts` (peran × status).
+Tampilan saja: otorisasi tetap di API.
+
+| Layar | Status | SUPER_ADMIN / ADMIN | OM / PM | HR | ASSET, FINANCE, ketua, anggota |
+|---|---|---|---|---|---|
+| Jenis pekerjaan | aktif | Ubah, BoM, Salin, Nonaktifkan | sama | tidak ada | tidak ada |
+| Jenis pekerjaan | nonaktif | Ubah, BoM | sama | tidak ada | tidak ada |
+| Aset (alat/kendaraan) | siap, tidak dipinjam | Serahkan, Status (+Berkas kendaraan) | Berkas kendaraan saja | sama dengan SUPER_ADMIN | Berkas kendaraan saja |
+| Mess | kelola hunian & tempat | ya | tidak | ya | tidak |
+| Mess | permintaan | ya | ya | ya | tidak |
+
+## 3c. Jenis pekerjaan sebagai template
+
+- Kolom bawaan `work_type.unit_measure` (default `Unit`) dan `work_type.default_phase` (NULL = ikut peran) dipakai saat item jadwal dibuat dari template (`plan_item_service.add_validated`). Field di item tetap bisa diubah PM.
+- PM yang memegang lebih dari satu divisi boleh memakai template dari divisi lain miliknya (`PlanItemService._validate`, `extra_divisions`). Template tidak disalin. Divisi yang dipimpin orang lain ditolak (422).
+
 ## 4. Catatan temuan izin
 
 Setiap item berikut perlu dikonfirmasi pemilik kode. Nomor T mengacu ke daftar di `README.md`.

@@ -10,6 +10,9 @@ export const workTypeSchema = z.object({
     "PREPARATION", "DISMANTLE", "COMMISSIONING", "TROUBLESHOOTING",
   ]),
   follow_up_work_type_id: z.string().nullable(),
+  unit_measure: z.string().trim().min(1, "Satuan wajib diisi.").max(50, "Satuan maksimal 50 karakter."),
+  // "" = ikut peran (API menerima null).
+  default_phase: z.string(),
   photos: z
     .array(
       z.object({

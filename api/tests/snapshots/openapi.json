@@ -9962,6 +9962,19 @@
       "title": "Title",
       "type": "string"
      },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
+     },
      "work_type_id": {
       "format": "uuid",
       "title": "Work Type Id",
@@ -10235,6 +10248,17 @@
       "title": "Title",
       "type": "string"
      },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
+     },
      "update_at": {
       "format": "date-time",
       "title": "Update At",
@@ -10453,6 +10477,19 @@
        }
       ],
       "title": "Title"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
      },
      "work_type_id": {
       "anyOf": [
@@ -15031,6 +15068,24 @@
    "WorkTypeIn": {
     "description": "Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.",
     "properties": {
+     "default_phase": {
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
+     },
      "description": {
       "anyOf": [
        {
@@ -15097,6 +15152,13 @@
       },
       "title": "Photos",
       "type": "array"
+     },
+     "unit_measure": {
+      "default": "Unit",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit Measure",
+      "type": "string"
      }
     },
     "required": [
@@ -15115,6 +15177,24 @@
       },
       "title": "Default Materials",
       "type": "array"
+     },
+     "default_phase": {
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
      },
      "description": {
       "anyOf": [
@@ -15211,6 +15291,11 @@
       },
       "title": "Photos",
       "type": "array"
+     },
+     "unit_measure": {
+      "default": "Unit",
+      "title": "Unit Measure",
+      "type": "string"
      }
     },
     "required": [

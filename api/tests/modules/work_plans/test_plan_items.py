@@ -52,6 +52,10 @@ def test_pm_adds_items_only_while_editable(client, world: World):
 
 def test_template_must_belong_to_plan_division(client, world: World):
     other = world.add_unit("Lain")
+    # PM dunia uji juga PM divisi "Lain" (multi-divisi boleh memakai template di sana); di sini divisi itu
+    # dipimpin orang lain, sehingga template-nya bukan milik PM ini.
+    stranger = world.add_person(f"pm_lain_{world.tag}", "PM")
+    sync_query("UPDATE division SET pm_id = %s WHERE division_id = %s", (stranger, other))
     foreign_wt = str(sync_query("INSERT INTO work_type (division_id, name) VALUES (%s, 'Survei lain') "
                                 "RETURNING work_type_id", (other,))[0][0])
     draft = make_daily_plan(world, status="DRAFT", days_from_today=1)

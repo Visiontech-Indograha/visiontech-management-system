@@ -8,7 +8,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { workTypeSchema, type WorkTypeValues } from "@/schemas/workTypeSchema";
 import { oversize, uploadForm } from "@/services/uploadService";
-import { useSaveWorkType, useWorkTypes, type WorkType } from "@/services/workTypeService";
+import { useSaveWorkType, useWorkTypes, type WorkType, type WorkTypeInput } from "@/services/workTypeService";
 import { useUserDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -18,6 +18,8 @@ import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { ControlInput, ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { defaultPhaseOptions, slotSummary } from "@/lib/jenisPekerjaan";
+import { PHASE_LABEL } from "@/lib/workPhase";
 
 /** Dialog tambah/ubah jenis pekerjaan: nama + divisi + slot template foto (label, petunjuk, foto contoh, wajib, urutan). */
 export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; onClose: () => void }) {
@@ -45,6 +47,8 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
       description: type?.description ?? "",
       kind: type?.kind ?? "INSTALLATION",
       follow_up_work_type_id: type?.follow_up_work_type_id ?? null,
+      unit_measure: type?.unit_measure ?? "Unit",
+      default_phase: type?.default_phase ?? "",
       photos: (type?.photos ?? []).map((p) => ({
         label: p.label,
         hint: p.hint ?? "",
@@ -102,6 +106,8 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
         description: v.description || null,
         kind: v.kind,
         follow_up_work_type_id: v.kind === "SURVEY_POINT" ? v.follow_up_work_type_id || null : null,
+        unit_measure: v.unit_measure.trim() || "Unit",
+        default_phase: (v.default_phase || null) as WorkTypeInput["default_phase"],
         photos: v.photos.map((p) => ({
           label: p.label,
           hint: p.hint || null,
@@ -179,6 +185,23 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
 
         </SelectField>
         <TextField label="Nama jenis" error={errors.name?.message} {...register("name")} />
+        <TextField
+          label="Satuan bawaan item"
+          hint="Dipakai otomatis saat item jadwal dibuat dari jenis ini. PM tetap bisa mengubahnya di tiap item."
+          error={errors.unit_measure?.message}
+          {...register("unit_measure")}
+        />
+        <SelectField
+          label="Fase bawaan item"
+          hint="Kosong = mengikuti peran. Fase survei hanya untuk peran survei."
+          error={errors.default_phase?.message}
+          {...register("default_phase")}
+        >
+          <ControlOption value="">Ikut peran (otomatis)</ControlOption>
+          {defaultPhaseOptions(kind).map((p) => (
+            <ControlOption key={p} value={p}>{PHASE_LABEL[p]}</ControlOption>
+          ))}
+        </SelectField>
         {/* Tunggu pilihan dimuat: select yang dipasang sebelum opsinya ada kehilangan nilai tersimpan. */}
         {kind === "SURVEY_POINT" && sameDivision.isSuccess && (
           <SelectField
@@ -194,6 +217,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
         )}
         <TextField label="Keterangan (opsional)" error={errors.description?.message} {...register("description")} />
         <TextBlock className="mb-2 text-sm font-medium">Template foto laporan</TextBlock>
+        <TextBlock className="mb-2 text-xs text-mist" aria-live="polite">Pratinjau: {slotSummary(watched ?? [])}</TextBlock>
         {errors.photos?.root?.message && <TextBlock className="mb-2 text-sm text-danger">{errors.photos.root.message}</TextBlock>}
         <ListBlock as="ol" className="space-y-3">
           {slots.fields.map((slot, i) => (

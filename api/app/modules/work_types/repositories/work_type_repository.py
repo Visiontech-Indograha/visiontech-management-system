@@ -14,6 +14,7 @@ _SELECT = """
     SELECT wt.work_type_id AS id, wt.division_id, d.name AS division_name,
            wt.name, wt.description, (wt.delete_at IS NULL) AS is_active, wt.kind, wt.follow_up_work_type_id,
            (SELECT f.name FROM work_type f WHERE f.work_type_id = wt.follow_up_work_type_id) AS follow_up_name,
+           wt.unit_measure, wt.default_phase,
            COALESCE((SELECT jsonb_agg(jsonb_build_object(
                                          'id', p.image_requirement_id,
                                          'sort_order', p.sort_order,
@@ -96,14 +97,17 @@ class WorkTypeRepository(BaseRepository):
     async def insert_type(
         self, org_id: UUID | str, division_id: UUID | str, name: str, description: str | None = None,
         kind: str = "WORK", follow_up: UUID | str | None = None,
+        unit_measure: str = "Unit", default_phase: str | None = None,
     ) -> str:
         """Jenis baru → id."""
         return str(
             await self.scalar(
-                "INSERT INTO work_type (division_id, name, description, kind, follow_up_work_type_id) "
-                "VALUES (CAST(:div_id AS uuid), :name, :desc, :kind, CAST(:fu AS uuid)) RETURNING work_type_id",
+                "INSERT INTO work_type (division_id, name, description, kind, follow_up_work_type_id, "
+                "unit_measure, default_phase) "
+                "VALUES (CAST(:div_id AS uuid), :name, :desc, :kind, CAST(:fu AS uuid), :unit, :phase) "
+                "RETURNING work_type_id",
                 {"div_id": str(division_id), "name": name, "desc": description, "kind": kind,
-                 "fu": str(follow_up) if follow_up else None},
+                 "fu": str(follow_up) if follow_up else None, "unit": unit_measure, "phase": default_phase},
             )
         )
 
@@ -113,6 +117,14 @@ class WorkTypeRepository(BaseRepository):
             "SELECT kind, CAST(division_id AS text) AS division_id FROM work_type "
             "WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL", {"id": str(type_id)})
         return (row.kind, row.division_id) if row else None
+
+    async def set_defaults(self, type_id: UUID | str, unit_measure: str, default_phase: str | None) -> None:
+        """Satuan & fase bawaan item jenis pekerjaan."""
+        await self.execute(
+            "UPDATE work_type SET unit_measure = :unit, default_phase = :phase, update_at = NOW() "
+            "WHERE work_type_id = CAST(:id AS uuid)",
+            {"id": str(type_id), "unit": unit_measure, "phase": default_phase},
+        )
 
     async def set_kind(self, type_id: UUID | str, kind: str, follow_up: UUID | str | None) -> None:
         await self.execute(

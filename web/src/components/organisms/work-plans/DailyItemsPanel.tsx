@@ -35,7 +35,7 @@ const STATUS: Record<string, string> = {
   TODO: "Belum mulai", IN_PROGRESS: "Dikerjakan", DONE: "Selesai", PENDING_ROLLOVER: "Minta pindah hari", SHIFTED_DAY: "Pindah hari",
 };
 /** Kolom formulir item yang boleh diberi galat dari API (kunci = nama field body). */
-const ITEM_FIELDS = ["work_type_id", "title", "task_phase", "target_qty", "location_name", "start_time", "end_time", "site_lat", "site_lng", "depends_on_item_id", "notes"];
+const ITEM_FIELDS = ["work_type_id", "title", "task_phase", "unit_measure", "target_qty", "location_name", "start_time", "end_time", "site_lat", "site_lng", "depends_on_item_id", "notes"];
 const message = (err: unknown) => (err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
 
 /** Item per titik pada jadwal harian: daftar, tambah (PM saat draf), hapus, dan keputusan geser (PM). */
@@ -159,8 +159,9 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
 }
 
 function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => void }) {
-  // Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal.
-  const types = useWorkTypes(false, detail.division_id).data?.filter((w) => w.kind !== "SURVEY_POINT");
+  // Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal. Tidak dibatasi divisi jadwal:
+  // PM multi-divisi boleh memakai template divisi lain miliknya (API yang membatasi); label divisi ditampilkan.
+  const types = useWorkTypes(false).data?.filter((w) => w.kind !== "SURVEY_POINT");
   const formOptions = useDailyFormOptions(true).data;
   const orders = (formOptions?.orders ?? []).filter(
     (o) => !o.division_id || o.division_id === detail.division_id
@@ -168,6 +169,16 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
   const create = useCreatePlanItem(detail.daily_plan_id);
   const prereqs = usePrerequisiteOptions(detail.daily_plan_id).data ?? [];
   const [phase, setPhase] = useState("SURVEY");
+  // Template terpilih mengisi fase & satuan bawaan; PM hanya mengubah bila perlu.
+  const [workTypeId, setWorkTypeId] = useState("");
+  const [unit, setUnit] = useState("");
+  const pickTemplate = (id: string) => {
+    setWorkTypeId(id);
+    const picked = types?.find((w) => w.id === id);
+    if (!picked) return;
+    setUnit(picked.unit_measure || "Unit");
+    if (picked.default_phase) setPhase(picked.default_phase);
+  };
   const [error, setError] = useState<string | null>(null);
   // Galat per kolom: dari validasi lokal dan dari 422 API (dipetakan ke kolom, bukan hanya satu pesan umum).
   const [fe, setFe] = useState<Record<string, string>>({});
@@ -214,6 +225,7 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
       work_type_id: v("work_type_id"),
       title,
       task_phase: phase as PlanItemCreate["task_phase"],
+      unit_measure: unit.trim() || undefined,
       is_main_deliverable: MAIN.includes(phase) && v("main") === "yes",
       completion_id: v("completion_id") || undefined,
       target_qty: qty.ok ? qty.value : "1",
@@ -263,22 +275,27 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           Alokasi melebihi sisa target order ({overBy} di atas sisa). Periksa kembali target volume.
         </TextBlock>
       )}
-      <SelectField name="work_type_id" label="Template (jenis pekerjaan divisi)" defaultValue="" error={fe.work_type_id}>
+      <SelectField name="work_type_id" label="Template (jenis pekerjaan)" value={workTypeId}
+        onChange={(e) => pickTemplate(e.target.value)} error={fe.work_type_id}>
         <ControlOption value="">Pilih template</ControlOption>
-        {types?.map((t) => <ControlOption key={t.id} value={t.id}>{t.name}</ControlOption>)}
+        {types?.map((t) => (
+          <ControlOption key={t.id} value={t.id}>{t.division_name ? `${t.name} · ${t.division_name}` : t.name}</ControlOption>
+        ))}
       </SelectField>
       <TextField name="title" label="Judul titik" hint="Contoh: Titik CCTV 03 — Pos Jaga Utara" error={fe.title} />
       <div className="grid gap-x-3 md:grid-cols-2">
-        <SelectField label="Fase" value={phase} onChange={(e) => setPhase(e.target.value)}>
+        <SelectField label="Fase" value={phase} onChange={(e) => setPhase(e.target.value)} error={fe.task_phase}>
           {Object.entries(PHASE).map(([k, l]) => <ControlOption key={k} value={k}>{l}</ControlOption>)}
         </SelectField>
-        {MAIN.includes(phase) && (
-          <SelectField name="main" label="Hasil utama pekerjaan klien?" defaultValue="yes">
-            <ControlOption value="yes">Ya</ControlOption>
-            <ControlOption value="no">Tidak</ControlOption>
-          </SelectField>
-        )}
+        <TextField name="unit_measure" label="Satuan" value={unit} onChange={(e) => setUnit(e.target.value)}
+          hint="Terisi dari jenis pekerjaan; boleh diubah." error={fe.unit_measure} />
       </div>
+      {MAIN.includes(phase) && (
+        <SelectField name="main" label="Hasil utama pekerjaan klien?" defaultValue="yes">
+          <ControlOption value="yes">Ya</ControlOption>
+          <ControlOption value="no">Tidak</ControlOption>
+        </SelectField>
+      )}
       <div className="grid gap-x-3 md:grid-cols-2">
         <TextField
           name="target_qty"

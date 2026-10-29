@@ -280,7 +280,7 @@ void main() {
     };
 
     testWidgets(
-      'O-10: sesi terbuka kemarin (lewat tengah malam) tetap bisa absen pulang',
+      'sesi terbuka kemarin (lewat tengah malam) tidak ditawarkan sebagai absen pulang hari ini',
       (tester) async {
         online();
         backend.routes['/attendance'] = (_) => {
@@ -289,8 +289,8 @@ void main() {
           'today': '2000-01-02',
         };
         await show(tester, const AttendanceScreen());
-        expect(find.textContaining('Absen pulang'), findsOneWidget);
-        expect(find.text('Absen masuk'), findsNothing);
+        expect(find.textContaining('Absen pulang'), findsNothing);
+        expect(find.text('Absen masuk'), findsOneWidget);
       },
     );
 

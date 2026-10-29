@@ -88,7 +88,7 @@ describe("Jadwal harian", () => {
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Bravo/ }));
     const dialog = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
     const chips = await within(dialog).findByTestId("recent-sites");
-    expect(calls.some((c) => c.url === "/work-plans/daily/recent-sites" && c.params?.team_id === "t2")).toBe(true);
+    expect(calls.some((c) => c.url === "/work-plans/daily/recent-sites" && (c.params as { team_id?: string } | undefined)?.team_id === "t2")).toBe(true);
     fireEvent.click(within(chips).getByRole("button", { name: "Gardu Induk Minas" }));
     expect(within(dialog).getByLabelText("Lokasi site (opsional)")).toHaveValue("Gardu Induk Minas");
     expect(within(dialog).getByLabelText("Lintang (lat)")).toHaveValue("1.4700000");

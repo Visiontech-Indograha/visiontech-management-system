@@ -11,6 +11,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ApiError } from "@/lib/apiClient";
+import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {
   addDays,
@@ -23,6 +24,7 @@ import {
   type DailyPlan,
   wibDate,
 } from "@/services/dailyPlanService";
+import { useExportDailyReport } from "@/services/exportService";
 import { DailyItemsPanel } from "./DailyItemsPanel";
 
 const CONFIRM_MESSAGE: Record<DailyAction | "delete", string> = {
@@ -50,6 +52,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const reject = useRejectDailyPlan();
   const remove = useDeleteDailyPlan();
   const copy = useCopyDailyPlan();
+  const exportReport = useExportDailyReport();
   const [mode, setMode] = useState<"view" | "reject" | "copy">("view");
   const [error, setError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<DailyAction | "delete" | null>(null);
@@ -163,6 +166,24 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           ))}
           {canPlan && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
             <ActionButton size="sm" variant="outline" onClick={() => setMode("reject")}>Kembalikan ke draf</ActionButton>
+          )}
+          {(canPlan || isLeader) && (
+            <ActionButton
+              size="sm"
+              variant="outline"
+              disabled={exportReport.isPending}
+              onClick={() =>
+                exportReport.mutate(
+                  { daily_plan_id: p.daily_plan_id },
+                  {
+                    onSuccess: () => toast.success("Laporan harian siap diunduh."),
+                    onError: (err) => toast.error(errorMessage(err)),
+                  },
+                )
+              }
+            >
+              Cetak laporan harian (.docx)
+            </ActionButton>
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
           {canPlan && <ActionButton size="sm" variant="outline" onClick={() => setMode("copy")}>Salin ke hari lain</ActionButton>}

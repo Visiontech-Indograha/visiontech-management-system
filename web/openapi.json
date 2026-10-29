@@ -4990,6 +4990,49 @@
     ]
    }
   },
+  "/api/v1/exports/daily-report": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Daily Report",
+    "description": "Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan\nketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).",
+    "operationId": "export_daily_report_api_v1_exports_daily_report_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyReportExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/exports/{export_id}/file": {
    "get": {
     "tags": [
@@ -16737,7 +16780,8 @@
        "SURVEY_REPORT",
        "BAST_PDF",
        "BOQ",
-       "PROGRESS_SLIDES"
+       "PROGRESS_SLIDES",
+       "ORDER_SHEET"
       ],
       "title": "Template"
      }
@@ -17829,6 +17873,20 @@
      "summary"
     ],
     "title": "DailyReportCreate"
+   },
+   "DailyReportExportRequest": {
+    "properties": {
+     "daily_plan_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Daily Plan Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "daily_plan_id"
+    ],
+    "title": "DailyReportExportRequest"
    },
    "DailyReportOut": {
     "properties": {

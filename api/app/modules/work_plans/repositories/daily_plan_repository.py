@@ -28,9 +28,10 @@ _SELECT = """
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND i.status = 'DONE'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS done_count,
-           -- Persen progres nyata: rata-rata (jumlah dikerjakan / target) per pekerjaan, DONE = 100%.
-           -- Item yang dipindah hari (SHIFTED_DAY) tak dihitung, sehingga bisa 100 walau masih ada item lain
-           -- yang belum selesai: 100 hanya bila SEMUA item DONE (selaras item_count/done_count & web displayPct).
+           -- Persen progres (satu aturan dengan web workPhase.displayPct & mobile workPercent):
+           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) = 0% (dikerjakan di hari baru),
+           -- item lain = dikerjakan/target. Dibulatkan ke bawah. 100 hanya bila SEMUA item DONE; selainnya maks 99.
+           -- Contoh: A 2/2 + B pindah hari 0/1 = 50; A 1/2 = 50; semua DONE = 100.
            (SELECT CASE WHEN EXISTS (SELECT 1 FROM work_plan_item a WHERE a.daily_plan_id = wpd.daily_plan_id
                           AND a.delete_at IS NULL
                           AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
@@ -38,11 +39,11 @@ _SELECT = """
                           AND a.delete_at IS NULL AND a.status <> 'DONE'
                           AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
                   THEN 100
-                  ELSE LEAST(99, COALESCE(ROUND(AVG(CASE WHEN i.status = 'DONE' THEN 1
+                  ELSE LEAST(99, COALESCE(FLOOR(AVG(CASE WHEN i.status = 'DONE' THEN 1
+                        WHEN i.status = 'SHIFTED_DAY' THEN 0
                         ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int)
              END
               FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL
-              AND i.status <> 'SHIFTED_DAY'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS progress_pct,
            -- Jenis pekerjaan hari itu (Survei/Persiapan/Instalasi/Replacement/Maintenance) untuk filter & warna.
            ARRAY(SELECT DISTINCT i.task_phase::text FROM work_plan_item i

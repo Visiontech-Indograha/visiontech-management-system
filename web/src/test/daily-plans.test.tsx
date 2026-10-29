@@ -167,4 +167,52 @@ describe("F10 · buat jadwal dari sel hari, tanggal lampau, dan hapus", () => {
     fireEvent.click(within(confirm).getByRole("button", { name: "Hapus" }));
     await waitFor(() => expect(calls.some((c) => c.method === "delete" && c.url === "/work-plans/daily/p1")).toBe(true));
   });
+
+  it("koordinat diisi tanpa nama lokasi: form menolak dan meminta nama sebelum menyimpan", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/work-plans/daily" && c.method === "get") return { data: [] };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-plans/daily" && c.method === "post") return { data: plan({ status: "DRAFT" }) };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: kosong` }));
+    fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /Tim Bravo/ }));
+    const form = await screen.findByRole("dialog", { name: "Buat jadwal harian" });
+    fireEvent.change(within(form).getByLabelText("Lintang (lat)"), { target: { value: "0.4213" } });
+    fireEvent.change(within(form).getByLabelText("Bujur (lng)"), { target: { value: "101.3806" } });
+    fireEvent.submit(form.querySelector("form") as HTMLFormElement);
+    expect(await within(form).findByText("Isi nama lokasi bila koordinat diisi (mis. Gudang Cikarang).")).toBeInTheDocument();
+    expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily")).toBe(false);
+    fireEvent.change(within(form).getByLabelText("Lokasi site (opsional)"), { target: { value: "Gudang Pekanbaru" } });
+    fireEvent.submit(form.querySelector("form") as HTMLFormElement);
+    await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/work-plans/daily")).toBe(true));
+    expect(calls.find((c) => c.method === "post" && c.url === "/work-plans/daily")!.data).toMatchObject({ site_name: "Gudang Pekanbaru", site_lat: 0.4213, site_lng: 101.3806 });
+  });
+
+  it("hapus massal: hanya jadwal yang belum dimulai bisa dipilih, konfirmasi, lalu hasil dirangkum", async () => {
+    const deleted: string[] = [];
+    const calls = mockApi((c) => {
+      if (c.method === "delete" && c.url?.startsWith("/work-plans/daily/")) {
+        if (c.url === "/work-plans/daily/p2") throw Object.assign(new Error("Jadwal sudah dimulai."), {});
+        deleted.push(c.url);
+        return { status: 204, data: null };
+      }
+      if (c.url === "/work-plans/daily" && c.method === "get") {
+        return { data: [plan({ status: "APPROVED" }), plan({ daily_plan_id: "p2", team_id: "t2", team_name: "Tim Bravo", status: "DRAFT" }), plan({ daily_plan_id: "p3", team_id: "t3", team_name: "Tim Charlie", status: "ONGOING" })] };
+      }
+      if (c.url === "/work-plans/form-options") return { data: { ...options, teams: [...options.teams, { team_id: "t3", name: "Tim Charlie", division_id: "d1", leader_employee_id: "e-y", leader_name: "Dian" }] } };
+    });
+    renderRoute("/work-plans", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: `${dayLabel}: 3 jadwal` }));
+    const day = await screen.findByRole("dialog");
+    expect(within(day).queryByRole("checkbox", { name: "Pilih jadwal Tim Charlie" })).toBeNull();
+    fireEvent.click(within(day).getByRole("checkbox", { name: "Pilih jadwal Tim Alpha" }));
+    fireEvent.click(within(day).getByRole("checkbox", { name: "Pilih jadwal Tim Bravo" }));
+    fireEvent.click(within(day).getByRole("button", { name: "Hapus terpilih (2)" }));
+    const confirm = await screen.findByRole("dialog", { name: "Hapus jadwal terpilih?" });
+    expect(deleted).toEqual([]);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Hapus" }));
+    await waitFor(() => expect(deleted.length).toBe(1));
+    expect(calls.filter((c) => c.method === "delete").map((c) => c.url)).toEqual(["/work-plans/daily/p1", "/work-plans/daily/p2"]);
+  });
 });

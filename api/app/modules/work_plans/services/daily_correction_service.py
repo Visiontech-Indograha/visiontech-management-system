@@ -55,7 +55,7 @@ class DailyCorrectionService:
         return await self.repo.of_plan(daily_plan_id)
 
     async def inbox(self, user: CurrentUser, status: str | None) -> list[Any]:
-        everything = is_admin(user) or user.role == "ADMIN_HR_GA"
+        everything = is_admin(user) or user.has_role("ADMIN_HR_GA")
         return await self.repo.inbox(user.employee_id, status, all_divisions=everything)
 
     async def _locked(self, correction_id: UUID) -> Any:

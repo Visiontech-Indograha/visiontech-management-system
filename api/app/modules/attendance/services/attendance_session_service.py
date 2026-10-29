@@ -161,7 +161,7 @@ class AttendanceSessionService:
         """Rekap uang makan (docs/35 §5): pemegang export:attendance semua divisi; PM hanya divisi yang dipimpinnya
         (keputusan pemilik 2026-10-21). Lainnya → 403."""
         if "export:attendance" not in user.permissions:
-            if user.role != "PROJECT_MANAGER" or not user.employee_id:
+            if not user.has_role("PROJECT_MANAGER") or not user.employee_id:
                 raise ForbiddenError("Rekap uang makan hanya untuk PM divisi atau pengelola absensi.")
             own = await self.repo.scalar(
                 "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL LIMIT 1",

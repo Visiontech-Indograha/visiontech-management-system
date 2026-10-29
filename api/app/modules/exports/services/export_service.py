@@ -265,7 +265,7 @@ class ExportService:
         return record, content
 
     async def list_periodic(self, user: CurrentUser) -> list[Any]:
-        sees_all = is_admin(user) or user.role == "OPERATIONAL_MANAGER"
+        sees_all = is_admin(user) or user.has_role("OPERATIONAL_MANAGER")
         if not sees_all and not user.employee_id:
             return []
         return await self.repo.list_exports(generated_by=None if sees_all else user.employee_id)
@@ -277,7 +277,7 @@ class ExportService:
             raise NotFoundError("Dokumen")
         if record.completion_id is not None:
             await self.orders.get_order_detail(user, record.completion_id)  # tak terlihat → 404
-        elif not (is_admin(user) or user.role == "OPERATIONAL_MANAGER"
+        elif not (is_admin(user) or user.has_role("OPERATIONAL_MANAGER")
                   or str(record.generated_by_id) == str(user.employee_id)):
             raise NotFoundError("Dokumen")
         content = storage.get_object_bytes(record.file_output_url)

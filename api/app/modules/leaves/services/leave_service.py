@@ -39,7 +39,7 @@ class LeaveService:
     async def apply(self, user: CurrentUser, data: LeaveCreate) -> Any:
         # Karyawan biasa hanya boleh mengajukan cuti untuk dirinya sendiri
         emp_id: UUID | str | None
-        if user.role not in ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"):
+        if not user.has_role("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"):
             if data.employee_id and str(data.employee_id) != str(user.employee_id):
                 raise ForbiddenError("Hanya HR atau Admin yang dapat mengajukan cuti atas nama karyawan lain.")
             emp_id = user.employee_id
@@ -98,7 +98,7 @@ class LeaveService:
         return await self.repo.get_leave(leave_id)
 
     async def review(self, user: CurrentUser, leave_id: UUID, data: LeaveReview) -> Any:
-        if user.role not in ALLOWED_REVIEW_ROLES:
+        if not user.has_role(*ALLOWED_REVIEW_ROLES):
             raise ForbiddenError("Hanya PM, HR, OM, atau Super Admin yang berwenang meninjau permohonan cuti.")
 
         if user.employee_id is None:
@@ -112,13 +112,13 @@ class LeaveService:
         if str(user.employee_id) == str(leave.employee_id):
             raise ForbiddenError("Pemohon cuti tidak dapat menyetujui atau menolak permohonannya sendiri.")
 
-        if user.role == "PROJECT_MANAGER" and not await self._pm_owns(user, leave.employee_id):
+        if user.has_role("PROJECT_MANAGER") and not await self._pm_owns(user, leave.employee_id):
             raise ForbiddenError("PM hanya dapat meninjau cuti karyawan di divisinya.")
 
         if leave.status in ("APPROVED_BY_HR", "REJECTED", "CANCELLED"):
             raise AppError("ALREADY_DECIDED", "Permohonan cuti ini sudah diputuskan.", status=409)
 
-        is_pm = user.role == "PROJECT_MANAGER"
+        is_pm = user.has_role("PROJECT_MANAGER")
         if is_pm and leave.status == "APPROVED_BY_PM":
             raise AppError(
                 "ALREADY_APPROVED_BY_PM",
@@ -193,9 +193,9 @@ class LeaveService:
         return pm_id is not None and str(pm_id) == str(user.employee_id)
 
     async def _ensure_can_view(self, user: CurrentUser, employee_id: UUID | str) -> None:
-        if user.role in ORG_WIDE_ROLES or str(employee_id) == str(user.employee_id):
+        if user.has_role(*ORG_WIDE_ROLES) or str(employee_id) == str(user.employee_id):
             return
-        if user.role == "PROJECT_MANAGER" and await self._pm_owns(user, employee_id):
+        if user.has_role("PROJECT_MANAGER") and await self._pm_owns(user, employee_id):
             return
         raise ForbiddenError("Anda tidak berhak melihat data cuti karyawan ini.")
 
@@ -215,9 +215,9 @@ class LeaveService:
         year: int | None = None,
     ) -> list[Any]:
         pm_id = None
-        if user.role == "PROJECT_MANAGER":
+        if user.has_role("PROJECT_MANAGER"):
             pm_id = user.employee_id
-        elif user.role not in ORG_WIDE_ROLES:
+        elif not user.has_role(*ORG_WIDE_ROLES):
             if user.employee_id is None:
                 return []
             employee_id = UUID(str(user.employee_id))

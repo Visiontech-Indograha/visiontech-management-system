@@ -30,7 +30,7 @@ CLEARANCE_OPEN = ("CLEARANCE_PENDING", "SUBMITTED")
 
 
 def _manages_all(user: CurrentUser) -> bool:
-    return user.role == "SUPER_ADMIN" or Permission.MANAGE_OFFBOARDING.value in user.permissions
+    return user.has_role("SUPER_ADMIN") or Permission.MANAGE_OFFBOARDING.value in user.permissions
 
 
 class OffboardingService:
@@ -41,7 +41,7 @@ class OffboardingService:
     # ── Baca ─────────────────────────────────────────────────────────────────
     async def _my_division(self, user: CurrentUser) -> str | None:
         """None = semua divisi (HR/admin/OM); PM hanya divisinya."""
-        if _manages_all(user) or user.role == "OPERATIONAL_MANAGER":
+        if _manages_all(user) or user.has_role("OPERATIONAL_MANAGER"):
             return None
         if not user.employee_id:
             raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
@@ -129,9 +129,9 @@ class OffboardingService:
         as_pm = approval_type == "PM"
         if as_pm:
             managers = await self.repo.division_managers(record.division_id)
-            allowed = user.role == "SUPER_ADMIN" or (
+            allowed = user.has_role("SUPER_ADMIN") or (
                 managers is not None and user.employee_id in (str(managers.pm_id), str(managers.om_id))
-            ) or (record.division_id is None and user.role == "OPERATIONAL_MANAGER")
+            ) or (record.division_id is None and user.has_role("OPERATIONAL_MANAGER"))
             if not allowed:
                 raise ForbiddenError("Persetujuan PM hanya oleh PM/OM divisi karyawan.")
             if record.approved_by_pm_id is not None:

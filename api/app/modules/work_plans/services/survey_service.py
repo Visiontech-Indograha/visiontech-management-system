@@ -171,7 +171,7 @@ class SurveyService:
 
     async def list_surveys(self, user: CurrentUser, state: str | None) -> list[dict[str, Any]]:
         """Daftar survei: admin & OM semua; PM/OM divisi yang dipimpin; ketua/anggota tim sendiri (jadwal terbit)."""
-        sees_all = is_admin(user) or user.role == "OPERATIONAL_MANAGER"
+        sees_all = is_admin(user) or user.has_role("OPERATIONAL_MANAGER")
         if not sees_all and not user.employee_id:
             return []
         rows = await self.repo.list_tasks(user.employee_id, sees_all, state)

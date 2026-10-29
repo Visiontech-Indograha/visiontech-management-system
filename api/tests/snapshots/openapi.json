@@ -1507,6 +1507,20 @@
     "title": "Body_set_survey_logo_api_v1_exports_survey_logos__role__put",
     "type": "object"
    },
+   "Body_set_team_logo_api_v1_teams__team_id__logo_put": {
+    "properties": {
+     "file": {
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file"
+    ],
+    "title": "Body_set_team_logo_api_v1_teams__team_id__logo_put",
+    "type": "object"
+   },
    "Body_upload_document_api_v1_files_upload_post": {
     "properties": {
      "file": {
@@ -11453,6 +11467,29 @@
       ],
       "title": "Leader Name"
      },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
+     },
      "member_count": {
       "default": 0,
       "title": "Member Count",
@@ -11547,6 +11584,29 @@
       ],
       "title": "Leader Name"
      },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
+     },
      "member_count": {
       "default": 0,
       "title": "Member Count",
@@ -11592,6 +11652,31 @@
      "create_at"
     ],
     "title": "TeamListItem",
+    "type": "object"
+   },
+   "TeamLogoOut": {
+    "properties": {
+     "logo_file_id": {
+      "format": "uuid",
+      "title": "Logo File Id",
+      "type": "string"
+     },
+     "logo_url": {
+      "title": "Logo Url",
+      "type": "string"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "logo_file_id",
+     "logo_url"
+    ],
+    "title": "TeamLogoOut",
     "type": "object"
    },
    "TeamOption": {
@@ -24188,6 +24273,145 @@
      }
     ],
     "summary": "Update Team",
+    "tags": [
+     "Teams"
+    ]
+   }
+  },
+  "/api/v1/teams/{team_id}/logo": {
+   "delete": {
+    "description": "Menghapus logo tim → kembali ke logo default. Hanya ketua tim tersebut.",
+    "operationId": "delete_team_logo_api_v1_teams__team_id__logo_delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Team Logo",
+    "tags": [
+     "Teams"
+    ]
+   },
+   "get": {
+    "description": "Isi logo tim (gambar). Anggota tim, PM/OM divisi, HR, dan SUPER_ADMIN; selain itu/tanpa logo → 404.",
+    "operationId": "get_team_logo_api_v1_teams__team_id__logo_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Team Logo",
+    "tags": [
+     "Teams"
+    ]
+   },
+   "put": {
+    "description": "Mengganti logo tim (PNG/JPEG/WebP, maks 2 MB). Hanya ketua tim tersebut (SUPER_ADMIN darurat).",
+    "operationId": "set_team_logo_api_v1_teams__team_id__logo_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_set_team_logo_api_v1_teams__team_id__logo_put"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamLogoOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set Team Logo",
     "tags": [
      "Teams"
     ]

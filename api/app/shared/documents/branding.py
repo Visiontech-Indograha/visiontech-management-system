@@ -7,12 +7,14 @@ Logo kop laporan survei yang bisa diganti per organisasi: logo perusahaan (Visio
 from __future__ import annotations
 
 import io
+import logging
 from typing import Any, Literal
 
+import filetype
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core import storage
-from app.core.errors import ValidationError
+from app.core.errors import AppError, ValidationError
 
 LogoRole = Literal["company", "client"]
 DPI = 300
@@ -102,3 +104,57 @@ def apply_logos(doc: Any, template_format: str, logos: dict[str, bytes]) -> None
         except (UnidentifiedImageError, OSError):
             target = standard_px(role)
         part._blob = fit_logo(logos[role], target, name.rsplit(".", 1)[-1])
+
+
+# ── Logo tim (ketua tim mengganti; dipakai di semua dokumen tim) ──────────────────────────────
+# Format mengikuti logo Visiontech: PNG (logo_company.png). Berkas disimpan apa adanya, tanpa dipangkas.
+TEAM_LOGO_MAX_BYTES = 2 * 1024 * 1024
+TEAM_LOGO_MIN_PX = 64
+TEAM_LOGO_MAX_PX = 4000
+TEAM_LOGO_MIMES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+COMPANY_BOX_PX = standard_px("company")  # kotak logo standar kop dokumen (≈4,59 × 1,34 cm @300 dpi)
+
+logger = logging.getLogger(__name__)
+
+
+def validate_team_logo(raw: bytes) -> tuple[str, str]:
+    """Berkas logo tim yang lolos uji → (mime, ekstensi). Galat: 413 ukuran, 415 tipe, 422 rusak/ukuran piksel."""
+    if len(raw) > TEAM_LOGO_MAX_BYTES:
+        raise AppError("FILE_TOO_LARGE", "Ukuran logo melebihi batas 2 MB.", status=413)
+    kind = filetype.guess(raw)
+    mime = kind.mime if kind else None
+    if mime not in TEAM_LOGO_MIMES:
+        raise AppError("INVALID_FILE_TYPE", "Logo tim harus berformat PNG, JPEG, atau WebP.", status=415)
+    try:
+        img = Image.open(io.BytesIO(raw))
+        img.load()  # dekode penuh: berkas terpotong ikut tertolak
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise AppError("IMAGE_CORRUPT", "Berkas logo rusak atau terpotong.", status=422) from None
+    w, h = img.size
+    if not (TEAM_LOGO_MIN_PX <= w <= TEAM_LOGO_MAX_PX and TEAM_LOGO_MIN_PX <= h <= TEAM_LOGO_MAX_PX):
+        raise AppError("LOGO_SIZE_INVALID",
+                       f"Sisi logo harus {TEAM_LOGO_MIN_PX}-{TEAM_LOGO_MAX_PX} piksel.", status=422)
+    return mime, TEAM_LOGO_MIMES[mime]
+
+
+def team_logo_storage_key(organization_id: str, team_id: str, file_id: str, ext: str) -> str:
+    return f"{organization_id}/team-logo/{team_id}/{file_id}.{ext}"
+
+
+def team_logo_or_default(team_id: str | None, storage_key: str | None) -> bytes | None:
+    """Isi logo tim dari storage, atau None (→ pakai logo default Visiontech). Berkas hilang/MinIO mati = default."""
+    if not storage_key:
+        return None
+    try:
+        data = storage.get_object_bytes(storage_key)
+    except Exception:  # noqa: BLE001 - dokumen tetap terbit dengan logo default
+        data = None
+    if not data:
+        logger.debug("Logo tim %s tidak ditemukan di storage; memakai logo default.", team_id)
+        return None
+    return data
+
+
+def fit_contain_png(logo: bytes, box: tuple[int, int] = COMPANY_BOX_PX) -> bytes:
+    """Logo di tengah kotak `box` (skala proporsional, kanvas transparan). Persegi tampil lebih kecil, tak dipangkas."""
+    return fit_logo(logo, box, "png")

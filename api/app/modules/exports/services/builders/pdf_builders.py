@@ -5,6 +5,7 @@ PDF resmi BAST dengan QR verifikasi (docs/35 §8). Hanya untuk order yang sudah 
 from __future__ import annotations
 
 from app.modules.exports.services.builders.model import CompletionReport, qty, tgl
+from app.shared.documents.branding import COMPANY_BOX_PX, fit_contain_png
 from app.shared.documents.pdf_service import data_uri, html_to_pdf, qr_data_uri, render_html
 
 
@@ -17,5 +18,6 @@ def completion_pdf(r: CompletionReport) -> bytes:
         leader_sig=data_uri(r.leader_signature, "image/png") if r.leader_signature else None,
         pm_sig=data_uri(r.pm_signature, "image/png") if r.pm_signature else None,
         qr=qr_data_uri(r.verify_url) if r.verify_url else None,
+        logo=data_uri(fit_contain_png(r.team_logo, COMPANY_BOX_PX), "image/png") if r.team_logo else None,
     )
     return html_to_pdf(html)

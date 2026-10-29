@@ -147,3 +147,16 @@ def test_autodeploy_rolls_back_images_when_new_containers_are_unhealthy():
     assert "case $RC in 14|16|17|18) rollback_images || true ;; esac" in text
     # rollback hanya setelah kontainer dinyalakan: tidak untuk kegagalan checkout/build/backup/migrasi (11-13, 15)
     assert text.index("rollback_images()") > text.index("Jalankan kontainer baru")
+
+
+def test_images_carry_environment_and_revision_labels():
+    """Citra harus menjelaskan dirinya (layanan, lingkungan, commit) dan autodeploy mengisinya lewat build-arg."""
+    root = DEPLOY.parent
+    for svc, dockerfile in (("api", "api/Dockerfile"), ("web", "web/Dockerfile"), ("face", "face-service/Dockerfile")):
+        text = read(root / dockerfile)
+        required = ("ARG GIT_SHA", "ARG VMS_ENV", f'vms.layanan="{svc}"', "vms.lingkungan=",
+                    "org.opencontainers.image.revision")
+        for needle in required:
+            assert needle in text, f"{dockerfile}: tidak ada {needle}"
+    deploy = read(DEPLOY / "autodeploy.sh")
+    assert '--build-arg "GIT_SHA=' in deploy and '--build-arg "VMS_ENV=' in deploy

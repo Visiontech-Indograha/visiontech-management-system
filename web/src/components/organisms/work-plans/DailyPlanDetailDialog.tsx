@@ -9,6 +9,7 @@ import { displayPct, phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { DailyPlanLocationForm } from "@/components/organisms/work-plans/DailyPlanLocationForm";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { DialogCancelButton } from "@/components/molecules/DialogActions";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
@@ -56,7 +57,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const remove = useDeleteDailyPlan();
   const copy = useCopyDailyPlan();
   const exportReport = useExportDailyReport();
-  const [mode, setMode] = useState<"view" | "reject" | "copy">("view");
+  const [mode, setMode] = useState<"view" | "reject" | "copy" | "location">("view");
   const [confirm, setConfirm] = useState<DailyAction | "delete" | null>(null);
   const p = detail.data ?? plan;
   // Galat tindakan lama (mis. "Jadwal belum berisi pekerjaan") hanya tampil selama isi jadwal belum berubah.
@@ -68,7 +69,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const copyForm = useDirtyForm();
   const formDirty = (mode === "reject" && rejectForm.dirty) || (mode === "copy" && copyForm.dirty);
   // Pindah mode membuang isian formulir kecil dan keadaan kotornya.
-  const enterMode = (next: "view" | "reject" | "copy") => {
+  const enterMode = (next: "view" | "reject" | "copy" | "location") => {
     rejectForm.reset();
     copyForm.reset();
     setMode(next);
@@ -77,6 +78,9 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const manages = !!p.can_manage;
   const editable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED");
   const deletable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED" || p.status === "APPROVED");
+  // Lokasi disetujui bisa diubah tanpa kembali ke draf, selama hari kerjanya belum mulai (API menegakkan aturan yang sama).
+  const todayJakarta = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const locationEditable = manages && p.status === "APPROVED" && p.work_date > todayJakarta;
 
   const run = async (fn: () => Promise<unknown>, done: string, close = false) => {
     setError(null);
@@ -165,6 +169,9 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
             </div>
           </FormBlock>
         )}
+        {mode === "location" && (
+          <DailyPlanLocationForm plan={p} onDone={() => enterMode("view")} onCancel={() => enterMode("view")} />
+        )}
         {mode === "copy" && (
           <FormBlock
             {...copyForm.formProps}
@@ -235,6 +242,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
           {manages && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}
+          {locationEditable && <ActionButton size="sm" variant="outline" onClick={() => enterMode("location")}>Ubah lokasi</ActionButton>}
           {/* F10: hapus (lunak) untuk draf, diajukan, dan disetujui yang belum dimulai; API menolak bila sudah dipakai. */}
           {deletable && (
             <ActionButton

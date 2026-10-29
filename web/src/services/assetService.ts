@@ -9,6 +9,7 @@ export type Vehicle = S["VehicleOut"];
 export type Loan = S["LoanOut"];
 export type VehicleFile = S["VehicleFileOut"];
 export type LoanRequest = S["LoanRequestOut"];
+export type AssetAvailability = S["AssetAvailabilityOut"];
 export type ToolCreate = S["ToolCreate"];
 export type VehicleCreate = S["VehicleCreate"];
 export type LoanCreate = S["LoanCreate"];
@@ -30,6 +31,17 @@ export const useLoans = (open = true) =>
   useQuery({
     queryKey: [...KEY, "loans", { open }],
     queryFn: async () => (await api.get<Loan[]>("/assets/loans", { params: { open } })).data,
+  });
+
+/** Ketersediaan alat & kendaraan pada tanggal jadwal (tim pemakai bila dipakai). `team_id` menandai tim peminta. */
+export const useAssetAvailability = (date: string, teamId?: string) =>
+  useQuery({
+    queryKey: [...KEY, "availability", date, teamId ?? null],
+    enabled: !!date,
+    queryFn: async () =>
+      (await api.get<AssetAvailability[]>("/assets/availability", {
+        params: { date, ...(teamId ? { team_id: teamId } : {}) },
+      })).data,
   });
 
 export const useVehicleFiles = (vehicleId: string) =>

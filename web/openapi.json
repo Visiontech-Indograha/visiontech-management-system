@@ -24869,6 +24869,19 @@
       ],
       "title": "Task Phase"
      },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
+     },
      "is_main_deliverable": {
       "type": "boolean",
       "title": "Is Main Deliverable",
@@ -25049,6 +25062,17 @@
        "MAINTENANCE"
       ],
       "title": "Task Phase"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
      },
      "is_main_deliverable": {
       "type": "boolean",
@@ -25352,6 +25376,19 @@
        }
       ],
       "title": "Task Phase"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 50,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
      },
      "is_main_deliverable": {
       "anyOf": [
@@ -30130,6 +30167,31 @@
        }
       ],
       "title": "Follow Up Work Type Id"
+     },
+     "unit_measure": {
+      "type": "string",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit Measure",
+      "default": "Unit"
+     },
+     "default_phase": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
      }
     },
     "type": "object",
@@ -30228,6 +30290,29 @@
        }
       ],
       "title": "Follow Up Name"
+     },
+     "unit_measure": {
+      "type": "string",
+      "title": "Unit Measure",
+      "default": "Unit"
+     },
+     "default_phase": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
      },
      "photos": {
       "items": {

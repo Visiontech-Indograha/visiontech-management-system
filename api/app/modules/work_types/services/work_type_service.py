@@ -55,6 +55,14 @@ class WorkTypeService:
             raise ValidationError("Label slot foto tidak boleh kembar.")
         return name, photos
 
+    @staticmethod
+    def _clean_defaults(data: WorkTypeIn) -> tuple[str, str | None]:
+        """Satuan & fase bawaan item. Fase SURVEY hanya sah untuk jenis survei (sama dengan aturan item jadwal)."""
+        unit = (data.unit_measure or "").strip() or "Unit"
+        if data.default_phase == "SURVEY" and data.kind not in ("SURVEY_TASK", "SURVEY_POINT"):
+            raise ValidationError("Fase bawaan survei hanya untuk jenis pekerjaan survei.")
+        return unit, data.default_phase
+
     async def _check_examples(self, org_id: str, photos: list[dict[str, Any]]) -> None:
         """Foto contoh harus berkas milik organisasi ini (V-08)."""
         await ensure_same_org(self.db, org_id, files=[p["example_file_id"] for p in photos])
@@ -70,11 +78,13 @@ class WorkTypeService:
         if division_id is None:
             raise ValidationError("Divisi wajib ditentukan untuk jenis pekerjaan ini.")
         name, photos = self._clean(data)
+        unit, phase = self._clean_defaults(data)
         if await self.repo.name_taken(org_id, division_id, name, None):
             raise AppError("DUPLICATE", "Jenis pekerjaan dengan nama itu sudah ada di divisi ini.", status=409)
         await self._check_examples(org_id, photos)
         follow_up = await self._check_kind(data, str(division_id), None)
-        type_id = await self.repo.insert_type(org_id, division_id, name, data.description, data.kind, follow_up)
+        type_id = await self.repo.insert_type(
+            org_id, division_id, name, data.description, data.kind, follow_up, unit_measure=unit, default_phase=phase)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, UUID(type_id))
 
@@ -98,6 +108,8 @@ class WorkTypeService:
         await self._check_examples(org_id, photos)
         await self.repo.update_type(type_id, name, target_division, data.description, True)
         await self.repo.set_kind(type_id, data.kind, await self._check_kind(data, str(target_division), type_id))
+        unit, phase = self._clean_defaults(data)
+        await self.repo.set_defaults(type_id, unit, phase)
         await self.repo.replace_photos(org_id, type_id, photos)
         return await self.get(org_id, type_id)
 
@@ -147,7 +159,8 @@ class WorkTypeService:
             for p in (source.photos or [])
         ]
         new_id = await self.repo.insert_type(
-            org_id, target_division_id, source.name, source.description, source.kind, None
+            org_id, target_division_id, source.name, source.description, source.kind, None,
+            unit_measure=source.unit_measure, default_phase=source.default_phase,
         )
         await self.repo.replace_photos(org_id, new_id, photos)
         for m in await self.repo.list_default_materials(type_id):

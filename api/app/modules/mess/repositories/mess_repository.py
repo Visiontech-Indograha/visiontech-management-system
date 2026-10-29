@@ -99,6 +99,35 @@ class MessRepository(BaseRepository):
             {"id": str(mess_id), "start": start, "end": end, "ex": str(exclude) if exclude else None},
         ) or 0)
 
+    async def first_full_day(
+        self, mess_id: UUID | str, start: date, end: date, capacity: int, exclude: UUID | str | None = None
+    ) -> date | None:
+        """Tanggal pertama dalam rentang (inklusif) saat hunian disetujui sudah mencapai kapasitas; None bila lolos.
+        Dihitung per tanggal: dua hunian yang tidak pernah bersamaan tidak saling memakan kapasitas."""
+        day = await self.scalar(
+            """
+            SELECT g.d::date
+            FROM generate_series(CAST(:start AS date), CAST(:end AS date), interval '1 day') AS g(d)
+            JOIN LATERAL (
+                SELECT COUNT(*) AS cnt FROM company_mess_stay s
+                WHERE s.mess_id = CAST(:id AS uuid) AND s.delete_at IS NULL AND s.status = 'APPROVED'
+                  AND s.stay_start_date <= g.d::date AND s.stay_end_date >= g.d::date
+                  AND (CAST(:ex AS uuid) IS NULL OR s.mess_stay_id <> CAST(:ex AS uuid))
+            ) c ON TRUE
+            WHERE c.cnt >= :cap
+            ORDER BY g.d
+            LIMIT 1
+            """,
+            {"id": str(mess_id), "start": start, "end": end, "cap": capacity,
+             "ex": str(exclude) if exclude else None},
+        )
+        return day if isinstance(day, date) else None
+
+    async def team_exists(self, team_id: UUID | str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM team WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL)",
+            {"id": str(team_id)}))
+
     # --- hunian ----------------------------------------------------------------------------------------------------
     async def list_stays(
         self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None
@@ -160,10 +189,11 @@ class MessRepository(BaseRepository):
             """
             INSERT INTO company_mess_stay (mess_id, mess_name, city, address, latitude, longitude, employee_id,
                                            stay_start_date, stay_end_date, status, requested_by_user_id,
-                                           request_note, decided_by_user_id, decided_at)
+                                           request_note, decided_by_user_id, decided_at, team_id)
             SELECT p.mess_id, p.mess_name, p.city, p.address, p.latitude, p.longitude, CAST(:employee_id AS uuid),
                    :stay_start_date, :stay_end_date, CAST(:status AS text), CAST(:requested_by AS uuid),
-                   :request_note, CAST(:decided_by AS uuid), CAST(:decided_at AS timestamptz)
+                   :request_note, CAST(:decided_by AS uuid), CAST(:decided_at AS timestamptz),
+                   CAST(:team_id AS uuid)
             FROM company_mess p WHERE p.mess_id = CAST(:mess_id AS uuid) AND p.delete_at IS NULL
             RETURNING mess_stay_id
             """,

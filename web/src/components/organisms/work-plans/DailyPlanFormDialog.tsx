@@ -91,6 +91,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
       } else {
         await create.mutateAsync({
           ...body,
+          kind: "WORK",
           division_id: team.division_id,
           team_id: team.team_id,
           work_date: value("work_date"),

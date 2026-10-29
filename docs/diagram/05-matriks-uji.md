@@ -4,7 +4,7 @@ Dibuat dari kode per 2026-10-29. Kasus diturunkan dari transisi di `02-state-mac
 
 Kolom:
 
-- **ID**: prefiks area (MS master, JD jadwal, AB absen, PR progres, RO rollover, KO koreksi, LB lembur, SV survei, BA order dan BAST, VP verifikasi publik, EK ekspor, IZ izin umum, BT batas input, HM perilaku manusia).
+- **ID**: prefiks area (MS master, JD jadwal, AB absen, PR progres, RO rollover, KO koreksi, LB lembur, SV survei, BA order dan BAST, VP verifikasi publik, EK ekspor, IZ izin umum, BT batas input, HM perilaku manusia, AT aset tim pada jadwal, MH hunian mess per tanggal).
 - **Tipe**: UI web, HP (Flutter), atau API (pemanggilan langsung ke endpoint, misalnya via Postman CLI atau pytest).
 - **Prioritas**: P1 wajib sebelum rilis, P2 penting, P3 sekadar kelengkapan.
 - Kode galat: 401 belum login, 403 izin atau relasi, 404 tidak terlihat, 409 status tidak sesuai, 422 validasi.
@@ -295,3 +295,15 @@ Kolom:
 | HM-12 | Aplikasi ditutup saat unggah foto | Anggota | foto kembali di antrean | HP | P2 | |
 | HM-13 | Dua tab PM mengubah item yang sama | PM | konflik ditolak 409, tidak menimpa diam-diam [VERIFIKASI] | UI web | P2 | |
 | HM-14 | Akurasi GPS turun ke 110 m di tengah absen | Anggota | diminta pindah ke tempat terbuka, absen belum tercatat | HP | P2 | |
+
+## O. Aset tim pada jadwal dan hunian mess
+
+| ID | Skenario | Peran | Harapan | Tipe | Prioritas | Catatan |
+|---|---|---|---|---|---|---|
+| AT-01 | Buat jadwal tim; aset bawaan tim dipakai tim lain pada tanggal itu | PM | peringatan "Bentrok: dipakai <nama tim>" dengan tanggal jadwal | UI web | P1 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-02 | Aset bawaan tim tersedia pada tanggal jadwal | PM | ditandai "Tersedia"; aset tim lain tidak tampil | UI web | P2 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-03 | Tim belum punya aset bawaan | PM | panel menyebut belum ada aset tim | UI web | P3 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-04 | Ketersediaan diminta per tanggal dan tim | sistem | GET /assets/availability?date=&team_id= | API | P1 | sudah ada di API (PR #235) |
+| MH-01 | Tempatkan karyawan ke mess pada rentang yang sudah penuh di satu hari | HR | peringatan "Mess penuh pada dd-mm-yyyy" dan tanggal lain tidak disebut | UI web | P1 | vitest `mess-hunian-kapasitas.test.tsx` |
+| MH-02 | Rentang masih muat | HR | tanpa peringatan | UI web | P2 | vitest `mess-hunian-kapasitas.test.tsx` |
+| MH-03 | Pilih tim yang menginap | HR | team_id ikut dikirim; kosong = null | UI web | P2 | vitest `mess-hunian-kapasitas.test.tsx` |

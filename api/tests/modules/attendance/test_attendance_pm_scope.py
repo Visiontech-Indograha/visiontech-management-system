@@ -82,3 +82,15 @@ def test_selfie_of_other_division_is_hidden_from_pm(client, world: World):
     assert client.get(f"/files/{file_id}/url", headers=world.headers(client, "pm")).status_code == 200
     assert client.get(f"/files/{file_id}/url", headers=world.headers(client, "pm2")).status_code == 404
     assert client.get(f"/files/{file_id}/url", headers=world.headers(client, "ops")).status_code == 200
+
+
+def test_hr_sees_and_opens_selfies_of_every_division(client, world: World):
+    """Keputusan pemilik HR: ADMIN_HR_GA melihat absensi & swafoto seluruh karyawan (sama seperti OM/Finance)."""
+    att_id = _member_check_in(client, world)
+    _second_division_pm(world)
+    file_id = sync_query(
+        "SELECT f.id::text FROM attendance a JOIN file_object f ON f.storage_key = a.face_photo_path "
+        "WHERE a.attendance_id = %s", (att_id,))[0][0]
+
+    assert att_id in _listed_ids(client, world, "hr")
+    assert client.get(f"/files/{file_id}/url", headers=world.headers(client, "hr")).status_code == 200

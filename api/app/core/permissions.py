@@ -140,9 +140,11 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE,
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
+    # HR melihat absensi seluruh karyawan (keputusan pemilik HR), tanpa wewenang mengekspor/meninjau.
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+        P.VIEW_ALL_ATTENDANCE,
     }),
     # Finance melihat & mengekspor absensi seluruh karyawan dan meninjau lembur (sama seperti FINANCE V1).
     SystemRole.FINANCE: frozenset({

@@ -5,7 +5,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
-import { phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
+import { displayPct, phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
@@ -77,7 +77,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     ...((isLeader || canPlan) && p.status === "ONGOING" ? (["complete"] as const) : []),
   ];
 
-  const pct = p.progress_pct ?? 0;
+  const pct = displayPct(p);
   const state = WORK_STATE[workState(p, wibDate())];
 
   return (
@@ -161,8 +161,8 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
               {ACTION_LABEL[a]}
             </ActionButton>
           ))}
-          {canPlan && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
-            <ActionButton size="sm" variant="outline" onClick={() => setMode("reject")}>Kembalikan</ActionButton>
+          {canPlan && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
+            <ActionButton size="sm" variant="outline" onClick={() => setMode("reject")}>Kembalikan ke draf</ActionButton>
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
           {canPlan && <ActionButton size="sm" variant="outline" onClick={() => setMode("copy")}>Salin ke hari lain</ActionButton>}

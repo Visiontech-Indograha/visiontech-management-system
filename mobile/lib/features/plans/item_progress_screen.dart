@@ -435,7 +435,9 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     ),
                     Expanded(
                       child: TextField(
-            maxLength: 12,
+                        maxLength: 12,
+                        // Penghitung "n/12" tak bermakna untuk jumlah (dan membingungkan saat tak bisa diubah).
+                        buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
                         controller: _qty,
                         enabled: _editable,
                         textAlign: TextAlign.center,

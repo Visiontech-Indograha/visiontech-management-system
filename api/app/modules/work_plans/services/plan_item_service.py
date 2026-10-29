@@ -49,6 +49,8 @@ PHASE_BY_KIND = {
     "MAINTENANCE": "MAINTENANCE",
 }
 MAIN_PHASES = ("INSTALLATION", "REPLACEMENT", "MAINTENANCE")
+# Fase SURVEY hanya sah pada jenis pekerjaan survei; jenis lain (mis. WORK) menolak fase itu.
+SURVEY_KINDS = ("SURVEY_TASK", "SURVEY_POINT")
 
 
 def _state(message: str) -> AppError:
@@ -122,15 +124,21 @@ class PlanItemService:
             if not {str(e) for e in assigned} <= members:
                 raise ValidationError("Penugasan hanya untuk anggota aktif tim jadwal ini.")
 
+    @staticmethod
+    async def _check_phase(kind: str | None, phase: str | None) -> None:
+        if phase == "SURVEY" and kind not in SURVEY_KINDS:
+            raise ValidationError("Fase survei hanya untuk jenis pekerjaan survei (template survei).")
+
     async def create(self, user: CurrentUser, daily_plan_id: UUID, data: PlanItemCreate) -> Any:
         access = await check_daily_access(self.db, daily_plan_id, user, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT", "SUBMITTED")
         fields = data.model_dump()
         fields["title"] = data.title.strip()
         await self._validate(access, fields)
+        kind = await self.repo.work_type_kind(data.work_type_id)
         if fields["task_phase"] is None:
-            kind = await self.repo.work_type_kind(data.work_type_id)
             fields["task_phase"] = PHASE_BY_KIND.get(kind or "", "INSTALLATION")
+        await self._check_phase(kind, fields["task_phase"])
         if fields["is_main_deliverable"] and fields["task_phase"] not in MAIN_PHASES:
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")
         item_id = await self.repo.insert(daily_plan_id, fields)
@@ -145,6 +153,9 @@ class PlanItemService:
         if fields.get("title"):
             fields["title"] = fields["title"].strip()
         phase = fields.get("task_phase", item.task_phase)
+        if "task_phase" in fields or "work_type_id" in fields:
+            kind = await self.repo.work_type_kind(fields.get("work_type_id", item.work_type_id))
+            await self._check_phase(kind, phase)
         main = fields.get("is_main_deliverable", item.is_main_deliverable)
         if main and phase not in ("INSTALLATION", "REPLACEMENT", "MAINTENANCE"):
             raise ValidationError("Deliverable utama hanya untuk fase instalasi, penggantian, atau pemeliharaan.")

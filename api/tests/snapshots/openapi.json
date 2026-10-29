@@ -2274,7 +2274,8 @@
        "SURVEY_REPORT",
        "BAST_PDF",
        "BOQ",
-       "PROGRESS_SLIDES"
+       "PROGRESS_SLIDES",
+       "ORDER_SHEET"
       ],
       "title": "Template",
       "type": "string"
@@ -3366,6 +3367,20 @@
      "summary"
     ],
     "title": "DailyReportCreate",
+    "type": "object"
+   },
+   "DailyReportExportRequest": {
+    "properties": {
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "daily_plan_id"
+    ],
+    "title": "DailyReportExportRequest",
     "type": "object"
    },
    "DailyReportOut": {
@@ -19124,6 +19139,49 @@
     "summary": "Events",
     "tags": [
      "Events"
+    ]
+   }
+  },
+  "/api/v1/exports/daily-report": {
+   "post": {
+    "description": "Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan\nketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).",
+    "operationId": "export_daily_report_api_v1_exports_daily_report_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyReportExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/octet-stream": {}
+      },
+      "description": "Berkas dokumen"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Export Daily Report",
+    "tags": [
+     "Ekspor Dokumen"
     ]
    }
   },

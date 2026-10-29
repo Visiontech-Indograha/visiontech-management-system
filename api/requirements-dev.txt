@@ -3,5 +3,5 @@
 # Alat pengembangan & CI (dok 12 §7, dok 14). Versi stabil terbaru per 2026-09-23.
 pytest==9.1.1
 pytest-xdist==3.8.0
-ruff==0.16.8
-mypy==2.3.1
+ruff==0.17.2
+mypy==2.4.0

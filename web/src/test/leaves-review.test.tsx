@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { mockMe } from "@/app/mockSession";
 import { mockApi, renderRoute } from "./utils";
 
 /** Persetujuan cuti dua tahap: PM lebih dulu, lalu HR/GA. HR harus bisa meninjau cuti yang sudah disetujui PM. */
@@ -16,20 +17,20 @@ const handler = (status: string) => (c: { url?: string; method?: string }) => {
 describe("Tinjau cuti", () => {
   it("HR melihat tombol tinjau untuk cuti yang sudah disetujui PM", async () => {
     mockApi(handler("APPROVED_BY_PM"));
-    renderRoute("/leaves", { role: "HR" });
+    renderRoute("/leaves", { me: { ...mockMe("HR")!, role: "ADMIN_HR_GA" } });
     expect(await screen.findByRole("button", { name: "Tinjau cuti Uji Ketua" })).toBeInTheDocument();
   });
 
   it("PM tidak bisa meninjau lagi cuti yang sudah disetujuinya", async () => {
     mockApi(handler("APPROVED_BY_PM"));
-    renderRoute("/leaves", { role: "PM" });
+    renderRoute("/leaves", { me: { ...mockMe("PM")!, role: "PROJECT_MANAGER" } });
     expect(await screen.findByText("Keperluan keluarga")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Tinjau cuti Uji Ketua" })).not.toBeInTheDocument();
   });
 
   it("cuti yang masih menunggu bisa ditinjau PM", async () => {
     mockApi(handler("PENDING"));
-    renderRoute("/leaves", { role: "PM" });
+    renderRoute("/leaves", { me: { ...mockMe("PM")!, role: "PROJECT_MANAGER" } });
     expect(await screen.findByRole("button", { name: "Tinjau cuti Uji Ketua" })).toBeInTheDocument();
   });
 });

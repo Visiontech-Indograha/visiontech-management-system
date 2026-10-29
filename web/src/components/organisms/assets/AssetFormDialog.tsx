@@ -11,6 +11,7 @@ export function AssetFormDialog({
   title,
   submitLabel = "Simpan",
   submitting,
+  submitDisabled = false,
   formError,
   onClose,
   onSubmit,
@@ -19,6 +20,8 @@ export function AssetFormDialog({
   title: string;
   submitLabel?: string;
   submitting: boolean;
+  /** Tombol simpan nonaktif (mis. bentrok jadwal) selain saat sedang menyimpan. */
+  submitDisabled?: boolean;
   formError: string | null;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -33,7 +36,7 @@ export function AssetFormDialog({
       footer={
         <>
           <DialogCancelButton onCancel={onClose} disabled={submitting} />
-          <ActionButton type="submit" form="asset-form" disabled={submitting}>
+          <ActionButton type="submit" form="asset-form" disabled={submitting || submitDisabled}>
             {submitting ? "Menyimpan..." : submitLabel}
           </ActionButton>
         </>

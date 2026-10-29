@@ -187,3 +187,42 @@ def test_pm_backdates_up_to_seven_days_with_reason_and_audit(client, world: Worl
     assert approved.json()["status"] == "APPROVED"
     assert sync_query("SELECT COUNT(*) FROM app_activity_logs WHERE entity_id = %s "
                       "AND action = 'BACKDATE_APPROVED'", (plan_id,))[0][0] == 1
+
+
+def test_pm_approves_own_draft_in_one_step_with_both_audit_rows(client, world: World):
+    """PM/OM menyetujui DRAFT miliknya langsung (submit+approve atomik); audit mencatat SUBMITTED dan APPROVED."""
+    pm, leader = world.headers(client, "pm"), world.headers(client, "leader")
+    pid = _create(client, world, days=1).json()["daily_plan_id"]
+    add_item(pid, world, "Titik satu-langkah")
+    assert client.post(f"/work-plans/daily/{pid}/approve", headers=leader).status_code in (403, 404)
+    approved = client.post(f"/work-plans/daily/{pid}/approve", headers=pm)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "APPROVED"
+    actions = sorted(r[0] for r in sync_query(
+        "SELECT action FROM app_activity_logs WHERE entity_id = %s AND action IN ('SUBMITTED', 'APPROVED')",
+        (pid,)))
+    assert actions == ["APPROVED", "SUBMITTED"]
+
+
+def test_can_manage_flag_is_true_only_for_division_manager(client, world: World):
+    """Tombol persetujuan di web bergantung pada can_manage: hanya PM/OM divisi (ketua & anggota tidak)."""
+    draft = make_daily_plan(world, status="DRAFT", days_from_today=2)
+    approved = make_daily_plan(world, status="APPROVED", days_from_today=3)
+    pm = world.headers(client, "pm")
+    assert client.get(f"/work-plans/daily/{draft}", headers=pm).json()["can_manage"] is True
+    assert client.get(f"/work-plans/daily/{approved}", headers=pm).json()["can_manage"] is True
+    member = world.headers(client, "member")
+    assert client.get(f"/work-plans/daily/{approved}", headers=member).json()["can_manage"] is False
+    assert all(p["can_manage"] for p in client.get(
+        "/work-plans/daily", params={"start": str(jakarta_now().date()),
+                                     "end": str(jakarta_now().date() + timedelta(days=5))}, headers=pm).json())
+
+
+def test_pm_deletes_backdated_draft(client, world: World):
+    """T-6: draf bertanggal lampau (dibuat via backdate) boleh dihapus lunak oleh PM/OM pembuatnya."""
+    pm = world.headers(client, "pm")
+    created = _create(client, world, days=-2, backdate_reason="Hujan, pekerjaan tertunda")
+    assert created.status_code == 201, created.text
+    pid = created.json()["daily_plan_id"]
+    assert client.delete(f"/work-plans/daily/{pid}", headers=pm).status_code == 200
+    assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s", (pid,))[0][0]

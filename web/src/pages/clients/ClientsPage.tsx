@@ -30,6 +30,7 @@ export function ClientsPage() {
       onDeactivate={setRemoving}
       onCloseEdit={() => setEditing(null)}
       onCloseRemove={() => setRemoving(null)}
+      onUseExisting={(id) => setEditing(clientsQuery.data?.find((c) => c.client_id === id) ?? null)}
     />
   );
 }

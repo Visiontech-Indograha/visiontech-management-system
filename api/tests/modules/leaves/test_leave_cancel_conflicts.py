@@ -120,3 +120,23 @@ def test_cancel_without_body_still_works_for_older_field_apps(client, world: Wor
     assert cancelled.status_code == 200, cancelled.text
     assert cancelled.json()["status"] == "CANCELLED"
     assert cancelled.json()["cancel_note"] is None
+
+
+def test_approval_note_is_not_reported_as_rejection(client, world: World):
+    """T-8: catatan persetujuan (kolom rejection_note bersama) muncul sebagai review_note, bukan penolakan."""
+    hr = world.headers(client, "hr")
+    approved_id = _apply_sick(client, world, _next_workday(70))
+    approved = client.post(f"/leaves/{approved_id}/review", headers=hr,
+                           json={"decision": "APPROVED", "note": "Semoga cepat sembuh"})
+    assert approved.status_code == 200, approved.text
+    detail = client.get(f"/leaves/{approved_id}", headers=hr).json()
+    assert detail["review_note"] == "Semoga cepat sembuh"
+    assert detail["rejection_note"] is None
+
+    rejected_id = _apply_sick(client, world, _next_workday(71))
+    rejected = client.post(f"/leaves/{rejected_id}/review", headers=hr,
+                           json={"decision": "REJECTED", "note": "Surat dokter tidak lengkap"})
+    assert rejected.status_code == 200, rejected.text
+    detail = client.get(f"/leaves/{rejected_id}", headers=hr).json()
+    assert detail["rejection_note"] == "Surat dokter tidak lengkap"
+    assert detail["review_note"] is None

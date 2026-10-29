@@ -21,11 +21,13 @@ from typing import Any
 from uuid import UUID
 
 import filetype
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
+from app.modules.work_completion.repositories.work_completion_bom_repository import WorkCompletionBomRepository
 from app.modules.work_completion.repositories.work_completion_repository import (
     CRUDWorkCompletion,
 )
@@ -172,11 +174,35 @@ class WorkCompletionService:
             raise NotFoundError("Tanda tangan")
         return png
 
+    async def export_access(self, user: CurrentUser, completion_id: UUID) -> tuple[dict[str, Any], bool]:
+        """Akses ekspor dokumen order: (order, penuh). Pengelola (PM order / PM-OM divisi) dan Super Admin = penuh.
+        Ketua tim yang punya item di order = terbatas (False). Selain itu 403 (404 bila order tak terlihat)."""
+        order = await self._access(user, completion_id, manage=False)
+        on_team = order.pop("_on_team", False)
+        standing = await self.crud.standing(completion_id, user.employee_id)
+        if user.has_role("SUPER_ADMIN") or (standing is not None and standing.manages):
+            return order, True
+        if on_team and user.has_role("TEAM_LEADER"):
+            return order, False
+        raise ForbiddenError("Dokumen order ini hanya untuk PM/OM divisi. Ketua tim hanya dapat mengunduh "
+                             "BAST dan slide progres untuk timnya.")
+
     async def get_order_detail(self, current_user: CurrentUser, completion_id: UUID) -> dict[str, Any]:
         """Mengambil rincian order proyek (yang terlihat oleh pengguna)."""
         order = await self._access(current_user, completion_id, manage=False)
         order.pop("_on_team", None)
         return order
+
+    async def _client_name(self, client_id: Any, project: Any) -> str:
+        """Nama klien order diambil dari master klien: order wajib memilih klien (atau lewat proyek)."""
+        if not client_id:
+            raise ValidationError("Pilih klien dari daftar klien. Buat klien baru di menu Klien bila belum ada.")
+        client = await self.crud.client_snapshot(client_id)
+        if client is None:
+            raise ValidationError("Klien tidak ditemukan.")
+        if project is not None and str(project.client_id) != str(client.client_id):
+            raise ValidationError("Klien order tidak sesuai dengan klien proyek.")
+        return str(client.name)
 
     async def create_order(self, current_user: CurrentUser, data: dict[str, Any]) -> dict[str, Any]:
         """Membuat order proyek baru."""
@@ -194,9 +220,12 @@ class WorkCompletionService:
                 if proj:
                     data["division_id"] = proj.division_id
             elif current_user.employee_id:
-                pm_div = await self.crud.get_pm_division(current_user.employee_id)
-                if pm_div:
-                    data["division_id"] = pm_div
+                pm_divs = await self.crud.get_pm_divisions(current_user.employee_id)
+                if len(pm_divs) > 1:  # PM multi-divisi: order tidak boleh masuk ke divisi yang acak
+                    raise AppError("DIVISION_REQUIRED", "Anda memimpin lebih dari satu divisi. Pilih divisi order ini.",
+                                   status=422, details={"divisions": pm_divs})
+                if pm_divs:
+                    data["division_id"] = pm_divs[0]["division_id"]
         if not data.get("division_id"):
             raise ValidationError("Divisi order wajib ditentukan.")
         if not current_user.has_role("SUPER_ADMIN") and (
@@ -211,15 +240,16 @@ class WorkCompletionService:
                 raise ValidationError("Proyek tidak ditemukan di divisi order ini.")
             if project.status != "ONGOING":
                 raise ValidationError("Proyek tidak sedang berjalan.")
-            data["client_name"] = data.get("client_name") or project.client_name
+            data["client_id"] = data.get("client_id") or project.client_id
             data["project_title"] = data.get("project_title") or project.project_title
             data["order_number"] = data.get("order_number") or project.spk_number[:50]
             data.setdefault("start_work_date", project.start_date)
             data.setdefault("end_work_date", project.end_date)
             if not current_user.has_role("PROJECT_MANAGER") and not data.get("pm_id"):
                 data["pm_id"] = project.pm_id
-        if not data.get("client_name") or not data.get("project_title"):
-            raise ValidationError("Isi nama klien dan judul pekerjaan, atau pilih proyek.")
+        data["client_name"] = await self._client_name(data.get("client_id"), project)
+        if not data.get("project_title"):
+            raise ValidationError("Isi judul pekerjaan, atau pilih proyek.")
         pm_id = data.get("pm_id")
         if pm_id and await self.crud.employee_role(pm_id) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
@@ -248,6 +278,9 @@ class WorkCompletionService:
         existing = await self._editable(current_user, completion_id)
         if data.get("pm_id") and await self.crud.employee_role(data["pm_id"]) != "PROJECT_MANAGER":
             raise ValidationError("PM order harus karyawan aktif dengan peran Project Manager.")
+        data.pop("client_name", None)  # nama klien selalu diambil dari master klien
+        if "client_id" in data:
+            data["client_name"] = await self._client_name(data["client_id"], None)
 
         await self.crud.update_completion(completion_id, data)
         updated = await self.crud.get_completion(completion_id)
@@ -443,3 +476,8 @@ class WorkCompletionService:
         """Membaca daftar revisi klien."""
         await self.get_order_detail(current_user, completion_id)
         return await self.crud.list_revisions(completion_id)
+
+
+async def sync_bom_for_order(db: AsyncSession, completion_id: UUID | str) -> int:
+    """Dipakai modul jadwal saat item dibuat dari template: salin BoM default jenis pekerjaan ke order (idempoten)."""
+    return await WorkCompletionBomRepository(db).sync_bom_from_work_types(completion_id)

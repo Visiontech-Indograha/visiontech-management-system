@@ -39,10 +39,11 @@ def test_client_with_project_updated_only_by_owning_division(client, world: Worl
     pm2 = world.add_person("pm2", "PM", unit_id=unit2)
     sync_query("UPDATE division SET pm_id = %s WHERE division_id = %s", (pm2, unit2))
 
-    denied = client.put(f"/clients/{client_id}", headers=world.headers(client, "pm2"), json={"name": "Ganti"})
+    new_name = f"Ganti {uuid.uuid4().hex[:8]}"  # nama unik: DB uji dipakai bersama (nama klien harus unik)
+    denied = client.put(f"/clients/{client_id}", headers=world.headers(client, "pm2"), json={"name": new_name})
     assert denied.status_code == 403, denied.text
     assert client.delete(f"/clients/{client_id}", headers=world.headers(client, "pm2")).status_code == 403
 
-    allowed = client.put(f"/clients/{client_id}", headers=world.headers(client, "pm"), json={"name": "Ganti"})
+    allowed = client.put(f"/clients/{client_id}", headers=world.headers(client, "pm"), json={"name": new_name})
     assert allowed.status_code == 200, allowed.text
-    assert allowed.json()["name"] == "Ganti"
+    assert allowed.json()["name"] == new_name

@@ -74,7 +74,7 @@ export interface paths {
         };
         /**
          * List Clients
-         * @description Daftar klien.
+         * @description Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.
          */
         get: operations["list_clients_api_v1_clients_get"];
         put?: never;
@@ -542,6 +542,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-plans/daily/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Create Daily
+         * @description Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+         */
+        post: operations["bulk_create_daily_api_v1_work_plans_daily_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/bulk-standby": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Standby Daily
+         * @description Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+         */
+        post: operations["bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/daily/{daily_plan_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Daily Plan
+         * @description Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim.
+         */
+        post: operations["activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-plans/daily/approve": {
         parameters: {
             query?: never;
@@ -763,7 +823,7 @@ export interface paths {
         };
         /**
          * Order Schedule
-         * @description Jadwal harian yang memuat item order klien ini (proyek multi-minggu).
+         * @description Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.
          */
         get: operations["order_schedule_api_v1_work_plans_orders__completion_id__schedule_get"];
         put?: never;
@@ -5042,6 +5102,100 @@ export interface components {
              */
             create_at: string;
         };
+        /**
+         * DailyActivateIn
+         * @description Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi).
+         */
+        DailyActivateIn: {
+            /** Items */
+            items: components["schemas"]["PlanItemCreate"][];
+        };
+        /** DailyBulkCellOut */
+        DailyBulkCellOut: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /**
+             * Work Date
+             * Format: date
+             */
+            work_date: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "CREATED" | "SKIPPED";
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Message */
+            message?: string | null;
+        };
+        /**
+         * DailyBulkIn
+         * @description Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.
+         */
+        DailyBulkIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Team Ids */
+            team_ids: string[];
+            /** Work Dates */
+            work_dates: string[];
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
+            /**
+             * Target
+             * @default DRAFT
+             * @enum {string}
+             */
+            target: "DRAFT" | "APPROVED";
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /**
+             * Attendance Radius M
+             * @default 150
+             */
+            attendance_radius_m: number | null;
+        };
+        /** DailyBulkOut */
+        DailyBulkOut: {
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: number;
+            /** Cells */
+            cells: components["schemas"]["DailyBulkCellOut"][];
+        };
+        /**
+         * DailyBulkStandbyIn
+         * @description Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati.
+         */
+        DailyBulkStandbyIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Team Ids */
+            team_ids: string[];
+            /** Work Dates */
+            work_dates: string[];
+        };
         /** DailyFormOptions */
         DailyFormOptions: {
             /** Divisions */
@@ -5116,6 +5270,12 @@ export interface components {
              * Format: date
              */
             work_date: string;
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /** Site Name */
             site_name?: string | null;
             /** Site Lat */
@@ -5209,6 +5369,12 @@ export interface components {
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
             /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
+            /**
              * Created By Id
              * Format: uuid
              */
@@ -5239,6 +5405,11 @@ export interface components {
              * @default []
              */
             phases: string[];
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
             /**
              * Items
              * @default []
@@ -5317,6 +5488,12 @@ export interface components {
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
             /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
+            /**
              * Created By Id
              * Format: uuid
              */
@@ -5347,6 +5524,11 @@ export interface components {
              * @default []
              */
             phases: string[];
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
         };
         /** DailyPlanUpdate */
         DailyPlanUpdate: {
@@ -6418,6 +6600,8 @@ export interface components {
             reviewed_at?: string | null;
             /** Rejection Note */
             rejection_note?: string | null;
+            /** Review Note */
+            review_note?: string | null;
             /** Cancel Note */
             cancel_note?: string | null;
             /** Conflicts */
@@ -6845,6 +7029,8 @@ export interface components {
              * Format: date
              */
             stay_end_date: string;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayOut */
         MessStayOut: {
@@ -6925,6 +7111,8 @@ export interface components {
             stay_end_date: string;
             /** Note */
             note?: string | null;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayUpdate */
         MessStayUpdate: {
@@ -7467,6 +7655,28 @@ export interface components {
             order_number?: string | null;
             /** Division Id */
             division_id?: string | null;
+        };
+        /**
+         * OrderScheduleOut
+         * @description Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target).
+         */
+        OrderScheduleOut: {
+            /** Total Target Unit */
+            total_target_unit: number;
+            /** Completed Target Unit */
+            completed_target_unit: number;
+            /**
+             * Scheduled Target Qty
+             * @description Jumlah target item yang sudah dijadwalkan untuk order ini
+             */
+            scheduled_target_qty: number;
+            /**
+             * Unscheduled Target Qty
+             * @description Sisa target yang belum dijadwalkan (total - terjadwal)
+             */
+            unscheduled_target_qty: number;
+            /** Plans */
+            plans: components["schemas"]["DailyPlanOut"][];
         };
         /**
          * OvertimeCreate
@@ -8650,6 +8860,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /**
@@ -8684,6 +8896,10 @@ export interface components {
              * Format: uuid
              */
             tool_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8721,6 +8937,8 @@ export interface components {
         ToolUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Ownership Type */
@@ -8754,6 +8972,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /**
              * Division Id
              * Format: uuid
@@ -8846,6 +9066,10 @@ export interface components {
              * Format: uuid
              */
             vehicle_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8885,6 +9109,8 @@ export interface components {
         VehicleUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Vehicle Type */
@@ -9045,13 +9271,11 @@ export interface components {
             pm_id?: string | null;
             /** Project Id */
             project_id?: string | null;
-            /** Client Id */
-            client_id?: string | null;
             /**
-             * Client Name
-             * @description Nama klien (kosong = dari proyek)
+             * Client Id
+             * @description Klien dari master (wajib, kecuali lewat proyek)
              */
-            client_name?: string | null;
+            client_id?: string | null;
             /**
              * Project Title
              * @description Judul (kosong = dari proyek)
@@ -9296,8 +9520,6 @@ export interface components {
         WorkCompletionUpdate: {
             /** Client Id */
             client_id?: string | null;
-            /** Client Name */
-            client_name?: string | null;
             /** Project Title */
             project_title?: string | null;
             /** Order Number */
@@ -10553,6 +10775,107 @@ export interface operations {
             };
         };
     };
+    bulk_create_daily_api_v1_work_plans_daily_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyBulkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyBulkStandbyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyBulkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                daily_plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DailyActivateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     bulk_approve_api_v1_work_plans_daily_approve_post: {
         parameters: {
             query?: never;
@@ -10997,7 +11320,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DailyPlanOut"][];
+                    "application/json": components["schemas"]["OrderScheduleOut"];
                 };
             };
             /** @description Validation Error */

@@ -23,6 +23,7 @@ Kolom:
 | MS-07 | Tipe titik SURVEY_POINT dengan pemasangan lanjutan berjenis SURVEY | PM | 422 | API | P2 | |
 | MS-08 | Tambah material template ke jenis pekerjaan divisi lain | PM | 403 | API | P2 | |
 | MS-09 | Buat klien atau proyek dengan peran HR (tanpa CREATE_PLAN) | HR | 403 | API | P2 | |
+| MS-10 | Daftar klien oleh karyawan biasa | Anggota | 403 | API | P1 | Perbaikan PR #211 (A3) |
 | MS-10 | Ubah nama proyek berstatus COMPLETED | PM | 409 PROJECT_CLOSED | API | P2 | |
 | MS-11 | Hapus proyek yang sudah dipakai jadwal | PM | 409 PROJECT_IN_USE | API | P2 | |
 | MS-12 | Buat jadwal memakai proyek berstatus DRAFT | PM | 422 Proyek tidak sedang berjalan | API | P1 | |
@@ -53,6 +54,11 @@ Kolom:
 | JD-20 | Anggota melihat jadwal tim yang sudah APPROVED | Anggota | 200 | HP | P1 | |
 | JD-21 | Anggota tim lain melihat jadwal APPROVED tim ini | Anggota tim lain | 404 | API | P1 | |
 | JD-22 | Salin jadwal ke tanggal yang sudah ada jadwal tim | PM | 409 | API | P2 | |
+| JD-23 | Ajukan jadwal tanpa item | PM divisi | 422 PLAN_EMPTY | API | P1 | Perbaikan PR #213 |
+| JD-24 | Setujui jadwal tanpa item | PM divisi | 422 PLAN_EMPTY | API | P1 | Perbaikan PR #213 |
+| JD-25 | Salin jadwal dengan item | PM divisi | 201, item ikut tersalin, progres direset | API | P1 | Perbaikan PR #213 |
+| JD-26 | Mulai hari kerja tanpa absen masuk ketua hari ini | Ketua | 409 CHECKIN_REQUIRED | API | P1 | Perbaikan PR #209 (H1) |
+| JD-27 | Ambil aset atau jadwal order dengan ID acak | PM | bukan 200 `[]` (ditolak sesuai akses) | API | P1 | Perbaikan PR #211 (A2) |
 | JD-23 | Akses GET /work-plans/daily tanpa token | Publik | 401 | API | P2 | |
 
 ## C. Absen (masuk, pulang, offline, tinjau)
@@ -83,8 +89,9 @@ Kolom:
 | AB-22 | Tinjau absensi tanpa catatan | PM | 422 Catatan pemeriksaan wajib diisi | API | P2 | |
 | AB-23 | Tinjau absensi yang sudah APPROVED | PM | 409 INVALID_STATE | API | P2 | |
 | AB-24 | HR (ADMIN_HR_GA) meninjau absensi | HR | 403 (tanpa REVIEW_ATTENDANCE di route) | API | P2 | |
-| AB-25 | ADMIN legacy menghapus absensi (lihat T1) | ADMIN | Harapan 403 sesuai niat DELETE_ANY [VERIFIKASI] | API | P1 | |
-| AB-26 | FINANCE meninjau absensi NEEDS_REVIEW (lihat T3) | FINANCE | Harapan 200 bila diizinkan, hasil aktual perlu dicek [VERIFIKASI] | API | P1 | |
+| AB-25 | ADMIN legacy menghapus absensi (lihat T1) | ADMIN | Harapan 403 sesuai niat DELETE_ANY [VERIFIKASI] | API | P1 | Perbaikan PR #186 (T1) |
+| AB-26 | FINANCE meninjau absensi NEEDS_REVIEW (lihat T3) | FINANCE | Harapan 200 bila diizinkan, hasil aktual perlu dicek [VERIFIKASI] | API | P1 | Perbaikan PR #213 (T3) |
+| AB-27 | PM divisi lain membuka daftar absensi karyawan divisi lain | PM divisi B | hanya karyawan divisi B yang tampil | API | P1 | Perbaikan PR #211 (A1) |
 
 ## D. Progres item dan foto
 
@@ -109,6 +116,8 @@ Kolom:
 |---|---|---|---|---|---|---|
 | RO-01 | Minta pindah hari dengan qty 40 persen dan alasan | Ketua | 200, PENDING_ROLLOVER, WAITING_PM | HP | P1 | |
 | RO-02 | Minta pindah hari saat qty sudah mencapai target | Ketua | 422 | API | P2 | |
+| RO-03 | Selesaikan hari saat item masih menunggu keputusan pindah hari | Ketua | 409 ROLLOVER_PENDING | API | P1 | Perbaikan PR #213 (H3) |
+| RO-04 | Persen jadwal setelah satu item dipindah | PM | persen dihitung dari item aktif, bukan 100% | UI web | P2 | Perbaikan PR #210 (W6) |
 | RO-03 | Minta pindah hari dua kali untuk item sama | Ketua | 409 | API | P1 | |
 | RO-04 | PM setujui ke tanggal baru (jadwal tujuan dibuat otomatis) | PM | 200, item lama SHIFTED_DAY, item baru TODO dengan sisa volume | UI web | P1 | |
 | RO-05 | PM setujui ke tanggal sebelum tanggal asal | PM | 422 | API | P1 | |
@@ -255,6 +264,12 @@ Kolom:
 | BT-08 | Alasan pindah hari kosong atau spasi | Ketua | 422 | API | P2 | |
 | BT-09 | Catatan tinjau absensi kosong | PM | 422 | API | P1 | |
 | BT-10 | Unggah berkas di atas batas ukuran | Ketua | ditolak, batas perlu dipastikan [VERIFIKASI] | HP | P2 | |
+| BT-11 | Unggah PNG terpotong 18 byte atau HEIC palsu | Ketua | 422, berkas ditolak | API | P1 | Perbaikan PR #211 (A5) |
+| BT-12 | Unggah byte identik yang sudah dimiliki pengguna lain | Anggota | file_id baru atau milik sendiri, tidak membocorkan berkas lain | API | P1 | Perbaikan PR #211 (A4) |
+| BT-13 | Unduh gambar atau PDF dari /files/{id} | Anggota | header X-Content-Type-Options: nosniff ada | API | P2 | Perbaikan PR #211 (A6) |
+| BT-14 | Material jenis pekerjaan dengan nama kosong atau kebutuhan 0 | PM | 422 per kolom | UI web | P2 | Perbaikan PR #210 (W11) |
+| BT-15 | Target item 99999999999 atau 1,5 | PM | 422 menunjuk kolom target | API | P2 | Perbaikan PR #213 (W2) |
+| BT-16 | Nomor kontrak proyek 150 karakter | PM | 422 (maks 100) | API | P2 | Perbaikan PR #213 (W8) |
 
 ## N. Perilaku manusia tidak normal
 

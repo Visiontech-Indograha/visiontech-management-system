@@ -31,17 +31,17 @@ flowchart TD
     end
 
     subgraph JADWAL["D. Jadwal harian (web)"]
-        D1["Buat jadwal harian DRAFT per tim per tanggal<br/>Peran: PM, OM divisinya, SUPER_ADMIN<br/>Web: /work-plans, POST /work-plans/daily"]
+        D1["Buat jadwal harian DRAFT per tim per tanggal<br/>Peran: PM, OM divisinya, SUPER_ADMIN<br/>Web: /work-plans, POST /work-plans/daily<br/>Salin ke tanggal lain: POST /work-plans/daily/:id/copy (item ikut disalin)"]
         D2["Tambah item pekerjaan per titik<br/>Jenis pekerjaan, order, tim, lokasi<br/>POST /work-plans/daily/:id/items"]
-        D3["Submit: DRAFT ke SUBMITTED<br/>Peran: PM, OM divisinya"]
+        D3["Submit: DRAFT ke SUBMITTED<br/>Peran: PM, OM divisinya<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)"]
         D4{"Setujui atau tolak"}
-        D5["Jadwal APPROVED, dirilis ke tim<br/>Notifikasi ke tim"]
+        D5["Jadwal APPROVED, dirilis ke tim<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)<br/>Notifikasi ke tim"]
     end
 
     subgraph LAPANGAN["E. Lapangan (HP)"]
         E1["Absen masuk: swafoto wajah dan GPS<br/>Peran: ketua, anggota (kanal MOBILE)<br/>HP: AttendanceScreen, tab /<br/>POST /attendance/check-in"]
         E2{"Absen lolos validasi?"}
-        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start"]
+        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start<br/>Syarat: absen masuk ketua hari ini (409 CHECKIN_REQUIRED)"]
         E4["Kerjakan item: isi progres dan foto wajib<br/>Peran: ketua, anggota tim<br/>HP: ItemProgressScreen<br/>PATCH /work-plans/items/:id/progress"]
         E5{"Item selesai (qty tercapai)?"}
         E6["Ajukan pindah hari dengan alasan<br/>Peran: ketua<br/>POST /work-plans/items/:id/request-rollover"]
@@ -50,7 +50,7 @@ flowchart TD
         E9["Ajukan lembur (opsional)<br/>Peran: ketua, anggota saat ONGOING<br/>HP: DailyPlanScreen<br/>POST /overtime, diputus PM atau OM"]
         E11["Isi laporan harian<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/report"]
         E12["Absen pulang<br/>Peran: ketua, anggota<br/>POST /attendance/check-out"]
-        E13["Selesaikan hari kerja: COMPLETED<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/complete<br/>Syarat: laporan harian ada"]
+        E13["Selesaikan hari kerja: COMPLETED<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/complete<br/>Syarat: laporan harian ada (422 REPORT_REQUIRED), tanpa koreksi terbuka (409 CORRECTION_OPEN) dan tanpa pindah hari menunggu (409 ROLLOVER_PENDING)"]
     end
 
     subgraph ABSENREVIEW["F. Tinjau absensi"]
@@ -75,12 +75,14 @@ flowchart TD
     end
 
     subgraph EKSPOR["I. Ekspor dan verifikasi"]
-        I1["Ekspor dokumen order<br/>POST /exports/work-completions/:id<br/>BAST docx, survei docx, BAST PDF ber-QR, BoQ xlsx, slide pptx"]
+        I1["Ekspor dokumen order<br/>POST /exports/work-completions/:id<br/>BAST docx (dengan ringkasan harian dan halaman peta), survei docx, BAST PDF ber-QR, BoQ xlsx, slide pptx, surat tugas order (ORDER_SHEET, docx)"]
         I2{"Template BAST_PDF?"}
         I3["Ditolak 409 NOT_SIGNED<br/>sebelum PM tanda tangan"]
         I4["Berkas tersimpan di MinIO<br/>Unduh: GET /exports/:id/file"]
         I5["Verifikasi publik lewat QR, tanpa login<br/>Web: /verify/work-completion/:id?h=sha256<br/>GET /verify/work-completions/:id"]
         I6["Rekap periodik xlsx atau pptx<br/>Peran: PM, OM, OPS, SUPER_ADMIN<br/>POST /exports/periodic"]
+        I7["Laporan harian satu jadwal (docx)<br/>Peran: ketua atau anggota tim, PM atau OM divisi (jadwal dirilis)<br/>POST /exports/daily-report"]
+        I8["Laporan mingguan tim (pptx) dari web<br/>Peran: ketua atau anggota tim, PM atau OM divisi<br/>POST /exports/team-week"]
     end
 
     A1 --> B1

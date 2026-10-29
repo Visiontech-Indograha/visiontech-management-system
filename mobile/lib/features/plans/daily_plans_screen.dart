@@ -307,7 +307,7 @@ class _PlanCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${plan['site_name']}',
+                                jadwalTitle(plan),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),

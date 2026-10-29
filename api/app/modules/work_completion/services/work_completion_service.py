@@ -21,11 +21,13 @@ from typing import Any
 from uuid import UUID
 
 import filetype
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
+from app.modules.work_completion.repositories.work_completion_bom_repository import WorkCompletionBomRepository
 from app.modules.work_completion.repositories.work_completion_repository import (
     CRUDWorkCompletion,
 )
@@ -443,3 +445,8 @@ class WorkCompletionService:
         """Membaca daftar revisi klien."""
         await self.get_order_detail(current_user, completion_id)
         return await self.crud.list_revisions(completion_id)
+
+
+async def sync_bom_for_order(db: AsyncSession, completion_id: UUID | str) -> int:
+    """Dipakai modul jadwal saat item dibuat dari template: salin BoM default jenis pekerjaan ke order (idempoten)."""
+    return await WorkCompletionBomRepository(db).sync_bom_from_work_types(completion_id)

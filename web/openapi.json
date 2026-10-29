@@ -17554,6 +17554,15 @@
       "format": "date",
       "title": "Work Date"
      },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "default": "WORK"
+     },
      "site_name": {
       "anyOf": [
        {
@@ -17805,6 +17814,15 @@
        "COMPLETED"
       ],
       "title": "Status"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "default": "WORK"
      },
      "created_by_id": {
       "type": "string",
@@ -18063,6 +18081,15 @@
        "COMPLETED"
       ],
       "title": "Status"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "default": "WORK"
      },
      "created_by_id": {
       "type": "string",
@@ -22145,6 +22172,18 @@
       "type": "string",
       "format": "date",
       "title": "Stay End Date"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "type": "object",
@@ -22345,6 +22384,18 @@
        }
       ],
       "title": "Note"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "type": "object",
@@ -26851,6 +26902,18 @@
       "format": "uuid",
       "title": "Office Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "division_id": {
       "anyOf": [
        {
@@ -26972,6 +27035,29 @@
       "format": "uuid",
       "title": "Tool Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "office_id": {
       "type": "string",
       "format": "uuid",
@@ -27083,6 +27169,18 @@
        }
       ],
       "title": "Office Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "division_id": {
       "anyOf": [
@@ -27218,6 +27316,18 @@
       "type": "string",
       "format": "uuid",
       "title": "Office Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "division_id": {
       "type": "string",
@@ -27434,6 +27544,29 @@
       "format": "uuid",
       "title": "Vehicle Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "office_id": {
       "type": "string",
       "format": "uuid",
@@ -27545,6 +27678,18 @@
        }
       ],
       "title": "Office Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "division_id": {
       "anyOf": [

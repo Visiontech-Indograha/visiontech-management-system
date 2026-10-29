@@ -35,11 +35,12 @@ _OPEN_LOAN = """
 _TOOL_SELECT = f"""
     SELECT t.tool_id, t.office_id, o.name AS office_name, t.division_id, d.name AS division_name,
            t.ownership_type::text AS ownership_type, t.category::text AS category, t.name, t.tool_code,
-           t.status::text AS status, fo.id AS photo_file_id,
+           t.status::text AS status, fo.id AS photo_file_id, t.team_id, tm.name AS team_name,
            loan.assignment_id, loan.holder_employee_id, loan.holder_name, loan.daily_plan_id
     FROM tool t
     JOIN office o ON o.office_id = t.office_id
     LEFT JOIN division d ON d.division_id = t.division_id
+    LEFT JOIN team tm ON tm.team_id = t.team_id
     LEFT JOIN file_object fo ON fo.storage_key = t.photo_path
     {_OPEN_LOAN.format(col="tool_id", alias="t")}
 """
@@ -47,7 +48,7 @@ _TOOL_SELECT = f"""
 _VEHICLE_SELECT = f"""
     SELECT v.vehicle_id, v.office_id, o.name AS office_name, v.division_id, d.name AS division_name,
            v.vehicle_type::text AS vehicle_type, v.name, v.number_plate, v.status::text AS status,
-           fo.id AS photo_file_id,
+           fo.id AS photo_file_id, v.team_id, tm.name AS team_name,
            (SELECT max({_wib_date("vf.expired_at")}) FROM vehicle_file vf
              WHERE vf.vehicle_id = v.vehicle_id AND vf.type = 'STNK' AND vf.status = 'active'
                AND vf.delete_at IS NULL) AS stnk_expired_at,
@@ -58,6 +59,7 @@ _VEHICLE_SELECT = f"""
     FROM vehicle v
     JOIN office o ON o.office_id = v.office_id
     JOIN division d ON d.division_id = v.division_id
+    LEFT JOIN team tm ON tm.team_id = v.team_id
     LEFT JOIN file_object fo ON fo.storage_key = v.photo_path
     {_OPEN_LOAN.format(col="vehicle_id", alias="v")}
 """
@@ -188,10 +190,10 @@ class AssetRepository(BaseRepository):
     async def insert_tool(self, fields: dict[str, Any]) -> UUID:
         tool_id: UUID = await self.scalar(
             """
-            INSERT INTO tool (office_id, division_id, ownership_type, category, name, tool_code, photo_path)
+            INSERT INTO tool (office_id, division_id, ownership_type, category, name, tool_code, photo_path, team_id)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid),
                     CAST(:ownership_type AS tool_ownership_enum), CAST(:category AS tool_category_enum),
-                    :name, :tool_code, :photo_path)
+                    :name, :tool_code, :photo_path, CAST(:team_id AS uuid))
             RETURNING tool_id
             """,
             fields,
@@ -209,6 +211,7 @@ class AssetRepository(BaseRepository):
                 name = COALESCE(:name, name),
                 tool_code = COALESCE(:tool_code, tool_code),
                 photo_path = COALESCE(:photo_path, photo_path),
+                team_id = COALESCE(CAST(:team_id AS uuid), team_id),
                 update_at = now()
             WHERE tool_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
@@ -243,9 +246,9 @@ class AssetRepository(BaseRepository):
     async def insert_vehicle(self, fields: dict[str, Any]) -> UUID:
         vehicle_id: UUID = await self.scalar(
             """
-            INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, photo_path)
+            INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, photo_path, team_id)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid), CAST(:vehicle_type AS vehicle_type_enum),
-                    :name, :number_plate, :photo_path)
+                    :name, :number_plate, :photo_path, CAST(:team_id AS uuid))
             RETURNING vehicle_id
             """,
             fields,
@@ -262,6 +265,7 @@ class AssetRepository(BaseRepository):
                 name = COALESCE(:name, name),
                 number_plate = COALESCE(:number_plate, number_plate),
                 photo_path = COALESCE(:photo_path, photo_path),
+                team_id = COALESCE(CAST(:team_id AS uuid), team_id),
                 update_at = now()
             WHERE vehicle_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
@@ -340,6 +344,11 @@ class AssetRepository(BaseRepository):
             """,
             {"date": work_date},
         ))
+
+    async def team_office(self, team_id: UUID | str) -> Any:
+        return await self.fetchone(
+            "SELECT office_id, name FROM team WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(team_id)})
 
     async def team_names(self, team_ids: list[Any]) -> dict[str, str]:
         ids = sorted({str(t) for t in team_ids if t})

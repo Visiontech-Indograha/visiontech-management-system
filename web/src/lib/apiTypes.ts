@@ -5116,6 +5116,12 @@ export interface components {
              * Format: date
              */
             work_date: string;
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /** Site Name */
             site_name?: string | null;
             /** Site Lat */
@@ -5208,6 +5214,12 @@ export interface components {
              * @enum {string}
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /**
              * Created By Id
              * Format: uuid
@@ -5316,6 +5328,12 @@ export interface components {
              * @enum {string}
              */
             status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            /**
+             * Kind
+             * @default WORK
+             * @enum {string}
+             */
+            kind: "WORK" | "STANDBY";
             /**
              * Created By Id
              * Format: uuid
@@ -6845,6 +6863,8 @@ export interface components {
              * Format: date
              */
             stay_end_date: string;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayOut */
         MessStayOut: {
@@ -6925,6 +6945,8 @@ export interface components {
             stay_end_date: string;
             /** Note */
             note?: string | null;
+            /** Team Id */
+            team_id?: string | null;
         };
         /** MessStayUpdate */
         MessStayUpdate: {
@@ -8672,6 +8694,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /**
@@ -8706,6 +8730,10 @@ export interface components {
              * Format: uuid
              */
             tool_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8743,6 +8771,8 @@ export interface components {
         ToolUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Ownership Type */
@@ -8776,6 +8806,8 @@ export interface components {
              * Format: uuid
              */
             office_id: string;
+            /** Team Id */
+            team_id?: string | null;
             /**
              * Division Id
              * Format: uuid
@@ -8868,6 +8900,10 @@ export interface components {
              * Format: uuid
              */
             vehicle_id: string;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
             /**
              * Office Id
              * Format: uuid
@@ -8907,6 +8943,8 @@ export interface components {
         VehicleUpdate: {
             /** Office Id */
             office_id?: string | null;
+            /** Team Id */
+            team_id?: string | null;
             /** Division Id */
             division_id?: string | null;
             /** Vehicle Type */

@@ -93,11 +93,23 @@ class AssetService:
             raise NotFoundError("Alat")
         return tool
 
+    async def _team(self, team_id: UUID | None, office_id: UUID | None) -> str | None:
+        """Tim pemakai bawaan harus ada dan berada di kantor yang sama dengan aset (bila kantor diketahui)."""
+        if team_id is None:
+            return None
+        row = await self.repo.team_office(team_id)
+        if row is None:
+            raise ValidationError("Tim tidak ditemukan.")
+        if office_id is not None and str(row.office_id) != str(office_id):
+            raise ValidationError("Tim berbeda kantor dengan aset ini.")
+        return str(team_id)
+
     async def create_tool(self, data: ToolCreate) -> Any:
         await self._check_place(data.office_id, data.division_id)
         if await self.repo.tool_code_taken(data.tool_code):
             raise AppError("TOOL_CODE_TAKEN", "Kode alat sudah dipakai.", status=409)
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip(), photo_path=await self._path(data.photo_file_id, "foto"))
         return await self.repo.get_tool(await self.repo.insert_tool(fields))
@@ -110,6 +122,7 @@ class AssetService:
         if data.ownership_type and data.ownership_type != tool.ownership_type and tool.assignment_id:
             raise _in_use("TOOL")
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id) if data.office_id else None,
                       division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip() if data.name else None,
@@ -132,6 +145,7 @@ class AssetService:
         if await self.repo.plate_taken(data.number_plate):
             raise AppError("PLATE_TAKEN", "Nomor polisi sudah terdaftar.", status=409)
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id), name=data.name.strip(),
                       photo_path=await self._path(data.photo_file_id, "foto"))
         return await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
@@ -144,6 +158,7 @@ class AssetService:
         if data.vehicle_type and data.vehicle_type != vehicle.vehicle_type and vehicle.assignment_id:
             raise _in_use("VEHICLE")
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id) if data.office_id else None,
                       division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip() if data.name else None,

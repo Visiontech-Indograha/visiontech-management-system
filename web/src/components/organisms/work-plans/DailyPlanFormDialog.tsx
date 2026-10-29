@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { ChoiceChips } from "@/components/molecules/ChoiceChips";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
@@ -9,6 +10,7 @@ import { ApiError } from "@/lib/apiClient";
 import { SiteMapPicker } from "@/components/organisms/sites/SiteMapPicker";
 import {
   useCreateDailyPlan,
+  useRecentSites,
   useUpdateDailyPlan,
   type DailyFormOptions,
   type DailyPlan,
@@ -34,6 +36,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const [radius, setRadius] = useState(String(plan?.attendance_radius_m ?? 150));
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const recent = useRecentSites(plan ? "" : teamId);   // hanya saat membuat jadwal baru
   const busy = create.isPending || update.isPending;
 
   // Titik untuk peta: hanya bila kedua koordinat valid; mengetik manual ikut menggeser penanda.
@@ -100,6 +103,19 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
         </SelectField>
         <TextField name="work_date" label="Tanggal" type="date" defaultValue={plan?.work_date ?? initial?.work_date} error={errors.work_date} />
         <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui; koordinat wajib dilengkapi sebelum presensi." />
+        <ChoiceChips
+          label="Lokasi terakhir tim:"
+          testId="recent-sites"
+          items={(recent.data ?? []).map((s) => ({ key: `${s.site_name}|${s.site_lat}|${s.site_lng}`, label: s.site_name }))}
+          onPick={(key) => {
+            const s = recent.data?.find((x) => `${x.site_name}|${x.site_lat}|${x.site_lng}` === key);
+            if (!s) return;
+            setSiteName(s.site_name);
+            setLat(String(s.site_lat));
+            setLng(String(s.site_lng));
+            if (s.attendance_radius_m) setRadius(String(s.attendance_radius_m));
+          }}
+        />
         <SiteMapPicker
           point={point}
           radius={Number.isFinite(radiusNum) && radiusNum > 0 ? radiusNum : null}

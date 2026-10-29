@@ -20,7 +20,8 @@ def _lend(client, world: World, **body):
 def _daily_plan(world: World, days_from_today: int = 0) -> str:
     return str(sync_query(
         "INSERT INTO work_plan_daily (work_date, site_name, site_lat, site_lng, division_id, team_id, created_by_id) "
-        "VALUES (CURRENT_DATE + %s, 'Site uji', -6.2, 106.8, %s, %s, %s) RETURNING daily_plan_id",
+        "VALUES ((now() AT TIME ZONE 'Asia/Jakarta')::date + %s, 'Site uji', -6.2, 106.8, %s, %s, %s)"
+        "RETURNING daily_plan_id",
         (days_from_today, world.unit_id, world.team_id, world.employees["pm"]))[0][0])
 
 

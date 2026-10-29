@@ -3360,6 +3360,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assets/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Asset Availability
+         * @description Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana).
+         */
+        get: operations["asset_availability_api_v1_assets_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/assets/tools": {
         parameters: {
             query?: never;
@@ -3918,6 +3938,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-types/{type_id}/copy-to-division": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy Work Type To Division
+         * @description Menyalin jenis pekerjaan (template foto + BoM default) ke divisi lain sebagai jenis baru.
+         *     PM hanya dapat menyalin ke divisinya sendiri.
+         */
+        post: operations["copy_work_type_to_division_api_v1_work_types__type_id__copy_to_division_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-types/{type_id}": {
         parameters: {
             query?: never;
@@ -4181,6 +4222,40 @@ export interface components {
              */
             notes: string[];
             download?: components["schemas"]["ReleaseFileOut"] | null;
+        };
+        /**
+         * AssetAvailabilityOut
+         * @description Ketersediaan satu alat/kendaraan pada satu tanggal jadwal.
+         */
+        AssetAvailabilityOut: {
+            /**
+             * Asset Type
+             * @enum {string}
+             */
+            asset_type: "TOOL" | "VEHICLE";
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Asset Name */
+            asset_name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ready" | "allocated" | "loaned" | "damaged" | "lost" | "pension";
+            /** Available */
+            available: boolean;
+            /** Used By Team Id */
+            used_by_team_id?: string | null;
+            /** Used By Team Name */
+            used_by_team_name?: string | null;
+            /**
+             * Used By Requested Team
+             * @default false
+             */
+            used_by_requested_team: boolean;
         };
         /** AssetStatusUpdate */
         AssetStatusUpdate: {
@@ -4885,6 +4960,17 @@ export interface components {
              * @enum {string}
              */
             template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES" | "ORDER_SHEET";
+        };
+        /**
+         * CopyToDivisionIn
+         * @description Divisi tujuan salinan jenis pekerjaan.
+         */
+        CopyToDivisionIn: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
         };
         /** CorrectionCreate */
         CorrectionCreate: {
@@ -16160,6 +16246,40 @@ export interface operations {
             };
         };
     };
+    asset_availability_api_v1_assets_availability_get: {
+        parameters: {
+            query: {
+                /** @description Tanggal jadwal (YYYY-MM-DD) */
+                date: string;
+                /** @description Tim peminta: tandai aset yang dipakai tim ini */
+                team_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetAvailabilityOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_tools_api_v1_assets_tools_get: {
         parameters: {
             query?: {
@@ -17293,6 +17413,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["WorkTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    copy_work_type_to_division_api_v1_work_types__type_id__copy_to_division_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CopyToDivisionIn"];
             };
         };
         responses: {

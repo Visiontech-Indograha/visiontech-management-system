@@ -8,6 +8,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
+from pydantic import BaseModel
 
 from app.api.deps import daily_access, get_current_user, require_permission
 from app.core.list_params import ListParams, apply_list
@@ -73,6 +74,31 @@ async def create_work_type(
     if not data.division_id and len(user_divs) == 1:
         data.division_id = user_divs[0]
     return await controller.handle_create(current_user.organization_id, data, creator_div)
+
+
+class CopyToDivisionIn(BaseModel):
+    """Divisi tujuan salinan jenis pekerjaan."""
+    division_id: UUID
+
+
+@router.post(
+    "/work-types/{type_id}/copy-to-division", response_model=WorkTypeOut, status_code=status.HTTP_201_CREATED
+)
+async def copy_work_type_to_division(
+    type_id: UUID,
+    data: CopyToDivisionIn,
+    current_user: CurrentUser = _MANAGE,
+    controller: WorkTypeController = Depends(),
+) -> WorkTypeOut:
+    """
+    Menyalin jenis pekerjaan (template foto + BoM default) ke divisi lain sebagai jenis baru.
+    PM hanya dapat menyalin ke divisinya sendiri.
+    """
+    user_divs = await controller.get_user_divisions(current_user.user_id)
+    creator_div = user_divs if current_user.has_role("PROJECT_MANAGER") else None
+    return await controller.handle_copy_to_division(
+        current_user.organization_id, type_id, data.division_id, creator_div
+    )
 
 
 @router.put("/work-types/{type_id}", response_model=WorkTypeOut)

@@ -271,3 +271,15 @@ class LoanRequestOut(BaseModel):
     reviewed_at: datetime | None = None
     assignment_id: UUID | None = None
     create_at: datetime
+
+
+class AssetAvailabilityOut(BaseModel):
+    """Ketersediaan satu alat/kendaraan pada satu tanggal jadwal."""
+    asset_type: Literal["TOOL", "VEHICLE"]
+    asset_id: UUID
+    asset_name: str
+    status: AssetStatus
+    available: bool  # True bila tidak dipakai tim lain pada tanggal itu dan kondisinya siap
+    used_by_team_id: UUID | None = None  # Tim pemakai pada tanggal itu (None = tidak dipakai)
+    used_by_team_name: str | None = None
+    used_by_requested_team: bool = False  # Dipakai oleh tim yang diminta (query team_id)

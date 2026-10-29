@@ -5,6 +5,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { ContactLinks } from "@/components/molecules/ContactLinks";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
+import { ImageView } from "@/components/molecules/ImageView";
 import { Trash2 } from "@/components/molecules/Glyphs";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -13,7 +14,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { errorMessage } from "@/lib/errors";
 import { useEmployees } from "@/services/employeeService";
-import { useAddTeamMember, useRemoveTeamMember, useTeam, type Team } from "@/services/teamService";
+import { useAddTeamMember, useRemoveTeamMember, useTeam, useTeamLogo, type Team } from "@/services/teamService";
 
 /** Anggota tim + kontak (Telepon/WhatsApp), tambah/keluarkan anggota (karyawan aktif divisi tim). */
 export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () => void }) {
@@ -23,6 +24,7 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
   const add = useAddTeamMember(team.team_id);
   const remove = useRemoveTeamMember(team.team_id);
   const [pick, setPick] = useState("");
+  const logo = useTeamLogo(team.team_id, Boolean(team.logo_url));
   const members = detail.data?.members ?? [];
   const inTeam = new Set(members.map((m) => m.employee_id));
   const options = (candidates.data?.items ?? []).filter((e) => !inTeam.has(e.employee_id));
@@ -40,7 +42,10 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
   return (
     <VmsDialog open title={`Anggota ${team.name}`} onClose={onClose}>
       <div className="space-y-4">
-        <TextBlock className="text-sm text-mist">{`${team.division_name ?? "-"} · ${team.office_name ?? "-"}`}</TextBlock>
+        <div className="flex items-center gap-3">
+          {logo.data && <ImageView src={logo.data} alt={`Logo ${team.name}`} className="h-12 max-w-40 object-contain" />}
+          <TextBlock className="text-sm text-mist">{`${team.division_name ?? "-"} · ${team.office_name ?? "-"}`}</TextBlock>
+        </div>
         {detail.isPending && <LoadingBar />}
         <ListBlock className="divide-y divide-line rounded-panel border border-line">
           {members.map((m) => {

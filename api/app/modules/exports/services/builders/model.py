@@ -105,6 +105,7 @@ class CompletionReport:
     pm_signature: bytes | None = None
     map_image: bytes | None = None  # PNG peta + penanda titik (None: tanpa koneksi / tanpa koordinat)
     has_coordinates: bool = False  # ada titik berkoordinat (beda 'tanpa koneksi' dan 'tanpa titik')
+    team_logo: bytes | None = None  # logo tim (berkas asli); None = logo default Visiontech
 
     @property
     def survey_points(self) -> list[ReportPoint]:
@@ -138,6 +139,7 @@ class DailyReport:
     generated_by: str
     generated_at: datetime
     report_submitted_at: datetime | None = None
+    team_logo: bytes | None = None
 
 
 @dataclass
@@ -164,6 +166,7 @@ class TeamWeekReport:
     roster: list[Any]
     generated_by: str
     generated_at: datetime
+    team_logo: bytes | None = None
 
 
 def plan_status_label(value: str | None) -> str:

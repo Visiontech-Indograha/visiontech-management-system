@@ -7,7 +7,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+# Prefiks API (app.main.API_PREFIX); logo_url dibentuk dari sini agar selalu bisa diunduh klien.
+TEAM_LOGO_PATH = "/api/v1/teams/{team_id}/logo"
 
 
 class MemberAdd(BaseModel):
@@ -55,7 +58,21 @@ class TeamListItem(BaseModel):
     status: bool
     member_count: int = 0
     create_at: datetime
+    logo_file_id: UUID | None = None
+    logo_url: str | None = None
+
+    @model_validator(mode="after")
+    def _logo_url(self) -> TeamListItem:
+        if self.logo_file_id is not None and self.logo_url is None:
+            self.logo_url = TEAM_LOGO_PATH.format(team_id=self.team_id)
+        return self
 
 
 class TeamDetail(TeamListItem):
     members: list[MemberOut] = []
+
+
+class TeamLogoOut(BaseModel):
+    team_id: UUID
+    logo_file_id: UUID
+    logo_url: str

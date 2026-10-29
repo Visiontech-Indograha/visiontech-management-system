@@ -718,6 +718,9 @@ CREATE TABLE IF NOT EXISTS file_object (
     UNIQUE (office_id, sha256)
 );
 
+-- Logo tim (kolom team ditambahkan setelah file_object ada): dipakai di semua dokumen tim & foto berwatermark.
+ALTER TABLE team ADD COLUMN IF NOT EXISTS logo_file_id uuid NULL REFERENCES file_object(id) ON DELETE SET NULL;
+
 -- 29. Tabel work_plan_attachment (lampiran jadwal harian, N─N work_plan_daily ↔ file_object)
 CREATE TABLE IF NOT EXISTS work_plan_attachment (
     daily_plan_id UUID NOT NULL CONSTRAINT fk_work_plan_attachment_daily

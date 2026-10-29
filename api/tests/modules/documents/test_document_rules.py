@@ -77,3 +77,28 @@ def test_deactivate_and_delete(client, world: World):
     # Dokumen karyawan lain tidak bisa diubah lewat URL karyawan ini.
     foreign = _upload(client, world, owner="leader").json()["id"]
     assert client.delete(f"{base}/{foreign}", headers=hr).status_code == 404
+
+
+def test_hr_cannot_attach_someone_elses_file(client, world: World):
+    """Berkas milik pengguna lain (di sini: pengunggah = karyawan lain) tidak boleh dilampirkan HR."""
+    buf = io.BytesIO()
+    Image.new("RGB", (24, 24), (7, 40, 90)).save(buf, "PNG")
+    uploaded = client.post("/files/upload", headers=world.headers(client, "pm"),
+                           files={"file": ("pm.png", buf.getvalue(), "image/png")})
+    assert uploaded.status_code == 200, uploaded.text
+    response = client.post(f"/employees/{world.employees['member']}/documents", headers=world.headers(client, "hr"),
+                           json={"doc_type": "KTP", "file_id": uploaded.json()["file_id"]})
+    assert response.status_code == 422, response.text
+    assert client.get(f"/employees/{world.employees['member']}/documents",
+                      headers=world.headers(client, "hr")).json()["total"] == 0
+
+
+def test_employee_own_file_can_be_attached_by_hr(client, world: World):
+    buf = io.BytesIO()
+    Image.new("RGB", (24, 24), (9, 90, 40)).save(buf, "PNG")
+    uploaded = client.post("/files/upload", headers=world.headers(client, "member"),
+                           files={"file": ("ktp.png", buf.getvalue(), "image/png")})
+    assert uploaded.status_code == 200, uploaded.text
+    response = client.post(f"/employees/{world.employees['member']}/documents", headers=world.headers(client, "hr"),
+                           json={"doc_type": "KTP", "file_id": uploaded.json()["file_id"]})
+    assert response.status_code == 201, response.text

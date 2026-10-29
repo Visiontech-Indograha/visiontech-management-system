@@ -48,6 +48,19 @@ Map<String, dynamic>? openCorrectionOf(List<Map<String, dynamic>> corrections) {
   return null;
 }
 
+/// Pesan untuk galat aksi hari kerja: kode dari backend lebih spesifik daripada pesan umum.
+String dayActionErrorMessage(Object error) => switch (apiErrorCode(error)) {
+  'CHECKIN_REQUIRED' =>
+    'Absen masuk hari ini belum tercatat. Lakukan absen masuk dulu di menu Absensi, lalu mulai hari kerja.',
+  'ROLLOVER_PENDING' =>
+    'Ada pekerjaan yang masih menunggu keputusan PM untuk pindah hari. Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+  _ => apiErrorMessage(error),
+};
+
+/// Jumlah item hari ini yang masih menunggu keputusan PM untuk pindah hari (menahan penutupan hari).
+int pendingRolloverCount(Map<String, dynamic> plan) =>
+    (plan['items'] as List? ?? const []).where((i) => i is Map && i['status'] == 'PENDING_ROLLOVER').length;
+
 String correctionStateTitle(String status) => switch (status) {
   'REQUESTED' => 'Koreksi menunggu keputusan PM',
   'REVISING' => 'PM meminta revisi laporan',
@@ -73,6 +86,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   bool _busy = false;
   bool _reportPending = false;
   List<Map<String, dynamic>> _corrections = const [];
+  /// Ketua sudah absen masuk pada tanggal jadwal (null = belum bisa dipastikan, mis. luring / gagal muat).
+  bool? _checkedIn;
 
   String get _me {
     final auth = ref.read(authControllerProvider);
@@ -122,8 +137,27 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           // riwayat koreksi hanya tambahan; layar tetap tampil tanpanya
         }
       }
+      var checkedIn = _checkedIn;
+      if (plan['leader_employee_id'] == _me && plan['status'] == 'APPROVED') {
+        checkedIn = null;
+        if (!NetworkHint.probablyOffline) {
+          try {
+            final att = await engine.api.myAttendance(employeeId: _me);
+            final day = '${plan['work_date']}';
+            checkedIn = att.items.any((a) => a['work_date'] == day && a['check_in_at'] != null);
+          } on DioException {
+            // tanpa data absen tombol tetap nonaktif; pesan di layar menjelaskan
+          }
+        }
+      }
       if (mounted) {
-        setState(() => (_plan = plan, _dailyReport = report, _corrections = corrections, _error = null));
+        setState(() {
+          _plan = plan;
+          _dailyReport = report;
+          _corrections = corrections;
+          _checkedIn = checkedIn;
+          _error = null;
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
@@ -248,7 +282,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       _snack(done);
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e), error: true);
+      _snack(dayActionErrorMessage(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -407,14 +441,26 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ),
                   if (_isLeader && plan['status'] == 'APPROVED') ...[
                     const SizedBox(height: 12),
+                    if (_checkedIn != true)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NoticeBanner(
+                          icon: Icons.login_rounded,
+                          text: _checkedIn == null
+                              ? 'Status absen masuk belum bisa dimuat. Periksa sinyal, lalu tarik ke bawah untuk memuat ulang.'
+                              : 'Absen masuk hari ini belum tercatat. Lakukan absen masuk di menu Absensi, lalu mulai hari kerja.',
+                        ),
+                      ),
                     PrimaryAction(
                       label: 'Mulai hari kerja',
                       icon: Icons.play_arrow_rounded,
                       busy: _busy,
-                      onTap: () => _run(
-                        () => ref.read(syncEngineProvider).api.startDay(widget.dailyPlanId),
-                        'Hari kerja dimulai.',
-                      ),
+                      onTap: _checkedIn == true
+                          ? () => _run(
+                                () => ref.read(syncEngineProvider).api.startDay(widget.dailyPlanId),
+                                'Hari kerja dimulai.',
+                              )
+                          : null,
                     ),
                   ],
                   if (_isLeader && plan['status'] == 'COMPLETED' && _openCorrection == null) ...[
@@ -474,12 +520,21 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       onTap: _busy ? null : _dailyReportForm,
                     ),
                     const SizedBox(height: 12),
+                    if (_openCorrection == null && pendingRolloverCount(plan) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NoticeBanner(
+                          icon: Icons.update_rounded,
+                          text: '${pendingRolloverCount(plan)} pekerjaan masih menunggu keputusan PM untuk pindah hari. '
+                              'Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+                        ),
+                      ),
                     if (_openCorrection == null)
                     PrimaryAction(
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: _dailyReport == null || _reportPending ? null : () async {
+                      onTap: _dailyReport == null || _reportPending || pendingRolloverCount(plan) > 0 ? null : () async {
                         if (!await confirmAction(
                           context,
                           title: 'Selesaikan hari kerja?',
@@ -666,12 +721,16 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SurfaceCard(
     padding: EdgeInsets.zero,
-    child: ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
+    // ListTile butuh Material sendiri: tanpanya latar kartu (DecoratedBox) menutupi efek tekan.
+    child: Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
     ),
   );
 }

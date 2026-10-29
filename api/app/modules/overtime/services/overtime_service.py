@@ -98,7 +98,7 @@ class OvertimeService:
             return await self.repo.list_by_plan(daily_plan_id)
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
             return await self.repo.list_all_active(None)
-        if user.role == "PROJECT_MANAGER" and user.employee_id:
+        if user.has_role("PROJECT_MANAGER") and user.employee_id:
             return await self.repo.list_all_active(user.employee_id)
         if user.employee_id:
             return await self.repo.list_by_employee(user.employee_id)
@@ -111,6 +111,6 @@ class OvertimeService:
     async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
             return await self.repo.recap(month, None)
-        if user.role == "PROJECT_MANAGER" and user.employee_id:
+        if user.has_role("PROJECT_MANAGER") and user.employee_id:
             return await self.repo.recap(month, user.employee_id)
         raise ForbiddenError("Rekap lembur hanya untuk OM, PM divisi, atau admin.")

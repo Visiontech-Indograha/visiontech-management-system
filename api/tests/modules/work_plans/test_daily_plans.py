@@ -119,3 +119,26 @@ def test_edit_only_while_draft_or_submitted(client, world: World):
     assert bad_hours.status_code == 422
     approved = make_daily_plan(world, status="APPROVED", days_from_today=2)
     assert client.put(f"/work-plans/daily/{approved}", headers=pm, json={"site_name": "X Site"}).status_code == 409
+
+
+def test_recent_sites_lists_distinct_team_sites_newest_first(client, world: World, other_world: World):
+    assert _create(client, world, days=1, site_name="Site A", site_lat="1.1000000", site_lng="101.1000000",
+                   attendance_radius_m=200).status_code == 201
+    assert _create(client, world, days=2, site_name="Site B", site_lat="1.2000000", site_lng="101.2000000"
+                   ).status_code == 201
+    assert _create(client, world, days=3, site_name="Site A", site_lat="1.1000000", site_lng="101.1000000",
+                   attendance_radius_m=200).status_code == 201
+    r = client.get("/work-plans/daily/recent-sites", params={"team_id": world.team_id},
+                   headers=world.headers(client, "pm"))
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    assert [x["site_name"] for x in rows] == ["Site A", "Site B"]  # unik, terbaru dulu
+    assert rows[0]["attendance_radius_m"] == 200 and float(rows[0]["site_lat"]) == 1.1
+    assert client.get("/work-plans/daily/recent-sites", params={"team_id": world.team_id, "limit": 1},
+                      headers=world.headers(client, "pm")).json()[0]["site_name"] == "Site A"
+    # PM divisi lain tidak melihat lokasi tim ini; peran lapangan ditolak
+    other = client.get("/work-plans/daily/recent-sites", params={"team_id": world.team_id},
+                       headers=other_world.headers(client, "pm"))
+    assert other.status_code == 200 and other.json() == []
+    assert client.get("/work-plans/daily/recent-sites", params={"team_id": world.team_id},
+                      headers=world.headers(client, "member")).status_code == 403

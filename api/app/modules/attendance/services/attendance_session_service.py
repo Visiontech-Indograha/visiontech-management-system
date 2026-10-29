@@ -64,6 +64,19 @@ CHECKOUT_NOT_VALID = (
     "Absen pulang hanya bisa dilakukan setelah absen masuk valid. Absen masuk Anda masih menunggu pemeriksaan."
 )
 FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
+# Hasil pemeriksaan wajah yang disimpan eksplisit di attendance.face_status (tidak pernah diam-diam "lolos").
+FACE_STATUS_OF_RESULT = {
+    "MATCH": "MATCHED",
+    "MISMATCH": "MISMATCH",
+    "UNAVAILABLE": "SERVICE_DOWN",
+    "NOT_ENROLLED": "NOT_ENROLLED",
+    "STALE": "STALE",
+}
+
+
+def face_status_of(outcome: FaceOutcome | None) -> str:
+    """None (pemeriksaan wajah tidak dijalankan) dan hasil tak dikenal → NOT_CHECKED."""
+    return FACE_STATUS_OF_RESULT.get(outcome.result, "NOT_CHECKED") if outcome is not None else "NOT_CHECKED"
 FACE_MISMATCH = "Wajah pada swafoto tidak cocok dengan wajah terdaftar. Ambil ulang swafoto dengan wajah jelas."
 # docs/35 §5: absen di lokasi tugas harian hanya untuk anggota/ketua tim jadwal itu, pada tanggalnya, setelah disetujui.
 DAILY_OPEN_STATUSES = ("APPROVED", "ONGOING")
@@ -241,18 +254,20 @@ class AttendanceSessionService:
     async def record_face(self, row: Any, event: str, outcome: FaceOutcome | None, *, online: bool) -> Any:
         """Hasil yang tidak bisa dipastikan → PENDING_OM dengan catatan; wajah tidak boleh dilewati diam-diam."""
         label = "masuk" if event == "CHECK_IN" else "pulang"
-        if outcome is None or outcome.result == "MATCH":
+        if outcome is not None and outcome.result == "MATCH":
             return row
-        if outcome.result == "UNAVAILABLE":
+        if outcome is None:
+            note = f"wajah absen {label} tidak diperiksa: pemeriksaan wajah tidak dijalankan"
+        elif outcome.result == "UNAVAILABLE":
             note = f"wajah absen {label} belum diperiksa: layanan pengenalan wajah tidak tersedia"
         elif outcome.result == "STALE":
             note = f"wajah absen {label} belum diperiksa: pendaftaran wajah perlu diulang (model berganti)"
         elif outcome.result == "MISMATCH":
             note = f"wajah absen {label} tidak cocok (skor {outcome.score:.0f})"
-        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen offline
-            note = "belum mendaftar wajah"
+        elif outcome.result == "NOT_ENROLLED":  # selalu ditandai, walau FACE_ENROLLMENT_REQUIRED dimatikan
+            note = f"wajah absen {label} tidak diperiksa: karyawan belum mendaftar wajah"
         else:
-            return row
+            note = f"wajah absen {label} belum diperiksa ({outcome.result})"
         return await self.repo.flag_missing_face(row.id, event, note)
 
     async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
@@ -407,6 +422,7 @@ class AttendanceSessionService:
                 selfie_file_id=selfie_file_id,
                 face_result=outcome.result if outcome else None,
                 face_similarity=outcome.similarity if outcome else None,
+                face_status=face_status_of(outcome),
                 source=channel,
                 explanation=note,
                 at=at or (local_clock.local_now if local_clock else None),

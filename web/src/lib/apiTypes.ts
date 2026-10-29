@@ -4357,6 +4357,8 @@ export interface components {
             face_result?: string | null;
             /** Face Similarity */
             face_similarity?: number | null;
+            /** Face Status */
+            face_status?: string | null;
             /** Check Out Face Result */
             check_out_face_result?: string | null;
             /** Check Out Face Similarity */

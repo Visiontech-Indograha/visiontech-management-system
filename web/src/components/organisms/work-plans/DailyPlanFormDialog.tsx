@@ -10,9 +10,12 @@ import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
 import { SiteMapPicker } from "@/components/organisms/sites/SiteMapPicker";
 import {
+  addDays,
+  BACKDATE_DAYS,
   useCreateDailyPlan,
   useRecentSites,
   useUpdateDailyPlan,
+  wibDate,
   type DailyFormOptions,
   type DailyPlan,
 } from "@/services/dailyPlanService";
@@ -35,6 +38,11 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const [lat, setLat] = useState(plan ? String(plan.site_lat ?? "") : "");
   const [lng, setLng] = useState(plan ? String(plan.site_lng ?? "") : "");
   const [radius, setRadius] = useState(String(plan?.attendance_radius_m ?? 150));
+  const [workDate, setWorkDate] = useState(plan?.work_date ?? initial?.work_date ?? "");
+  // F10: jadwal tanggal lampau (<= BACKDATE_DAYS hari, hanya saat membuat) wajib beralasan; tercatat audit.
+  const [backdateReason, setBackdateReason] = useState("");
+  const today = wibDate();
+  const backdated = !plan && !!workDate && workDate < today;
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const recent = useRecentSites(plan ? "" : teamId);   // hanya saat membuat jadwal baru
@@ -75,13 +83,20 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
       clock_in_time: value("clock_in_time") || "07:00",
       clock_out_time: value("clock_out_time") || "16:00",
     };
+    if (backdated && !backdateReason.trim()) return setErrors({ backdate_reason: "Isi alasan untuk tanggal lampau." });
     try {
       if (plan) {
         await update.mutateAsync({ ...body, team_id: team.team_id, work_date: value("work_date") || plan.work_date });
         toast.success("Jadwal diperbarui.");
       } else {
-        await create.mutateAsync({ ...body, division_id: team.division_id, team_id: team.team_id, work_date: value("work_date") });
-        toast.success("Jadwal dibuat sebagai draf.");
+        await create.mutateAsync({
+          ...body,
+          division_id: team.division_id,
+          team_id: team.team_id,
+          work_date: value("work_date"),
+          ...(backdated ? { backdate_reason: backdateReason.trim() } : {}),
+        });
+        toast.success(backdated ? "Jadwal tanggal lampau dibuat sebagai draf (tercatat)." : "Jadwal dibuat sebagai draf.");
       }
       onClose();
     } catch (err) {
@@ -103,7 +118,26 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
             </ControlOption>
           ))}
         </SelectField>
-        <TextField name="work_date" label="Tanggal" type="date" defaultValue={plan?.work_date ?? initial?.work_date} error={errors.work_date} />
+        <TextField
+          name="work_date"
+          label="Tanggal"
+          type="date"
+          value={workDate}
+          min={plan ? today : addDays(today, -BACKDATE_DAYS)}
+          onChange={(e) => setWorkDate(e.target.value)}
+          error={errors.work_date}
+        />
+        {backdated && (
+          <TextField
+            name="backdate_reason"
+            label={`Alasan tanggal lampau (maks. ${BACKDATE_DAYS} hari)`}
+            value={backdateReason}
+            onChange={(e) => setBackdateReason(e.target.value)}
+            maxLength={300}
+            error={errors.backdate_reason}
+            hint="Dicatat di audit. Jadwal dibuat sebagai draf dan tetap perlu diajukan/disetujui."
+          />
+        )}
         <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui; koordinat wajib dilengkapi sebelum presensi." />
         <ChoiceChips
           label="Lokasi terakhir tim:"

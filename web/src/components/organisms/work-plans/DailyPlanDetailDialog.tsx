@@ -74,6 +74,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     setMode(next);
   };
   const editable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED");
+  const deletable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED" || p.status === "APPROVED");
 
   const run = async (fn: () => Promise<unknown>, done: string, close = false) => {
     setError(null);
@@ -172,9 +173,11 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
               // Ketikan manual dd/mm/yyyy (atau yyyy-mm-dd); tidak bergantung pada pemilih tanggal peramban.
               const until = parseTanggalInput(String(new FormData(e.currentTarget).get("until") ?? ""));
               if (!until) return setError("Tanggal tidak valid. Tulis dengan format dd/mm/yyyy, misalnya 01/11/2026.");
+              // Salin boleh maju atau mundur dari tanggal jadwal ini (tanggal sebelum hari ini ditolak API).
               const dates: string[] = [];
-              for (let d = addDays(p.work_date, 1); d <= until; d = addDays(d, 1)) dates.push(d);
-              if (!dates.length) return setError("Pilih tanggal akhir setelah tanggal jadwal ini.");
+              const [from, to] = until >= p.work_date ? [addDays(p.work_date, 1), until] : [until, addDays(p.work_date, -1)];
+              for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
+              if (!dates.length) return setError("Pilih tanggal lain selain tanggal jadwal ini.");
               void run(() => copy.mutateAsync({ id: p.daily_plan_id, work_dates: dates }), `${dates.length} jadwal draf dibuat.`, true);
             }}
           >
@@ -230,7 +233,8 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
           {canPlan && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}
-          {editable && (
+          {/* F10: hapus (lunak) untuk draf, diajukan, dan disetujui yang belum dimulai; API menolak bila sudah dipakai. */}
+          {deletable && (
             <ActionButton
               size="sm"
               variant="ghost"

@@ -4,9 +4,12 @@ sampai diterima. Jadwal dibuka kembali (ONGOING) selama revisi dan COMPLETED lag
 """
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tests.conftest import World, requires_db, sync_query
+from tests.daily import add_item
 
 pytestmark = requires_db
 
@@ -125,3 +128,57 @@ def test_inbox_scopes_to_division_and_leader(client, world: World):
         mine = client.get("/work-plans/corrections", headers=world.headers(client, who)).json()
         assert cid in [c["correction_id"] for c in mine]
     assert client.get("/work-plans/corrections", headers=world.headers(client, "member")).json() == []
+
+
+def _ready_to_accept(client, world: World, plan_id: str) -> str:
+    """Koreksi sampai IN_REVIEW (laporan ada, PM sudah menyetujui, ketua sudah mengirim revisi)."""
+    _report(client, world, plan_id)
+    cid = _ask(client, world, plan_id).json()["correction_id"]
+    assert _decide(client, world, cid, "APPROVE").json()["status"] == "REVISING"
+    submit = client.post(f"/work-plans/corrections/{cid}/submit", headers=world.headers(client, "leader"))
+    assert submit.status_code == 200, submit.text
+    return cid
+
+
+def _done_item_missing_mandatory_photo(world: World, plan_id: str) -> tuple[str, str]:
+    """Pekerjaan DONE dengan satu foto wajib (image_requirement) yang belum diunggah."""
+    item = add_item(plan_id, world, "AP B", status="DONE", completed_qty=1, progress_percent=100)
+    wt = sync_query("SELECT work_type_id FROM work_plan_item WHERE item_id = %s", (item,))[0][0]
+    sync_query("INSERT INTO image_requirement (work_type_id, name, path_image, is_mandatory, sort_order) "
+               "VALUES (%s, 'Foto sesudah', 'sop/x.png', TRUE, 1)", (wt,))
+    req = str(sync_query("SELECT image_requirement_id FROM image_requirement WHERE work_type_id = %s", (wt,))[0][0])
+    return item, req
+
+
+def test_accept_refused_while_mandatory_photo_missing_then_forced_with_note(client, world: World):
+    """F9: PM tidak boleh menerima koreksi bila foto wajib pekerjaan DONE belum lengkap (409 PHOTOS_INCOMPLETE)."""
+    plan_id = _completed_plan(world)
+    _done_item_missing_mandatory_photo(world, plan_id)
+    cid = _ready_to_accept(client, world, plan_id)
+
+    refused = _decide(client, world, cid, "ACCEPT")
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["error"]["code"] == "PHOTOS_INCOMPLETE"
+    assert "AP B" in refused.text and "Foto sesudah" in refused.text
+
+    no_note = client.post(f"/work-plans/corrections/{cid}/decision", headers=world.headers(client, "pm"),
+                          json={"decision": "ACCEPT", "force": True})
+    assert no_note.status_code == 422, no_note.text
+
+    forced = client.post(f"/work-plans/corrections/{cid}/decision", headers=world.headers(client, "pm"),
+                         json={"decision": "ACCEPT", "force": True, "note": "Foto menyusul, sudah dicek di lokasi"})
+    assert forced.status_code == 200, forced.text
+    assert forced.json()["status"] == "ACCEPTED"
+    assert _plan_status(plan_id) == "COMPLETED"
+
+
+def test_accept_allowed_once_mandatory_photo_is_attached(client, world: World):
+    plan_id = _completed_plan(world)
+    item, req = _done_item_missing_mandatory_photo(world, plan_id)
+    cid = _ready_to_accept(client, world, plan_id)
+    sync_query("UPDATE work_plan_item SET realization_photos_json = %s::jsonb WHERE item_id = %s",
+               (json.dumps([{"requirement_id": req}]), item))
+
+    accepted = _decide(client, world, cid, "ACCEPT")
+    assert accepted.status_code == 200, accepted.text
+    assert accepted.json()["status"] == "ACCEPTED"

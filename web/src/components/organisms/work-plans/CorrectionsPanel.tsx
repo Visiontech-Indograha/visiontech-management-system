@@ -6,6 +6,7 @@ import { FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { ApiError } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
 import {
   CORRECTION_STATUS,
@@ -19,17 +20,24 @@ import {
 /** PM memutuskan permintaan koreksi laporan harian dan memeriksa revisi sampai diterima. */
 export function CorrectionsPanel({ canDecide }: { canDecide: boolean }) {
   const inbox = useCorrectionInbox();
-  const [target, setTarget] = useState<{ correction: Correction; decision: CorrectionDecision; label: string } | null>(null);
+  const [target, setTarget] = useState<{ correction: Correction; decision: CorrectionDecision; label: string; force: boolean } | null>(null);
+  // F9: penerimaan ditolak server karena foto wajib pekerjaan belum lengkap (409 PHOTOS_INCOMPLETE).
+  const [photoGap, setPhotoGap] = useState<{ correction: Correction; message: string } | null>(null);
   const decide = useDecideCorrection();
   const items = (inbox.data ?? []).filter((c) => c.status !== "ACCEPTED" && c.status !== "REJECTED");
   if (!items.length) return null;
 
-  const run = async (c: Correction, decision: CorrectionDecision, note?: string) => {
+  const run = async (c: Correction, decision: CorrectionDecision, note?: string, force = false) => {
     try {
-      await decide.mutateAsync({ id: c.correction_id, decision, note });
+      await decide.mutateAsync({ id: c.correction_id, decision, note, force });
       toast.success("Keputusan disimpan.");
       setTarget(null);
+      setPhotoGap(null);
     } catch (err) {
+      if (err instanceof ApiError && err.code === "PHOTOS_INCOMPLETE" && decision === "ACCEPT" && !force) {
+        setPhotoGap({ correction: c, message: err.message });
+        return;
+      }
       toast.error(errorMessage(err));
     }
   };
@@ -54,11 +62,33 @@ export function CorrectionsPanel({ canDecide }: { canDecide: boolean }) {
                   size="sm"
                   variant={a.needsNote ? "outline" : "default"}
                   disabled={decide.isPending}
-                  onClick={() => (a.needsNote ? setTarget({ correction: c, decision: a.decision, label: a.label }) : run(c, a.decision))}
+                  onClick={() => {
+                    setPhotoGap(null);
+                    if (a.needsNote) setTarget({ correction: c, decision: a.decision, label: a.label, force: false });
+                    else run(c, a.decision);
+                  }}
                 >
                   {a.label}
                 </ActionButton>
               ))}
+            </div>
+          )}
+          {canDecide && photoGap?.correction.correction_id === c.correction_id && (
+            <div role="alert" className="flex w-full flex-col gap-2 rounded-panel border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <TextBlock>{photoGap.message}</TextBlock>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton size="sm" variant="outline" disabled={decide.isPending} onClick={() => setPhotoGap(null)}>
+                  Batal
+                </ActionButton>
+                <ActionButton
+                  size="sm"
+                  variant="outline"
+                  disabled={decide.isPending}
+                  onClick={() => setTarget({ correction: c, decision: "ACCEPT", label: "Terima tetap dengan catatan", force: true })}
+                >
+                  Terima tetap dengan catatan
+                </ActionButton>
+              </div>
             </div>
           )}
         </div>
@@ -68,7 +98,7 @@ export function CorrectionsPanel({ canDecide }: { canDecide: boolean }) {
           label={target.label}
           submitting={decide.isPending}
           onClose={() => setTarget(null)}
-          onSubmit={(note) => run(target.correction, target.decision, note)}
+          onSubmit={(note) => run(target.correction, target.decision, note, target.force)}
         />
       )}
     </section>

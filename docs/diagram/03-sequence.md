@@ -136,7 +136,7 @@ sequenceDiagram
     participant D as DB
     participant S as MinIO
     K->>A: POST /work-plans/daily/:id/start (LEADER)
-    A->>D: status APPROVED (409), tanggal tidak lebih dari hari ini (422), absen masuk ketua hari ini (409 CHECKIN_REQUIRED)
+    A->>D: status APPROVED (409), tanggal tidak lebih dari hari ini (422), absen masuk ketua pada tanggal jadwal atau hari ini WIB (409 CHECKIN_REQUIRED)
     A->>D: SET ONGOING
     A-->>K: 200 DailyPlanOut
     K->>A: POST /files/upload (foto hasil kerja)

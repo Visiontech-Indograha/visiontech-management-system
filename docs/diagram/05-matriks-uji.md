@@ -33,12 +33,14 @@ Kolom:
 | ID | Langkah | Aktor | Harapan | Tipe | Prioritas | Hasil |
 |---|---|---|---|---|---|---|
 | JD-01 | Buat jadwal DRAFT untuk tim aktif, tanggal besok | PM divisi | 201, status DRAFT | UI web | P1 | |
-| JD-02 | Buat jadwal untuk tanggal kemarin | PM | 422 | API | P2 | |
+| JD-02 | Buat jadwal untuk tanggal kemarin tanpa alasan | PM | 422 | API | P2 | |
+| JD-28 | Buat jadwal tanggal kemarin dengan alasan (backdate_reason) | PM | 201 DRAFT, audit BACKDATE_CREATED tercatat | API | P1 | F10 |
+| JD-29 | Buat jadwal tanggal 8 hari lalu, atau oleh Ketua | PM / Ketua | 422 / 403 | API | P1 | F10 |
 | JD-03 | Buat dua jadwal untuk tim dan tanggal yang sama | PM | 409 TEAM_DAY_TAKEN | API | P1 | |
 | JD-04 | PM divisi B membuat jadwal untuk divisi A | PM divisi B | 403 Hanya PM/OM divisi ini | API | P1 | |
 | JD-05 | OPS (punya CREATE_PLAN, bukan PM atau OM divisi) membuat jadwal | OPS | 403 | API | P2 | |
 | JD-06 | Submit jadwal yang sudah APPROVED | PM | 409 INVALID_STATE | API | P2 | |
-| JD-07 | Setujui jadwal yang tanggalnya sudah lewat | PM | 422 | API | P1 | |
+| JD-07 | Setujui jadwal yang tanggalnya lebih dari 7 hari lalu | PM | 422 | API | P1 | F10 (<= 7 hari boleh) |
 | JD-08 | Setujui matriks 5 jadwal, satu milik divisi lain | PM | 200, approved 4, skipped 1 | API | P1 | |
 | JD-09 | Tolak jadwal SUBMITTED tanpa alasan | PM | 422 | API | P2 | |
 | JD-10 | Tolak jadwal APPROVED dengan alasan | PM | 200, status DRAFT, alasan tersimpan | UI web | P1 | |
@@ -58,6 +60,9 @@ Kolom:
 | JD-24 | Setujui jadwal tanpa item | PM divisi | 422 PLAN_EMPTY | API | P1 | Perbaikan PR #213 |
 | JD-25 | Salin jadwal dengan item | PM divisi | 201, item ikut tersalin, progres direset | API | P1 | Perbaikan PR #213 |
 | JD-26 | Mulai hari kerja tanpa absen masuk ketua hari ini | Ketua | 409 CHECKIN_REQUIRED | API | P1 | Perbaikan PR #209 (H1) |
+| JD-30 | Mulai jadwal bertanggal lampau yang belum dimulai, ketua sudah absen HARI INI | Ketua | 200 ONGOING (F11); sebelum perbaikan 409 | API | P1 | F11 |
+| JD-31 | Hapus jadwal APPROVED yang belum dimulai | PM | 200, delete_at terisi (F10); ONGOING tetap 409 | API | P1 | F10 |
+| JD-32 | Selesaikan hari tanpa laporan saat ada item menunggu pindah hari | Ketua | 409 ROLLOVER_PENDING (bukan 422), lalu tetap 409 walau laporan sudah ada | API | P1 | F16 |
 | JD-27 | Ambil aset atau jadwal order dengan ID acak | PM | bukan 200 `[]` (ditolak sesuai akses) | API | P1 | Perbaikan PR #211 (A2) |
 | JD-23 | Akses GET /work-plans/daily tanpa token | Publik | 401 | API | P2 | |
 
@@ -145,6 +150,7 @@ Kolom:
 | KO-08 | PM kembalikan revisi | PM | 200, REVISING | UI web | P1 | |
 | KO-09 | Dua tab PM memutuskan koreksi yang sama | PM | satu 200, satu 409 | UI web | P1 | |
 | KO-10 | Ketua menutup jadwal lagi saat koreksi REVISING (lihat T7) | Ketua | Harapan 409 atau ditolak [VERIFIKASI] | API | P1 | |
+| KO-11 | PM terima revisi saat foto wajib pekerjaan DONE belum lengkap | PM | 409 PHOTOS_INCOMPLETE; web tampilkan peringatan dan 'Terima tetap dengan catatan' (force + catatan) | API, UI web | P1 | F9 |
 | KO-11 | PM tolak permintaan koreksi | PM | 200, REJECTED, jadwal tetap COMPLETED | UI web | P2 | |
 | KO-12 | Anggota minta koreksi | Anggota | 403 | API | P2 | |
 

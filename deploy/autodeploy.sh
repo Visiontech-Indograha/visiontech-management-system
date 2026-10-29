@@ -245,7 +245,9 @@ $CHANGES
   done
   step "Build image (docker compose build)"
   BUILD_ENV=$([ "$PFX" = "vms" ] && echo produksi || echo "${PFX#vms_}")      # vms→produksi, vms_beta→beta
-  docker compose --progress=plain build --build-arg "GIT_SHA=$SHORT" --build-arg "VMS_ENV=$BUILD_ENV" 2>&1 || exit 12
+  # Satu build sekali waktu untuk SEMUA lingkungan di server ini (prod + beta membangun bersamaan → swap 80%, 2026-10-29).
+  BUILD_LOCK="${VMS_BUILD_LOCK:-$HOME/deploy/.build.lock}"
+  flock -w 1800 "$BUILD_LOCK" docker compose --progress=plain build --build-arg "GIT_SHA=$SHORT" --build-arg "VMS_ENV=$BUILD_ENV" 2>&1 || exit 12
   step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
   ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Migrasi database (Alembic Master Schema V2)"

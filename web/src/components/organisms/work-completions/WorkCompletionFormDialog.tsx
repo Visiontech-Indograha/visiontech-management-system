@@ -58,7 +58,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
     handleSubmit,
     control,
     setValue,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({
     defaultValues: {
       division_id: me?.division_id ?? "",
@@ -151,7 +151,7 @@ export function WorkCompletionFormDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Pekerjaan klien baru"
       onClose={onClose}

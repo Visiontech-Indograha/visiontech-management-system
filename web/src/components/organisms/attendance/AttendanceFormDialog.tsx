@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -22,8 +23,9 @@ export function AttendanceFormDialog({
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
 }) {
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog
+    <VmsDialog dirty={dirtyForm.dirty}
       open
       title={title}
       onClose={onClose}
@@ -38,7 +40,7 @@ export function AttendanceFormDialog({
         </>
       }
     >
-      <FormBlock id="attendance-form" onSubmit={onSubmit} noValidate>
+      <FormBlock {...dirtyForm.formProps} id="attendance-form" onSubmit={onSubmit} noValidate>
         <FormErrorText message={formError} />
         {children}
       </FormBlock>

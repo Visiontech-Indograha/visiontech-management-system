@@ -6,6 +6,7 @@ import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { errorMessage } from "@/lib/errors";
 import { useEmployees } from "@/services/employeeService";
 import { REASON_LABEL, useCreateOffboarding, type OffboardingCreate } from "@/services/offboardingService";
@@ -46,8 +47,9 @@ export function OffboardingFormDialog({ employee, onClose }: {
     }
   };
 
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog
+    <VmsDialog dirty={dirtyForm.dirty}
       open
       title={employee ? `Offboarding ${employee.name}` : "Mulai offboarding"}
       onClose={onClose}
@@ -60,7 +62,7 @@ export function OffboardingFormDialog({ employee, onClose }: {
         </>
       }
     >
-      <FormBlock id="offboarding-form" onSubmit={submit} noValidate className="space-y-3">
+      <FormBlock {...dirtyForm.formProps} id="offboarding-form" onSubmit={submit} noValidate className="space-y-3">
         <FormErrorText message={error} />
         <TextBlock className="text-sm text-mist">
           Pinjaman alat & kendaraan yang belum kembali otomatis masuk daftar clearance. Akun baru dinonaktifkan setelah

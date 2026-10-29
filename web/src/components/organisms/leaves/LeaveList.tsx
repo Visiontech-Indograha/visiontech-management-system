@@ -15,10 +15,16 @@ import { lastPageOf, type Paged } from "@/lib/paged";
 import { LeaveApplyButton } from "./LeaveApplyButton";
 import { LEAVE_TYPE_LABEL, type LeaveRequest } from "@/services/leaveService";
 
+/** Status final cuti: APPROVED_BY_HR dipakai untuk setiap persetujuan non-PM (HR, OM, admin), jadi label netral. */
+function leaveStatusLabel(l: Pick<LeaveRequest, 'status' | 'reviewed_by_name'>): string {
+  if (l.status === 'APPROVED_BY_HR') return l.reviewed_by_name ? 'Disetujui · ' + l.reviewed_by_name : 'Disetujui';
+  return STATUS_BADGE[l.status]?.label ?? l.status;
+}
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Menunggu Persetujuan", className: "bg-amber-500/15 text-amber-600 font-medium" },
   APPROVED_BY_PM: { label: "Disetujui PM", className: "bg-leaf/15 text-leaf font-medium" },
-  APPROVED_BY_HR: { label: "Disetujui HR", className: "bg-leaf/15 text-leaf font-medium" },
+  APPROVED_BY_HR: { label: "Disetujui", className: "bg-leaf/15 text-leaf font-medium" },
   APPROVED_BY_FINANCE: { label: "Disetujui Finance", className: "bg-leaf/15 text-leaf font-medium" },
   REJECTED: { label: "Ditolak", className: "bg-danger/15 text-danger font-medium" },
   CANCELLED: { label: "Dibatalkan", className: "bg-hover text-mist font-medium" },
@@ -71,7 +77,7 @@ export function LeaveList({
             <ControlOption value="">-- Semua Status --</ControlOption>
             <ControlOption value="PENDING">Menunggu Persetujuan</ControlOption>
             <ControlOption value="APPROVED_BY_PM">Disetujui PM</ControlOption>
-            <ControlOption value="APPROVED_BY_HR">Disetujui HR</ControlOption>
+            <ControlOption value="APPROVED_BY_HR">Disetujui (final)</ControlOption>
             <ControlOption value="REJECTED">Ditolak</ControlOption>
             <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
           </SelectField>
@@ -108,9 +114,9 @@ export function LeaveList({
       {leaves.data && leaves.data.items.length > 0 && (
         <ListBlock className="grid gap-3 md:grid-cols-2">
           {leaves.data.items.map((l) => {
-            const statusBadge = STATUS_BADGE[l.status] ?? {
-              label: l.status,
-              className: "bg-hover text-mist",
+            const statusBadge = {
+              label: leaveStatusLabel(l),
+              className: STATUS_BADGE[l.status]?.className ?? "bg-hover text-mist",
             };
             const isPending = l.status === "PENDING";
 

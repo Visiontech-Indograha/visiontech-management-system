@@ -7464,12 +7464,8 @@ export interface components {
             work_type_id: string;
             /** Title */
             title: string;
-            /**
-             * Task Phase
-             * @default INSTALLATION
-             * @enum {string}
-             */
-            task_phase: "SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE";
+            /** Task Phase */
+            task_phase?: ("SURVEY" | "PREPARATION" | "INSTALLATION" | "REPLACEMENT" | "MAINTENANCE") | null;
             /**
              * Is Main Deliverable
              * @default false

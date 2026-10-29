@@ -10599,6 +10599,47 @@
     "title": "ProjectUpdate",
     "type": "object"
    },
+   "RecentSiteOut": {
+    "description": "Lokasi site yang pernah dipakai tim (untuk dipilih ulang di form Jadwal harian).",
+    "properties": {
+     "attendance_radius_m": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attendance Radius M"
+     },
+     "last_used": {
+      "format": "date",
+      "title": "Last Used",
+      "type": "string"
+     },
+     "site_lat": {
+      "title": "Site Lat",
+      "type": "string"
+     },
+     "site_lng": {
+      "title": "Site Lng",
+      "type": "string"
+     },
+     "site_name": {
+      "title": "Site Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "site_name",
+     "site_lat",
+     "site_lng",
+     "last_used"
+    ],
+    "title": "RecentSiteOut",
+    "type": "object"
+   },
    "RejectIn": {
     "properties": {
      "reason": {
@@ -25633,6 +25674,71 @@
      }
     ],
     "summary": "Bulk Approve",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/recent-sites": {
+   "get": {
+    "description": "Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).",
+    "operationId": "recent_sites_api_v1_work_plans_daily_recent_sites_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 10,
+       "maximum": 30,
+       "minimum": 1,
+       "title": "Limit",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/RecentSiteOut"
+         },
+         "title": "Response Recent Sites Api V1 Work Plans Daily Recent Sites Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Recent Sites",
     "tags": [
      "Work Plans (Daily-First)"
     ]

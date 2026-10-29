@@ -16,6 +16,12 @@ String _fmt(dynamic iso) => iso == null ? '-' : _date.format(DateTime.parse(iso 
 String _iso(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
 /// Label status hunian/pengajuan mess untuk karyawan.
+/// Mess di daftar `/mess/places` untuk `mess_id` hunian (kunci API: `mess_id`); null bila sudah tidak ada.
+Map<String, dynamic>? findMessPlace(List<Map<String, dynamic>> places, String? messId) {
+  if (messId == null) return null;
+  return places.where((p) => p['mess_id'] == messId).firstOrNull;
+}
+
 String messStatusLabel(String status) => switch (status) {
   'REQUESTED' => 'Menunggu persetujuan',
   'APPROVED' => 'Disetujui',
@@ -92,7 +98,7 @@ class _MessScreenState extends ConsumerState<MessScreen> {
   Future<void> _repeat(Map<String, dynamic> stay) async {
     try {
       final places = await ref.read(syncEngineProvider).api.messPlaces();
-      final place = places.where((p) => p['id'] == stay['mess_id']).firstOrNull;
+      final place = findMessPlace(places, stay['mess_id'] as String?);
       if (place == null) return _snack('Mess ini sudah tidak tersedia. Pilih mess lain lewat "Ajukan mess".');
       if (!mounted) return;
       final sent = await showDialog<bool>(

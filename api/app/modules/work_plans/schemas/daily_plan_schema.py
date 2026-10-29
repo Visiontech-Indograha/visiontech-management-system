@@ -41,6 +41,16 @@ class DailyPlanCreate(BaseModel):
         return self
 
 
+class RecentSiteOut(BaseModel):
+    """Lokasi site yang pernah dipakai tim (untuk dipilih ulang di form Jadwal harian)."""
+
+    site_name: str
+    site_lat: Decimal
+    site_lng: Decimal
+    attendance_radius_m: int | None = None
+    last_used: date
+
+
 class DailyPlanUpdate(BaseModel):
     team_id: UUID | None = None
     project_id: UUID | None = None

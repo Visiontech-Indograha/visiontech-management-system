@@ -229,7 +229,8 @@ $CHANGES
     docker image inspect "${IMG}-$c" >/dev/null 2>&1 && docker tag "${IMG}-$c" "${IMG}-$c:rollback" && echo "rollback siap: ${IMG}-$c"
   done
   step "Build image (docker compose build)"
-  docker compose --progress=plain build 2>&1 || exit 12
+  BUILD_ENV=$([ "$PFX" = "vms" ] && echo produksi || echo "${PFX#vms_}")      # vms→produksi, vms_beta→beta
+  docker compose --progress=plain build --build-arg "GIT_SHA=$SHORT" --build-arg "VMS_ENV=$BUILD_ENV" 2>&1 || exit 12
   step "Backup database (DB aplikasi → lokal + MinIO vms-backups)"
   ./backup.sh "pra-deploy-$SHORT" || exit 13
   step "Migrasi database (Alembic Master Schema V2)"

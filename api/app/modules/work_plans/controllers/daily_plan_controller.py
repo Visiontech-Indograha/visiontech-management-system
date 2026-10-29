@@ -14,6 +14,10 @@ from app.core.security import CurrentUser
 from app.modules.work_plans.dependencies import get_daily_plan_service, get_geocode_service
 from app.modules.work_plans.schemas.daily_plan_schema import (
     BulkApproveOut,
+    DailyActivateIn,
+    DailyBulkIn,
+    DailyBulkOut,
+    DailyBulkStandbyIn,
     DailyFormOptions,
     DailyPlanCreate,
     DailyPlanDetail,
@@ -93,6 +97,15 @@ class DailyPlanController:
 
     async def handle_bulk_approve(self, user: CurrentUser, daily_plan_ids: list[UUID]) -> BulkApproveOut:
         return BulkApproveOut(**await self.service.bulk_approve(user, daily_plan_ids))
+
+    async def handle_bulk_create(self, user: CurrentUser, data: DailyBulkIn) -> DailyBulkOut:
+        return await self.service.bulk_create(user, data)
+
+    async def handle_bulk_standby(self, user: CurrentUser, data: DailyBulkStandbyIn) -> DailyBulkOut:
+        return await self.service.bulk_standby_empty_days(user, data.team_ids, data.work_dates, data.division_id)
+
+    async def handle_activate(self, user: CurrentUser, daily_plan_id: UUID, data: DailyActivateIn) -> DailyPlanOut:
+        return self._out(await self.service.activate(user, daily_plan_id, data))
 
     async def handle_geo_search(self, q: str) -> list[GeoResult]:
         return [GeoResult(**r) for r in await self.geocoder.search(q)]

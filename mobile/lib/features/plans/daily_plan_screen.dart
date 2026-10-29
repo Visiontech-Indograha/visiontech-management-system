@@ -15,6 +15,7 @@ import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
 import 'day_resources_card.dart';
 import 'item_progress_screen.dart';
+import 'item_state.dart';
 import 'overtime_hours.dart';
 import 'survey_screen.dart';
 
@@ -574,7 +575,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                               'Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
                         ),
                       ),
-                    if (_openCorrection == null)
+                    if (_openCorrection == null) ...[
                     PrimaryAction(
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
@@ -594,6 +595,16 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         );
                       },
                     ),
+                    if (closeDayBlockReason(
+                          hasReport: _dailyReport != null,
+                          reportPending: _reportPending,
+                          pendingRollovers: pendingRolloverCount(plan),
+                        ) case final reason?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(reason, style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                    ],
                   ],
                   const SectionTitle('Daftar pekerjaan hari ini'),
                   for (final item in (plan['items'] as List? ?? const []).cast<Map>().where(
@@ -686,10 +697,12 @@ class _ItemCard extends StatelessWidget {
     final done = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
     final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
     final pct = target <= 0 ? 0.0 : (done / target).clamp(0, 1).toDouble();
-    final raw = '${item['status']}';
-    final state = raw == 'DONE'
-        ? 'DONE'
-        : (done > 0 && raw != 'SHIFTED_DAY' && raw != 'PENDING_ROLLOVER' ? 'PARTIAL' : raw);
+    final state = itemDisplayState(
+      raw: '${item['status']}',
+      done: done,
+      target: target,
+      photoCount: photoRefsOf(item['realization_photos_json']).length,
+    );
     final accent = statusStyle(state).accent;
     return Material(
       color: Theme.of(context).colorScheme.surface,

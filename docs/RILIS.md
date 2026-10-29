@@ -12,9 +12,9 @@ API, web, dan mobile mengikutinya lewat `bash scripts/versi.sh --tulis`; `bash s
 
 ## Urutan menaikkan versi
 1. Di cabang kerja, ubah `VERSION` lalu jalankan `bash scripts/versi.sh --tulis`.
-2. Tambahkan bagian `## [X.Y.Z] - YYYY-MM-DD` di `CHANGELOG.md` (format Keep a Changelog; isi dari `[Unreleased]`).
-3. Jalankan `bash scripts/verify.sh all`, lalu buka PR ke `development`.
-4. Setelah PR beruntun ke `prod` digabung, workflow `.github/workflows/rilis.yml` membuat tag `vX.Y.Z` dan
-   GitHub Release dengan catatan bagian tersebut.
+2. Judul PR sebaiknya memakai Conventional Commits (`feat:`, `fix:`, `chore:`, dan seterusnya); catatan rilis dibuat dari judul dan daftar PR.
+3. CHANGELOG.md lokal bersifat opsional. Bila bagian `## [X.Y.Z]` ada di berkas itu, isinya dipakai sebagai catatan rilis; bila tidak, catatan dibuat otomatis.
+4. Jalankan `bash scripts/verify.sh all`, lalu buka PR ke `development`.
+5. Setelah PR beruntun ke `prod` digabung, workflow `.github/workflows/rilis.yml` membuat tag `vX.Y.Z` dan GitHub Release.
 
 Catatan: push ke `prod` tanpa kenaikan `VERSION` membuat workflow gagal dengan sengaja (tag sudah ada).

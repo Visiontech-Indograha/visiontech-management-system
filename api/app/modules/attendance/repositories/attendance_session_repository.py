@@ -668,7 +668,7 @@ class AttendanceSessionRepository(BaseRepository):
                 CAST(:view_all AS boolean)
                 OR EXISTS (
                     SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
                 )
                 OR (
                     EXISTS (

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it } from "vitest";
 import { WorkCompletionFormDialog } from "@/components/organisms/work-completions/WorkCompletionFormDialog";
 import { mockMe } from "@/app/mockSession";
@@ -14,9 +15,11 @@ const clients = [
 function renderForm() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={client}>
-      <WorkCompletionFormDialog onClose={() => {}} />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <WorkCompletionFormDialog onClose={() => {}} />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 

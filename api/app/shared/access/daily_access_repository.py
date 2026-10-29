@@ -19,7 +19,7 @@ class DailyAccessRepository(BaseRepository):
     async def standing(self, daily_plan_id: UUID | str, employee_id: UUID | str | None) -> Any:
         return await self.fetchone(
             """
-            SELECT wpd.daily_plan_id, wpd.status, wpd.work_date, wpd.division_id, wpd.team_id,
+            SELECT wpd.daily_plan_id, wpd.status, wpd.kind, wpd.work_date, wpd.division_id, wpd.team_id,
                    d.pm_id, d.om_id, t.leader_employee_id,
                    (CAST(:emp AS uuid) IS NOT NULL AND CAST(:emp AS uuid) IN (d.pm_id, d.om_id)) AS manages,
                    (t.leader_employee_id = CAST(:emp AS uuid)) AS is_leader,

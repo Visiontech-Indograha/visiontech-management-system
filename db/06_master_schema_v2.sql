@@ -341,6 +341,9 @@ CREATE TABLE IF NOT EXISTS work_plan_daily (
     clock_out_time TIME NOT NULL DEFAULT '16:00:00',
     status VARCHAR(30) NOT NULL DEFAULT 'DRAFT'
         CONSTRAINT ck_work_plan_daily_status CHECK (status IN ('DRAFT','SUBMITTED','APPROVED','ONGOING','COMPLETED')),
+    -- WORK = jadwal kerja biasa; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib). Lihat migrasi v2_0013.
+    kind VARCHAR(10) NOT NULL DEFAULT 'WORK'
+        CONSTRAINT ck_work_plan_daily_kind CHECK (kind IN ('WORK','STANDBY')),
     created_by_id UUID NOT NULL REFERENCES employee(employee_id),
     approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
     approved_at TIMESTAMPTZ NULL,

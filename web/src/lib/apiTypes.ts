@@ -1883,7 +1883,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel Leave
-         * @description Pembatalan cuti oleh pemohon, HR, atau OM (status PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).
+         * @description Pembatalan cuti oleh pemohon, HR, atau OM (PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).
          */
         post: operations["cancel_leave_api_v1_leaves__leave_id__cancel_post"];
         delete?: never;

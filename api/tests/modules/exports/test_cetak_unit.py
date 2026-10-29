@@ -260,6 +260,7 @@ def _svc(items: list | None = None, header: object | None = None) -> es.ExportSe
     repo.team_roster = AsyncMock(return_value=[])
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
+    repo.employee_name = AsyncMock(return_value="Pengguna Uji")
     repo.insert_export = AsyncMock(
         return_value=SimpleNamespace(
             export_id="e1",
@@ -376,3 +377,9 @@ async def test_daily_report_hidden_schedule_is_not_found_or_forbidden(monkeypatc
     monkeypatch.setattr(es, "check_daily_access", AsyncMock(side_effect=ForbiddenError("x")))
     with pytest.raises(ForbiddenError):
         await svc.export_daily_report(USER, "d1")
+
+
+def test_bast_map_legend_uses_same_terms_as_the_map():
+    points = [_point("Survei A", lat=1.4, lng=101.4, status="DONE", day=2)]
+    text = _text(bast_docx(_completion(points, map_image=_png(), has_coordinates=True)))
+    assert "Existing (sudah terpasang)" in text and "Usulan pemasangan baru" in text

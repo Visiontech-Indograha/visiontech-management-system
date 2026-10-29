@@ -70,10 +70,9 @@ class FilesController:
         # Tipe ditentukan dari isi berkas (magic bytes), bukan klaim klien: header palsu tidak lolos.
         mime_type = kind.mime if kind else None
         if mime_type not in ALLOWED_MIMES:
-            raise HTTPException(
-                status_code=415,
-                detail={"code": "INVALID_FILE_TYPE", "message": f"Tipe berkas tidak diizinkan: {mime_type}"},
-            )
+            message = (f"Tipe berkas tidak diizinkan: {mime_type}" if mime_type
+                       else "Tipe berkas tidak dikenali. Unggah berkas asli (foto, PDF, atau dokumen), bukan teks.")
+            raise HTTPException(status_code=415, detail={"code": "INVALID_FILE_TYPE", "message": message})
 
         if mime_type.startswith("image/") and not is_decodable_image(file_bytes):
             if mime_type == "image/heic":

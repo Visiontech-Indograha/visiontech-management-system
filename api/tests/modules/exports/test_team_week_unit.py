@@ -126,3 +126,17 @@ def test_content_disposition_is_latin1_safe(name: str, ascii_part: str, utf8_par
     header = content_disposition("inline", name)
     header.encode("latin-1")  # tidak boleh error (dulu → 500)
     assert header.startswith("inline; ") and ascii_part in header and utf8_part in header
+
+
+@pytest.mark.anyio
+async def test_team_week_is_readable_by_hr_like_daily_report(monkeypatch):
+    svc = _service(member=False, items=[])
+    check = AsyncMock(side_effect=AppError("FORBIDDEN", "bukan PM divisi ini", status=403))
+    monkeypatch.setattr(es, "check_division_manager", check)
+    user = CurrentUser(user_id=str(uuid4()), organization_id=str(uuid4()), email="hr@x", role="ADMIN_HR_GA",
+                       roles=["ADMIN_HR_GA"], session_id="s", permissions=[], employee_id=str(uuid4()))
+    with pytest.raises(AppError) as err:
+        await svc.export_team_week(user, uuid4(), date(2026, 10, 26))
+    assert err.value.code == "NO_WORK"  # lolos gerbang akses; tanpa item hanya pesan "tidak ada pekerjaan"
+    check.assert_not_awaited()
+

@@ -24,6 +24,7 @@ from app.modules.exports.services.builders.model import (
     tgl,
 )
 from app.shared.documents import docx_kit as kit
+from app.shared.documents.static_map import STATUS_LABEL
 
 
 def _signature_blocks(r: CompletionReport) -> list[tuple[str, str, str, bytes | None]]:
@@ -83,7 +84,8 @@ def _map_section(doc: DocxDocument, r: CompletionReport, no: int) -> None:
         doc.add_paragraph().add_run().add_picture(io.BytesIO(r.map_image), width=Cm(16.5))
         kit.para(
             doc,
-            "Hijau = sudah selesai, biru = belum selesai. Nomor sesuai urutan titik pada tabel.",
+            f"Hijau = {STATUS_LABEL['EXISTING']}, biru = {STATUS_LABEL['PROPOSED']}. "
+            "Nomor sesuai urutan titik pada tabel.",
             italic=True,
             size=8,
         )

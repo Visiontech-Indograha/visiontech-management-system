@@ -129,6 +129,7 @@ def _service(order: dict) -> es.ExportService:
     repo.team_roster = AsyncMock(return_value=[])
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
+    repo.employee_name = AsyncMock(return_value="Pengguna Uji")
     return es.ExportService(repo, orders)
 
 
@@ -156,3 +157,13 @@ async def test_periodic_range_is_limited():
         await svc.export_periodic(user, ORDER["completion_id"], date(2026, 9, 20), date(2026, 9, 1), "EXCEL_XLSX")
     with pytest.raises(ValidationError):
         await svc.export_periodic(user, ORDER["completion_id"], date(2026, 8, 1), date(2026, 9, 30), "PPTX")
+
+
+
+async def test_printed_by_shows_employee_name_not_email():
+    svc = es.ExportService(repo=MagicMock(), orders=MagicMock())
+    svc.repo.employee_name = AsyncMock(return_value="Budi Santoso")
+    user = SimpleNamespace(email="budi@contoh.test", employee_id="11111111-1111-4111-8111-111111111111")
+    assert await svc._printer(user) == "Budi Santoso"
+    svc.repo.employee_name = AsyncMock(return_value=None)
+    assert await svc._printer(SimpleNamespace(email="x@contoh.test", employee_id=None)) == "-"

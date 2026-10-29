@@ -54,11 +54,11 @@ sequenceDiagram
     A->>D: status DRAFT atau SUBMITTED (409), validasi jenis pekerjaan dan order
     A-->>W: 201 PlanItemOut
     W->>A: POST /work-plans/daily/:id/submit (MANAGE)
-    A->>D: DRAFT to SUBMITTED
+    A->>D: cek minimal 1 item (422 PLAN_EMPTY), DRAFT to SUBMITTED
     A->>N: daily_submitted
     A-->>W: 200 DailyPlanOut
     W->>A: POST /work-plans/daily/:id/approve (MANAGE, atau matriks POST /work-plans/daily/approve)
-    A->>D: status DRAFT atau SUBMITTED (409), tanggal tidak lampau (422)
+    A->>D: status DRAFT atau SUBMITTED (409), tanggal tidak lampau (422), minimal 1 item (422 PLAN_EMPTY)
     A->>D: SET APPROVED, approver diisi
     A->>N: daily_approved ke tim
     A-->>W: 200 (matriks: daftar approved dan skipped)
@@ -136,7 +136,7 @@ sequenceDiagram
     participant D as DB
     participant S as MinIO
     K->>A: POST /work-plans/daily/:id/start (LEADER)
-    A->>D: status APPROVED, tanggal tidak lebih dari hari ini (409 atau 422)
+    A->>D: status APPROVED (409), tanggal tidak lebih dari hari ini (422), absen masuk ketua hari ini (409 CHECKIN_REQUIRED)
     A->>D: SET ONGOING
     A-->>K: 200 DailyPlanOut
     K->>A: POST /files/upload (foto hasil kerja)
@@ -331,7 +331,7 @@ sequenceDiagram
     participant W as Web PM
     participant P as Pemindai QR publik
     K->>A: POST /work-plans/daily/:id/complete
-    A->>D: ketua atau MANAGE, status ONGOING (409), laporan ada (422)
+    A->>D: ketua atau MANAGE, status ONGOING (409), tanpa koreksi terbuka (409 CORRECTION_OPEN), tanpa pindah hari menunggu (409 ROLLOVER_PENDING), laporan ada (422)
     A->>D: SET COMPLETED (hasil dikunci)
     A-->>K: 200
     K->>A: GET /work-completions/:id (LOGIN, relasi tim)
@@ -373,7 +373,7 @@ sequenceDiagram
     participant A as API
     participant D as DB
     participant S as MinIO
-    W->>A: POST /exports/work-completions/:id (template BAST, SURVEY_REPORT, BAST_PDF, BOQ, PROGRESS_SLIDES)
+    W->>A: POST /exports/work-completions/:id (template BAST, SURVEY_REPORT, BAST_PDF, BOQ, PROGRESS_SLIDES, ORDER_SHEET)
     A->>D: get_order_detail (visibilitas, 404 bila tak terlihat)
     alt BAST_PDF tanpa signature_hash
         A-->>W: 409 NOT_SIGNED
@@ -389,6 +389,11 @@ sequenceDiagram
     A->>D: pemilik, admin, atau OM (404 Dokumen bila tidak)
     A->>S: baca berkas (404 FILE_GONE bila hilang dari penyimpanan)
     A-->>W: berkas
+    W->>A: POST /exports/daily-report (docx, satu jadwal)
+    A->>D: ketua atau anggota tim, atau PM/OM divisi (jadwal dirilis)
+    A-->>W: berkas docx
+    W->>A: POST /exports/team-week (pptx, 7 hari, dari web)
+    A-->>W: berkas pptx
     W->>A: POST /exports/periodic (xlsx atau pptx, rentang tanggal)
     A->>D: CREATE_PLAN (403), rentang maks 31 hari (422)
     A->>S: simpan rekap periodik

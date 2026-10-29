@@ -47,3 +47,11 @@ Webhook Discord ada di `notify.env` (`DISCORD_WEBHOOK_DEPLOY`, opsional `DISCORD
 
 ## 9. Hardening server (diterapkan 29-10-2026)
 `sudo bash ~/deploy/vms-mvp/src/deploy/hardening-server.sh --cek` lalu `--ya` (buka satu sesi SSH cadangan; uji login kunci dari sesi baru sebelum menutup). Hasilnya: login root dan sandi SSH mati, `ufw` default tolak masuk (izin 22, 80, 443, 8080, 8000 dan antarmuka `tailscale0`), `fail2ban`, `unattended-upgrades`. Docker melewati ufw, jadi port kontainer harus diikat lewat compose (bagian 7–8). MariaDB bawaan host dibuka oleh `mariadb.socket` (`[::]:3306`) meski `bind-address` lokal; diikat dengan override `/etc/systemd/system/mariadb.socket.d/lokal.conf` (`ListenStream=127.0.0.1:3306`). Apache host dinonaktifkan (bukan bagian VMS). Cek: `sudo fail2ban-client status sshd`, `sudo ufw status`.
+
+## 10. Uptime Kuma: tahan alarm saat rilis (retry)
+Tiap rilis produksi membuat `/ready` gagal beberapa detik (kontainer API diganti), dan tanpa jeda Kuma langsung membunyikan alarm palsu. Monitor `produksi-api-ready` dibuat tahan sesaat:
+1. Buka Uptime Kuma (Tailscale/lokal, `deploy/uptime-kuma.compose.yml`), lalu **Edit** monitor `produksi-api-ready`.
+2. Isi **Heartbeat Interval** = `20` (detik) dan **Retries** = `3`. **Retry Interval** ikut 20 detik.
+3. **Save**. Alarm baru menyala bila `/ready` gagal berturut-turut sekitar 1 menit (satu percobaan awal + 3 ulang).
+4. Uji: pada rilis berikutnya, pastikan tidak ada notifikasi alarm. Jangan mematikan `vms_api` produksi hanya untuk menguji.
+Retries 2–3 sudah cukup; jangan lebih dari 5 agar gangguan sungguhan tidak terlambat dilaporkan.

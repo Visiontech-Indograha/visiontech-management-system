@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Idempoten: dijalankan ulang pada DB berisi tidak menghapus kolom enum (dulu DROP TYPE ... CASCADE).
 -- ============================================================================
 DO $$ BEGIN
-    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE', 'FINANCE');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN

@@ -10,7 +10,7 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
-OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA")
+OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA", "FINANCE")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
 _MAIN_OFFICE = "(SELECT office_id FROM office WHERE is_main_office AND delete_at IS NULL LIMIT 1)"

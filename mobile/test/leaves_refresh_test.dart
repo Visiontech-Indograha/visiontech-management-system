@@ -100,4 +100,11 @@ void main() {
 
     expect(find.text('Menunggu PM'), findsNothing);
   });
+
+  testWidgets('layar cuti ketua/anggota tidak menampilkan tombol persetujuan', (tester) async {
+    await _pump(tester, _FakeApi());
+    expect(find.textContaining('Tinjau'), findsNothing);
+    expect(find.textContaining('Setujui'), findsNothing);
+    expect(find.textContaining('Tolak'), findsNothing);
+  });
 }

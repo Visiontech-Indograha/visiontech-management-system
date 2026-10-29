@@ -721,12 +721,16 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SurfaceCard(
     padding: EdgeInsets.zero,
-    child: ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
+    // ListTile butuh Material sendiri: tanpanya latar kartu (DecoratedBox) menutupi efek tekan.
+    child: Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
     ),
   );
 }

@@ -260,6 +260,7 @@ def test_map_downloads_real_satellite_tiles_manual():  # pragma: no cover - manu
 def _svc(items: list | None = None, header: object | None = None) -> es.ExportService:
     orders = MagicMock()
     orders.get_order_detail = AsyncMock(return_value={**ORDER})
+    orders.export_access = AsyncMock(return_value=({**ORDER}, True))  # pengelola = akses penuh
     repo = MagicMock()
     repo.db = MagicMock()
     repo.completion_items = AsyncMock(return_value=items or [])

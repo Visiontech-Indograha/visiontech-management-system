@@ -40,12 +40,22 @@ export const WORK_STATE: Record<WorkState, { label: string; dot: string; text: s
   PARTIAL: { label: "Selesai sebagian", dot: "bg-warning-solid", text: "text-warning", bar: "bg-warning-solid" },
   DONE: { label: "Selesai", dot: "bg-success-solid", text: "text-success", bar: "bg-success-solid" },
 };
+/** Persen yang ditampilkan. API menghitung persen tanpa item yang dipindah hari (SHIFTED_DAY), sehingga
+ * bisa mencapai 100 walau sebagian pekerjaan belum selesai; 100% hanya bila semua item (termasuk yang
+ * dipindah/menunggu pindah) sudah DONE. */
+export function displayPct(p: { done_count: number; item_count: number; progress_pct?: number }): number {
+  const raw = p.progress_pct ?? (p.item_count ? (p.done_count / p.item_count) * 100 : 0);
+  const pct = Math.max(0, Math.min(100, Math.round(raw)));
+  const allDone = p.item_count > 0 && p.done_count >= p.item_count;
+  return !allDone && pct >= 100 ? 99 : pct;
+}
+
 export function workState(
   p: { status: string; work_date: string; done_count: number; item_count: number; progress_pct?: number },
   today: string,
 ): WorkState {
-  const pct = p.progress_pct ?? (p.item_count ? (p.done_count / p.item_count) * 100 : 0);
-  if (p.item_count > 0 && (p.done_count >= p.item_count || pct >= 100)) return "DONE";
+  const pct = displayPct(p);
+  if (p.item_count > 0 && p.done_count >= p.item_count) return "DONE";
   if (p.status === "COMPLETED") return pct > 0 ? "PARTIAL" : "LATE";
   if (p.work_date < today) return "LATE";
   if (p.status === "ONGOING" || pct > 0) return "ONGOING";

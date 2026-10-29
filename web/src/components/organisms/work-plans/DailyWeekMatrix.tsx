@@ -3,7 +3,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, WORK_STATE, workState, type Phase } from "@/lib/workPhase";
+import { displayPct, PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, WORK_STATE, workState, type Phase } from "@/lib/workPhase";
 import { addDays, useDailyPlans, weekStart, type DailyPlan } from "@/services/dailyPlanService";
 
 const MONTH = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
@@ -174,7 +174,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   </ActionButton>
                 );
               }
-              const pct = plan.progress_pct ?? 0;
+              const pct = displayPct(plan);
               const color = phaseColor(mainPhase(plan));
               return (
                 <ActionButton key={team.team_id} variant="outline"

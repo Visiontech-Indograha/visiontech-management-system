@@ -182,9 +182,21 @@ export const useCorrectionInbox = () =>
     queryFn: async () => (await api.get<Correction[]>("/work-plans/corrections")).data,
   });
 
-export const useDecideCorrection = () =>
-  useDailyMutation(async ({ id, decision, note }: { id: string; decision: CorrectionDecision; note?: string }) =>
-    (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note })).data);
+/** Keputusan koreksi: respons server langsung menggantikan baris di daftar (tidak menunggu refetch,
+ * yang bisa membawa data lama dan membuat klik pertama seolah tidak berefek), lalu daftar diperbarui ulang. */
+export const useDecideCorrection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, decision, note }: { id: string; decision: CorrectionDecision; note?: string }) =>
+      (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note })).data,
+    onSuccess: (updated) => {
+      qc.setQueryData<Correction[]>([...KEY, "corrections"], (old) =>
+        old?.map((c) => (c.correction_id === updated.correction_id ? updated : c)),
+      );
+      return qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+};
 
 export const CORRECTION_STATUS: Record<Correction["status"], string> = {
   REQUESTED: "Menunggu keputusan",

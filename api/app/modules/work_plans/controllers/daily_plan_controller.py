@@ -6,6 +6,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends
@@ -34,6 +35,7 @@ from app.modules.work_plans.schemas.daily_report_schema import (
 )
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.geocode_service import GeocodeService
+from app.shared.access.access_service import is_admin
 
 
 class DailyPlanController:
@@ -48,8 +50,15 @@ class DailyPlanController:
         self.geocoder = geocoder
 
     @staticmethod
-    def _out(row: object) -> DailyPlanOut:
-        return DailyPlanOut(**row._mapping)  # type: ignore[attr-defined]
+    def _manages(user: CurrentUser, mapping: Any) -> bool:
+        """PM/OM divisi jadwal (atau SUPER_ADMIN) — sama dengan `manages` pada check_daily_access."""
+        if is_admin(user) or not user.employee_id:
+            return is_admin(user)
+        return user.employee_id in (str(mapping["pm_id"]), str(mapping["om_id"]))
+
+    def _out(self, user: CurrentUser, row: object) -> DailyPlanOut:
+        mapping = row._mapping  # type: ignore[attr-defined]
+        return DailyPlanOut(**mapping, can_manage=self._manages(user, mapping))
 
     async def handle_list(
         self, user: CurrentUser, start: date | None, end: date | None, division_id: UUID | None,
@@ -57,10 +66,11 @@ class DailyPlanController:
     ) -> list[DailyPlanOut]:
         rows = await self.service.list_plans(user, start=start, end=end, division_id=division_id, team_id=team_id,
                                              status=status)
-        return [self._out(r) for r in rows]
+        return [self._out(user, r) for r in rows]
 
-    async def handle_detail(self, daily_plan_id: UUID) -> DailyPlanDetail:
-        return DailyPlanDetail(**await self.service.detail(daily_plan_id))
+    async def handle_detail(self, user: CurrentUser, daily_plan_id: UUID) -> DailyPlanDetail:
+        data = await self.service.detail(daily_plan_id)
+        return DailyPlanDetail(**data, can_manage=self._manages(user, data))
 
     async def handle_recent_sites(self, user: CurrentUser, team_id: UUID, limit: int) -> list[RecentSiteOut]:
         rows = await self.service.recent_sites(user, team_id, limit)
@@ -79,17 +89,17 @@ class DailyPlanController:
             completed_target_unit=int(totals.completed_target_unit or 0),
             scheduled_target_qty=scheduled,
             unscheduled_target_qty=max(total - scheduled, 0.0),
-            plans=[self._out(r) for r in plans],
+            plans=[self._out(user, r) for r in plans],
         )
 
     async def handle_create(self, user: CurrentUser, data: DailyPlanCreate) -> DailyPlanOut:
-        return self._out(await self.service.create(user, data))
+        return self._out(user, await self.service.create(user, data))
 
     async def handle_update(self, user: CurrentUser, daily_plan_id: UUID, data: DailyPlanUpdate) -> DailyPlanOut:
-        return self._out(await self.service.update(user, daily_plan_id, data))
+        return self._out(user, await self.service.update(user, daily_plan_id, data))
 
     async def handle_copy(self, user: CurrentUser, daily_plan_id: UUID, work_dates: list[date]) -> list[DailyPlanOut]:
-        return [self._out(r) for r in await self.service.copy(user, daily_plan_id, work_dates)]
+        return [self._out(user, r) for r in await self.service.copy(user, daily_plan_id, work_dates)]
 
     async def handle_delete(self, user: CurrentUser, daily_plan_id: UUID) -> dict[str, str]:
         await self.service.delete(user, daily_plan_id)
@@ -101,10 +111,10 @@ class DailyPlanController:
     async def handle_transition(self, user: CurrentUser, daily_plan_id: UUID, action: str,
                                 reason: str | None = None) -> DailyPlanOut:
         if action == "reject":
-            return self._out(await self.service.reject(user, daily_plan_id, reason or ""))
+            return self._out(user, await self.service.reject(user, daily_plan_id, reason or ""))
         handler = {"submit": self.service.submit, "approve": self.service.approve,
                    "start": self.service.start, "complete": self.service.complete}[action]
-        return self._out(await handler(user, daily_plan_id))
+        return self._out(user, await handler(user, daily_plan_id))
 
     async def handle_bulk_approve(self, user: CurrentUser, daily_plan_ids: list[UUID]) -> BulkApproveOut:
         return BulkApproveOut(**await self.service.bulk_approve(user, daily_plan_ids))
@@ -116,7 +126,7 @@ class DailyPlanController:
         return await self.service.bulk_standby_empty_days(user, data.team_ids, data.work_dates, data.division_id)
 
     async def handle_activate(self, user: CurrentUser, daily_plan_id: UUID, data: DailyActivateIn) -> DailyPlanOut:
-        return self._out(await self.service.activate(user, daily_plan_id, data))
+        return self._out(user, await self.service.activate(user, daily_plan_id, data))
 
     async def handle_geo_search(self, q: str) -> list[GeoResult]:
         return [GeoResult(**r) for r in await self.geocoder.search(q)]

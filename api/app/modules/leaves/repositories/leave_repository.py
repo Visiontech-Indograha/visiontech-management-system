@@ -20,7 +20,11 @@ _LEAVE_SELECT = """
            lr.end_date, lr.total_days, lr.reason, lr.status::text AS status,
            lr.attachment_path,
            COALESCE(rev_hr.full_name, rev_pm.full_name) AS reviewed_by_name,
-           lr.reviewed_at, lr.rejection_note, lr.cancel_note, lr.create_at
+           lr.reviewed_at,
+           -- Kolom rejection_note dipakai bersama oleh catatan persetujuan & penolakan; dipisah menurut status.
+           CASE WHEN lr.status::text = 'REJECTED' THEN lr.rejection_note END AS rejection_note,
+           CASE WHEN lr.status::text <> 'REJECTED' THEN lr.rejection_note END AS review_note,
+           lr.cancel_note, lr.create_at
     FROM leave_request lr
     JOIN employee e ON e.employee_id = lr.employee_id
     LEFT JOIN division d ON d.division_id = e.division_id

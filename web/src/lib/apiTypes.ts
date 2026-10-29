@@ -5406,6 +5406,11 @@ export interface components {
              */
             phases: string[];
             /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
+            /**
              * Items
              * @default []
              */
@@ -5519,6 +5524,11 @@ export interface components {
              * @default []
              */
             phases: string[];
+            /**
+             * Can Manage
+             * @default false
+             */
+            can_manage: boolean;
         };
         /** DailyPlanUpdate */
         DailyPlanUpdate: {
@@ -6590,6 +6600,8 @@ export interface components {
             reviewed_at?: string | null;
             /** Rejection Note */
             rejection_note?: string | null;
+            /** Review Note */
+            review_note?: string | null;
             /** Cancel Note */
             cancel_note?: string | null;
             /** Conflicts */

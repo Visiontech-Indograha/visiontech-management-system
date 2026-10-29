@@ -18299,6 +18299,11 @@
       "title": "Phases",
       "default": []
      },
+     "can_manage": {
+      "type": "boolean",
+      "title": "Can Manage",
+      "default": false
+     },
      "items": {
       "items": {
        "$ref": "#/components/schemas/DailyItemBrief"
@@ -18565,6 +18570,11 @@
       "type": "array",
       "title": "Phases",
       "default": []
+     },
+     "can_manage": {
+      "type": "boolean",
+      "title": "Can Manage",
+      "default": false
      }
     },
     "type": "object",
@@ -21421,6 +21431,17 @@
        }
       ],
       "title": "Rejection Note"
+     },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
      },
      "cancel_note": {
       "anyOf": [

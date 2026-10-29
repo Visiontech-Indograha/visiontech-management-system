@@ -334,6 +334,9 @@ class _GuidedPhotoCaptureState extends State<GuidedPhotoCapture> {
   }
 
   Future<void> _capture(int index) async {
+    // Ketukan kedua sebelum tombol sempat dinonaktifkan (frame belum berganti) tidak boleh membuka kamera
+    // kedua: dua rute kamera menghasilkan dua foto, tetapi slot hanya menyimpan satu (foto lainnya yatim).
+    if (_capturingIndex != null) return;
     setState(() {
       _capturingIndex = index;
       _error = null;

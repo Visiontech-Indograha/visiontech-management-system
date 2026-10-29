@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
@@ -633,6 +634,42 @@ class VmsApi {
     });
     final res = await _dio.post('$_p/files/upload', data: form);
     return (res.data as Map)['file_id'] as String;
+  }
+
+  // --- Logo tim -------------------------------------------------------------
+  /// Detail tim (memuat `logo_file_id` & `logo_url`). Anggota tanpa izin lihat tim memperoleh 403.
+  Future<Map<String, dynamic>> teamDetail(String teamId) async =>
+      _map((await _dio.get('$_p/teams/$teamId')).data);
+
+  /// Gambar logo tim; null bila tim belum punya logo (404).
+  Future<Uint8List?> teamLogoBytes(String teamId) async {
+    try {
+      final res = await _dio.get<List<int>>(
+        '$_p/teams/$teamId/logo',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final data = res.data;
+      return data == null ? null : Uint8List.fromList(data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  /// Unggah logo tim (multipart `file`). Hanya ketua tim; 403 bila bukan.
+  Future<Map<String, dynamic>> uploadTeamLogo(
+    String teamId,
+    Uint8List bytes,
+    String filename,
+  ) async {
+    final form = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    return _map((await _dio.put('$_p/teams/$teamId/logo', data: form)).data);
+  }
+
+  Future<void> deleteTeamLogo(String teamId) async {
+    await _dio.delete('$_p/teams/$teamId/logo');
   }
 
   /// Mengganti (atau menghapus bila null) foto profil sendiri dengan berkas hasil unggah.

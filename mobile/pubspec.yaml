@@ -59,7 +59,7 @@ dependencies:
   google_fonts: ^6.2.1
   camera_android: ^0.10.12
   webview_flutter: ^4.14.1
-  flutter_local_notifications: ^22.3.1
+  flutter_local_notifications: ^22.3.3
   timezone: ^0.11.0
   image_picker: ^1.2.4
   flutter_map: ^8.3.2

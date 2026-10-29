@@ -146,6 +146,12 @@ void main() {
 
   testWidgets('ketua tim melihat bagian serah terima di jadwalnya', (tester) async {
     await pumpApp(tester, 'e1', const DailyPlanScreen(dailyPlanId: 'a'));
+    // Daftar dibangun malas: bagian ini kini di bawah alasan tutup hari, jadi gulir sampai terlihat.
+    await tester.scrollUntilVisible(
+      find.text('Serah terima pekerjaan'),
+      300,
+      scrollable: find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)),
+    );
     expect(find.text('Serah terima pekerjaan'), findsOneWidget);
   });
 

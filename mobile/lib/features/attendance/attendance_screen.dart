@@ -201,10 +201,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       };
     }
     // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak
-    // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini".
+    // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini". Sesi tanggal sebelumnya (lupa pulang,
+    // kerja malam) sudah berakhir pada tengah malam: tidak ditawarkan sebagai "Absen pulang" hari ini.
+    final dayNow = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
     for (final r in _records) {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
+          r['work_date'] == dayNow &&
           (r['status'] == 'AUTO_VALID' || r['status'] == 'APPROVED')) {
         // Absen pulang offline yang belum terkirim: tampilkan jamnya & jangan tawarkan pulang lagi.
         if (offOut != null) {
@@ -296,8 +299,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
 
   Future<void> _checkIn() async {
     final now = attendanceClock();
-    if (_wibMinutes(now) < 6 * 60 + 45) {
-      _snack('Absensi masuk baru dibuka mulai pukul 06:45 WIB.');
+    if (!attendanceHoursSkipped() && _wibMinutes(now) < 6 * 60 + 45) {
+      await tampilkanJamBukaAbsen(context);
       return;
     }
     final site = _sites.where((s) => s['id'] == _siteId).firstOrNull;
@@ -930,6 +933,27 @@ int _wibHour(DateTime now) => now.toUtc().add(const Duration(hours: 7)).hour;
 int _wibMinutes(DateTime now) {
   final w = now.toUtc().add(const Duration(hours: 7));
   return w.hour * 60 + w.minute;
+}
+
+/// Build development (`VMS_DEVELOPMENT`, juga `--dart-define=VMS_DEVELOPMENT=true`) boleh melewati gerbang jam
+/// absen masuk 06:45 di aplikasi bila `VMS_SKIP_ATTENDANCE_HOURS=true`. Build lain selalu dibatasi, flag diabaikan.
+const _devBuildFlag = bool.fromEnvironment('VMS_DEVELOPMENT');
+const _skipHoursFlag = bool.fromEnvironment('VMS_SKIP_ATTENDANCE_HOURS');
+
+bool attendanceHoursSkipped({bool devBuild = _devBuildFlag, bool skipFlag = _skipHoursFlag}) => devBuild && skipFlag;
+
+/// Pesan jam buka absen sebagai dialog (bukan snackbar yang cepat hilang); tombol OK menutupnya.
+Future<void> tampilkanJamBukaAbsen(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Absensi belum dibuka'),
+      content: const Text('Absensi masuk baru dibuka mulai pukul 06:45 WIB.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('OK')),
+      ],
+    ),
+  );
 }
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.

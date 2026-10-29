@@ -19,6 +19,10 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     AttachmentsIn,
     BulkApproveIn,
     BulkApproveOut,
+    DailyActivateIn,
+    DailyBulkIn,
+    DailyBulkOut,
+    DailyBulkStandbyIn,
     DailyFormOptions,
     DailyPlanCopy,
     DailyPlanCreate,
@@ -85,6 +89,27 @@ async def create_daily_plan(data: DailyPlanCreate, current_user: CurrentUser = _
                             controller: DailyPlanController = Depends()) -> DailyPlanOut:
     """Membuat jadwal harian (DRAFT) untuk satu tim pada satu tanggal."""
     return await controller.handle_create(current_user, data)
+
+
+@router.post("/daily/bulk", response_model=DailyBulkOut)
+async def bulk_create_daily(data: DailyBulkIn, current_user: CurrentUser = _PLANNER,
+                            controller: DailyPlanController = Depends()) -> DailyBulkOut:
+    """Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain."""
+    return await controller.handle_bulk_create(current_user, data)
+
+
+@router.post("/daily/bulk-standby", response_model=DailyBulkOut)
+async def bulk_standby_daily(data: DailyBulkStandbyIn, current_user: CurrentUser = _PLANNER,
+                             controller: DailyPlanController = Depends()) -> DailyBulkOut:
+    """Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui)."""
+    return await controller.handle_bulk_standby(current_user, data)
+
+
+@router.post("/daily/{daily_plan_id}/activate", response_model=DailyPlanOut)
+async def activate_daily_plan(daily_plan_id: UUID, data: DailyActivateIn, current_user: CurrentUser = _PLANNER,
+                              controller: DailyPlanController = Depends()) -> DailyPlanOut:
+    """Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim."""
+    return await controller.handle_activate(current_user, daily_plan_id, data)
 
 
 @router.post("/daily/approve", response_model=BulkApproveOut)

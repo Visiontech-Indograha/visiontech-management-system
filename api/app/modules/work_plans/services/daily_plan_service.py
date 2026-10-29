@@ -16,7 +16,7 @@ Jadwal harian daily-first (Milestone 5, docs/35 §3; keputusan pemilik 2026-10-2
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -27,7 +27,15 @@ from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.work_plans.repositories.daily_plan_repository import DailyPlanRepository
-from app.modules.work_plans.schemas.daily_plan_schema import DailyPlanCreate, DailyPlanUpdate
+from app.modules.work_plans.schemas.daily_plan_schema import (
+    DailyActivateIn,
+    DailyBulkCellOut,
+    DailyBulkIn,
+    DailyBulkOut,
+    DailyPlanCreate,
+    DailyPlanUpdate,
+)
+from app.modules.work_plans.services.plan_item_service import PlanItemService
 from app.shared.access.access_service import (
     DailyAccess,
     DailyNeed,
@@ -262,6 +270,73 @@ class DailyPlanService:
             raise ValidationError("Ada berkas lampiran yang belum diunggah atau sudah dihapus.")
         await self.repo.replace_attachments(daily_plan_id, file_ids)
         return await self.repo.attachment_ids(daily_plan_id)
+
+    # ── Alokasi massal & siaga ─────────────────────────────────────────────────
+    async def _bulk_cell_problem(self, data: DailyBulkIn, team_id: UUID, work_date: date) -> tuple[str, str] | None:
+        """Alasan sel dilewati (kode, pesan) atau None bila sel bisa dibuat. Tidak melempar galat per sel."""
+        if not await self.repo.team_of_division(team_id, data.division_id):
+            return "TEAM_BUKAN_DIVISI", "Tim tidak ditemukan, nonaktif, atau bukan milik divisi ini."
+        if work_date < jakarta_now().date():
+            return "TANGGAL_LAMPAU", "Tanggal sudah lewat; alokasi hanya untuk hari ini atau mendatang."
+        if await self.repo.team_day_taken(team_id, work_date):
+            return "TEAM_DAY_TAKEN", "Tim ini sudah punya jadwal pada tanggal tersebut."
+        return None
+
+    async def bulk_create(self, user: CurrentUser, data: DailyBulkIn) -> DailyBulkOut:
+        """Membuat jadwal untuk setiap pasangan (tim, tanggal) dalam satu transaksi permintaan.
+
+        Sel yang tidak memenuhi aturan dilaporkan sebagai SKIPPED dan tidak menggagalkan sel lain. Seluruh sel
+        ditulis dalam satu sesi, jadi galat tak terduga di tengah jalan membatalkan permintaan secara utuh."""
+        await check_division_manager(self.db, data.division_id, user)
+        if not user.employee_id:
+            raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
+        cells: list[DailyBulkCellOut] = []
+        for team_id in dict.fromkeys(data.team_ids):
+            for work_date in sorted(set(data.work_dates)):
+                problem = await self._bulk_cell_problem(data, team_id, work_date)
+                if problem:
+                    cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="SKIPPED",
+                                                  reason=problem[0], message=problem[1]))
+                    continue
+                new_id = await self.repo.insert({
+                    "division_id": str(data.division_id), "team_id": str(team_id), "project_id": None,
+                    "work_date": work_date, "site_name": data.site_name.strip() if data.site_name else None,
+                    "site_lat": data.site_lat, "site_lng": data.site_lng,
+                    "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
+                    "clock_out_time": time(16, 0), "kind": data.kind, "created_by_id": user.employee_id,
+                })
+                if data.target == "APPROVED":
+                    await self.repo.set_status(new_id, "APPROVED", approver=user.employee_id)
+                cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="CREATED",
+                                              daily_plan_id=new_id))
+        created = sum(1 for c in cells if c.status == "CREATED")
+        return DailyBulkOut(created=created, skipped=len(cells) - created, cells=cells)
+
+    async def bulk_standby_empty_days(self, user: CurrentUser, team_ids: list[UUID], work_dates: list[date],
+                                      division_id: UUID) -> DailyBulkOut:
+        """Tandai hari kosong tim sebagai siaga (disetujui). Hanya sel tanpa jadwal yang dibuat."""
+        data = DailyBulkIn(division_id=division_id, team_ids=team_ids, work_dates=work_dates, kind="STANDBY",
+                           target="APPROVED")
+        return await self.bulk_create(user, data)
+
+    async def activate(self, user: CurrentUser, daily_plan_id: UUID, data: DailyActivateIn) -> Any:
+        """Ubah jadwal siaga menjadi pekerjaan klien: tambah item, ubah kind jadi WORK, beri tahu ketua & anggota."""
+        access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
+        if access.plan.kind != "STANDBY":
+            raise AppError("BUKAN_SIAGA", "Hanya jadwal siaga yang dapat diubah jadi pekerjaan.", status=409)
+        require_daily_status(access, "DRAFT", "SUBMITTED", "APPROVED")
+        items = PlanItemService(self.db)
+        for item in data.items:
+            await items.add_validated(access, daily_plan_id, item)
+        await self.repo.set_kind(daily_plan_id, "WORK")
+        people = await NotificationService(self.db).repo.daily_people(daily_plan_id)
+        if people:
+            await NotificationService(self.db).notify_employees(
+                [people.leader, *people.members], "DAILY_ACTIVATED",
+                f"Tim Anda mendapat tugas {NotificationService._day_label(people)}", people.site_name or "",
+                target="plan", plan_id=daily_plan_id,
+            )
+        return await self.repo.get(daily_plan_id)
 
     # ── Status ────────────────────────────────────────────────────────────────
     async def _require_items_unless_standby(self, access: DailyAccess, daily_plan_id: UUID | str) -> None:

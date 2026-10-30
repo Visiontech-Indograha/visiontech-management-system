@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
 
+from app.shared.documents.branding import KopLogos, default_kop_logos
+
 PHASE_LABEL = {
     "SURVEY": "Survei",
     "PREPARATION": "Persiapan",
@@ -105,7 +107,7 @@ class CompletionReport:
     pm_signature: bytes | None = None
     map_image: bytes | None = None  # PNG peta + penanda titik (None: tanpa koneksi / tanpa koordinat)
     has_coordinates: bool = False  # ada titik berkoordinat (beda 'tanpa koneksi' dan 'tanpa titik')
-    team_logo: bytes | None = None  # logo tim (berkas asli); None = logo default Visiontech
+    logos: KopLogos = field(default_factory=default_kop_logos)  # (logo Visiontech, logo tim | None)
 
     @property
     def survey_points(self) -> list[ReportPoint]:
@@ -151,7 +153,7 @@ class DailyReport:
     generated_by: str
     generated_at: datetime
     report_submitted_at: datetime | None = None
-    team_logo: bytes | None = None
+    logos: KopLogos = field(default_factory=default_kop_logos)
     assets: list[AssetLine] = field(default_factory=list)
 
 
@@ -179,7 +181,7 @@ class TeamWeekReport:
     roster: list[Any]
     generated_by: str
     generated_at: datetime
-    team_logo: bytes | None = None
+    logos: KopLogos = field(default_factory=default_kop_logos)
     assets: list[AssetLine] = field(default_factory=list)
 
 

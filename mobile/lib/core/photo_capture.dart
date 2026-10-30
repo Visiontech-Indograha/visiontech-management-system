@@ -106,7 +106,8 @@ Future<(File?, String?)> captureWatermarkedPhoto({
   return (file, null);
 }
 
-/// Logo watermark: logo tim bila tersedia (cache/server dengan batas waktu singkat), selain itu logo default.
+/// Logo watermark: logo Visiontech SELALU tampil; logo tim (bila ada & tersedia cepat, cache/server dengan
+/// batas waktu singkat) ditampilkan di sebelahnya. Keduanya digabung dalam satu kotak standar.
 Future<Uint8List> _watermarkLogo(BuildContext context) async {
   Uint8List? teamLogo;
   try {
@@ -114,10 +115,45 @@ Future<Uint8List> _watermarkLogo(BuildContext context) async {
       ProviderScope.containerOf(context, listen: false),
     );
   } catch (_) {
-    teamLogo = null; // tanpa ProviderScope (mis. uji) → logo default
+    teamLogo = null; // tanpa ProviderScope (mis. uji) → hanya logo Visiontech
   }
-  return teamLogo ??
+  final visiontech =
       (await rootBundle.load(watermarkLogoAsset)).buffer.asUint8List();
+  if (teamLogo == null) return visiontech;
+  return compute(composeKopLogos, <Uint8List>[visiontech, teamLogo]);
+}
+
+/// Gabung logo Visiontech dan logo tim berdampingan dalam kotak watermark standar (PNG transparan).
+/// Tiap logo 'contain' di sel kotanya sendiri (sama lebar), tanpa distorsi atau pangkas.
+@visibleForTesting
+Uint8List composeKopLogos(List<Uint8List> logos) {
+  const gap = 6;
+  final boxW = watermarkLogoBoxWidth.toInt();
+  final boxH = watermarkLogoBoxHeight.toInt();
+  final cellW = (boxW - gap) ~/ 2;
+  final canvas = img.Image(width: boxW, height: boxH, numChannels: 4);
+  for (var i = 0; i < logos.length; i++) {
+    final src = img.decodeImage(logos[i]);
+    if (src == null) continue;
+    final scale = [cellW / src.width, boxH / src.height].reduce(
+      (a, b) => a < b ? a : b,
+    );
+    final w = (src.width * scale).round().clamp(1, cellW).toInt();
+    final h = (src.height * scale).round().clamp(1, boxH).toInt();
+    final sized = img.copyResize(
+      src,
+      width: w,
+      height: h,
+      interpolation: img.Interpolation.average,
+    );
+    img.compositeImage(
+      canvas,
+      sized,
+      dstX: i * (cellW + gap) + (cellW - w) ~/ 2,
+      dstY: (boxH - h) ~/ 2,
+    );
+  }
+  return img.encodePng(canvas);
 }
 
 class _WatermarkArgs {

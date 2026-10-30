@@ -38,9 +38,9 @@ def qr_data_uri(text: str) -> str:
     return data_uri(buf.getvalue(), "image/png")
 
 
-def render_html(template: str, *, logo: str | None = None, **context: Any) -> str:
-    """HTML dari templat. `logo` (data URI) menggantikan logo default kop."""
-    return _ENV.get_template(template).render(logo=logo or LOGO_DATA_URI, **context)
+def render_html(template: str, *, logos: list[str] | None = None, **context: Any) -> str:
+    """HTML dari templat. `logos` (data URI) = logo kop berurutan; kosong → logo Visiontech bawaan."""
+    return _ENV.get_template(template).render(logos=logos or [LOGO_DATA_URI], **context)
 
 
 def html_to_pdf(html: str) -> bytes:

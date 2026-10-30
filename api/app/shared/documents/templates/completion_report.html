@@ -16,6 +16,7 @@
   .num { text-align: right; }
   .kop { display: flex; align-items: center; justify-content: space-between;
          padding-bottom: 3mm; margin-bottom: 4mm; border-bottom: 0.8mm solid #232c6f; }
+  .kop .logos { display: flex; align-items: center; gap: 4mm; }
   .kop img { height: 13mm; }
   .kop .client { text-align: right; font-size: 8pt; color: #64748b; }
   .kop .client b { display: block; font-size: 11pt; color: #111827; }
@@ -36,7 +37,7 @@
 </head>
 <body>
   <div class="kop">
-    <img src="{{ logo }}" alt="Visiontech Indograha">
+    <div class="logos">{% for logo in logos %}<img src="{{ logo }}" alt="Logo">{% endfor %}</div>
     <div class="client">Klien<b>{{ o.client_name or "-" }}</b></div>
   </div>
   <h1>BERITA ACARA SERAH TERIMA PEKERJAAN</h1>

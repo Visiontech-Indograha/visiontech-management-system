@@ -18,7 +18,7 @@ from app.modules.exports.services.builders import model as m
 from app.modules.exports.services.builders.docx_builders import daily_report_docx
 from app.modules.exports.services.builders.office_builders import team_week_pptx
 from app.shared.documents import branding
-from app.shared.documents.branding import COMPANY_BOX_PX, fit_contain_png, team_logo_or_default, validate_team_logo
+from app.shared.documents.branding import COMPANY_BOX_PX, fit_contain_png, team_logo_bytes, validate_team_logo
 from app.shared.documents.docx_kit import LOGO
 
 
@@ -102,9 +102,9 @@ def test_fitted_logo_stays_inside_standard_box():
 def test_resolver_returns_stored_bytes_or_default(monkeypatch):
     stored = {"org/team-logo/t/f.png": b"logo-asli"}
     monkeypatch.setattr(storage_core, "get_object_bytes", lambda key: stored.get(key))
-    assert team_logo_or_default("t", "org/team-logo/t/f.png") == b"logo-asli"
-    assert team_logo_or_default("t", "org/team-logo/t/hilang.png") is None  # berkas hilang → default
-    assert team_logo_or_default("t", None) is None  # tim tanpa logo → default
+    assert team_logo_bytes("t", "org/team-logo/t/f.png") == b"logo-asli"
+    assert team_logo_bytes("t", "org/team-logo/t/hilang.png") is None  # berkas hilang → default
+    assert team_logo_bytes("t", None) is None  # tim tanpa logo → default
 
 
 def test_resolver_survives_storage_exception(monkeypatch):
@@ -112,7 +112,7 @@ def test_resolver_survives_storage_exception(monkeypatch):
         raise ConnectionError("MinIO mati")
 
     monkeypatch.setattr(storage_core, "get_object_bytes", boom)
-    assert team_logo_or_default("t", "k") is None
+    assert team_logo_bytes("t", "k") is None
 
 
 # ── dokumen memuat logo tim ─────────────────────────────────────────────────────────────────
@@ -125,34 +125,33 @@ def _daily(team_logo: bytes | None) -> m.DailyReport:
     return m.DailyReport(
         team_name="Tim Logo", division_name="Divisi Uji", work_date=m.date(2026, 10, 29), site_name="Site",
         status="APPROVED", leader_name="Ketua", points=[], roster=[], summary=None, obstacles=None,
-        generated_by="-", generated_at=datetime(2026, 10, 29, tzinfo=UTC), team_logo=team_logo,
+        generated_by="-", generated_at=datetime(2026, 10, 29, tzinfo=UTC), logos=(LOGO.read_bytes(), team_logo),
     )
 
 
-def test_daily_report_docx_uses_team_logo_in_letterhead():
+def test_daily_report_docx_shows_visiontech_and_team_logo_in_letterhead():
     custom = _png((500, 500), (20, 160, 60, 255))
     media = _docx_media(daily_report_docx(_daily(custom)))
     sizes = [Image.open(io.BytesIO(b)).size for b in media.values()]
-    assert COMPANY_BOX_PX in sizes  # kop memakai kanvas logo tim (kotak standar)
-    assert LOGO.read_bytes() not in media.values()  # logo default tidak dipakai
+    assert sizes.count(COMPANY_BOX_PX) == 2  # logo Visiontech + logo tim, kanvas kotak standar yang sama
 
 
-def test_daily_report_docx_falls_back_to_default_logo_without_team_logo():
+def test_daily_report_docx_keeps_visiontech_logo_without_team_logo():
     media = _docx_media(daily_report_docx(_daily(None)))
-    assert LOGO.read_bytes() in media.values()
+    assert len(media) == 1  # logo Visiontech tetap ada di kop
 
 
-def test_team_week_pptx_uses_team_logo_on_cover_and_slides():
+def test_team_week_pptx_shows_visiontech_and_team_logo_on_cover_and_slides():
     report = m.TeamWeekReport(
         team_name="Tim Logo", division_name="Divisi Uji", start=m.date(2026, 10, 26), end=m.date(2026, 11, 1),
         points=[], roster=[], generated_by="-", generated_at=m.datetime(2026, 11, 1),
-        team_logo=_png((1000, 200), (20, 60, 160, 255)),
+        logos=(LOGO.read_bytes(), _png((1000, 200), (20, 60, 160, 255))),
     )
     prs = Presentation(io.BytesIO(team_week_pptx(report)))
     pictures = [sh for s in prs.slides for sh in s.shapes if sh.shape_type == 13]
-    assert len(pictures) >= 2  # sampul + kepala slide
-    assert LOGO.read_bytes() not in {sh.image.blob for sh in pictures}  # logo default tidak dipakai
-    assert all(Image.open(io.BytesIO(sh.image.blob)).size == COMPANY_BOX_PX for sh in pictures)  # kanvas logo tim
+    blobs = {sh.image.blob for sh in pictures}
+    assert LOGO.read_bytes() in blobs  # logo Visiontech di kepala slide
+    assert len([sh for sh in pictures if Image.open(io.BytesIO(sh.image.blob)).size == COMPANY_BOX_PX]) >= 2
 
 
 def test_bast_and_surat_tugas_use_team_logo_in_letterhead():
@@ -166,11 +165,11 @@ def test_bast_and_surat_tugas_use_team_logo_in_letterhead():
              "bom_items": [], "summary_notes": None, "obstacles": None}
     report = m.CompletionReport(
         order=order, points=[], roster=[], bom=[], generated_by="-", generated_at=m.datetime(2026, 10, 2),
-        team_logo=_png((400, 400), (160, 20, 20, 255)),
+        logos=(LOGO.read_bytes(), _png((400, 400), (160, 20, 20, 255))),
     )
     for content in (bast_docx(report), order_sheet_docx(report)):
-        assert COMPANY_BOX_PX in [Image.open(io.BytesIO(b)).size for b in _docx_media(content).values()]
-        assert LOGO.read_bytes() not in _docx_media(content).values()
+        sizes = [Image.open(io.BytesIO(b)).size for b in _docx_media(content).values()]
+        assert sizes.count(COMPANY_BOX_PX) == 2  # logo Visiontech + logo tim
 
 
 async def test_survey_letterhead_company_logo_is_replaced_by_team_logo(monkeypatch):

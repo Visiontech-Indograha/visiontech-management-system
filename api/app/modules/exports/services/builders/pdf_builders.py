@@ -18,6 +18,6 @@ def completion_pdf(r: CompletionReport) -> bytes:
         leader_sig=data_uri(r.leader_signature, "image/png") if r.leader_signature else None,
         pm_sig=data_uri(r.pm_signature, "image/png") if r.pm_signature else None,
         qr=qr_data_uri(r.verify_url) if r.verify_url else None,
-        logo=data_uri(fit_contain_png(r.team_logo, COMPANY_BOX_PX), "image/png") if r.team_logo else None,
+        logos=[data_uri(fit_contain_png(logo, COMPANY_BOX_PX), "image/png") for logo in r.logos if logo],
     )
     return html_to_pdf(html)

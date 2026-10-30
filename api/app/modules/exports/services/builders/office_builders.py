@@ -150,7 +150,7 @@ def _summary(prs: PptxPresentation, points: Sequence[Any], kicker: str, footer: 
 
 def completion_pptx(r: CompletionReport) -> bytes:
     o = r.order
-    prs = theme.deck(r.team_logo)
+    prs = theme.deck(r.logos)
     footer = f"{o.get('project_title') or 'Laporan pekerjaan'} · {o.get('client_name') or ''}"
     theme.cover(prs, o.get("project_title") or "Laporan Pekerjaan",
                 f"{o.get('client_name') or '-'} · {tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}",
@@ -212,7 +212,7 @@ def _assets_slide(prs: PptxPresentation, assets: Sequence[AssetLine], footer: st
 def team_week_pptx(r: TeamWeekReport) -> bytes:
     """Laporan mingguan tim: sampul, ringkasan (kartu angka + jenis), tabel semua pekerjaan, satu slide per
     pekerjaan (foto, keterangan, status), penutup."""
-    prs = theme.deck(r.team_logo)
+    prs = theme.deck(r.logos)
     footer = f"{r.team_name} · {tgl(r.start)} s.d. {tgl(r.end)}"
     leader = next((m.full_name for m in r.roster if m.is_leader), "-")
     members = [m.full_name for m in r.roster if not m.is_leader]

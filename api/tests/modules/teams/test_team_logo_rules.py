@@ -197,4 +197,6 @@ def test_team_week_export_uses_team_logo(client, world: World, stored):
     assert response.status_code == 200, response.text
     prs = Presentation(io.BytesIO(response.content))
     sizes = [sh.image.size for s in prs.slides for sh in s.shapes if sh.shape_type == 13]
-    assert sizes and all(size == COMPANY_BOX_PX for size in sizes)  # kepala & sampul memakai logo tim
+    team = [size for size in sizes if size == COMPANY_BOX_PX]
+    assert team, "logo tim tidak tampil di kepala/sampul"  # logo tim di kanvas kotak standar
+    assert len(sizes) > len(team), "logo Visiontech harus tetap tampil di samping logo tim"

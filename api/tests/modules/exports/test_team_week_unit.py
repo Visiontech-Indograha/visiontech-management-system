@@ -168,7 +168,7 @@ async def test_team_week_export_passes_the_teams_vehicles_and_tools_to_the_deck(
     ])
     svc.repo.team_roster = AsyncMock(return_value=[])
     svc._points = AsyncMock(return_value=([], []))
-    svc._team_logo = AsyncMock(return_value=None)
+    svc._kop_logos = AsyncMock(return_value=(b"", None))
     svc._printer = AsyncMock(return_value="ketua")
     svc._store = AsyncMock(return_value=SimpleNamespace(export_id="e1"))
     captured: dict[str, object] = {}

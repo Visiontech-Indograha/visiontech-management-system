@@ -231,7 +231,7 @@ class ExportService:
     async def _survey_logos_for(self, s: dict[str, Any], user: CurrentUser) -> dict[str, bytes]:
         """Logo kop survei: logo perusahaan diganti logo tim bila tim punya logo; sisanya logo organisasi."""
         logos = await asyncio.to_thread(branding.custom_logos, user.organization_id)
-        team_logo = await self._team_logo([str(s["team_id"])]) if s.get("team_id") else None
+        team_logo = (await self._kop_logos([str(s["team_id"])]))[1] if s.get("team_id") else None
         return {**logos, "company": team_logo} if team_logo else logos
 
     # ── Logo kop laporan survei ───────────────────────────────────────────────
@@ -301,7 +301,7 @@ class ExportService:
             roster=await self.repo.team_roster([str(header.team_id)]), summary=header.summary,
             obstacles=header.obstacles, generated_by=await self._printer(user), generated_at=jakarta_now(),
             report_submitted_at=header.report_submitted_at,
-            team_logo=await self._team_logo([str(header.team_id)]),
+            logos=await self._kop_logos([str(header.team_id)]),
             assets=_asset_lines(await self.repo.daily_assets(daily_plan_id)),
         )
         content = daily_report_docx(report)
@@ -426,7 +426,7 @@ class ExportService:
         report = TeamWeekReport(
             team_name=team.name, division_name=team.division_name, start=start, end=end, points=points,
             roster=await self.repo.team_roster([str(team_id)]), generated_by=await self._printer(user),
-            generated_at=jakarta_now(), team_logo=await self._team_logo([str(team_id)]),
+            generated_at=jakarta_now(), logos=await self._kop_logos([str(team_id)]),
             assets=_asset_lines(await self.repo.team_week_assets(team_id, start, end)),
         )
         content = team_week_pptx(report)
@@ -436,13 +436,14 @@ class ExportService:
                                    period=(start, end))
         return record, content
 
-    async def _team_logo(self, team_ids: list[str]) -> bytes | None:
-        """Logo tim untuk kop dokumen. Hanya bila dokumen memuat satu tim; lebih dari satu tim → logo default."""
+    async def _kop_logos(self, team_ids: list[str]) -> branding.KopLogos:
+        """Logo kop dokumen: logo Visiontech (selalu) + logo tim. Hanya bila dokumen memuat satu tim;
+        lebih dari satu tim → hanya logo Visiontech."""
         ids = list(dict.fromkeys(t for t in team_ids if t))
         if len(ids) != 1:
-            return None
+            return branding.default_kop_logos()
         key = (await self.repo.team_logo_keys(ids)).get(ids[0])
-        return await asyncio.to_thread(branding.team_logo_or_default, ids[0], key)
+        return await asyncio.to_thread(branding.kop_logos, ids[0], key)
 
     async def _printer(self, user: CurrentUser) -> str:
         """Nama pencetak untuk dokumen (bukan email). Tanpa data karyawan → "-"."""
@@ -476,5 +477,5 @@ class ExportService:
             leader_signature=storage.get_image_bytes(leader_key) if leader_key else None,
             pm_signature=storage.get_image_bytes(pm_key) if pm_key else None,
             map_image=map_image, has_coordinates=bool(marks),
-            team_logo=await self._team_logo([str(i.team_id) for i in items]),
+            logos=await self._kop_logos([str(i.team_id) for i in items]),
         )

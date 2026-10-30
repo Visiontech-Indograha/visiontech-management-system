@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { SelectField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
@@ -5,7 +6,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
-import { useExportPeriodic } from "@/services/exportService";
+import { useExportPeriodic, useExportTeamWeek } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
 export function DailyWeekToolbar({ options, divisionId, onDivision }: {
@@ -39,6 +40,35 @@ export function ApproveWeekButton({ count, busy, onClick }: { count: number; bus
     <ActionButton onClick={onClick} disabled={busy}>
       Setujui minggu ini ({count})
     </ActionButton>
+  );
+}
+
+/** Laporan mingguan tim (.pptx) untuk satu tim pada minggu yang tampil (API /exports/team-week). */
+export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["teams"]; start: string }) {
+  const exporter = useExportTeamWeek();
+  const [picked, setPicked] = useState("");
+  const teamId = picked || (teams.length === 1 ? teams[0]!.team_id : "");
+  const run = () =>
+    exporter.mutate(
+      { team_id: teamId, start_date: start },
+      { onSuccess: () => toast.success("Laporan mingguan tim berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
+    );
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      {teams.length > 1 && (
+        <div className="w-56">
+          <SelectField label="Tim" value={teamId} onChange={(e) => setPicked(e.target.value)}>
+            <ControlOption value="">Pilih tim</ControlOption>
+            {teams.map((t) => (
+              <ControlOption key={t.team_id} value={t.team_id}>{t.name}</ControlOption>
+            ))}
+          </SelectField>
+        </div>
+      )}
+      <ActionButton variant="outline" size="sm" disabled={!teamId || exporter.isPending} onClick={run}>
+        Laporan mingguan tim (.pptx)
+      </ActionButton>
+    </div>
   );
 }
 

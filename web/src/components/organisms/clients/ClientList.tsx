@@ -56,7 +56,7 @@ export function ClientList({
       {clients.data?.length === 0 && (
         <div className="rounded-panel border border-line bg-surface p-8 text-center shadow-card">
           <Building2 className="mx-auto mb-3 text-mist" size={36} />
-          <TextBlock className="mb-2 font-medium">Belum ada klien terdaftar</TextBlock>
+          <TextBlock className="mb-2 font-medium">{search ? "Klien tidak ditemukan" : "Belum ada klien terdaftar"}</TextBlock>
           <TextBlock className="mb-4 text-sm text-mist">
             {search
               ? "Tidak ada klien yang cocok dengan kata kunci pencarian Anda."

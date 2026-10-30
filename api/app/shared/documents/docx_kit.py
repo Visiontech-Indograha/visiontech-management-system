@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import io
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 
 from docx import Document
@@ -17,7 +16,11 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-LOGO = Path(__file__).resolve().parent / "templates" / "assets" / "logo-visiontech.png"
+from app.shared.documents.branding import COMPANY_BOX_PX, VISIONTECH_LOGO, KopLogos, fit_contain_png
+
+# Logo Visiontech bawaan repo; kotak kop = kotak standar branding, dipasang berdampingan bila ada logo tim.
+LOGO = VISIONTECH_LOGO
+TEAM_LOGO_CM = (3.2, 0.94)
 INK = RGBColor(30, 41, 59)
 MUTED = RGBColor(100, 116, 139)
 HEADER_FILL = "E2E8F0"
@@ -35,14 +38,21 @@ def new_document(margin_cm: float = 2.0) -> DocxDocument:
 
 
 def letterhead(doc: DocxDocument, company: str, title: str, subtitle: str | None = None,
-               client: str | None = None) -> None:
-    """Kop: logo + nama perusahaan (kiri), klien (kanan), lalu judul dokumen di tengah."""
+               client: str | None = None, logos: KopLogos | None = None) -> None:
+    """Kop: logo Visiontech (+ logo tim bila ada) di kiri, nama perusahaan, klien (kanan), judul di tengah.
+
+    `logos` = (logo Visiontech, logo tim | None); None → hanya logo Visiontech bawaan. Kedua logo di-fit
+    'contain' ke kotak yang sama (tanpa distorsi/pangkas) agar format seragam."""
     table = doc.add_table(rows=1, cols=2)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     left, right = table.rows[0].cells
     p = left.paragraphs[0]
-    if LOGO.exists():
-        p.add_run().add_picture(str(LOGO), height=Cm(1.4))
+    vms_logo, team_logo = logos if logos else (LOGO.read_bytes(), None)
+    for logo in (vms_logo, team_logo):
+        if logo:
+            fitted = fit_contain_png(logo, COMPANY_BOX_PX)
+            p.add_run().add_picture(io.BytesIO(fitted), width=Cm(TEAM_LOGO_CM[0]), height=Cm(TEAM_LOGO_CM[1]))
+            p.add_run("  ")
     run = left.add_paragraph().add_run(company)
     run.bold, run.font.size, run.font.color.rgb = True, Pt(12), INK
     if client:

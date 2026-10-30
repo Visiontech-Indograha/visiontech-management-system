@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 from PIL import Image
 
+from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, ValidationError
 from app.modules.attendance.services.attendance_session_service import AttendanceSessionService
 from app.modules.face.repositories.face_repository import parse_embedding
@@ -21,6 +22,12 @@ from app.modules.face.services.face_embed_client import EmbedResult, FaceService
 from app.modules.face.services.face_service import FaceOutcome, FaceService, cosine
 
 EMP = uuid4()
+
+
+@pytest.fixture(autouse=True)
+def _real_face_pipeline(monkeypatch):
+    """Uji ini memeriksa jalur wajah asli; mode wajah palsu sesi uji dimatikan di sini."""
+    monkeypatch.setattr(settings, "FACE_FAKE_MODE", False)
 
 
 def _jpeg() -> bytes:

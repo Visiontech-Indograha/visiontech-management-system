@@ -52,8 +52,9 @@ def test_attendance_selfie_is_only_for_its_owner_and_reviewers(client, world, fa
         "site_id": world.site_id, "location": {"lat": -6.2, "lng": 106.8}, "selfie_file_id": file_id})
     assert check_in.status_code == 200, check_in.text
 
-    # swafoto terlihat oleh pemilik & peninjau absensi (PM, OM, admin) — bukan rekan atau HR/GA.
-    _expect(client, world, file_id, allowed={"member", "pm", "ops", "admin"}, denied={"leader", "hr"})
+    # swafoto terlihat oleh pemilik, peninjau absensi (PM divisinya, OM, admin), dan HR/GA (view semua absensi);
+    # bukan rekan tim lain.
+    _expect(client, world, file_id, allowed={"member", "pm", "ops", "admin", "hr"}, denied={"leader"})
 
 
 def test_daily_plan_attachment_follows_plan_visibility(client, world, other_world, fake_storage):

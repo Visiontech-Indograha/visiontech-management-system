@@ -8,6 +8,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, type Phase } from "@/lib/workPhase";
 import { WorkCompletionAddButton } from "./WorkCompletionAddButton";
 import { WorkCompletionDetailModal } from "./WorkCompletionDetailModal";
+import { WorkCompletionFormDialog } from "./WorkCompletionFormDialog";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import {
   type WorkCompletion,
@@ -50,6 +51,7 @@ export function WorkCompletionList({
   const deleteMutation = useDeleteWorkCompletion();
 
   const [deleteTarget, setDeleteTarget] = useState<WorkCompletion | null>(null);
+  const [editTarget, setEditTarget] = useState<WorkCompletion | null>(null);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -187,7 +189,10 @@ export function WorkCompletionList({
                     </ActionButton>
                     {canManage && !done && (
                       <>
-                        <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
+                        <ActionButton size="sm" variant="outline" onClick={() => setEditTarget(order)}>
+                        Ubah
+                      </ActionButton>
+                      <ActionButton size="sm" variant="outline" onClick={() => void toggleUrgent(order)}>
                         {order.order_status === "URGENT" ? "Hapus tanda mendesak" : "Tandai mendesak"}
                       </ActionButton>
                       <ActionButton
@@ -241,6 +246,7 @@ export function WorkCompletionList({
           </TextBlock>
         </VmsDialog>
       )}
+      {editTarget && <WorkCompletionFormDialog order={editTarget} onClose={() => setEditTarget(null)} />}
     </QueryState>
   );
 }

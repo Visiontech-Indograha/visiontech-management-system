@@ -24,7 +24,7 @@ jobs:
     name: API · ruff · mypy · pytest (PostgreSQL nyata)
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.api == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
@@ -35,6 +35,8 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Bersihkan sisa DB CI sebelumnya (runner self-hosted dipakai ulang)
+        run: docker rm -f vms-db >/dev/null 2>&1 || true
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"   # sama dengan Dockerfile (T-16)
@@ -86,11 +88,15 @@ jobs:
       - name: Uji — face-service (aturan tantangan liveness, tanpa model)
         run: python -m pytest -q -p no:warnings ../face-service/tests
 
+      - name: Bersihkan DB CI (runner self-hosted dipakai ulang antar job)
+        if: always()
+        run: docker rm -f vms-db >/dev/null 2>&1 || true
+
   web:
     name: Web · lint · typecheck · test · build
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.web == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     defaults:
       run:
         working-directory: web
@@ -111,7 +117,7 @@ jobs:
     # Juga menentukan bagian yang berubah (sudah mengambil seluruh riwayat) — tanpa job tambahan
     # yang memakan minimal 1 menit tertagih.
     name: Pemindaian rahasia (gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     outputs:
       api: ${{ steps.changes.outputs.api }}
       web: ${{ steps.changes.outputs.web }}
@@ -164,7 +170,7 @@ jobs:
     name: Mobile (Flutter analyze + test)
     needs: secrets
     if: ${{ !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     defaults:
       run:
         working-directory: mobile
@@ -182,7 +188,7 @@ jobs:
     name: Laporan ke #vms-ci
     needs: [api, web, mobile, secrets]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     steps:
       - name: Kirim ke Discord (berhasil & gagal; tanpa data pribadi — dok 17 §2)
         env:

@@ -7,6 +7,7 @@ import {
 import { useListControls } from "@/hooks/useListControls";
 import { usePagedList } from "@/hooks/usePagedList";
 import { errorMessage } from "@/lib/errors";
+import { messActions } from "@/lib/aksiPeran";
 import {
   type MessPlace,
   type MessStay,
@@ -16,8 +17,9 @@ import { useSession } from "@/stores/sessionStore";
 
 export function MessPage() {
   const { me } = useSession();
-  const canManage = Boolean(me?.permissions.includes("manage:mess"));
-  const canReview = Boolean(me?.permissions.includes("review:mess"));
+  const actions = messActions(me?.permissions ?? []);
+  const canManage = actions.includes("manageStays");
+  const canReview = actions.includes("reviewRequests");
   const stayControls = useListControls({ prefix: "hunian_" });
   const requestControls = useListControls({ prefix: "req_" });
   const placeControls = useListControls({ prefix: "msp_" });

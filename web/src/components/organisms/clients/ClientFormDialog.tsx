@@ -8,17 +8,24 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
+import { ApiError } from "@/lib/apiClient";
 import { useSaveClient, type Client, type ClientInput } from "@/services/clientService";
+import { namaKlienError } from "@/lib/inputRules";
+import { ActionButton } from "@/components/molecules/ActionButton";
 
 export function ClientFormDialog({
   client,
   onClose,
+  onUseExisting,
 }: {
   client: Client | null;
   onClose: () => void;
+  /** Nama klien sudah ada (409 CLIENT_EXISTS): buka klien yang sudah ada alih-alih membuat duplikat. */
+  onUseExisting?: (clientId: string) => void;
 }) {
   const save = useSaveClient(client?.client_id);
   const [formError, setFormError] = useState<string | null>(null);
+  const [existingId, setExistingId] = useState<string | null>(null);
 
   const {
     register,
@@ -37,6 +44,7 @@ export function ClientFormDialog({
 
   const onSubmit = async (values: ClientInput) => {
     setFormError(null);
+    setExistingId(null);
     try {
       await save.mutateAsync({
         client_code: values.client_code.trim().toUpperCase(),
@@ -48,6 +56,9 @@ export function ClientFormDialog({
       toast.success(client ? "Data klien diperbarui." : "Klien baru berhasil ditambahkan.");
       onClose();
     } catch (err) {
+      if (err instanceof ApiError && err.code === "CLIENT_EXISTS" && typeof err.details.client_id === "string") {
+        setExistingId(err.details.client_id);
+      }
       setFormError(applyFieldErrors(err, setError) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   };
@@ -73,6 +84,12 @@ export function ClientFormDialog({
       </TextBlock>
       <FormBlock id="client-form" onSubmit={handleSubmit(onSubmit)}>
         {formError && <FormErrorText message={formError} />}
+        {existingId && onUseExisting && (
+          <ActionButton type="button" variant="link" size="xs" className="text-primary font-medium p-0 h-auto"
+            onClick={() => onUseExisting(existingId)}>
+            Pakai klien yang sudah ada
+          </ActionButton>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <TextField
@@ -91,9 +108,7 @@ export function ClientFormDialog({
             placeholder="cth. PT Telekomunikasi Seluler"
             error={errors.name?.message}
             {...register("name", {
-              required: "Nama klien wajib diisi.",
-              minLength: { value: 2, message: "Nama klien minimal 2 karakter." },
-              maxLength: { value: 150, message: "Maksimal 150 karakter." },
+              validate: (v) => (v.trim() === "" ? "Nama klien wajib diisi." : (namaKlienError(v) ?? true)),
             })}
           />
         </div>

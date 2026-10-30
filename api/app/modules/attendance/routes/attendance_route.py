@@ -172,6 +172,7 @@ async def export_attendance(
     """
     P4-5: Ekspor CSV untuk Finance. Jam dalam zona waktu organisasi (sebelumnya tercetak UTC).
     """
+    check_date_range(start_date, end_date, start_name="start_date", end_name="end_date")
     return await controller.handle_export(current_user, start_date, end_date)
 
 

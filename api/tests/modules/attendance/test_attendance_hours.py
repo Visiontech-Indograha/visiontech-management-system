@@ -334,7 +334,8 @@ def test_required_out_is_nine_hours_after_on_time_check_in():
 
     from app.core.time import WIB
     checked_in = datetime(2026, 10, 26, 7, 0, tzinfo=WIB)
-    opened = MagicMock(clock_in_at=checked_in, scheduled_out=time(17, 0), is_late=False)
+    opened = MagicMock(clock_in_at=checked_in, scheduled_out=time(17, 0), is_late=False,
+                       attendance_date=date(2026, 10, 26))
     _, required_out, _, _ = asyncio.run(_hints_service(opened, None).day_hints("org", str(uuid4())))
     assert required_out == checked_in + timedelta(hours=9)
 
@@ -343,9 +344,21 @@ def test_late_check_in_must_leave_at_office_closing_time():
     from datetime import time
 
     from app.core.time import WIB
-    opened = MagicMock(clock_in_at=datetime(2026, 10, 26, 8, 30, tzinfo=WIB), scheduled_out=time(17, 0), is_late=True)
+    opened = MagicMock(clock_in_at=datetime(2026, 10, 26, 8, 30, tzinfo=WIB), scheduled_out=time(17, 0), is_late=True,
+                       attendance_date=date(2026, 10, 26))
     _, required_out, _, _ = asyncio.run(_hints_service(opened, None).day_hints("org", str(uuid4())))
     assert required_out == datetime(2026, 10, 26, 17, 0, tzinfo=WIB)
+
+
+def test_stale_open_session_gives_no_checkout_reminder():
+    """Sesi tanggal kemarin yang belum ditutup tidak menghasilkan jam pulang hari ini (sudah berakhir tengah malam)."""
+    from datetime import time
+
+    from app.core.time import WIB
+    opened = MagicMock(clock_in_at=datetime(2026, 10, 25, 8, 0, tzinfo=WIB), scheduled_out=time(17, 0), is_late=False,
+                       attendance_date=date(2026, 10, 25))
+    _, required_out, _, _ = asyncio.run(_hints_service(opened, None).day_hints("org", str(uuid4())))
+    assert required_out is None
 
 
 def test_day_hints_reports_pending_daily_report_and_no_session():

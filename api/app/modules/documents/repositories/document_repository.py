@@ -21,7 +21,7 @@ _COLUMNS = """
     ef.employee_file_id AS id, ef.employee_id, ef.type AS doc_type, ef.status::text AS status,
     (ef.active_at AT TIME ZONE 'Asia/Jakarta')::date AS active_at,
     (ef.expired_at AT TIME ZONE 'Asia/Jakarta')::date AS expired_at,
-    fo.id AS file_id, ef.create_at AS created_at
+    fo.id AS file_id, fo.mime_type AS file_mime, ef.create_at AS created_at
 """
 _FROM = "FROM employee_file ef LEFT JOIN file_object fo ON fo.storage_key = ef.path_file"
 
@@ -54,6 +54,21 @@ class DocumentRepository(BaseRepository):
             "SELECT storage_key FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
         )
         return key
+
+    async def file_uploader(self, file_id: UUID | str) -> str | None:
+        """user_id pengunggah berkas (file_object.uploaded_by), atau None bila berkas tidak ada."""
+        val: str | None = await self.scalar(
+            "SELECT uploaded_by::text FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
+        )
+        return val
+
+    async def user_of_employee(self, emp_id: UUID | str) -> str | None:
+        """Akun (user_id) milik karyawan, bila ada."""
+        val: str | None = await self.scalar(
+            "SELECT user_id::text FROM users WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL",
+            {"emp": str(emp_id)},
+        )
+        return val
 
     async def list_for_employee(self, emp_id: UUID | str) -> list[Any]:
         """Semua dokumen karyawan; yang berlaku di atas, lalu terbaru."""

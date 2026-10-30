@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { CheckControl } from "@/components/molecules/CheckControl";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, WORK_STATE, workState, type Phase } from "@/lib/workPhase";
-import { addDays, useDailyPlans, weekStart, type DailyPlan } from "@/services/dailyPlanService";
+import { displayPct, PHASE_COLOR, PHASE_LABEL, PHASES, phaseColor, phaseLabel, WORK_STATE, workState, type Phase } from "@/lib/workPhase";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { addDays, BACKDATE_DAYS, useDailyPlans, useDeleteDailyPlan, weekStart, type DailyPlan } from "@/services/dailyPlanService";
 
 const MONTH = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric", timeZone: "UTC" });
 const LONG = new Intl.DateTimeFormat("id-ID", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
@@ -16,6 +19,8 @@ const shiftMonth = (first: string, delta: number) => {
   return d.toISOString().slice(0, 10);
 };
 const mainPhase = (p: DailyPlan) => p.phases?.[0] ?? "PREPARATION";
+/** Jadwal yang boleh dihapus massal: draf, diajukan, atau disetujui yang belum dimulai (API tetap menjadi penentu). */
+const DELETABLE_STATUS = ["DRAFT", "SUBMITTED", "APPROVED"];
 
 export interface MatrixTeam {
   team_id: string;
@@ -41,6 +46,31 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
   const [picked, setPicked] = useState(today);
   const [dayOpen, setDayOpen] = useState(false);
   const [only, setOnly] = useState<Phase | null>(null);
+  const [sel, setSel] = useState<string[]>([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const remove = useDeleteDailyPlan();
+  const deletable = (p: DailyPlan) => canPlan && DELETABLE_STATUS.includes(p.status);
+
+  /** Hapus berurutan; hasil dirangkum (berhasil & gagal beserta alasan pertama). */
+  async function bulkDelete() {
+    setBulkBusy(true);
+    let ok = 0;
+    const failures: string[] = [];
+    for (const id of sel) {
+      try {
+        await remove.mutateAsync(id);
+        ok += 1;
+      } catch (err) {
+        failures.push(err instanceof Error ? err.message : "galat");
+      }
+    }
+    setBulkBusy(false);
+    setBulkOpen(false);
+    setSel([]);
+    if (failures.length) toast.error(`${ok} jadwal dihapus, ${failures.length} gagal. ${failures[0]}`);
+    else toast.success(`${ok} jadwal dihapus.`);
+  }
 
   const gridStart = weekStart(month);
   const nextMonth = shiftMonth(month, 1);
@@ -110,9 +140,11 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   aria-label={`${LONG.format(asDate(d))}: ${list.length ? `${list.length} jadwal` : "kosong"}`}
                   onClick={() => {
                     setPicked(d);
-                    // Satu jadwal → langsung detail lengkap; lebih dari satu / kosong → pilih dulu di jendela hari.
-                    if (list.length === 1) onOpen(list[0]!);
-                    else if (list.length > 1 || (canPlan && d >= today)) setDayOpen(true);
+                    // PM/OM: jendela hari selalu terbuka (baris tim tanpa jadwal → "Buat jadwal").
+                    // Peran lain: satu jadwal → langsung detail; lebih dari satu → pilih dulu di jendela hari.
+                    if (canPlan) setDayOpen(true);
+                    else if (list.length === 1) onOpen(list[0]!);
+                    else if (list.length > 1) setDayOpen(true);
                   }}
                   className={[
                     "flex h-auto min-h-20 flex-col items-stretch justify-start gap-1 rounded-none border-b border-r border-line p-1 text-left sm:min-h-28 sm:p-1.5",
@@ -159,13 +191,30 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
 
       </QueryState>
 
+      <ConfirmDialog
+        open={bulkOpen}
+        title="Hapus jadwal terpilih?"
+        message={`${sel.length} jadwal beserta pekerjaannya akan dihapus dan tidak dapat dikembalikan. Jadwal yang sudah dimulai atau dipakai tidak ikut terhapus dan dilaporkan.`}
+        confirmLabel="Hapus"
+        danger
+        busy={bulkBusy}
+        onConfirm={bulkDelete}
+        onClose={() => setBulkOpen(false)}
+      />
+
       {dayOpen && (
         <VmsDialog open title={LONG.format(asDate(picked))} onClose={() => setDayOpen(false)}>
           <div className="space-y-2">
+            {picked < today && (
+              <TextBlock as="p" className="text-xs text-mist">
+                {`Tanggal lampau: jadwal baru hanya sampai ${BACKDATE_DAYS} hari ke belakang dan wajib beralasan.`}
+              </TextBlock>
+            )}
             {rows.map((team) => {
               const plan = dayPlans.find((p) => p.team_id === team.team_id);
               if (!plan) {
-                if (only || !(canPlan && picked >= today)) return null;
+                // Tim tanpa jadwal pada tanggal ini: tombol buat (tanggal lampau sampai BACKDATE_DAYS hari, PM/OM).
+                if (only || !canPlan || picked < addDays(today, -BACKDATE_DAYS)) return null;
                 return (
                   <ActionButton key={team.team_id} variant="outline" className="w-full justify-between border-dashed text-mist"
                     onClick={() => { setDayOpen(false); onCreate(team, picked); }}>
@@ -174,15 +223,15 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   </ActionButton>
                 );
               }
-              const pct = plan.progress_pct ?? 0;
+              const pct = displayPct(plan);
               const color = phaseColor(mainPhase(plan));
-              return (
+              const card = (
                 <ActionButton key={team.team_id} variant="outline"
                   className="relative flex h-auto w-full flex-col items-stretch gap-1.5 overflow-hidden whitespace-normal p-3 pl-4 text-left"
                   onClick={() => { setDayOpen(false); onOpen(plan); }}>
                   <TextBlock as="span" className={`absolute inset-y-0 left-0 w-1.5 ${color.bar}`} />
                   <div className="flex justify-between gap-2">
-                    <TextBlock as="span" className="truncate font-semibold">{`${team.name} · ${plan.site_name}`}</TextBlock>
+                    <TextBlock as="span" className="truncate font-semibold">{`${team.name} · ${plan.site_name || "Lokasi belum ditentukan"}`}</TextBlock>
                     <TextBlock as="span" className={`font-semibold ${WORK_STATE[workState(plan, today)].text}`}>{`${WORK_STATE[workState(plan, today)].label} · ${pct}%`}</TextBlock>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-line">
@@ -193,7 +242,24 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                   </TextBlock>
                 </ActionButton>
               );
+              if (!deletable(plan)) return card;
+              const checked = sel.includes(plan.daily_plan_id);
+              return (
+                <div key={team.team_id} className="flex items-start gap-2">
+                  <CheckControl className="mt-4" aria-label={`Pilih jadwal ${team.name}`} checked={checked}
+                    onCheckedChange={(v) => setSel((old) => (v === true ? [...old, plan.daily_plan_id] : old.filter((x) => x !== plan.daily_plan_id)))} />
+                  <div className="min-w-0 flex-1">{card}</div>
+                </div>
+              );
             })}
+            {sel.length > 0 && (
+              <div className="flex items-center justify-between gap-2 border-t border-line pt-2">
+                <TextBlock as="span" className="text-xs text-mist">{`${sel.length} jadwal dipilih`}</TextBlock>
+                <ActionButton variant="destructive" disabled={bulkBusy} onClick={() => setBulkOpen(true)}>
+                  {`Hapus terpilih (${sel.length})`}
+                </ActionButton>
+              </div>
+            )}
           </div>
         </VmsDialog>
       )}

@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS public.leave_request (
     reviewed_by_hr_id uuid,
     reviewed_at timestamp with time zone,
     rejection_note text,
+    cancel_note text,
     create_at timestamp with time zone DEFAULT now() NOT NULL,
     update_at timestamp with time zone DEFAULT now() NOT NULL,
     delete_at timestamp with time zone,

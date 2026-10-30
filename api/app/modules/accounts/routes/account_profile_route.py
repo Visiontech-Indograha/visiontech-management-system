@@ -13,7 +13,12 @@ from app.api.deps import require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.accounts.controllers.account_profile_controller import AccountProfileController
-from app.modules.accounts.schemas.account_schema import AccountCreate, AccountOut, AccountWithPassword
+from app.modules.accounts.schemas.account_schema import (
+    AccountCreate,
+    AccountOut,
+    AccountRoleUpdate,
+    AccountWithPassword,
+)
 
 router = APIRouter(prefix="/employees/{emp_id}/account", tags=["Employee Account"])
 
@@ -41,9 +46,23 @@ async def create_account(
     controller: AccountProfileController = Depends(),
 ) -> AccountWithPassword:
     """
-    Membuat akun baru untuk karyawan dengan kata sandi sementara.
+    Membuat akun baru untuk karyawan dengan kata sandi sementara. Peran lapangan (EMPLOYEE/TEAM_LEADER) opsional;
+    hanya HR/SUPER_ADMIN.
     """
-    return await controller.handle_create_account(emp_id, current_user.organization_id, data)
+    return await controller.handle_create_account(emp_id, current_user, data)
+
+
+@router.post("/role", response_model=AccountOut)
+async def set_field_role(
+    emp_id: UUID,
+    data: AccountRoleUpdate,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountOut:
+    """
+    Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.
+    """
+    return await controller.handle_set_role(emp_id, current_user, data)
 
 
 @router.post("/reset-password", response_model=AccountWithPassword)

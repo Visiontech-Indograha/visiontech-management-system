@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
-from tests.daily import make_daily_plan
+from tests.daily import add_item, check_in, make_daily_plan
 
 pytestmark = requires_db
 
@@ -23,13 +23,15 @@ def _create(client, world: World, who: str = "pm", **over):
     return client.post("/work-plans/daily", headers=world.headers(client, who), json=_body(world, **over))
 
 
-def test_pm_creates_draft_and_runs_full_cycle(client, world: World):
+def test_pm_creates_draft_and_runs_full_cycle(client, world: World, fake_storage):
     created = _create(client, world, days=0)
     assert created.status_code == 201, created.text
     plan = created.json()
     assert plan["status"] == "DRAFT" and plan["team_name"]
     pid = plan["daily_plan_id"]
     pm, leader = world.headers(client, "pm"), world.headers(client, "leader")
+    add_item(pid, world, "Titik CCTV uji")  # jadwal kosong tidak boleh diajukan (PLAN_EMPTY)
+    check_in(client, world, "leader")  # ketua harus absen masuk sebelum mulai (CHECKIN_REQUIRED)
 
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).json()["status"] == "SUBMITTED"
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).json()["status"] == "APPROVED"
@@ -83,6 +85,7 @@ def test_reject_returns_to_draft_with_reason(client, world: World):
 
 def test_bulk_approve_skips_ineligible(client, world: World, other_world: World):
     mine = make_daily_plan(world, status="SUBMITTED", days_from_today=1)
+    add_item(mine, world, "Titik CCTV uji")
     done = make_daily_plan(world, status="COMPLETED", days_from_today=2)
     foreign = make_daily_plan(other_world, status="SUBMITTED", days_from_today=1)
     result = client.post("/work-plans/daily/approve", headers=world.headers(client, "pm"),
@@ -100,10 +103,15 @@ def test_copy_to_other_dates(client, world: World):
     assert {c["status"] for c in copied.json()} == {"DRAFT"}
 
 
-def test_only_unused_unapproved_plans_can_be_deleted(client, world: World):
+def test_only_unused_unstarted_plans_can_be_deleted(client, world: World):
+    """F10: jadwal DISETUJUI yang belum dimulai boleh dihapus (lunak); yang sudah ONGOING tidak."""
     pm = world.headers(client, "pm")
+    ongoing = make_daily_plan(world, status="ONGOING")
+    assert client.delete(f"/work-plans/daily/{ongoing}", headers=pm).status_code == 409
     approved = make_daily_plan(world, status="APPROVED", days_from_today=1)
-    assert client.delete(f"/work-plans/daily/{approved}", headers=pm).status_code == 409
+    assert client.delete(f"/work-plans/daily/{approved}", headers=pm).status_code == 200
+    assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s",
+                      (approved,))[0][0]
     draft = make_daily_plan(world, status="DRAFT", days_from_today=2)
     assert client.delete(f"/work-plans/daily/{draft}", headers=pm).status_code == 200
     assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s", (draft,))[0][0]
@@ -147,6 +155,104 @@ def test_recent_sites_lists_distinct_team_sites_newest_first(client, world: Worl
 def test_plan_without_site_name_can_be_submitted_and_approved(client, world: World):
     """Temuan uji nyata 29-10-2026: jadwal tanpa nama lokasi memberi 500 (notification.body NULL)."""
     pid = _create(client, world, days=3, site_name=None).json()["daily_plan_id"]
+    add_item(pid, world, "Titik CCTV uji")
     pm = world.headers(client, "pm")
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).status_code == 200
     assert client.post(f"/work-plans/daily/{pid}/approve", headers=pm).status_code == 200
+
+
+def test_pm_backdates_up_to_seven_days_with_reason_and_audit(client, world: World):
+    """F10: PM/OM boleh membuat jadwal tanggal lampau <= 7 hari bila beralasan; tercatat di audit."""
+    pm = world.headers(client, "pm")
+    reason = "Hujan, pekerjaan tertunda"
+    created = _create(client, world, days=-2, backdate_reason=reason)
+    assert created.status_code == 201, created.text
+    plan_id = created.json()["daily_plan_id"]
+    audit = sync_query("SELECT action, changed_diff->>'reason' FROM app_activity_logs "
+                       "WHERE entity_id = %s AND action = 'BACKDATE_CREATED'", (plan_id,))
+    assert audit == [("BACKDATE_CREATED", reason)]
+
+    assert _create(client, world, days=-2).status_code == 422          # tanpa alasan
+    assert _create(client, world, days=-8, backdate_reason=reason).status_code == 422  # lebih dari 7 hari
+    assert _create(client, world, who="member", days=-2, backdate_reason=reason).status_code == 403
+
+    assert client.post(f"/work-plans/daily/{plan_id}/items", headers=pm,
+                       json={"work_type_id": str(sync_query(
+                           "INSERT INTO work_type (division_id, name) VALUES (%s, 'Uji backdate') "
+                           "RETURNING work_type_id", (world.unit_id,))[0][0]),
+                           "title": "Titik backdate", "task_phase": "INSTALLATION",
+                           "is_main_deliverable": True, "target_qty": "1"}).status_code == 201
+    approved = client.post(f"/work-plans/daily/{plan_id}/approve", headers=pm)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "APPROVED"
+    assert sync_query("SELECT COUNT(*) FROM app_activity_logs WHERE entity_id = %s "
+                      "AND action = 'BACKDATE_APPROVED'", (plan_id,))[0][0] == 1
+
+
+def test_pm_approves_own_draft_in_one_step_with_both_audit_rows(client, world: World):
+    """PM/OM menyetujui DRAFT miliknya langsung (submit+approve atomik); audit mencatat SUBMITTED dan APPROVED."""
+    pm, leader = world.headers(client, "pm"), world.headers(client, "leader")
+    pid = _create(client, world, days=1).json()["daily_plan_id"]
+    add_item(pid, world, "Titik satu-langkah")
+    assert client.post(f"/work-plans/daily/{pid}/approve", headers=leader).status_code in (403, 404)
+    approved = client.post(f"/work-plans/daily/{pid}/approve", headers=pm)
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["status"] == "APPROVED"
+    actions = sorted(r[0] for r in sync_query(
+        "SELECT action FROM app_activity_logs WHERE entity_id = %s AND action IN ('SUBMITTED', 'APPROVED')",
+        (pid,)))
+    assert actions == ["APPROVED", "SUBMITTED"]
+
+
+def test_can_manage_flag_is_true_only_for_division_manager(client, world: World):
+    """Tombol persetujuan di web bergantung pada can_manage: hanya PM/OM divisi (ketua & anggota tidak)."""
+    draft = make_daily_plan(world, status="DRAFT", days_from_today=2)
+    approved = make_daily_plan(world, status="APPROVED", days_from_today=3)
+    pm = world.headers(client, "pm")
+    assert client.get(f"/work-plans/daily/{draft}", headers=pm).json()["can_manage"] is True
+    assert client.get(f"/work-plans/daily/{approved}", headers=pm).json()["can_manage"] is True
+    member = world.headers(client, "member")
+    assert client.get(f"/work-plans/daily/{approved}", headers=member).json()["can_manage"] is False
+    assert all(p["can_manage"] for p in client.get(
+        "/work-plans/daily", params={"start": str(jakarta_now().date()),
+                                     "end": str(jakarta_now().date() + timedelta(days=5))}, headers=pm).json())
+
+
+def test_pm_deletes_backdated_draft(client, world: World):
+    """T-6: draf bertanggal lampau (dibuat via backdate) boleh dihapus lunak oleh PM/OM pembuatnya."""
+    pm = world.headers(client, "pm")
+    created = _create(client, world, days=-2, backdate_reason="Hujan, pekerjaan tertunda")
+    assert created.status_code == 201, created.text
+    pid = created.json()["daily_plan_id"]
+    assert client.delete(f"/work-plans/daily/{pid}", headers=pm).status_code == 200
+    assert sync_query("SELECT delete_at IS NOT NULL FROM work_plan_daily WHERE daily_plan_id = %s", (pid,))[0][0]
+
+
+def test_pm_moves_approved_unstarted_plan_without_returning_to_draft(client, world: World):
+    """Item uji siklus 3: lokasi jadwal DISETUJUI belum dimulai diubah PM/OM; status tetap APPROVED, tercatat audit."""
+    pid = make_daily_plan(world, status="APPROVED", days_from_today=3)
+    body = {"site_name": "Lokasi HP Uji", "site_lat": "0.4212983", "site_lng": "101.3806115",
+            "attendance_radius_m": 150}
+    moved = client.patch(f"/work-plans/daily/{pid}/location", headers=world.headers(client, "pm"), json=body)
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["status"] == "APPROVED"
+    assert moved.json()["site_name"] == "Lokasi HP Uji"
+    audit = sync_query("SELECT changed_diff->'to'->>'site_name' FROM app_activity_logs "
+                       "WHERE entity_id = %s AND action = 'LOCATION_CHANGED'", (pid,))
+    assert audit == [("Lokasi HP Uji",)]
+
+
+def test_location_change_rejected_for_draft_started_or_non_planner(client, world: World):
+    body = {"site_name": "Lokasi Baru", "site_lat": "0.4", "site_lng": "101.3", "attendance_radius_m": 150}
+    draft = make_daily_plan(world, status="DRAFT", days_from_today=3)
+    r = client.patch(f"/work-plans/daily/{draft}/location", headers=world.headers(client, "pm"), json=body)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "INVALID_STATE"
+    started = make_daily_plan(world, status="APPROVED", days_from_today=0)
+    r = client.patch(f"/work-plans/daily/{started}/location", headers=world.headers(client, "pm"), json=body)
+    assert r.status_code == 409 and r.json()["error"]["code"] == "PLAN_STARTED"
+    approved = make_daily_plan(world, status="APPROVED", days_from_today=4)
+    member = world.headers(client, "member")
+    assert client.patch(f"/work-plans/daily/{approved}/location", headers=member, json=body).status_code == 403
+    no_name = {**body, "site_name": "A"}
+    assert client.patch(f"/work-plans/daily/{approved}/location", headers=world.headers(client, "pm"),
+                        json=no_name).status_code == 422

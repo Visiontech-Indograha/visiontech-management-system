@@ -19,7 +19,32 @@ export async function reviewOvertime(id: string, body: components["schemas"]["Ov
   return (await api.post<Overtime>(`/overtime/${id}/review`, body)).data;
 }
 
+/** GET /overtime?status=PENDING_PM — lembur yang menunggu keputusan (API memfilter sesuai hak peninjau). */
+export async function listPendingOvertime(): Promise<Overtime[]> {
+  return (await api.get<Overtime[]>("/overtime", { params: { status: "PENDING_PM" } })).data;
+}
+
 const overtimeKey = (planId: string) => ["overtime", planId] as const;
+
+/** Antrean tinjau lembur. Prefix ["overtime"] ikut tersegarkan saat ada keputusan. */
+export const useOvertimePending = () =>
+  useQuery({
+    queryKey: ["overtime", "pending"],
+    queryFn: listPendingOvertime,
+  });
+
+/** Setujui/tolak lembur; menyegarkan antrean, daftar lembur rencana, dan rekap. */
+export function useReviewOvertime() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, decision, note }: { id: string; decision: "APPROVED" | "REJECTED"; note?: string }) =>
+      reviewOvertime(id, { decision, note }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["overtime"] });
+      await qc.invalidateQueries({ queryKey: ["overtime-recap"] });
+    },
+  });
+}
 
 /** Daftar lembur satu rencana kerja (TanStack Query). */
 export const useOvertime = (planId: string) =>

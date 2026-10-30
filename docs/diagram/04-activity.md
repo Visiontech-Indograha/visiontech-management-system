@@ -14,12 +14,12 @@ flowchart TD
     P1 -->|"tidak"| P9(["Selesai"])
     P1 -->|"ya"| P2["Buat jadwal DRAFT per tim per tanggal<br/>POST /work-plans/daily<br/>Galat: 422 jika tim tidak di divisi, tanggal lampau, atau proyek tidak ONGOING<br/>Galat: 409 TEAM_DAY_TAKEN jika tim sudah punya jadwal"]
     P2 --> P3["Tambah item per titik<br/>POST /work-plans/daily/:id/items<br/>Galat: 409 jika jadwal bukan DRAFT atau SUBMITTED"]
-    P3 --> P4["Submit ke SUBMITTED<br/>POST submit"]
+    P3 --> P4["Submit ke SUBMITTED<br/>POST submit<br/>Galat: 422 PLAN_EMPTY jika belum ada item"]
     P4 --> P5{"Setujui atau tolak"}
     P5 -->|"tolak dengan alasan"| P6["POST reject, kembali DRAFT<br/>Galat: 409 jika status bukan SUBMITTED atau APPROVED"]
     P6 --> P2
     P5 -->|"setujui satu-satu"| P7["POST approve<br/>Galat: 422 jika tanggal lampau<br/>Galat: 403 jika bukan PM divisi"]
-    P5 -->|"setujui matriks"| P8["POST /work-plans/daily/approve<br/>Item gagal dilewati, dilaporkan di skipped"]
+    P5 -->|"setujui matriks"| P8["POST /work-plans/daily/approve<br/>Jadwal gagal dilewati (termasuk tanpa item, PLAN_EMPTY), dilaporkan di skipped"]
     P7 --> P10["Jadwal APPROVED, tim dapat notifikasi"]
     P8 --> P10
     P10 --> P11{"Ada pekerjaan pindah hari?"}
@@ -72,7 +72,7 @@ flowchart TD
     K4 -->|"ya"| K6["Buka tab /plans, pilih jadwal hari ini"]
     K5 --> K6
     K6 --> K7{"Status jadwal?"}
-    K7 -->|"APPROVED"| K8["Mulai hari kerja<br/>POST /work-plans/daily/:id/start<br/>Galat: 409 jika bukan APPROVED"]
+    K7 -->|"APPROVED"| K8["Mulai hari kerja<br/>POST /work-plans/daily/:id/start<br/>Galat: 409 jika bukan APPROVED; 409 CHECKIN_REQUIRED jika ketua belum absen masuk pada tanggal jadwal atau hari ini"]
     K7 -->|"ONGOING"| K9["Kerjakan item"]
     K7 -->|"belum dirilis"| K0
     K8 --> K9
@@ -92,7 +92,7 @@ flowchart TD
     K17 -->|"tidak"| K19
     K18 --> K19["Isi laporan harian<br/>POST /work-plans/daily/:id/report"]
     K19 --> K20["Absen pulang<br/>POST /attendance/check-out"]
-    K20 --> K21["Selesaikan hari kerja<br/>POST /work-plans/daily/:id/complete<br/>Galat: 422 REPORT_REQUIRED jika laporan belum ada"]
+    K20 --> K21["Selesaikan hari kerja<br/>POST /work-plans/daily/:id/complete<br/>Galat: 409 CORRECTION_OPEN atau ROLLOVER_PENDING jika koreksi atau pindah hari masih terbuka; 422 REPORT_REQUIRED jika laporan belum ada"]
     K21 --> K22{"Ada koreksi dari PM?"}
     K22 -->|"ya, REVISING"| K23["Revisi laporan lalu kirim<br/>POST /work-plans/corrections/:id/submit"]
     K23 --> K21

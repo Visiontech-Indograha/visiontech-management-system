@@ -3,14 +3,30 @@ import logging
 
 from PIL import Image, ImageOps
 from PIL.Image import Image as PILImage
+from pillow_heif import register_heif_opener
 
 logger = logging.getLogger(__name__)
+
+# Dekoder HEIC/HEIF untuk Pillow (foto iPhone/Android): setelah ini `Image.open` menerima HEIC asli.
+# HEIC palsu/terpotong tetap gagal didekode dan ditolak (415/422) oleh `is_decodable_image`.
+register_heif_opener()
 
 # Constants for image resizing
 SIZES = {
     "thumb": 256,
     "view": 1024
 }
+
+def is_decodable_image(image_bytes: bytes) -> bool:
+    """Gambar benar-benar bisa didekode seluruhnya (PNG/JPEG/WebP). Berkas terpotong atau bertanda tipe palsu
+    (mis. HEIC tanpa pustaka dekoder) → False. Hanya magic bytes tidak cukup untuk memeriksa gambar."""
+    try:
+        with Image.open(io.BytesIO(image_bytes)) as src:
+            src.load()
+        return True
+    except Exception:
+        return False
+
 
 def compress_image(image_bytes: bytes) -> dict[str, bytes] | None:
     """

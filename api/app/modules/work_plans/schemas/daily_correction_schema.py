@@ -23,11 +23,15 @@ class CorrectionDecide(BaseModel):
 
     decision: CorrectionDecision
     note: str | None = Field(default=None, max_length=1000)
+    # F9: terima walau foto wajib pekerjaan DONE belum lengkap; hanya bersama catatan alasan.
+    force: bool = False
 
     @model_validator(mode="after")
     def _note_required(self) -> CorrectionDecide:
         if self.decision in ("REJECT", "RETURN") and not (self.note and self.note.strip()):
             raise ValueError("Catatan wajib diisi saat menolak atau mengembalikan untuk revisi.")
+        if self.force and not (self.note and self.note.strip()):
+            raise ValueError("Terima tanpa foto lengkap wajib disertai catatan alasan.")
         return self
 
 

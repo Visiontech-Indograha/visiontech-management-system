@@ -9,6 +9,7 @@ import '../../core/photo_capture.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
+import 'team_logo_screen.dart';
 
 final _stamp = DateFormat('d MMM yyyy, HH.mm', 'id_ID');
 
@@ -172,7 +173,21 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
           ),
     appBar: VmsTopBar(
       onBack: widget.asTab ? null : () => Navigator.of(context).maybePop(),
-      trailing: widget.asTab ? const NotificationBell() : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!widget.selectMode)
+            IconButton(
+              key: const Key('gallery-team-logo'),
+              tooltip: 'Logo tim',
+              icon: const Icon(Icons.groups_2_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TeamLogoScreen()),
+              ),
+            ),
+          if (widget.asTab) const NotificationBell(),
+        ],
+      ),
     ),
     body: _loading
         ? const Center(child: CircularProgressIndicator())

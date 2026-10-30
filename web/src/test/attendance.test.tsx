@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockApi, renderRoute } from "./utils";
 
 const row = (over: Record<string, unknown> = {}) => ({
@@ -121,5 +121,31 @@ describe("Absensi", () => {
     renderRoute("/attendance", { role: "field" });
     await screen.findByRole("heading", { name: "Absensi" });
     expect(screen.queryByRole("tab")).toBeNull();
+  });
+
+  it("Finance: ekspor CSV memakai rentang tanggal dan menolak rentang terbalik", async () => {
+    const calls = setup((url) => (url === "/attendance/export" ? { data: "Tanggal,NIK" } : undefined));
+    renderRoute("/attendance", { role: "FINANCE" });
+    await screen.findByText("Gudang Cikarang", { exact: false });
+    const panel = screen.getByRole("form", { name: "Ekspor CSV absensi" });
+    fireEvent.change(within(panel).getByLabelText("Ekspor dari"), { target: { value: "2026-10-10" } });
+    fireEvent.change(within(panel).getByLabelText("Ekspor sampai"), { target: { value: "2026-10-01" } });
+    fireEvent.click(within(panel).getByRole("button", { name: "Ekspor CSV" }));
+    expect(await within(panel).findByRole("alert")).toHaveTextContent("Tanggal mulai tidak boleh setelah tanggal akhir.");
+    expect(calls.some((c) => c.url === "/attendance/export")).toBe(false);
+
+    fireEvent.change(within(panel).getByLabelText("Ekspor sampai"), { target: { value: "2026-10-31" } });
+    window.URL.createObjectURL = vi.fn(() => "blob:x");
+    fireEvent.click(within(panel).getByRole("button", { name: "Ekspor CSV" }));
+    await waitFor(() => expect(calls.some((c) => c.url === "/attendance/export")).toBe(true));
+    const req = calls.find((c) => c.url === "/attendance/export")!;
+    expect(req.params).toEqual({ start_date: "2026-10-10", end_date: "2026-10-31" });
+  });
+
+  it("peran tanpa export:attendance tidak melihat tombol ekspor CSV", async () => {
+    setup();
+    renderRoute("/attendance", { role: "field" });
+    await screen.findByRole("heading", { name: "Absensi" });
+    expect(screen.queryByRole("form", { name: "Ekspor CSV absensi" })).toBeNull();
   });
 });

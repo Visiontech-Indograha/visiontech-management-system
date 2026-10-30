@@ -2,6 +2,7 @@
 Paket skema untuk modul assets.
 """
 from app.modules.assets.schemas.asset_schema import (
+    AssetAvailabilityOut,
     AssetStatusUpdate,
     InspectionCreate,
     InspectionOut,
@@ -19,6 +20,7 @@ from app.modules.assets.schemas.asset_schema import (
 )
 
 __all__ = [
+    "AssetAvailabilityOut",
     "AssetStatusUpdate",
     "InspectionCreate",
     "InspectionOut",

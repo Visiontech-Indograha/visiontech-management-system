@@ -16,7 +16,7 @@ from fastapi import Depends, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from app.core.errors import AppError, NotFoundError
-from app.core.image import compress_image
+from app.core.image import compress_image, is_decodable_image
 from app.core.security import CurrentUser, create_file_access_ticket
 from app.core.storage import get_object_bytes, upload_file
 from app.modules.system.dependencies import get_file_service
@@ -70,16 +70,33 @@ class FilesController:
         # Tipe ditentukan dari isi berkas (magic bytes), bukan klaim klien: header palsu tidak lolos.
         mime_type = kind.mime if kind else None
         if mime_type not in ALLOWED_MIMES:
+            message = (f"Tipe berkas tidak diizinkan: {mime_type}" if mime_type
+                       else "Tipe berkas tidak dikenali. Unggah berkas asli (foto, PDF, atau dokumen), bukan teks.")
+            raise HTTPException(status_code=415, detail={"code": "INVALID_FILE_TYPE", "message": message})
+
+        if mime_type.startswith("image/") and not is_decodable_image(file_bytes):
+            if mime_type == "image/heic":
+                raise HTTPException(
+                    status_code=415,
+                    detail={"code": "INVALID_FILE_TYPE",
+                            "message": "Format HEIC belum didukung. Unggah sebagai JPG atau PNG."},
+                )
             raise HTTPException(
-                status_code=415,
-                detail={"code": "INVALID_FILE_TYPE", "message": f"Tipe berkas tidak diizinkan: {mime_type}"},
+                status_code=422,
+                detail={"code": "IMAGE_CORRUPT", "message": "Berkas gambar rusak atau terpotong."},
             )
 
         file_hash = hashlib.sha256(file_bytes).digest()
+        # Kunci dedup per pemilik: isi berkas yang sama dari pengguna lain tidak dikenali (tak ada kebocoran
+        # keberadaan berkas). Kunci unik organisasi (office_id, sha256) dijaga dengan kunci turunan pemilik.
+        owner_key = hashlib.sha256(current_user.user_id.encode() + b":" + file_bytes).digest()
 
-        existing_file = await self.service.duplicate_of(current_user.organization_id, file_hash)
+        existing_file = await self.service.duplicate_of(
+            current_user.organization_id, current_user.user_id, [file_hash, owner_key])
         if existing_file:
             return {"file_id": str(existing_file.id), "message": "File sudah ada (deduplikasi)."}
+        if await self.service.key_held_by_other(current_user.organization_id, current_user.user_id, file_hash):
+            file_hash = owner_key
 
         file_id = str(uuid.uuid4())
         assert kind is not None
@@ -157,7 +174,8 @@ class FilesController:
             data = get_object_bytes(key)
             if data:
                 file_name = getattr(file_obj, "file_name", None) or f"{file_id}.{file_obj.mime_type.split('/')[-1]}"
-                disp_type = "attachment" if download else "inline"
+                # Non-gambar (PDF, dokumen) selalu diunduh, tak dirender inline dari origin API.
+                disp_type = "attachment" if (download or not is_image) else "inline"
                 # Gambar biasa (foto profil, aset, bukti kerja) boleh di-cache peramban; unduhan, dokumen pribadi, dan
                 # swafoto absensi (sensitif) tetap tanpa cache. Isi berkas per id tidak berubah, URL stabil per jendela.
                 sensitive = bool(getattr(file_obj, "personal_document", False) or getattr(file_obj, "selfie", False))
@@ -169,6 +187,7 @@ class FilesController:
                     headers={
                         "Content-Disposition": content_disposition(disp_type, str(file_name)),
                         "Cache-Control": cache_control,
+                        "X-Content-Type-Options": "nosniff",
                     },
                 )
 

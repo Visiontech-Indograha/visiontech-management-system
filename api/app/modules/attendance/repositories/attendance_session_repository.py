@@ -13,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
+from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
 from app.shared.attendance_sql import IS_LATE, IS_LATE_A
 
 
@@ -26,6 +27,12 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     a = math.sin(delta_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(r * c)
+
+
+def _pm_reach(emp_expr: str) -> str:
+    """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
+    dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
+    return pm_reaches_employee(VIEWER_EMPLOYEE_BY_USER, emp_expr)
 
 
 class AttendanceSessionRepository(BaseRepository):
@@ -92,6 +99,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -112,13 +120,48 @@ class AttendanceSessionRepository(BaseRepository):
         """Sesi terbuka terbaru: jam masuk, jam pulang kantor, dan status terlambat (untuk pengingat pulang)."""
         return await self.fetchone(
             f"""
-            SELECT a.clock_in_at, a.scheduled_out, ({IS_LATE_A}) AS is_late
+            SELECT a.clock_in_at, a.scheduled_out, a.attendance_date, ({IS_LATE_A}) AS is_late
             FROM attendance a
             WHERE a.employee_id = CAST(:emp AS uuid) AND a.clock_out_at IS NULL AND a.delete_at IS NULL
               AND a.om_approval_status <> 'REJECTED_BY_OM'
             ORDER BY a.clock_in_at DESC LIMIT 1
             """,
             {"emp": str(employee_id)},
+        )
+
+    async def auto_close_stale_sessions(self, employee_id: UUID | str, work_date: Any, close_time: Any) -> list[Any]:
+        """Menutup sesi tanggal sebelumnya yang lupa absen pulang, saat karyawan absen masuk hari baru.
+
+        Jam pulang = jam tutup (ATTENDANCE_CLOSE_TIME) pada TANGGAL ABSEN itu bila absen masuknya sebelum jam tutup;
+        bila absen masuk sudah lewat jam tutup (kerja malam), sesi berakhir pada 00:00 WIB hari berikutnya.
+        Status persetujuan tidak diubah (tetap masuk peninjauan) dan tidak memicu pemberitahuan pulang cepat."""
+        return list(
+            await self.fetchall(
+                """
+                UPDATE attendance AS a
+                   SET clock_out_at = CASE
+                           WHEN a.clock_in_at < (a.attendance_date + CAST(:close_clock AS time))
+                                                 AT TIME ZONE 'Asia/Jakarta'
+                           THEN (a.attendance_date + CAST(:close_clock AS time)) AT TIME ZONE 'Asia/Jakarta'
+                           ELSE CAST(a.attendance_date + 1 AS timestamp) AT TIME ZONE 'Asia/Jakarta'
+                       END,
+                       out_of_radius_note = COALESCE(a.out_of_radius_note || '; ', '') || :explanation,
+                       update_at = NOW()
+                 WHERE a.employee_id = CAST(:emp AS uuid)
+                   AND a.attendance_date < :work_date
+                   AND a.clock_in_at IS NOT NULL
+                   AND a.clock_out_at IS NULL
+                   AND a.om_approval_status <> 'REJECTED_BY_OM'
+                   AND a.delete_at IS NULL
+                RETURNING a.attendance_id AS id
+                """,
+                {
+                    "emp": str(employee_id),
+                    "work_date": work_date,
+                    "close_clock": close_time,
+                    "explanation": "Lupa absen pulang (ditutup otomatis saat absen masuk hari berikutnya)",
+                },
+            )
         )
 
     async def unreported_items(self, employee_id: UUID | str, work_date: Any) -> Any:
@@ -260,6 +303,29 @@ class AttendanceSessionRepository(BaseRepository):
             {"site": str(site_id), "lng": lng, "lat": lat},
         )
 
+    async def running_day_site(self, employee_id: UUID | str, work_date: Any) -> Any:
+        """Lokasi tugas tim HARI ITU untuk karyawan (ketua/anggota) — jadwal APPROVED/ONGOING beserta radius
+        dan koordinatnya. None bila tak ada (absen memakai lokasi yang dipilih, mis. kantor)."""
+        return await self.fetchone(
+            """
+            SELECT wpd.daily_plan_id
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE wpd.work_date = :d
+              AND wpd.status IN ('APPROVED', 'ONGOING')
+              AND wpd.site_lat IS NOT NULL AND wpd.site_lng IS NOT NULL
+              AND wpd.attendance_radius_m IS NOT NULL
+              AND wpd.delete_at IS NULL
+              AND (t.leader_employee_id = CAST(:emp AS uuid) OR EXISTS (
+                    SELECT 1 FROM member m
+                    WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
+                      AND m.is_active AND m.delete_at IS NULL))
+            ORDER BY wpd.daily_plan_id
+            LIMIT 1
+            """,
+            {"d": work_date, "emp": str(employee_id)},
+        )
+
     async def nearest_valid_site(
         self,
         org_id: UUID | str,
@@ -314,6 +380,7 @@ class AttendanceSessionRepository(BaseRepository):
         selfie_file_id: UUID | None,
         face_result: str | None,
         face_similarity: float | None,
+        face_status: str = "NOT_CHECKED",
         source: str = "MOBILE",
         explanation: str | None = None,
         at: Any = None,
@@ -374,7 +441,7 @@ class AttendanceSessionRepository(BaseRepository):
                 face_match_score, face_photo_path, distance_to_target_m,
                 is_within_attendance_radius, out_of_radius_photo_path, out_of_radius_note,
                 om_approval_status, distance_from_main_office_m, city_zone_status,
-                meal_allowance_amount
+                meal_allowance_amount, face_status
             ) VALUES (
                 CAST(:emp AS uuid), :work_date, :target_type, CAST(:office_id AS uuid), CAST(:daily_id AS uuid),
                 :sched_in, :sched_out, COALESCE(CAST(:at AS timestamptz), NOW()),
@@ -382,7 +449,7 @@ class AttendanceSessionRepository(BaseRepository):
                 :face_score, :photo_path, :dist_target,
                 :in_radius, :out_photo, :note,
                 :om_status, :dist_main, CAST(:city_zone AS city_zone_enum),
-                :meal_amount
+                :meal_amount, :face_status
             )
             RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
                       COALESCE(daily_plan_id, office_id) AS site_id, CAST(:label AS text) AS site_label,
@@ -401,6 +468,7 @@ class AttendanceSessionRepository(BaseRepository):
                       CAST(:selfie_id AS uuid) AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -416,6 +484,7 @@ class AttendanceSessionRepository(BaseRepository):
                 "in_lat": lat,
                 "in_lng": lng,
                 "face_score": face_score,
+                "face_status": face_status,
                 "photo_path": photo_path,
                 "dist_target": distance_to_target,
                 "in_radius": is_within_radius,
@@ -472,6 +541,7 @@ class AttendanceSessionRepository(BaseRepository):
                           AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity,
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
@@ -481,18 +551,17 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, dan PM divisi karyawan itu saja."""
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu."""
         rows = await self.fetchall(
-            """
+            f"""
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
             FROM users u
             WHERE u.employee_id IS NOT NULL
               AND u.employee_id <> CAST(:emp AS uuid)
               AND u.delete_at IS NULL
-              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER')
-                   OR (u.system_role = 'PROJECT_MANAGER' AND EXISTS (
-                        SELECT 1 FROM employee e JOIN division d ON d.division_id = e.division_id
-                        WHERE e.employee_id = CAST(:emp AS uuid) AND d.pm_id = u.employee_id)))
+              AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
+                   OR (u.system_role = 'PROJECT_MANAGER'
+                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')}))
             """,
             {"emp": str(employee_id)},
         )
@@ -551,6 +620,7 @@ class AttendanceSessionRepository(BaseRepository):
                           AS selfie_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                      face_status AS face_status,
                       (face_match_score / 100.0)::float AS face_similarity,
                       NULL::text AS check_out_face_result, NULL::float AS check_out_face_similarity
             """,
@@ -584,6 +654,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS selfie_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity
@@ -600,14 +671,23 @@ class AttendanceSessionRepository(BaseRepository):
         """Mengecek apakah peninjau memiliki wewenang untuk meninjau absensi."""
         return bool(
             await self.scalar(
-                """
+                f"""
                 SELECT (CAST(:emp AS uuid) IS DISTINCT FROM (
                     SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid)
                 ))
-                   AND EXISTS (
-                       SELECT 1 FROM users
-                       WHERE user_id = CAST(:viewer AS uuid)
-                         AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA')
+                   AND (
+                       EXISTS (
+                           SELECT 1 FROM users
+                           WHERE user_id = CAST(:viewer AS uuid)
+                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                       )
+                       OR (
+                           EXISTS (
+                               SELECT 1 FROM users
+                               WHERE user_id = CAST(:viewer AS uuid) AND system_role = 'PROJECT_MANAGER'
+                           )
+                           AND {_pm_reach('CAST(:emp AS uuid)')}
+                       )
                    )
                 """,
                 {"viewer": str(viewer_user_id), "emp": str(employee_id)},
@@ -647,12 +727,20 @@ class AttendanceSessionRepository(BaseRepository):
 
         where_clauses = [
             "a.delete_at IS NULL",
-            # Peninjau (sama dengan can_review) & pemegang VIEW_ALL melihat semua; pekerja lapangan hanya miliknya.
-            """(
+            # OM/SUPER_ADMIN & pemegang VIEW_ALL melihat semua; PM hanya karyawan divisinya (pm_id);
+            # selain itu hanya absensi miliknya sendiri.
+            f"""(
                 CAST(:view_all AS boolean)
                 OR EXISTS (
                     SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER')
+                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                )
+                OR (
+                    EXISTS (
+                        SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                          AND v.system_role = 'PROJECT_MANAGER'
+                    )
+                    AND {_pm_reach('a.employee_id')}
                 )
                 OR a.employee_id IS NOT DISTINCT FROM (
                     SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)
@@ -719,6 +807,7 @@ class AttendanceSessionRepository(BaseRepository):
                        AS employee_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
+                   a.face_status AS face_status,
                    (a.face_match_score / 100.0)::float AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,
@@ -733,12 +822,19 @@ class AttendanceSessionRepository(BaseRepository):
                    a.meal_allowance_amount::float AS meal_allowance_amount,
                    a.is_within_attendance_radius AS is_within_attendance_radius,
                    (
-                       EXISTS (
-                           SELECT 1 FROM users u
-                           WHERE u.user_id = CAST(:viewer AS uuid)
-                             AND u.system_role IN (
-                                  'SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'ADMIN_HR_GA'
-                              )
+                       (
+                           EXISTS (
+                               SELECT 1 FROM users u
+                               WHERE u.user_id = CAST(:viewer AS uuid)
+                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                           )
+                           OR (
+                               EXISTS (
+                                   SELECT 1 FROM users u
+                                   WHERE u.user_id = CAST(:viewer AS uuid) AND u.system_role = 'PROJECT_MANAGER'
+                               )
+                               AND {_pm_reach('a.employee_id')}
+                           )
                        )
                        AND a.employee_id IS DISTINCT FROM (
                            SELECT u2.employee_id FROM users u2 WHERE u2.user_id = CAST(:viewer AS uuid)
@@ -842,7 +938,7 @@ class AttendanceSessionRepository(BaseRepository):
             )
         )
 
-    async def meal_allowance_recap(self, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
+    async def meal_allowance_recap(self, start: Any, end: Any, division_ids: list[str] | None = None) -> list[Any]:
         """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama);
         hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
         return list(
@@ -858,11 +954,11 @@ class AttendanceSessionRepository(BaseRepository):
                 JOIN employee e ON e.employee_id = a.employee_id
                 WHERE a.delete_at IS NULL
                   AND a.attendance_date BETWEEN :start AND :end
-                  AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
+                  AND (CAST(:divs AS uuid[]) IS NULL OR e.division_id = ANY(CAST(:divs AS uuid[])))
                 GROUP BY e.employee_id, e.employee_no, e.full_name
                 ORDER BY e.full_name
                 """,
-                {"start": start, "end": end, "div": str(division_id) if division_id else None},
+                {"start": start, "end": end, "divs": division_ids or None},
             )
         )
 

@@ -24,9 +24,10 @@ String leaveStatusLabel(String status) => switch (status) {
   _ => status,
 };
 
-/// Cuti masih bisa dibatalkan pemohon selama belum final.
+/// Cuti masih bisa dibatalkan pemohon selama belum ditolak/dibatalkan (disetujui HR pun bisa dibatalkan).
+/// Batas hari cuti terakhir ditegakkan server.
 bool leaveCancellable(String status) =>
-    status == 'PENDING' || status == 'APPROVED_BY_PM';
+    status == 'PENDING' || status == 'APPROVED_BY_PM' || status == 'APPROVED_BY_HR';
 
 class LeavesScreen extends ConsumerStatefulWidget {
   const LeavesScreen({super.key});
@@ -35,7 +36,7 @@ class LeavesScreen extends ConsumerStatefulWidget {
   ConsumerState<LeavesScreen> createState() => _LeavesScreenState();
 }
 
-class _LeavesScreenState extends ConsumerState<LeavesScreen> {
+class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBindingObserver {
   List<Map<String, dynamic>> _items = [];
   Map<String, dynamic>? _balance;
   bool _loading = true;
@@ -44,6 +45,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _query.dispose();
     super.dispose();
   }
@@ -56,7 +58,15 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  /// Persetujuan PM/HR di web tidak terlihat sampai daftar dimuat ulang: muat ulang saat aplikasi kembali aktif,
+  /// saat peristiwa waktu nyata (SSE) masuk, dan lewat tarik-untuk-segarkan.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) _load();
   }
 
   Future<void> _load() async {
@@ -127,6 +137,8 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(liveEventTickProvider, (_, _) => _load());
+    ref.listen(syncTickProvider, (_, _) => _load());
     return Scaffold(
       appBar: VmsTopBar(onBack: () => context.pop()),
       floatingActionButton: FloatingActionButton.extended(

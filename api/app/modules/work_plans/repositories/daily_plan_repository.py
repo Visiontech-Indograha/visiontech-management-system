@@ -5,6 +5,7 @@ penyetuju); work_plan_daily 1─N work_plan_item, work_plan_attachment, attendan
 """
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -16,10 +17,10 @@ _SELECT = """
            wpd.project_id, (SELECT p.project_title FROM project p WHERE p.project_id = wpd.project_id)
                AS project_title,
            t.leader_employee_id, le.full_name AS leader_name, le.phone_number AS leader_phone,
-           d.pm_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
+           d.pm_id, d.om_id, (SELECT pm.full_name FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_name,
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
-           wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status,
+           wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL))
@@ -27,11 +28,22 @@ _SELECT = """
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND i.status = 'DONE'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS done_count,
-           -- Persen progres nyata: rata-rata (jumlah dikerjakan / target) per pekerjaan, DONE = 100%.
-           (SELECT COALESCE(ROUND(AVG(CASE WHEN i.status = 'DONE' THEN 1
-                        ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int
+           -- Persen progres (satu aturan dengan web workPhase.displayPct & mobile workPercent):
+           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) = 0% (dikerjakan di hari baru),
+           -- item lain = dikerjakan/target. Dibulatkan ke bawah. 100 hanya bila SEMUA item DONE; selainnya maks 99.
+           -- Contoh: A 2/2 + B pindah hari 0/1 = 50; A 1/2 = 50; semua DONE = 100.
+           (SELECT CASE WHEN EXISTS (SELECT 1 FROM work_plan_item a WHERE a.daily_plan_id = wpd.daily_plan_id
+                          AND a.delete_at IS NULL
+                          AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
+                    AND NOT EXISTS (SELECT 1 FROM work_plan_item a WHERE a.daily_plan_id = wpd.daily_plan_id
+                          AND a.delete_at IS NULL AND a.status <> 'DONE'
+                          AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
+                  THEN 100
+                  ELSE LEAST(99, COALESCE(FLOOR(AVG(CASE WHEN i.status = 'DONE' THEN 1
+                        WHEN i.status = 'SHIFTED_DAY' THEN 0
+                        ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int)
+             END
               FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL
-              AND i.status <> 'SHIFTED_DAY'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS progress_pct,
            -- Jenis pekerjaan hari itu (Survei/Persiapan/Instalasi/Replacement/Maintenance) untuk filter & warna.
            ARRAY(SELECT DISTINCT i.task_phase::text FROM work_plan_item i
@@ -137,6 +149,47 @@ class DailyPlanRepository(BaseRepository):
             {"t": str(team_id), "d": str(division_id)},
         ))
 
+    async def team_leader(self, team_id: UUID | str) -> str | None:
+        """Karyawan ketua tim (untuk peringatan cuti pada alokasi massal)."""
+        value = await self.scalar("SELECT leader_employee_id FROM team WHERE team_id = CAST(:t AS uuid)",
+                                  {"t": str(team_id)})
+        return str(value) if value else None
+
+    async def weekly_items(self, daily_plan_ids: list[str]) -> list[Any]:
+        """Item (pekerjaan) dari jadwal-jadwal matriks mingguan, urut mulai kerja."""
+        if not daily_plan_ids:
+            return []
+        return list(await self.fetchall(
+            """
+            SELECT i.daily_plan_id, i.item_id, i.title, wt.name AS work_type_name, i.completion_id,
+                   i.target_qty, i.completed_qty, i.status
+            FROM work_plan_item i
+            LEFT JOIN work_type wt ON wt.work_type_id = i.work_type_id
+            WHERE i.daily_plan_id = ANY(CAST(:ids AS uuid[])) AND i.delete_at IS NULL
+            ORDER BY i.start_time NULLS LAST, i.create_at
+            """,
+            {"ids": daily_plan_ids},
+        ))
+
+    async def orders_brief(self, completion_ids: list[str]) -> list[Any]:
+        """Order klien beserta total target, target selesai (item utama), dan target yang sudah dijadwalkan."""
+        if not completion_ids:
+            return []
+        return list(await self.fetchall(
+            """
+            SELECT wc.completion_id, wc.client_name, wc.project_title, wc.order_number, wc.total_target_unit,
+                   COALESCE((SELECT SUM(wpi.completed_qty)::int FROM work_plan_item wpi
+                             WHERE wpi.completion_id = wc.completion_id AND wpi.is_main_deliverable = TRUE
+                               AND wpi.delete_at IS NULL), 0) AS completed_target_unit,
+                   COALESCE((SELECT SUM(i.target_qty)::float FROM work_plan_item i
+                             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
+                             WHERE i.completion_id = wc.completion_id AND i.delete_at IS NULL), 0) AS scheduled_qty
+            FROM work_completion wc
+            WHERE wc.completion_id = ANY(CAST(:ids AS uuid[])) AND wc.delete_at IS NULL
+            """,
+            {"ids": completion_ids},
+        ))
+
     async def team_day_taken(self, team_id: UUID | str, work_date: date, exclude: UUID | str | None = None) -> bool:
         """Satu jadwal per tim per tanggal (titik absen tim hari itu)."""
         return bool(await self.scalar(
@@ -147,14 +200,58 @@ class DailyPlanRepository(BaseRepository):
             {"t": str(team_id), "d": work_date, "ex": str(exclude) if exclude else None},
         ))
 
+    async def leader_on_leave(self, employee_id: str, work_date: date) -> bool:
+        """Ketua tim punya permohonan cuti aktif/pending yang mencakup tanggal itu (peringatan alokasi massal)."""
+        return bool(await self.scalar(
+            """
+            SELECT EXISTS (SELECT 1 FROM leave_request
+                           WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL
+                             AND status IN ('PENDING', 'APPROVED_BY_PM', 'APPROVED_BY_HR')
+                             AND start_date <= :d AND end_date >= :d)
+            """,
+            {"emp": employee_id, "d": work_date},
+        ))
+
+    async def asset_loan_conflict(self, asset_type: str, asset_id: UUID | str, work_date: date) -> Any:
+        """Peminjaman aset yang bentrok pada tanggal itu: peminjaman tanpa jadwal atau berjadwal pada tanggal sama.
+        Mengembalikan baris (nama tim pemegang) atau None."""
+        if asset_type == "TOOL":
+            sql = """
+                SELECT t.name AS team_name FROM asset_assignment aa
+                LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                LEFT JOIN team t ON t.team_id = wpd.team_id
+                WHERE aa.tool_id = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                  AND (aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:d AS date))
+                ORDER BY aa.loaned_at DESC LIMIT 1
+            """
+        else:
+            sql = """
+                SELECT t.name AS team_name FROM asset_assignment aa
+                LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                LEFT JOIN team t ON t.team_id = wpd.team_id
+                WHERE aa.vehicle_id = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                  AND (aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:d AS date))
+                ORDER BY aa.loaned_at DESC LIMIT 1
+            """
+        return await self.fetchone(sql, {"id": str(asset_id), "d": work_date})
+
+    async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
+        """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""
+        await self.execute(
+            "UPDATE work_plan_daily SET kind = :kind, update_at = NOW() "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id), "kind": kind},
+        )
+
     async def insert(self, fields: dict[str, Any]) -> UUID:
         daily_plan_id: UUID = await self.scalar(
             """
             INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
-                                         attendance_radius_m, clock_in_time, clock_out_time, status, created_by_id)
+                                         attendance_radius_m, clock_in_time, clock_out_time, status, kind,
+                                         created_by_id)
             VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), CAST(:project_id AS uuid), :work_date,
                     :site_name, :site_lat, :site_lng, :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT',
-                    CAST(:created_by_id AS uuid))
+                    :kind, CAST(:created_by_id AS uuid))
             RETURNING daily_plan_id
             """,
             {"project_id": None, **fields},
@@ -181,6 +278,31 @@ class DailyPlanRepository(BaseRepository):
             """,
             {**fields, "id": str(daily_plan_id)},
         )
+
+    async def release_plan_assets(self, daily_plan_id: UUID | str) -> None:
+        """Jadwal selesai: peminjaman alat/kendaraan yang masih berjalan untuk jadwal ini otomatis dikembalikan
+        (siap dipakai lagi). Status aset dikembalikan ke `ready` bila tidak ada peminjaman lain yang berjalan."""
+        released = await self.fetchall(
+            "UPDATE asset_assignment SET returned_at = now(), assignment_status = 'ready' "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL "
+            "RETURNING tool_id, vehicle_id",
+            {"id": str(daily_plan_id)},
+        )
+        for row in released:
+            if row.tool_id is not None:
+                await self.execute(
+                    "UPDATE tool SET status = 'ready', update_at = now() WHERE tool_id = CAST(:id AS uuid) "
+                    "AND status IN ('allocated', 'loaned') AND NOT EXISTS (SELECT 1 FROM asset_assignment "
+                    "WHERE tool_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL)",
+                    {"id": str(row.tool_id)},
+                )
+            if row.vehicle_id is not None:
+                await self.execute(
+                    "UPDATE vehicle SET status = 'ready', update_at = now() WHERE vehicle_id = CAST(:id AS uuid) "
+                    "AND status IN ('allocated', 'loaned') AND NOT EXISTS (SELECT 1 FROM asset_assignment "
+                    "WHERE vehicle_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL)",
+                    {"id": str(row.vehicle_id)},
+                )
 
     async def set_status(
         self,
@@ -220,6 +342,20 @@ class DailyPlanRepository(BaseRepository):
             {"id": str(daily_plan_id)},
         ))
 
+    async def log_audit(self, user_id: str, role: str, daily_plan_id: UUID | str, action: str,
+                        diff: dict[str, Any]) -> None:
+        """Jejak audit jadwal harian (mis. BACKDATE_CREATED, BACKDATE_APPROVED) ke app_activity_logs."""
+        await self.execute(
+            """
+            INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                                           changed_diff)
+            VALUES (CAST(:uid AS uuid), :role, 'web_react', :action, 'work_plan_daily', CAST(:id AS uuid),
+                    CAST(:diff AS jsonb))
+            """,
+            {"uid": user_id, "role": (role or "")[:30], "action": action, "id": str(daily_plan_id),
+             "diff": json.dumps(diff, default=str)},
+        )
+
     async def archive(self, daily_plan_id: UUID | str) -> None:
         await self.execute(
             "UPDATE work_plan_item SET delete_at = now(), update_at = now() "
@@ -257,7 +393,7 @@ class DailyPlanRepository(BaseRepository):
             {"mgr": managed_by},
         ))
 
-    async def teams(self, managed_by: str | None) -> list[Any]:
+    async def teams(self, managed_by: str | None, division_id: UUID | str | None = None) -> list[Any]:
         return list(await self.fetchall(
             """
             SELECT t.team_id, t.name, t.division_id, t.leader_employee_id, e.full_name AS leader_name
@@ -265,9 +401,10 @@ class DailyPlanRepository(BaseRepository):
             JOIN employee e ON e.employee_id = t.leader_employee_id
             WHERE t.delete_at IS NULL AND t.status AND d.delete_at IS NULL
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+              AND (CAST(:div AS uuid) IS NULL OR t.division_id = CAST(:div AS uuid))
             ORDER BY d.name, t.name
             """,
-            {"mgr": managed_by},
+            {"mgr": managed_by, "div": str(division_id) if division_id else None},
         ))
 
     async def open_orders(self, managed_by: str | None) -> list[Any]:
@@ -282,6 +419,17 @@ class DailyPlanRepository(BaseRepository):
             {"mgr": managed_by},
         ))
 
+    async def order_scope(self, completion_id: UUID | str) -> Any:
+        """PM order & PM/OM divisinya; None bila order tidak ada / sudah dihapus."""
+        return await self.fetchone(
+            """
+            SELECT wc.pm_id, d.pm_id AS div_pm_id, d.om_id AS div_om_id
+            FROM work_completion wc JOIN division d ON d.division_id = wc.division_id
+            WHERE wc.completion_id = CAST(:c AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"c": str(completion_id)},
+        )
+
     async def plans_of_order(self, completion_id: UUID | str) -> list[Any]:
         """Jadwal yang memuat item order ini (proyek multi-minggu dilacak per hari/titik)."""
         return list(await self.fetchall(
@@ -293,6 +441,75 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"c": str(completion_id)},
         ))
+
+    async def order_target_totals(self, completion_id: UUID | str) -> Any:
+        """Target total & selesai order (selesai = item utama, seperti ringkasan order) serta target yang terjadwal."""
+        return await self.fetchone(
+            """
+            SELECT wc.total_target_unit,
+                   COALESCE((SELECT SUM(wpi.completed_qty)::int FROM work_plan_item wpi
+                             WHERE wpi.completion_id = wc.completion_id AND wpi.is_main_deliverable = TRUE
+                               AND wpi.delete_at IS NULL), 0) AS completed_target_unit,
+                   COALESCE((SELECT SUM(i.target_qty)::float FROM work_plan_item i
+                             JOIN work_plan_daily d ON d.daily_plan_id = i.daily_plan_id AND d.delete_at IS NULL
+                             WHERE i.completion_id = wc.completion_id AND i.delete_at IS NULL),
+                            0) AS scheduled_target_qty
+            FROM work_completion wc
+            WHERE wc.completion_id = CAST(:c AS uuid) AND wc.delete_at IS NULL
+            """,
+            {"c": str(completion_id)},
+        )
+
+    async def count_items(self, daily_plan_id: UUID | str) -> int:
+        """Jumlah item jadwal yang belum dihapus (jadwal tanpa item tidak boleh diajukan/disetujui)."""
+        return int(await self.scalar(
+            "SELECT count(*) FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(daily_plan_id)},
+        ) or 0)
+
+    async def has_pending_rollover(self, daily_plan_id: UUID | str) -> bool:
+        """Ada item yang menunggu keputusan pemindahan hari (PENDING_ROLLOVER) — jadwal belum boleh ditutup."""
+        return bool(await self.scalar(
+            "SELECT 1 FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status = 'PENDING_ROLLOVER' LIMIT 1",
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def leader_checked_in(self, daily_plan_id: UUID | str, today: date) -> bool:
+        """Ketua tim sudah absen masuk pada tanggal jadwal ATAU pada hari ini (WIB), absensi yang belum dihapus.
+
+        Jadwal bertanggal lampau yang belum dimulai boleh dimulai bila ketua sudah absen hari ini (F11)."""
+        return bool(await self.scalar(
+            """
+            SELECT 1 FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            JOIN attendance a ON a.employee_id = t.leader_employee_id
+                             AND a.attendance_date IN (wpd.work_date, CAST(:today AS date))
+            WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND a.delete_at IS NULL
+            LIMIT 1
+            """,
+            {"id": str(daily_plan_id), "today": today},
+        ))
+
+    async def copy_items(self, source_id: UUID | str, target_id: UUID | str) -> None:
+        """Salin item jadwal ke jadwal lain (hari lain). Progres direset; item survei dan item yang bergantung
+        pada prasyarat (depends_on_item_id) dilewati karena konteks harinya tidak ikut disalin."""
+        await self.execute(
+            """
+            INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
+                                        completion_id, target_qty, completed_qty, progress_percent, status,
+                                        start_time, end_time, location_name, site_lat, site_lng,
+                                        assigned_employee_ids, notes)
+            SELECT CAST(:target AS uuid), i.work_type_id, i.title, i.task_phase, i.is_main_deliverable,
+                   i.completion_id, i.target_qty, 0, 0, 'TODO', i.start_time, i.end_time, i.location_name,
+                   i.site_lat, i.site_lng, i.assigned_employee_ids, i.notes
+            FROM work_plan_item i
+            WHERE i.daily_plan_id = CAST(:source AS uuid) AND i.delete_at IS NULL
+              AND i.task_phase <> 'SURVEY' AND i.depends_on_item_id IS NULL
+            ORDER BY i.start_time NULLS LAST, i.create_at
+            """,
+            {"source": str(source_id), "target": str(target_id)},
+        )
 
     async def has_open_correction(self, daily_plan_id: UUID | str) -> bool:
         """Ada koreksi laporan yang belum diputuskan akhir (diminta, direvisi, atau menunggu tinjauan)."""

@@ -7,10 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart' show OfflineOp;
+import '../../data/sync_engine.dart' show OfflineOp, SyncEngine, SyncRejectedException;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
+import 'item_state.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 
 /// Alasan hasil kerja belum boleh disimpan, atau null bila valid. Jumlah tidak boleh melebihi target; menandai
@@ -77,11 +78,17 @@ class ItemProgressScreen extends ConsumerStatefulWidget {
 class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   Map<String, dynamic>? _item;
   List<Map<String, dynamic>> _slots = const [];
+  // false bila daftar foto wajib belum pernah termuat (tanpa sinyal, belum pernah dibuka di HP ini).
+  bool _slotsKnown = true;
   final List<_Photo> _photos = [];
   final _qty = TextEditingController();
   final _notes = TextEditingController();
   String? _error;
+  /// Galat simpan ditampilkan di atas tombol Simpan (bukan toast di bawah, yang menutupi tombol).
+  String? _saveError;
   bool _busy = false;
+  // Permintaan pindah hari yang masuk antrean HP (belum terkirim ke server).
+  bool _rolloverPending = false;
 
   bool get _editable =>
       widget.dayStatus == 'ONGOING' && const {'TODO', 'IN_PROGRESS', 'DONE'}.contains(_item?['status']);
@@ -100,39 +107,48 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   }
 
   Future<void> _load() async {
+    final engine = ref.read(syncEngineProvider);
+    final api = engine.api;
+    Map<String, dynamic> item;
     try {
-      final api = ref.read(syncEngineProvider).api;
-      final item = await api.planItem(widget.itemId);
-      final slots = await api.imageRequirements('${item['work_type_id']}');
-      if (!mounted) return;
-      setState(() {
-        _item = item;
-        _slots = slots;
-        _qty.text = qtyText(item['completed_qty']);
-        _notes.text = '${item['notes'] ?? ''}';
-        _photos
-          ..clear()
-          ..addAll([
-            for (final p in photoRefsOf(item['realization_photos_json']))
-              _Photo(fileId: p.fileId, requirementId: p.requirementId),
-          ]);
-        _error = null;
-      });
+      // Salinan item disimpan di HP: tanpa sinyal tetap memakai data terakhir yang dimuat server.
+      item = await engine.fetchMap('plan_item_${widget.itemId}', () => api.planItem(widget.itemId));
     } catch (e) {
       if (!mounted) return;
       final fallback = widget.initialItem;
-      if (fallback != null && _item == null) {
-        setState(() {
-          _item = fallback;
-          _qty.text = qtyText(fallback['completed_qty']);
-          _notes.text = '${fallback['notes'] ?? ''}';
-          _error = null;
-        });
-        _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+      if (fallback == null || _item != null) {
+        setState(() => _error = apiErrorMessage(e));
         return;
       }
-      setState(() => _error = apiErrorMessage(e));
+      _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+      item = fallback;
     }
+    // Daftar foto wajib = aturan server (syarat foto jenis pekerjaan item). Disalin di HP agar tetap tampil offline.
+    var slots = const <Map<String, dynamic>>[];
+    var slotsKnown = true;
+    try {
+      final wt = '${item['work_type_id']}';
+      final res = await engine.fetchList('image_req_$wt', () => api.imageRequirements(wt));
+      slots = res.items;
+      slotsKnown = !SyncEngine.neverCached(res.cachedAt);
+    } catch (e) {
+      slotsKnown = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _item = item;
+      _slots = slots;
+      _slotsKnown = slotsKnown;
+      _qty.text = qtyText(item['completed_qty']);
+      _notes.text = '${item['notes'] ?? ''}';
+      _photos
+        ..clear()
+        ..addAll([
+          for (final p in photoRefsOf(item['realization_photos_json']))
+            _Photo(fileId: p.fileId, requirementId: p.requirementId),
+        ]);
+      _error = null;
+    });
   }
 
   void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
@@ -145,8 +161,14 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
 
   Future<void> _save() async {
     if (_busy) return;
+    setState(() => _saveError = null);
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
-    if (qty == null || qty < 0) return _snack('Isi jumlah yang sudah selesai dengan angka.');
+    if (qty == null || qty < 0) return setState(() => _saveError = 'Isi jumlah yang sudah selesai dengan angka.');
+    final target0 = num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0;
+    if (!_slotsKnown && qty >= target0) {
+      return setState(() => _saveError =
+          'Daftar foto wajib belum termuat. Buka ulang pekerjaan ini saat ada sinyal sebelum menandai selesai.');
+    }
     final problem = progressProblem(
       qty: qty,
       target: num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0,
@@ -156,7 +178,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           .where((s) => _photos.any((p) => p.requirementId == s['image_requirement_id']))
           .length,
     );
-    if (problem != null) return _snack(problem, error: true);
+    if (problem != null) return setState(() => _saveError = problem);
     setState(() => _busy = true);
     try {
       final engine = ref.read(syncEngineProvider);
@@ -175,8 +197,10 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           ],
           notes: notes,
         );
-        _snack('Hasil kerja tersimpan.');
-        await _load();
+        if (!mounted) return;
+        showVmsToast(context, 'Tersimpan');
+        Navigator.of(context).pop();
+        return;
       } on DioException catch (e) {
         if (!isNetworkFailure(e)) rethrow;
         // Tidak ada koneksi: simpan di antrean HP (foto ikut), dikirim otomatis saat online.
@@ -195,10 +219,13 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           },
           localFiles: [for (final p in local) p.path!],
         );
-        _snack('Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
+        if (!mounted) return;
+        showVmsToast(context, 'Tidak ada koneksi. Hasil kerja disimpan di HP dan dikirim otomatis saat online.');
+        Navigator.of(context).pop();
+        return;
       }
     } catch (e) {
-      _snack(apiErrorMessage(e), error: true);
+      if (mounted) setState(() => _saveError = apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -236,16 +263,26 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     if (ok != true) return;
     setState(() => _busy = true);
     try {
-      await ref
-          .read(syncEngineProvider)
-          .api
-          .requestRollover(
-            widget.itemId,
-            reason: reason.text.trim(),
-            completedQty: num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0,
-          );
-      _snack('Permintaan pindah hari terkirim; menunggu keputusan PM.');
-      await _load();
+      // Seperti progres: dicoba langsung; tanpa sinyal masuk antrean HP (alasan ikut tersimpan) dan dikirim saat online.
+      final applied = await ref.read(syncEngineProvider).submit(
+        OfflineOp.planRolloverRequest,
+        {
+          'item_id': widget.itemId,
+          'delay_reason': reason.text.trim(),
+          'completed_qty': num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0,
+        },
+      );
+      if (!mounted) return;
+      if (applied) {
+        setState(() => _rolloverPending = false);
+        _snack('Permintaan pindah hari terkirim; menunggu keputusan PM.');
+        await _load();
+      } else {
+        setState(() => _rolloverPending = true);
+        _snack('Tidak ada koneksi. Permintaan pindah hari disimpan di HP dan dikirim otomatis saat online.');
+      }
+    } on SyncRejectedException catch (e) {
+      _snack(e.message, error: true);
     } catch (e) {
       _snack(apiErrorMessage(e), error: true);
     } finally {
@@ -279,13 +316,18 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     final phase = phaseAccent['${item['task_phase']}'] ?? Accent.slate;
     final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
     final qty = num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0;
-    final pct = target <= 0 ? 0.0 : (qty / target).clamp(0, 1).toDouble();
-    final state = item['status'] == 'DONE' || (target > 0 && qty >= target)
-        ? 'DONE'
-        : qty > 0
-        ? 'PARTIAL'
-        : 'TODO';
+    // Status & persen dihitung dari hasil yang SUDAH tersimpan; isian yang belum disimpan hanya pratinjau.
+    final saved = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
+    final pct = target <= 0 ? 0.0 : (saved / target).clamp(0, 1).toDouble();
+    final state = itemDisplayState(
+      raw: '${item['status']}',
+      done: saved,
+      target: target,
+      photoCount: _photos.length,
+      dayStatus: widget.dayStatus,
+    );
     final stateAccent = statusStyle(state).accent;
+    final unsaved = qty != saved;
     final overTarget = target > 0 && qty > target;
     final barColor = overTarget ? theme.colorScheme.error : stateAccent.strong;
     final mandatory = _slots.where((s) => s['is_mandatory'] == true).toList();
@@ -298,11 +340,21 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: PrimaryAction(
-                  label: 'Simpan hasil kerja',
-                  icon: Icons.check_circle_rounded,
-                  busy: _busy,
-                  onTap: _save,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_saveError != null) ...[
+                      NoticeBanner(icon: Icons.error_outline, text: _saveError!, accent: Accent.rose),
+                      const SizedBox(height: 8),
+                    ],
+                    PrimaryAction(
+                      label: 'Simpan hasil kerja',
+                      icon: Icons.check_circle_rounded,
+                      busy: _busy,
+                      onTap: _save,
+                    ),
+                  ],
                 ),
               ),
             )
@@ -381,7 +433,14 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
             ),
           ],
 
-          // Langkah 1 — foto
+          if (!_slotsKnown)
+      const _Banner(
+        accent: Accent.slate,
+        icon: Icons.cloud_off_rounded,
+        text: 'Daftar foto wajib belum termuat. Sambungkan internet lalu buka ulang pekerjaan ini.',
+      ),
+
+    // Langkah 1 — foto
           _Step(
             number: 1,
             title: 'Ambil foto',
@@ -414,7 +473,9 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     ),
                     Expanded(
                       child: TextField(
-            maxLength: 12,
+                        maxLength: 12,
+                        // Penghitung "n/12" tak bermakna untuk jumlah (dan membingungkan saat tak bisa diubah).
+                        buildCounter: (_, {required currentLength, required isFocused, required maxLength}) => null,
                         controller: _qty,
                         enabled: _editable,
                         textAlign: TextAlign.center,
@@ -449,6 +510,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                 Text(
                   overTarget
                       ? 'Melebihi target (${qtyText(target)})'
+                      : unsaved
+                      ? 'Belum disimpan · isian ${qtyText(qty)}'
                       : '${statusStyle(state).label} · ${(pct * 100).round()}%',
                   style: theme.textTheme.bodySmall?.copyWith(color: barColor, fontWeight: FontWeight.w700),
                 ),
@@ -468,10 +531,15 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           if (_editable && widget.isLeader && item['status'] != 'DONE') ...[
             const SizedBox(height: 16),
             TextButton.icon(
-              onPressed: _busy ? null : _rollover,
+              onPressed: _busy || _rolloverPending ? null : _rollover,
               icon: const Icon(Icons.update_rounded),
               label: const Text('Tidak selesai hari ini? Minta pindah hari'),
             ),
+            if (_rolloverPending)
+              Text(
+                'Menunggu koneksi untuk dikirim: permintaan pindah hari.',
+                style: theme.textTheme.bodySmall?.copyWith(color: Accent.amber.strong, fontWeight: FontWeight.w700),
+              ),
           ],
         ],
       ),

@@ -45,6 +45,7 @@ SELF_SERVICE = {
     ("GET", "/work-types/{type_id}/materials"): "BoM bawaan jenis pekerjaan (baca saja)",
     ("GET", "/divisions"): "daftar divisi organisasi sendiri (pilihan form karyawan)",
     ("GET", "/assets/tools"): "inventaris alat (baca saja) untuk perencanaan & HP tim (M4)",
+    ("GET", "/assets/availability"): "ketersediaan alat & kendaraan per tanggal (baca saja, butir 7)",
     ("GET", "/assets/vehicles"): "inventaris kendaraan + masa STNK/KIR (baca saja, M4)",
     ("GET", "/assets/vehicles/{vehicle_id}/files"): "berkas kendaraan (baca saja, M4)",
     ("GET", "/assets/vehicles/{vehicle_id}/inspections"): "riwayat inspeksi kendaraan (baca saja, M4)",
@@ -75,6 +76,9 @@ SELF_SERVICE = {
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {
+    ("PUT", "/teams/{team_id}/logo"): "TeamLogoService: hanya ketua tim tersebut (SUPER_ADMIN darurat, diuji)",
+    ("DELETE", "/teams/{team_id}/logo"): "TeamLogoService: hanya ketua tim tersebut (SUPER_ADMIN darurat, diuji)",
+    ("GET", "/teams/{team_id}/logo"): "TeamLogoService: anggota tim, PM/OM divisi, HR, SUPER_ADMIN; lain 404 (diuji)",
     # M5 daily-first: kedudukan pada jadwal/order dibaca di service (check_daily_access / standing order).
     ("GET", "/work-plans/daily/{daily_plan_id}/items"): "PlanItemService: check_daily_access(VIEW), lain 404",
     ("GET", "/work-plans/items/{item_id}"): "PlanItemService: jadwal item terlihat (VIEW), lain 404",
@@ -110,11 +114,12 @@ GUARDED_IN_HANDLER = {
     ("GET", "/exports/surveys/{task_id}/preview"): "ExportService → SurveyService.detail (akses survei)",
     ("POST", "/exports/surveys/{task_id}"): "ExportService → SurveyService.detail (akses survei)",
     ("POST", "/exports/team-week"): "ExportService.export_team_week: anggota tim atau PM/OM divisinya (diuji)",
+    ("POST", "/exports/daily-report"): "ExportService.export_daily_report: check_daily_access VIEW (tim saat dirilis, PM/OM; lain 404)",
     ("GET", "/work-completions/{completion_id}/signatures/{role}"): "WorkCompletionService._access (tim/PM order)",
     ("DELETE", "/work-completions/{completion_id}/photos/{file_id}"):
         "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",
-    # Daftar master hanya-baca untuk pilihan formulir; terbatas organisasi pengguna.
-    ("GET", "/clients"): "master hanya-baca untuk formulir (organisasi pengguna)",
+    # Daftar klien: create:plan atau PM/OM/HR (ClientService.can_read_clients); lapangan & ketua tidak.
+    ("GET", "/clients"): "ClientService.can_read_clients: create:plan atau PM/OM/HR (diuji)",
     ("GET", "/projects"): "master hanya-baca untuk formulir (organisasi pengguna)",
     ("GET", "/job-positions"): "master hanya-baca untuk formulir (organisasi pengguna)",
     # Manajemen cuti & izin karyawan

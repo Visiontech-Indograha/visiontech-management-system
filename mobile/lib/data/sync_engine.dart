@@ -27,6 +27,7 @@ class OfflineOp {
   static const incidentReport = 'INCIDENT_REPORT';
   static const overtimeReport = 'OVERTIME_REPORT';
   static const planItemProgress = 'PLAN_ITEM_PROGRESS';
+  static const planRolloverRequest = 'PLAN_ROLLOVER_REQUEST';
 
   static const labels = {
     dailyReportSave: 'Simpan laporan harian',
@@ -35,6 +36,7 @@ class OfflineOp {
     incidentReport: 'Laporan insiden',
     overtimeReport: 'Laporan lembur',
     planItemProgress: 'Simpan hasil kerja',
+    planRolloverRequest: 'Minta pindah hari',
     OfflineAttendance.entityType: 'Absensi offline',
   };
 }

@@ -16,6 +16,12 @@ void main() {
       expect(itemDisplayState(raw: 'TODO', done: 2, target: 2, photoCount: 0), 'DONE');
       expect(itemDisplayState(raw: 'DONE', done: 0, target: 2, photoCount: 0), 'DONE');
     });
+    test('hari yang sudah ditutup: item parsial berlabel Belum selesai, bukan Sedang dikerjakan', () {
+      expect(itemDisplayState(raw: 'TODO', done: 2, target: 5, photoCount: 0, dayStatus: 'COMPLETED'), 'ITEM_PARTIAL');
+      expect(itemDisplayState(raw: 'TODO', done: 0, target: 5, photoCount: 1, dayStatus: 'COMPLETED'), 'ITEM_PARTIAL');
+      expect(itemDisplayState(raw: 'TODO', done: 2, target: 5, photoCount: 0, dayStatus: 'ONGOING'), 'ITEM_IN_PROGRESS');
+      expect(itemDisplayState(raw: 'TODO', done: 5, target: 5, photoCount: 0, dayStatus: 'COMPLETED'), 'DONE');
+    });
     test('status pindah hari tidak tertimpa', () {
       expect(itemDisplayState(raw: 'PENDING_ROLLOVER', done: 1, target: 2, photoCount: 3), 'PENDING_ROLLOVER');
       expect(itemDisplayState(raw: 'SHIFTED_DAY', done: 0, target: 2, photoCount: 1), 'SHIFTED_DAY');

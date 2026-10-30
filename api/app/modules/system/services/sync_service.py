@@ -22,11 +22,11 @@ from app.core.security import CurrentUser
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
 from app.modules.work_plans.schemas.daily_report_schema import DailyReportCreate
-from app.modules.work_plans.schemas.plan_item_schema import ProgressIn
+from app.modules.work_plans.schemas.plan_item_schema import ProgressIn, RolloverRequest
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.plan_item_service import PlanItemService
 
-OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT", "PLAN_ITEM_PROGRESS")
+OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT", "PLAN_ITEM_PROGRESS", "PLAN_ROLLOVER_REQUEST")
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 INVALID = "Data operasi tidak valid."
 
@@ -89,6 +89,10 @@ class SyncService:
                 completed_qty=p["completed_qty"], photos=photos, notes=p.get("notes"),
             )
             await PlanItemService(self.db).progress(user, UUID(str(p["item_id"])), data)
+        elif op_type == "PLAN_ROLLOVER_REQUEST":
+            # Permintaan pindah hari dari HP (ketua): aturan & status sama dengan endpoint request-rollover.
+            data = RolloverRequest(delay_reason=str(p["delay_reason"]), completed_qty=p["completed_qty"])
+            await PlanItemService(self.db).request_rollover(user, UUID(str(p["item_id"])), data)
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

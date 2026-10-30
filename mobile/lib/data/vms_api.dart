@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 
 import '../core/api_client.dart';
 
@@ -532,6 +533,24 @@ class VmsApi {
   Future<List<Map<String, dynamic>>> myDocuments(String employeeId) async =>
       _list(((await _dio.get('$_p/employees/$employeeId/documents')).data as Map)['items']);
 
+  /// Catat dokumen pribadi dari berkas yang sudah diunggah (`fileId`). Karyawan hanya untuk dirinya sendiri.
+  /// [expiredAt] opsional (tanggal saja, WIB); berlaku mulai hari ini menurut server.
+  Future<Map<String, dynamic>> uploadDocument(
+    String employeeId, {
+    required String docType,
+    required String fileId,
+    DateTime? expiredAt,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/employees/$employeeId/documents',
+      data: {
+        'doc_type': docType,
+        'file_id': fileId,
+        'expired_at': ?(expiredAt == null ? null : DateFormat('yyyy-MM-dd').format(expiredAt)),
+      },
+    )).data,
+  );
+
   Future<List<Map<String, dynamic>>> planCorrections(String dailyPlanId) async =>
       _list((await _dio.get('$_p/work-plans/daily/$dailyPlanId/corrections')).data);
 
@@ -638,14 +657,15 @@ class VmsApi {
 
   // --- Berkas & sinkronisasi ---------------------------------------------
   /// Unggah satu berkas (foto bukti/swafoto) → `file_id`.
-  Future<String> uploadFile(File file) async {
+  /// [onProgress] (opsional) melapor byte terkirim dan total, untuk indikator unggah.
+  Future<String> uploadFile(File file, {void Function(int sent, int total)? onProgress}) async {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(
         file.path,
         filename: file.uri.pathSegments.last,
       ),
     });
-    final res = await _dio.post('$_p/files/upload', data: form);
+    final res = await _dio.post('$_p/files/upload', data: form, onSendProgress: onProgress);
     return (res.data as Map)['file_id'] as String;
   }
 

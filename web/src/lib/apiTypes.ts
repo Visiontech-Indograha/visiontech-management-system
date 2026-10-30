@@ -2760,7 +2760,7 @@ export interface paths {
         put?: never;
         /**
          * Upload Document
-         * @description Mencatat dokumen baru dari berkas yang sudah diunggah; dokumen sejenis yang lama menjadi `extended`.
+         * @description Mencatat dokumen dari berkas terunggah (karyawan: dokumen sendiri); yang sejenis jadi `extended`.
          */
         post: operations["upload_document_api_v1_employees__emp_id__documents_post"];
         delete?: never;
@@ -6034,6 +6034,8 @@ export interface components {
             expired_at?: string | null;
             /** File Id */
             file_id?: string | null;
+            /** File Mime */
+            file_mime?: string | null;
             /**
              * Created At
              * Format: date-time

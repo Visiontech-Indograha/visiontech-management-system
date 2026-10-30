@@ -72,12 +72,20 @@ def test_personal_document_is_managed_by_hr_and_seen_by_its_owner(client, world,
     assert client.get(f"/employees/{own_emp}/documents", headers=world.headers(client, "leader")).status_code == 404
 
 
-def test_employee_cannot_upload_documents_themselves(client, world, fake_storage):
+def test_employee_uploads_own_documents_only(client, world, fake_storage):
+    """Keputusan pemilik: karyawan boleh mengunggah dokumen pribadinya sendiri (izin upload:documents).
+    Dokumen rekan → 404; menonaktifkan/menghapus dokumen tetap hanya untuk HR."""
     member = world.headers(client, "member")
     file_id = _upload(client, member)
-    response = client.post(f"/employees/{world.employees['member']}/documents", headers=member,
-                           json={"doc_type": "SIM A", "file_id": file_id})
-    assert response.status_code == 403, response.text
+    own = client.post(f"/employees/{world.employees['member']}/documents", headers=member,
+                      json={"doc_type": "SIM A", "file_id": file_id})
+    assert own.status_code == 201, own.text
+    other = client.post(f"/employees/{world.employees['leader']}/documents", headers=member,
+                        json={"doc_type": "SIM A", "file_id": _upload(client, member)})
+    assert other.status_code == 404, other.text
+    deactivate = client.post(f"/employees/{world.employees['member']}/documents/{own.json()['id']}/deactivate",
+                             headers=member)
+    assert deactivate.status_code == 403, deactivate.text
 
 
 def test_site_and_attendance_day(client, world, fake_storage):

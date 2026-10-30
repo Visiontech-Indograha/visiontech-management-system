@@ -4,7 +4,7 @@
  * Harapan di tabel ditulis tangan dari aturan, bukan dihitung ulang dari helper.
  */
 import { describe, expect, it } from "vitest";
-import { assetRowActions, canManageAssets, messActions, workTypeActions } from "@/lib/aksiPeran";
+import { assetRowActions, canManageAssets, messActions, overtimeActions, workTypeActions } from "@/lib/aksiPeran";
 
 const PERAN = {
   SUPER_ADMIN: ["create:plan", "manage:assets", "manage:mess", "view:mess", "review:mess"],
@@ -88,4 +88,23 @@ describe("Mess: peran", () => {
   it.each(Object.keys(PERAN) as Peran[])("%s", (peran) => {
     expect(messActions(PERAN[peran])).toEqual(expected[peran]);
   });
+});
+
+describe("Lembur: peran × status × pengaju sendiri", () => {
+  // can_review dari API untuk lembur di divisi yang dikelola peran (review = PM/OM divisi atau SUPER_ADMIN; FINANCE
+  // melihat rekap tetapi API menolak review tanpa kedudukan PM/OM). Pengaju tidak pernah boleh meninjau sendiri.
+  const bisaTinjau: Record<Peran, boolean> = {
+    SUPER_ADMIN: true, ADMIN: true, OM: true, PM: true, HR: false, ASSET: false, FINANCE: false, KETUA: false, ANGGOTA: false,
+  };
+  const statuses = ["PENDING_PM", "APPROVED", "REJECTED"] as const;
+  for (const peran of Object.keys(PERAN) as Peran[]) {
+    it.each(statuses)(`${peran} %s`, (status) => {
+      const canReview = bisaTinjau[peran];
+      const expected = canReview && status === "PENDING_PM" ? ["approve", "reject"] : [];
+      expect(overtimeActions(status, canReview)).toEqual(expected);
+    });
+    it(`${peran} atas lembur sendiri: tanpa tombol`, () => {
+      expect(overtimeActions("PENDING_PM", false)).toEqual([]);
+    });
+  }
 });

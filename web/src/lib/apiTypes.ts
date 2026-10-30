@@ -7859,6 +7859,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Can Review
+             * @default false
+             */
+            can_review: boolean;
         };
         /**
          * OvertimeReview

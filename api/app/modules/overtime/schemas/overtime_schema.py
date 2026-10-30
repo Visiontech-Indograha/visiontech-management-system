@@ -51,6 +51,8 @@ class OvertimeResponse(BaseModel):
     reviewed_at: datetime | None
     review_note: str | None
     created_at: datetime
+    # Pengguna yang meminta ini boleh menyetujui/menolak baris ini sekarang (aturan review; untuk tampilan tombol).
+    can_review: bool = False
 
 
 class OvertimeRecapRow(BaseModel):

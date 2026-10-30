@@ -24682,6 +24682,11 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "can_review": {
+      "type": "boolean",
+      "title": "Can Review",
+      "default": false
      }
     },
     "type": "object",

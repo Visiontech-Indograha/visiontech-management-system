@@ -41,3 +41,11 @@ export function messActions(permissions: readonly string[]): MessAction[] {
   if (permissions.includes("review:mess")) actions.push("reviewRequests");
   return actions;
 }
+
+export type OvertimeAction = "approve" | "reject";
+
+/** Lembur: Setujui/Tolak hanya untuk lembur yang masih menunggu (PENDING_PM) dan yang boleh ditinjau pengguna ini
+ * (`can_review` dari API: PM/OM divisi jadwal atau admin, bukan pengaju sendiri). Yang sudah diputuskan tanpa tombol. */
+export function overtimeActions(status: string, canReview: boolean): OvertimeAction[] {
+  return canReview && status === "PENDING_PM" ? ["approve", "reject"] : [];
+}

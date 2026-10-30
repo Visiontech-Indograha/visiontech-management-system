@@ -10753,7 +10753,7 @@
      "Employee Account"
     ],
     "summary": "Create Account",
-    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara.",
+    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara. Peran lapangan (EMPLOYEE/TEAM_LEADER) opsional;\nhanya HR/SUPER_ADMIN.",
     "operationId": "create_account_api_v1_employees__emp_id__account_post",
     "security": [
      {
@@ -10840,6 +10840,65 @@
           "type": "string"
          },
          "title": "Response Delete Account Api V1 Employees  Emp Id  Account Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/role": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Set Field Role",
+    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountRoleUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
         }
        }
       }
@@ -15101,6 +15160,15 @@
       "maxLength": 254,
       "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
       "title": "Login"
+     },
+     "system_role": {
+      "type": "string",
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role",
+      "default": "EMPLOYEE"
      }
     },
     "type": "object",
@@ -15178,6 +15246,17 @@
        }
       ],
       "title": "Locked Until"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
      }
     },
     "type": "object",
@@ -15186,6 +15265,24 @@
     ],
     "title": "AccountOut",
     "description": "Schema for account output data, detailing user authentication and status."
+   },
+   "AccountRoleUpdate": {
+    "properties": {
+     "system_role": {
+      "type": "string",
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role"
+     }
+    },
+    "type": "object",
+    "required": [
+     "system_role"
+    ],
+    "title": "AccountRoleUpdate",
+    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER)."
    },
    "AccountWithPassword": {
     "properties": {
@@ -15255,6 +15352,17 @@
        }
       ],
       "title": "Locked Until"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
      },
      "temporary_password": {
       "type": "string",

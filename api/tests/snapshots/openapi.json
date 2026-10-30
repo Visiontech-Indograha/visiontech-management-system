@@ -9,6 +9,15 @@
       "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
       "title": "Login",
       "type": "string"
+     },
+     "system_role": {
+      "default": "EMPLOYEE",
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role",
+      "type": "string"
      }
     },
     "required": [
@@ -75,6 +84,17 @@
       ],
       "title": "Login"
      },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
+     },
      "user_id": {
       "anyOf": [
        {
@@ -92,6 +112,24 @@
      "exists"
     ],
     "title": "AccountOut",
+    "type": "object"
+   },
+   "AccountRoleUpdate": {
+    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).",
+    "properties": {
+     "system_role": {
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "system_role"
+    ],
+    "title": "AccountRoleUpdate",
     "type": "object"
    },
    "AccountWithPassword": {
@@ -151,6 +189,17 @@
        }
       ],
       "title": "Login"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
      },
      "temporary_password": {
       "title": "Temporary Password",
@@ -19476,7 +19525,7 @@
     ]
    },
    "post": {
-    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara.",
+    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara. Peran lapangan (EMPLOYEE/TEAM_LEADER) opsional;\nhanya HR/SUPER_ADMIN.",
     "operationId": "create_account_api_v1_employees__emp_id__account_post",
     "parameters": [
      {
@@ -19675,6 +19724,65 @@
      }
     ],
     "summary": "Reset Password",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/role": {
+   "post": {
+    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountRoleUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set Field Role",
     "tags": [
      "Employee Account"
     ]

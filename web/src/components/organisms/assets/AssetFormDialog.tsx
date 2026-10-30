@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { DialogCancelButton } from "@/components/molecules/DialogActions";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
@@ -9,6 +11,7 @@ export function AssetFormDialog({
   title,
   submitLabel = "Simpan",
   submitting,
+  submitDisabled = false,
   formError,
   onClose,
   onSubmit,
@@ -17,28 +20,29 @@ export function AssetFormDialog({
   title: string;
   submitLabel?: string;
   submitting: boolean;
+  /** Tombol simpan nonaktif (mis. bentrok jadwal) selain saat sedang menyimpan. */
+  submitDisabled?: boolean;
   formError: string | null;
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
   children: ReactNode;
 }) {
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog
+    <VmsDialog dirty={dirtyForm.dirty}
       open
       title={title}
       onClose={onClose}
       footer={
         <>
-          <ActionButton variant="outline" onClick={onClose} disabled={submitting}>
-            Batal
-          </ActionButton>
-          <ActionButton type="submit" form="asset-form" disabled={submitting}>
+          <DialogCancelButton onCancel={onClose} disabled={submitting} />
+          <ActionButton type="submit" form="asset-form" disabled={submitting || submitDisabled}>
             {submitting ? "Menyimpan..." : submitLabel}
           </ActionButton>
         </>
       }
     >
-      <FormBlock id="asset-form" onSubmit={onSubmit} noValidate>
+      <FormBlock {...dirtyForm.formProps} id="asset-form" onSubmit={onSubmit} noValidate>
         <FormErrorText message={formError} />
         {children}
       </FormBlock>

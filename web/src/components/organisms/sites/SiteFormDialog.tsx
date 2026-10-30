@@ -45,7 +45,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
     control,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<SiteValues>({
     resolver: zodResolver(siteSchema),
     defaultValues: { name: "", address: "", lat: "", lng: "", radius_m: "50" },
@@ -78,7 +78,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <VmsDialog
+    <VmsDialog dirty={isDirty}
       open
       title="Tambah lokasi kerja"
       onClose={onClose}

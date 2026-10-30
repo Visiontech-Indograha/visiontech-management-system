@@ -15,6 +15,7 @@ from app.core.time import jakarta_now
 from app.modules.leaves.controllers.leave_controller import LeaveController
 from app.modules.leaves.schemas.leave_schema import (
     LeaveBalanceResponse,
+    LeaveCancel,
     LeaveCreate,
     LeaveResponse,
     LeaveReview,
@@ -109,8 +110,9 @@ async def review_leave(
 @router.post("/{leave_id}/cancel", response_model=LeaveResponse)
 async def cancel_leave(
     leave_id: UUID,
+    data: LeaveCancel | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     controller: LeaveController = Depends(),
 ) -> LeaveResponse:
-    """Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM)."""
-    return await controller.handle_cancel(current_user, leave_id)
+    """Pembatalan cuti oleh pemohon, HR, atau OM (PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir)."""
+    return await controller.handle_cancel(current_user, leave_id, data)

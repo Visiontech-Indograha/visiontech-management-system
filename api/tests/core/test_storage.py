@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib
 import time
+from types import SimpleNamespace
 
 import pytest
 from minio import Minio
@@ -94,3 +95,31 @@ def test_presigned_url_defaults_to_internal_endpoint(monkeypatch):
         assert storage.presign_client() is storage.minio_client
     finally:
         storage.presign_client.cache_clear()
+
+
+# ── Logo pengganti belum diunggah: NoSuchKey harus fallback senyap (bukan ERROR) ────────────────
+def test_logo_belum_diunggah_fallback_tanpa_error(monkeypatch, caplog):
+    import logging
+
+    from minio.error import S3Error
+
+    from app.shared.documents import branding
+
+    monkeypatch.setattr(storage, "ensure_bucket", lambda: True)
+
+    def no_such_key(bucket: str, object_name: str):
+        raise S3Error(
+            code="NoSuchKey",
+            message="The specified key does not exist.",
+            resource=object_name,
+            request_id="rid",
+            host_id="hid",
+            response=SimpleNamespace(status=404, headers={}),
+            bucket_name=bucket,
+            object_name=object_name,
+        )
+
+    monkeypatch.setattr(storage.minio_client, "get_object", no_such_key)
+    with caplog.at_level(logging.DEBUG, logger="app.core.storage"):
+        assert branding.custom_logos("org-uji") == {}
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]

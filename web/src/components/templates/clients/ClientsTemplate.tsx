@@ -19,6 +19,7 @@ export function ClientsTemplate({
   onDeactivate,
   onCloseEdit,
   onCloseRemove,
+  onUseExisting,
 }: {
   clients: UseQueryResult<Client[]>;
   canManage: boolean;
@@ -31,6 +32,7 @@ export function ClientsTemplate({
   onDeactivate: (client: Client) => void;
   onCloseEdit: () => void;
   onCloseRemove: () => void;
+  onUseExisting: (clientId: string) => void;
 }) {
   return (
     <PageTemplate
@@ -50,8 +52,10 @@ export function ClientsTemplate({
       />
       {editing && (
         <ClientFormDialog
+          key={editing === "new" ? "new" : editing.client_id}
           client={editing === "new" ? null : editing}
           onClose={onCloseEdit}
+          onUseExisting={onUseExisting}
         />
       )}
       {removing && (

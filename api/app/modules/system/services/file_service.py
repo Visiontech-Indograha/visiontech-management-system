@@ -19,9 +19,12 @@ class FileService:
     def __init__(self, repo: CRUDFile) -> None:
         self.repo = repo
 
-    async def duplicate_of(self, org_id: UUID | str, sha256: bytes) -> Any:
-        """Berkas yang isinya sama di organisasi ini, atau None."""
-        return await self.repo.find_by_hash(org_id, sha256)
+    async def duplicate_of(self, org_id: UUID | str, user_id: UUID | str, keys: list[bytes]) -> Any:
+        """Berkas yang isinya sama milik pengunggah ini saja (berkas pengguna lain tak pernah dibocorkan), atau None."""
+        return await self.repo.find_own_by_hash(org_id, user_id, keys)
+
+    async def key_held_by_other(self, org_id: UUID | str, user_id: UUID | str, key: bytes) -> bool:
+        return await self.repo.key_held_by_other(org_id, user_id, key)
 
     async def register(
         self,

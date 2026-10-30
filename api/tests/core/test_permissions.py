@@ -28,7 +28,11 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     # Admin HR/GA = HR + aset + mess + proses keluar (FINANCE/ASSET V1 digabung ke sini).
     SystemRole.ADMIN_HR_GA: {
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS, P.MANAGE_MESS,
-        P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
+        P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS, P.VIEW_ALL_ATTENDANCE,
+    },
+    # Finance melihat, meninjau, dan mengekspor absensi seluruh karyawan; lembur; kelola kantor (sama V1).
+    SystemRole.FINANCE: {
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.REVIEW_OVERTIME, P.MANAGE_SITES,
     },
     # Ketua/anggota tim mendapat wewenangnya dari keanggotaan tim, bukan peran global.
     SystemRole.TEAM_LEADER: set(),
@@ -61,6 +65,11 @@ def test_user_without_global_role_gets_base_permissions_only():
 @pytest.mark.parametrize("role", ["admin", "hr", "SUPERADMIN", ""])
 def test_unknown_role_gets_no_permissions(role: str):
     assert get_role_permissions(role) == []
+
+
+def test_finance_may_export_attendance_but_hr_may_not():
+    assert P.EXPORT_ATTENDANCE.value in get_role_permissions(SystemRole.FINANCE)
+    assert P.EXPORT_ATTENDANCE.value not in get_role_permissions(SystemRole.ADMIN_HR_GA)
 
 
 def test_only_hr_and_admin_may_touch_other_peoples_documents():

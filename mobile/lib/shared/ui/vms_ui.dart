@@ -384,6 +384,8 @@ class SectionTitle extends StatelessWidget {
   'ACCEPTED' => (label: 'Diterima', accent: Accent.indigo),
   'APPEALED' => (label: 'Revisi diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
+  'ITEM_IN_PROGRESS' => (label: 'Sedang dikerjakan', accent: Accent.blue),
+  'ITEM_PARTIAL' => (label: 'Belum selesai', accent: Accent.amber),
   'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (label: 'Pengajuan penutupan', accent: Accent.violet),
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),
@@ -600,7 +602,7 @@ class PrimaryAction extends StatelessWidget {
   }
 }
 
-/// Nama + tombol Telepon & WhatsApp (kontak PM ↔ ketua/anggota tim). Tanpa nomor → keterangan "belum ada nomor HP".
+/// Nama + tombol Telepon & WhatsApp (kontak PM ↔ ketua/anggota tim). Tanpa nomor → keterangan netral "nomor HP belum tercatat".
 class ContactRow extends StatelessWidget {
   const ContactRow({super.key, required this.label, required this.name, this.phone});
   final String label;
@@ -620,8 +622,18 @@ class ContactRow extends StatelessWidget {
         const Icon(Icons.contact_phone_outlined, size: 18),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(
-            '$label: $name${p == null ? ' · belum ada nomor HP' : ''}',
+          child: Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: '$label: $name'),
+                // Keterangan netral (bukan galat): nomor memang belum dicatat di data karyawan.
+                if (p == null)
+                  TextSpan(
+                    text: ' · nomor HP belum tercatat',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  ),
+              ],
+            ),
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
@@ -642,6 +654,25 @@ class ContactRow extends StatelessWidget {
   }
 }
 
+/// Teks untuk field yang boleh kosong dari API: null/kosong → [fallback], bukan kata 'null' di layar.
+String textOr(Object? value, String fallback) {
+  final s = value?.toString().trim() ?? '';
+  return s.isEmpty ? fallback : s;
+}
+
+const _bulanSingkat = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+/// Judul kartu jadwal: lokasi, lalu nama proyek. Bila keduanya kosong: nama tim dan tanggal kerja (mis. "Tim A · 30 Okt").
+String jadwalTitle(Map<String, dynamic> p) {
+  final judul = textOr(p['site_name'], textOr(p['project_title'], ''));
+  if (judul.isNotEmpty) return judul;
+  final tim = textOr(p['team_name'], '');
+  final hari = DateTime.tryParse(textOr(p['work_date'], ''));
+  final tanggal = hari == null ? '' : '${hari.day} ${_bulanSingkat[hari.month - 1]}';
+  final bagian = [if (tim.isNotEmpty) 'Tim $tim', if (tanggal.isNotEmpty) tanggal];
+  return bagian.isEmpty ? 'Jadwal tanpa lokasi' : bagian.join(' · ');
+}
+
 /// Keadaan kerja satu jadwal (sama dengan web): biru berjalan, merah terlambat, hijau selesai,
 /// kuning selesai sebagian, abu belum mulai. Hasilnya kode status untuk [StatusPill]/[statusStyle].
 String workState(Map<String, dynamic> p, String today) {
@@ -649,7 +680,8 @@ String workState(Map<String, dynamic> p, String today) {
   final total = (p['item_count'] as num?)?.toInt() ?? 0;
   final pct = workPercent(p);
   final date = '${p['work_date']}';
-  if (total > 0 && (done >= total || pct >= 100)) return 'DONE';
+  // Selesai hanya bila semua item (termasuk yang dipindah/menunggu pindah) DONE — sama dengan web workState.
+  if (total > 0 && done >= total) return 'DONE';
   if (p['status'] == 'COMPLETED') return pct > 0 ? 'PARTIAL' : 'LATE';
   if (date.compareTo(today) < 0) return 'LATE';
   if (p['status'] == 'ONGOING' || pct > 0) return 'ONGOING';
@@ -658,11 +690,13 @@ String workState(Map<String, dynamic> p, String today) {
 
 /// Persen progres nyata jadwal (rata-rata jumlah dikerjakan/target) dari API, 0–100.
 int workPercent(Map<String, dynamic> p) {
-  final v = p['progress_pct'];
-  if (v is num) return v.toInt();
   final done = (p['done_count'] as num?)?.toInt() ?? 0;
   final total = (p['item_count'] as num?)?.toInt() ?? 0;
-  return total == 0 ? 0 : (done * 100 / total).round();
+  final v = p['progress_pct'];
+  final raw = v is num ? v.toInt() : (total == 0 ? 0 : (done * 100 / total).round());
+  // Sama dengan web displayPct: 100 hanya bila semua item DONE; selainnya maksimal 99.
+  final allDone = total > 0 && done >= total;
+  return allDone ? raw.clamp(0, 100).toInt() : raw.clamp(0, 99).toInt();
 }
 
 /// Warna per jenis pekerjaan (sama dengan web).

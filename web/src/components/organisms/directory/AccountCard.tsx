@@ -1,9 +1,18 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { TextField } from "@/components/molecules/Field";
+import { RoleSelectField } from "@/components/molecules/RoleSelectField";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
-import { useAccount, useAccountAction, useDeleteAccount, type Employee } from "@/services/employeeService";
+import { useSession } from "@/stores/sessionStore";
+import {
+  FIELD_ROLE_LABEL,
+  useAccount,
+  useAccountAction,
+  useDeleteAccount,
+  type Employee,
+  type FieldRole,
+} from "@/services/employeeService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { Pill } from "@/components/molecules/Pill";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -21,8 +30,12 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const action = useAccountAction(employee.employee_id);
   const deleteAccount = useDeleteAccount(employee.employee_id);
   const [login, setLogin] = useState(employee.email ?? "");
+  const [peranBaru, setPeranBaru] = useState<FieldRole>("EMPLOYEE");
+  const [peranAkun, setPeranAkun] = useState<FieldRole | null>(null);
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Peran lapangan hanya bisa dipilih HR/SUPER_ADMIN (keduanya memegang manage:users); API tetap memeriksa.
+  const canSetRole = !!useSession().me?.permissions.includes("manage:users");
 
   const run = async (
     a: Parameters<typeof action.mutateAsync>[0],
@@ -39,6 +52,9 @@ export function AccountCard({ employee }: { employee: Employee }) {
   };
 
   const a = account.data;
+  const roleAkun: FieldRole | null =
+    a?.system_role === "EMPLOYEE" || a?.system_role === "TEAM_LEADER" ? a.system_role : null;
+  const peranDipilih = peranAkun;
   return (
     <section aria-label="Akun login" className="mb-8 max-w-xl">
       <SectionTitle>Akun login</SectionTitle>
@@ -78,11 +94,22 @@ export function AccountCard({ employee }: { employee: Employee }) {
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
                 />
+                {canSetRole && (
+                  <RoleSelectField
+                    label="Peran"
+                    value={peranBaru}
+                    options={FIELD_ROLE_LABEL}
+                    onChange={(v) => setPeranBaru(v as FieldRole)}
+                  />
+                )}
                 <ActionButton
                   className="self-start"
                   disabled={action.isPending || !login.trim()}
                   onClick={() =>
-                    run({ kind: "create", login: login.trim() }, "Akun dibuat.")
+                    run(
+                      { kind: "create", login: login.trim(), systemRole: canSetRole ? peranBaru : "EMPLOYEE" },
+                      "Akun dibuat.",
+                    )
                   }
                 >
                   Buat akun
@@ -118,6 +145,32 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 setelah 5 kali).
               </TextBlock>
             ) : null}
+            {canSetRole && roleAkun && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-48">
+                  <RoleSelectField
+                    label="Peran"
+                    value={peranDipilih ?? roleAkun}
+                    options={FIELD_ROLE_LABEL}
+                    onChange={(v) => setPeranAkun(v as FieldRole)}
+                  />
+                </div>
+                <ActionButton
+                  variant="outline"
+                  disabled={action.isPending || (peranDipilih ?? roleAkun) === roleAkun}
+                  onClick={() =>
+                    run({ kind: "role", systemRole: peranDipilih ?? roleAkun }, "Peran akun diperbarui.").then(() =>
+                      setPeranAkun(null),
+                    )
+                  }
+                >
+                  Simpan peran
+                </ActionButton>
+              </div>
+            )}
+            {a.system_role && !roleAkun && (
+              <TextBlock className="text-mist">Peran kantor: {a.system_role} (diatur di menu peran).</TextBlock>
+            )}
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 variant="outline"

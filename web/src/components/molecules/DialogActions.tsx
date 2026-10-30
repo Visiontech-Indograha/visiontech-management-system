@@ -1,4 +1,22 @@
 import { Button } from "../atoms/Button";
+import { useDialogGuard } from "@/lib/dialogGuard";
+
+/**
+ * Tombol Batal untuk footer dialog. Di dalam VmsDialog, klik Batal ikut dijaga:
+ * formulir yang sudah berubah meminta konfirmasi lebih dulu.
+ */
+export function DialogCancelButton({ onCancel, disabled, children = "Batal" }: {
+  onCancel: () => void;
+  disabled?: boolean;
+  children?: React.ReactNode;
+}) {
+  const guard = useDialogGuard();
+  return (
+    <Button variant="outline" onClick={() => guard(onCancel)} disabled={disabled}>
+      {children}
+    </Button>
+  );
+}
 
 /**
  * Tombol kaki dialog formulir: "Batal" + tombol kirim untuk `<form id={formId}>`.
@@ -15,9 +33,9 @@ export function DialogActions({ onCancel, busy, formId, submitLabel = "Simpan", 
 }) {
   return (
     <>
-      <Button variant="outline" onClick={onCancel} disabled={busy}>
+      <DialogCancelButton onCancel={onCancel} disabled={busy}>
         {cancelLabel}
-      </Button>
+      </DialogCancelButton>
       <Button type="submit" form={formId} disabled={busy}>
         {busy ? busyLabel : submitLabel}
       </Button>

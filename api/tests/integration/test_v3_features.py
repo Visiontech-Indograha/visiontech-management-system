@@ -44,7 +44,7 @@ def test_work_completion_client_order_schemas() -> None:
     """Memastikan skema order proyek klien (WorkCompletion) tervalidasi dengan baik."""
     order_in = WorkCompletionCreate(
         division_id=uuid4(),
-        client_name="PT Pertamina EP",
+        client_id=uuid4(),
         project_title="Pemasangan 13 Unit CCTV Kilang",
         order_number="PO-2026-PTM-001",
         total_target_unit=13,
@@ -53,7 +53,7 @@ def test_work_completion_client_order_schemas() -> None:
         site_address="Pangkalan Susu, Langkat",
     )
     assert order_in.total_target_unit == 13
-    assert order_in.client_name == "PT Pertamina EP"
+    assert order_in.client_id is not None
 
     status_update = WorkCompletionStatusUpdate(order_status="URGENT")
     assert status_update.order_status == "URGENT"

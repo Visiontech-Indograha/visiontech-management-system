@@ -24,7 +24,8 @@ INSERT INTO employee (employee_id, office_id, full_name, employee_no, join_date,
 ('22222222-0000-4000-a000-000000000008', '11111111-0000-4000-a000-000000000001', 'Doni Firmansyah', 'VMS-EMP-008', '2025-10-20 08:00:00+07', '2026-10-20 17:00:00+07', '/uploads/profiles/doni.jpg', '[0.52, -0.19, 0.08, 0.71]', 'active'),
 ('22222222-0000-4000-a000-000000000009', '11111111-0000-4000-a000-000000000001', 'Fajar Ramadhan', 'VMS-EMP-009', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/fajar.jpg', '[0.15, 0.22, -0.10, 0.55]', 'active'),
 ('22222222-0000-4000-a000-000000000010', '11111111-0000-4000-a000-000000000001', 'Bayu Pratama', 'VMS-EMP-010', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/bayu.jpg', '[-0.20, 0.35, 0.18, 0.62]', 'active'),
-('22222222-0000-4000-a000-000000000011', '11111111-0000-4000-a000-000000000002', 'Ilham Hidayat', 'VMS-EMP-011', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/ilham.jpg', '[0.28, -0.12, 0.40, 0.45]', 'active')
+('22222222-0000-4000-a000-000000000011', '11111111-0000-4000-a000-000000000002', 'Ilham Hidayat', 'VMS-EMP-011', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', '/uploads/profiles/ilham.jpg', '[0.28, -0.12, 0.40, 0.45]', 'active'),
+('22222222-0000-4000-a000-000000000012', '11111111-0000-4000-a000-000000000001', 'Agus Wibisono', 'VMS-EMP-012', '2025-01-01 08:00:00+07', '2028-01-01 17:00:00+07', NULL, NULL, 'active')
 ON CONFLICT (employee_id) DO NOTHING;
 
 -- 3. Seed users (11 Akun Login terpisah dari tabel employee - Konfirmasi 1B)
@@ -40,7 +41,8 @@ INSERT INTO users (user_id, employee_id, username, email, password_hash, system_
 ('29999999-0000-4000-a000-000000000008', '22222222-0000-4000-a000-000000000008', 'tech_doni', 'doni.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
 ('29999999-0000-4000-a000-000000000009', '22222222-0000-4000-a000-000000000009', 'tech_fajar', 'fajar.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
 ('29999999-0000-4000-a000-000000000010', '22222222-0000-4000-a000-000000000010', 'tech_bayu', 'bayu.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
-('29999999-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000011', 'tech_ilham', 'ilham.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE)
+('29999999-0000-4000-a000-000000000011', '22222222-0000-4000-a000-000000000011', 'tech_ilham', 'ilham.tech@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'EMPLOYEE', TRUE),
+('29999999-0000-4000-a000-000000000012', '22222222-0000-4000-a000-000000000012', 'finance_agus', 'finance@visiontech.co.id', '$argon2id$v=19$m=65536,t=3,p=4$6FvAbtr5zTnOHFT/OWNz2w$Pd20PZh4UFEIam1yHNZ/NezRwrGlrW3UOATVN1+KOJA', 'FINANCE', true)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- 4. Seed user_sessions (4 Sesi Aktif di Web React & Android Flutter)

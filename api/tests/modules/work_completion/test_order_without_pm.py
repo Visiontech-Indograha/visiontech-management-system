@@ -10,6 +10,7 @@ import io
 from PIL import Image
 
 from tests.conftest import World, requires_db
+from tests.orders import make_client
 
 pytestmark = requires_db
 
@@ -23,7 +24,7 @@ def _png_data_url() -> str:
 def _create(client, world: World) -> dict:
     created = client.post(
         "/work-completions", headers=world.headers(client, "admin"),
-        json={"division_id": world.unit_id, "client_name": "Klien Uji", "project_title": "Pekerjaan Uji"},
+        json={"division_id": world.unit_id, "client_id": make_client("Klien Uji"), "project_title": "Pekerjaan Uji"},
     )
     assert created.status_code in (200, 201), created.text
     return created.json()

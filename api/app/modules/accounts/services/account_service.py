@@ -12,14 +12,24 @@ import string
 from types import SimpleNamespace
 from typing import Any
 
-from app.core.errors import AppError, NotFoundError
+from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.hard_delete import purge_row, write_delete_audit
+from app.core.permissions import SystemRole
 from app.core.security import CurrentUser, hash_password
 from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
 from app.modules.employees.repositories.employee_repository import CRUDEmployee
 
 _ALPHABET = string.ascii_letters + string.digits
+
+# Peran lapangan yang boleh dipilih pada akun karyawan, dan siapa yang boleh memilihnya (HR & SUPER_ADMIN saja).
+FIELD_ROLES = ("EMPLOYEE", "TEAM_LEADER")
+_ACCOUNT_MANAGERS = (SystemRole.SUPER_ADMIN, SystemRole.ADMIN_HR_GA)
+
+
+def _require_account_manager(actor: CurrentUser) -> None:
+    if not any(actor.has_role(role) for role in _ACCOUNT_MANAGERS):
+        raise ForbiddenError("Hanya HR/Admin atau SUPER_ADMIN yang dapat mengatur peran akun karyawan.")
 
 
 def temporary_password() -> str:
@@ -73,18 +83,25 @@ class AccountService:
         await self._employee(employee_id, org_id)
         return await self._with_login_state(await self.users.account_of_employee(employee_id))
 
-    async def create(self, employee_id: Any, org_id: str, login: str) -> tuple[Any, str]:
+    async def create(
+        self, employee_id: Any, actor: CurrentUser, login: str, system_role: str = "EMPLOYEE"
+    ) -> tuple[Any, str]:
         """
         Membuat akun login baru untuk karyawan yang ada.
 
         Args:
             employee_id: ID karyawan.
-            org_id: ID organisasi.
+            actor: Pengguna yang membuat akun (HR/SUPER_ADMIN).
             login: Alamat email login.
+            system_role: Peran lapangan (EMPLOYEE atau TEAM_LEADER).
 
         Returns:
             Tuple dari (Data akun, password sementara).
         """
+        _require_account_manager(actor)
+        if system_role not in FIELD_ROLES:
+            raise AppError("ROLE_NOT_FIELD", "Peran akun hanya Karyawan Lapangan atau Team Leader.", status=422)
+        org_id = actor.organization_id
         emp = await self._employee(employee_id, org_id)
         # Aturan bisnis: Karyawan yang nonaktif tidak boleh mendapatkan akses.
         if not emp.is_active:
@@ -97,8 +114,44 @@ class AccountService:
             raise AppError("LOGIN_TAKEN", "Email login sudah dipakai akun lain.", status=409)
 
         password = temporary_password()
-        row = await self.users.create_for_employee(org_id, employee_id, login, hash_password(password))
+        row = await self.users.create_for_employee(
+            org_id, employee_id, login, hash_password(password), system_role
+        )
+        await write_delete_audit(
+            self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
+            entity_type="users", entity_id=row.id, action="ACCOUNT_CREATE",
+            detail={"employee_id": str(employee_id), "system_role": system_role},
+        )
         return row, password
+
+    async def set_field_role(self, employee_id: Any, actor: CurrentUser, system_role: str) -> Any:
+        """
+        Mengubah peran lapangan akun (EMPLOYEE ↔ TEAM_LEADER). Peran kantor/admin tidak bisa diatur di sini, dan
+        ketua tim yang masih memimpin tim tidak bisa diturunkan. Perubahan dicatat di audit.
+        """
+        _require_account_manager(actor)
+        if system_role not in FIELD_ROLES:
+            raise AppError("ROLE_NOT_FIELD", "Peran akun hanya Karyawan Lapangan atau Team Leader.", status=422)
+        account = await self._account(employee_id, actor.organization_id)
+        if account.role not in FIELD_ROLES:
+            raise AppError(
+                "ROLE_NOT_FIELD", "Akun ini bukan peran lapangan; peran kantor tidak diubah dari sini.", status=409
+            )
+        if account.role == system_role:
+            return await self._with_login_state(account)
+        if system_role == "EMPLOYEE" and await self.users.leads_a_team(employee_id):
+            raise AppError(
+                "LEADER_ACTIVE_TEAM",
+                "Karyawan ini masih memimpin tim; ganti ketua tim sebelum menurunkan perannya.",
+                status=409,
+            )
+        await self.users.set_system_role(account.id, system_role)
+        await write_delete_audit(
+            self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
+            entity_type="users", entity_id=account.id, action="ROLE_CHANGE",
+            detail={"employee_id": str(employee_id), "from": account.role, "to": system_role},
+        )
+        return await self._with_login_state(await self.users.account_of_employee(employee_id))
 
     async def reset_password(self, employee_id: Any, org_id: str) -> tuple[Any, str]:
         """

@@ -5,6 +5,7 @@ import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { errorMessage } from "@/lib/errors";
 import { useEmployees, useOffices, useUserDivisions } from "@/services/employeeService";
 import { useCreateTeam } from "@/services/teamService";
@@ -37,14 +38,15 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog
+    <VmsDialog dirty={dirtyForm.dirty}
       open
       title="Tambah tim lapangan"
       onClose={onClose}
       footer={<DialogActions onCancel={onClose} busy={create.isPending} formId="team-form" />}
     >
-      <FormBlock
+      <FormBlock {...dirtyForm.formProps}
         id="team-form"
         className="space-y-3"
         onSubmit={(e) => {

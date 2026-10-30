@@ -100,3 +100,44 @@ def test_recap_counts_only_approved_hours(client, world: World):
     assert mine[world.employees["leader"]]["approved_hours"] == 0
     assert mine[world.employees["leader"]]["pending_entries"] == 1
     assert client.get("/recaps/overtime", headers=world.headers(client, "member")).status_code == 403
+
+
+def _flags(client, world: World, who: str, plan_id: str) -> dict[str, bool]:
+    rows = client.get("/overtime", headers=world.headers(client, who), params={"daily_plan_id": plan_id}).json()
+    return {r["id"]: r["can_review"] for r in rows}
+
+
+def test_list_flags_only_roles_that_may_review(client, world: World):
+    """`can_review` = aturan review: pending, bukan pengaju, dan PM/OM divisi jadwal atau admin."""
+    plan_id = run_daily_to_ongoing(world)
+    ot_id = _report(client, world, plan_id, "member").json()["id"]
+    assert _flags(client, world, "pm", plan_id) == {ot_id: True}
+    assert _flags(client, world, "ops", plan_id) == {ot_id: True}
+    assert _flags(client, world, "admin", plan_id) == {ot_id: True}
+    assert _flags(client, world, "leader", plan_id) == {ot_id: False}
+    assert _flags(client, world, "member", plan_id) == {ot_id: False}
+    assert _flags(client, world, "hr", plan_id) == {ot_id: False}
+
+
+def test_flag_matches_review_permission(client, world: World):
+    plan_id = run_daily_to_ongoing(world)
+    ot_id = _report(client, world, plan_id, "member").json()["id"]
+    assert _flags(client, world, "leader", plan_id)[ot_id] is False
+    assert _review(client, world, ot_id, "leader").status_code == 403
+    assert _flags(client, world, "pm", plan_id)[ot_id] is True
+    assert _review(client, world, ot_id, "pm", "REJECTED", "Tidak ada perintah lembur").status_code == 200
+
+
+def test_flag_off_once_decided(client, world: World):
+    plan_id = run_daily_to_ongoing(world)
+    ot_id = _report(client, world, plan_id, "member").json()["id"]
+    assert _review(client, world, ot_id, "pm").status_code == 200
+    assert _flags(client, world, "pm", plan_id) == {ot_id: False}
+    assert _flags(client, world, "admin", plan_id) == {ot_id: False}
+
+
+def test_reported_row_is_not_reviewable_by_its_own_reporter(client, world: World):
+    plan_id = run_daily_to_ongoing(world)
+    ot_id = _report(client, world, plan_id, "member").json()["id"]
+    rows = client.get("/overtime", headers=world.headers(client, "member"), params={"daily_plan_id": plan_id}).json()
+    assert [r["id"] for r in rows] == [ot_id] and rows[0]["can_review"] is False

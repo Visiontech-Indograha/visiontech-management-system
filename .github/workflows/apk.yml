@@ -27,6 +27,7 @@ concurrency:
   group: apk-${{ github.event.inputs.env || github.ref_name }}
   cancel-in-progress: true
 
+# Tetap di ubuntu-latest: runner self-hosted belum punya Android SDK (lihat docs/RUNBOOK-CI.md).
 jobs:
   build:
     runs-on: ubuntu-latest

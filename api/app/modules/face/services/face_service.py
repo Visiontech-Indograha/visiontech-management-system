@@ -14,7 +14,9 @@ Tidak ada foto wajah pendaftaran yang disimpan; embedding tidak pernah dicatat k
 """
 from __future__ import annotations
 
+import hashlib
 import math
+import random
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -36,6 +38,22 @@ MIN_ENROLL_QUALITY = 0.30
 ENROLL_MIN, ENROLL_MAX = 3, 5
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
+FAKE_MODEL = "fake-dev"         # penanda model untuk embedding sintetis mode wajah palsu (hanya dev)
+FAKE_SIMILARITY = 0.95          # skor yang dikembalikan mode wajah palsu untuk setiap swafoto
+EMBED_DIM = 512
+
+
+def fake_mode_active() -> bool:
+    """Mode wajah palsu aktif HANYA di APP_ENV=development (penjaga di config menolak start selain itu)."""
+    return bool(settings.FACE_FAKE_MODE) and settings.APP_ENV.strip().lower() == "development"
+
+
+def fake_embedding(employee_id: object) -> list[float]:
+    """Vektor sintetis deterministik per karyawan (dinormalkan). Hanya untuk mode wajah palsu dev."""
+    rng = random.Random(hashlib.sha256(f"fake-face:{employee_id}".encode()).digest())
+    vector = [rng.gauss(0.0, 1.0) for _ in range(EMBED_DIM)]
+    norm = math.sqrt(sum(v * v for v in vector)) or 1.0
+    return [v / norm for v in vector]
 
 
 @dataclass(frozen=True)
@@ -107,6 +125,10 @@ class FaceService:
         if parse_embedding(employee.face_embedding)[0] is not None:
             raise AppError("FACE_ALREADY_ENROLLED",
                            "Wajah Anda sudah terdaftar. Minta HR mengatur ulang bila perlu.", status=409)
+        if fake_mode_active():  # DEV: tanpa face-service; embedding sintetis deterministik per karyawan
+            await self.repo.set_embedding(employee.employee_id, fake_embedding(employee.employee_id), FAKE_MODEL,
+                                          "0", jakarta_now())
+            return EnrollResponse(enrolled=True, images_used=len(images), quality=None)
         results: list[EmbedResult] = []
         for n, image in enumerate(images, start=1):
             _check_image(image)
@@ -151,6 +173,8 @@ class FaceService:
         template = parse_embedding(await self.repo.embedding_of(employee_id))[0]
         if template is None:
             return FaceOutcome("NOT_ENROLLED", None)
+        if fake_mode_active():  # DEV: swafoto apa pun dari karyawan yang terdaftar dianggap cocok
+            return FaceOutcome("MATCH", FAKE_SIMILARITY)
         key = await self.repo.file_key(selfie_file_id)
         image = storage.get_image_bytes(key) if key else None
         if not image:

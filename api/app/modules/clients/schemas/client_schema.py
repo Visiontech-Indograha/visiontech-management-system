@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ClientOut(BaseModel):
@@ -18,6 +18,7 @@ class ClientOut(BaseModel):
 
 
 class ClientCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     client_code: str = Field(min_length=2, max_length=30, pattern=r"^[A-Za-z0-9_-]+$")
     name: str = Field(min_length=2, max_length=150)
     pic_name: str | None = Field(None, max_length=100)
@@ -26,6 +27,7 @@ class ClientCreate(BaseModel):
 
 
 class ClientUpdate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     client_code: str | None = Field(None, min_length=2, max_length=30, pattern=r"^[A-Za-z0-9_-]+$")
     name: str | None = Field(None, min_length=2, max_length=150)
     pic_name: str | None = Field(None, max_length=100)

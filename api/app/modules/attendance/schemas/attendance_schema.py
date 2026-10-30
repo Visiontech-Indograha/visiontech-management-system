@@ -102,6 +102,8 @@ class AttendanceResponse(BaseModel):
     # Pengenalan wajah hasil hitung server (MATCH/NO_MATCH/LOW_QUALITY/NOT_ENROLLED/SKIPPED); None = tidak diperiksa.
     face_result: str | None = None
     face_similarity: float | None = None
+    # Status eksplisit pemeriksaan wajah absen masuk: MATCHED/MISMATCH/STALE/NOT_ENROLLED/SERVICE_DOWN/NOT_CHECKED.
+    face_status: str | None = None
     check_out_face_result: str | None = None
     check_out_face_similarity: float | None = None
     # Hanya terisi di daftar GET /attendance

@@ -68,3 +68,11 @@ def test_export_needs_export_permission(client, world):
     for who in ("member", "hr", "pm"):
         assert _export(client, world, who).status_code == 403, who
     assert _export(client, world, "admin").status_code == 200
+
+
+def test_export_rejects_reversed_date_range(client, world):
+    today = jakarta_now().date()
+    response = client.get("/attendance/export", headers=world.headers(client, "admin"),
+                          params={"start_date": today.isoformat(),
+                                  "end_date": (today - timedelta(days=1)).isoformat()})
+    assert response.status_code == 422, response.text

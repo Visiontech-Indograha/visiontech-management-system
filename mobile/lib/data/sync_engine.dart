@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/api_client.dart';
@@ -27,6 +28,7 @@ class OfflineOp {
   static const incidentReport = 'INCIDENT_REPORT';
   static const overtimeReport = 'OVERTIME_REPORT';
   static const planItemProgress = 'PLAN_ITEM_PROGRESS';
+  static const planRolloverRequest = 'PLAN_ROLLOVER_REQUEST';
 
   static const labels = {
     dailyReportSave: 'Simpan laporan harian',
@@ -35,6 +37,7 @@ class OfflineOp {
     incidentReport: 'Laporan insiden',
     overtimeReport: 'Laporan lembur',
     planItemProgress: 'Simpan hasil kerja',
+    planRolloverRequest: 'Minta pindah hari',
     OfflineAttendance.entityType: 'Absensi offline',
   };
 }
@@ -69,6 +72,9 @@ class SyncEngine {
 
   static const _uuid = Uuid();
   static const _localFiles = '_local_files';
+
+  /// Bertambah tiap ada operasi yang diterima server (APPLIED): layar yang menampilkan data itu memuat ulang.
+  static final ValueNotifier<int> appliedRevision = ValueNotifier<int>(0);
 
   VmsApi get api => _api;
 
@@ -187,11 +193,15 @@ class SyncEngine {
       await _deviceId.getClientId(),
       ready.values.toList(),
     );
+    // Server menjawab berarti jaringan nyata ada: status offline lama tidak boleh menahan data baru.
+    if (results.isNotEmpty) NetworkHint.markOnline();
+    var applied = false;
     for (final r in results) {
       final rowId = byClientId[r['client_op_id']];
       if (rowId == null) continue;
       switch (r['status']) {
         case 'APPLIED':
+          applied = true;
           await (_db.delete(
             _db.pendingSyncOperations,
           )..where((t) => t.id.equals(rowId))).go();
@@ -212,6 +222,7 @@ class SyncEngine {
           );
       }
     }
+    if (applied) appliedRevision.value++;
   }
 
   Future<void> _markDead(int id, String error) =>

@@ -25,6 +25,11 @@ _EXPORT_COLS = """
 class ExportRepository(BaseRepository):
     """Query bahan dokumen & registri ekspor."""
 
+    async def employee_name(self, employee_id: UUID | str) -> str | None:
+        val: str | None = await self.scalar(
+            "SELECT full_name FROM employee WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
+        return val
+
     # ── Bahan dokumen order ───────────────────────────────────────────────────
     async def completion_items(self, completion_id: UUID | str) -> list[Any]:
         """Item (titik) order, urut tanggal & jam; termasuk nama penugasan dan foto realisasinya."""
@@ -38,6 +43,37 @@ class ExportRepository(BaseRepository):
             {"team": str(team_id), "start": start, "end": end},
         )
 
+    async def led_team_ids(self, employee_id: UUID | str | None) -> set[str]:
+        """Tim yang dipimpin karyawan ini (ketua tim)."""
+        if not employee_id:
+            return set()
+        rows = await self.fetchall(
+            "SELECT team_id FROM team WHERE leader_employee_id = CAST(:e AS uuid) AND delete_at IS NULL",
+            {"e": str(employee_id)})
+        return {str(r.team_id) for r in rows}
+
+    async def daily_items(self, daily_plan_id: UUID | str) -> list[Any]:
+        """Item satu jadwal harian (laporan harian cetak)."""
+        return await self._items("d.daily_plan_id = CAST(:d AS uuid)", {"d": str(daily_plan_id)})
+
+    async def daily_header(self, daily_plan_id: UUID | str) -> Any:
+        """Jadwal + tim + divisi + ketua + laporan harian ketua (bila sudah dikirim)."""
+        return await self.fetchone(
+            """
+            SELECT d.daily_plan_id, d.team_id, d.work_date, d.site_name, d.status::text AS status,
+                   t.name AS team_name, dv.name AS division_name,
+                   COALESCE(le.full_name, '-') AS leader_name,
+                   r.summary, r.obstacles, r.submitted_at AS report_submitted_at
+            FROM work_plan_daily d
+            JOIN team t ON t.team_id = d.team_id
+            JOIN division dv ON dv.division_id = t.division_id
+            LEFT JOIN employee le ON le.employee_id = t.leader_employee_id
+            LEFT JOIN work_plan_daily_report r ON r.daily_plan_id = d.daily_plan_id AND r.delete_at IS NULL
+            WHERE d.daily_plan_id = CAST(:d AS uuid) AND d.delete_at IS NULL
+            """,
+            {"d": str(daily_plan_id)},
+        )
+
     async def team_info(self, team_id: UUID | str) -> Any:
         return await self.fetchone(
             "SELECT t.team_id, t.name, t.division_id, t.leader_employee_id, d.name AS division_name "
@@ -46,12 +82,55 @@ class ExportRepository(BaseRepository):
             {"t": str(team_id)},
         )
 
+    async def team_logo_keys(self, team_ids: list[str]) -> dict[str, str]:
+        """team_id → storage_key logo tim (hanya tim yang punya logo)."""
+        if not team_ids:
+            return {}
+        rows = await self.fetchall(
+            """
+            SELECT CAST(t.team_id AS text) AS team_id, fo.storage_key
+            FROM team t JOIN file_object fo ON fo.id = t.logo_file_id
+            WHERE t.team_id = ANY(CAST(:ids AS uuid[])) AND t.delete_at IS NULL
+            """,
+            {"ids": team_ids},
+        )
+        return {str(r.team_id): r.storage_key for r in rows}
+
     async def is_team_member(self, team_id: UUID | str, employee_id: UUID | str) -> bool:
         return bool(await self.scalar(
             "SELECT EXISTS (SELECT 1 FROM team t WHERE t.team_id = CAST(:t AS uuid) "
             "AND t.leader_employee_id = CAST(:e AS uuid)) OR EXISTS (SELECT 1 FROM member m "
             "WHERE m.team_id = CAST(:t AS uuid) AND m.employee_id = CAST(:e AS uuid) AND m.delete_at IS NULL)",
             {"t": str(team_id), "e": str(employee_id)},
+        ))
+
+    async def daily_assets(self, daily_plan_id: UUID | str) -> list[Any]:
+        """Kendaraan & alat yang dikaitkan ke satu jadwal harian (laporan harian cetak)."""
+        return await self._asset_rows("wpd.daily_plan_id = CAST(:d AS uuid)", {"d": str(daily_plan_id)})
+
+    async def team_week_assets(self, team_id: UUID | str, start: date, end: date) -> list[Any]:
+        """Kendaraan & alat yang dikaitkan ke jadwal tim dalam rentang tanggal (laporan mingguan tim)."""
+        return await self._asset_rows(
+            "wpd.team_id = CAST(:team AS uuid) AND wpd.work_date BETWEEN :start AND :end "
+            "AND wpd.status IN ('APPROVED', 'ONGOING', 'COMPLETED')",
+            {"team": str(team_id), "start": start, "end": end},
+        )
+
+    async def _asset_rows(self, where: str, params: dict[str, Any]) -> list[Any]:
+        return list(await self.fetchall(
+            f"""
+            SELECT CASE WHEN aa.vehicle_id IS NOT NULL THEN 'Kendaraan' ELSE 'Alat' END AS kind,
+                   COALESCE(t.name, v.name) AS name, COALESCE(t.tool_code, v.number_plate) AS code,
+                   e.full_name AS holder, wpd.work_date, aa.assignment_status::text AS status
+            FROM asset_assignment aa
+            JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+            JOIN employee e ON e.employee_id = aa.employee_id
+            LEFT JOIN tool t ON t.tool_id = aa.tool_id
+            LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
+            WHERE {where} AND aa.delete_at IS NULL
+            ORDER BY wpd.work_date, kind, name
+            """,
+            params,
         ))
 
     async def _items(self, where: str, params: dict[str, Any]) -> list[Any]:
@@ -189,16 +268,17 @@ class ExportRepository(BaseRepository):
     # ── Registri document_template_export ────────────────────────────────────
     async def insert_export(self, *, source_type: str, completion_id: UUID | str | None, period_start: date | None,
                             period_end: date | None, template_type: str, master_template: str, export_format: str,
-                            storage_key: str, generated_by: UUID | str) -> Any:
+                            storage_key: str, generated_by: UUID | str,
+                            daily_plan_id: UUID | str | None = None) -> Any:
         return await self.fetchone(
             f"""
             WITH x AS (
                 INSERT INTO document_template_export (
                     source_type, completion_id, period_start_date, period_end_date, template_type,
-                    master_template_path, export_format, file_output_url, generated_by_id
+                    master_template_path, export_format, file_output_url, generated_by_id, daily_plan_id
                 ) VALUES (
                     :source, CAST(:cid AS uuid), :pstart, :pend, :tpl, :master,
-                    CAST(:fmt AS export_format_enum), :key, CAST(:by AS uuid)
+                    CAST(:fmt AS export_format_enum), :key, CAST(:by AS uuid), CAST(:daily AS uuid)
                 ) RETURNING export_id, source_type, completion_id, daily_plan_id, period_start_date, period_end_date,
                             template_type, export_format, file_output_url, generated_by_id, create_at
             )
@@ -206,7 +286,8 @@ class ExportRepository(BaseRepository):
             """,
             {"source": source_type, "cid": str(completion_id) if completion_id else None, "pstart": period_start,
              "pend": period_end, "tpl": template_type, "master": master_template, "fmt": export_format,
-             "key": storage_key, "by": str(generated_by)},
+             "key": storage_key, "by": str(generated_by),
+             "daily": str(daily_plan_id) if daily_plan_id else None},
         )
 
     async def list_exports(self, *, completion_id: UUID | str | None = None,

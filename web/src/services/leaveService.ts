@@ -19,7 +19,18 @@ export interface LeaveRequest {
   reviewed_by_name?: string | null;
   reviewed_at?: string | null;
   rejection_note?: string | null;
+  review_note?: string | null;
+  cancel_note?: string | null;
+  conflicts?: LeaveConflict[];
   create_at: string;
+}
+
+/** Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan. */
+export interface LeaveConflict {
+  plan_id: string;
+  work_date: string;
+  team_name: string;
+  status: string;
 }
 
 export interface LeaveBalance {
@@ -44,6 +55,7 @@ export interface LeaveCreateInput {
 export interface LeaveReviewInput {
   decision: "APPROVED" | "REJECTED";
   note?: string;
+  acknowledge_conflicts?: boolean;
 }
 
 export interface LeaveListParams {
@@ -70,6 +82,10 @@ export async function applyLeave(body: LeaveCreateInput): Promise<LeaveRequest> 
 
 export async function reviewLeave(leaveId: string, body: LeaveReviewInput): Promise<LeaveRequest> {
   return (await api.post<LeaveRequest>(`/leaves/${leaveId}/review`, body)).data;
+}
+
+export async function cancelLeave(leaveId: string, reason: string): Promise<LeaveRequest> {
+  return (await api.post<LeaveRequest>(`/leaves/${leaveId}/cancel`, { reason })).data;
 }
 
 export async function getLeaveBalance(employeeId: string, year = new Date().getFullYear()): Promise<LeaveBalance> {
@@ -106,6 +122,17 @@ export function useReviewLeave() {
   return useMutation({
     mutationFn: ({ leaveId, body }: { leaveId: string; body: LeaveReviewInput }) =>
       reviewLeave(leaveId, body),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["leaves"] });
+      await qc.invalidateQueries({ queryKey: ["leave-balance"] });
+    },
+  });
+}
+
+export function useCancelLeave() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leaveId, reason }: { leaveId: string; reason: string }) => cancelLeave(leaveId, reason),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["leaves"] });
       await qc.invalidateQueries({ queryKey: ["leave-balance"] });

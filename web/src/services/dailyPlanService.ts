@@ -17,6 +17,9 @@ export type DailyAction = "submit" | "approve" | "start" | "complete";
 
 const KEY = ["daily-plans"] as const;
 
+/** Jadwal tanggal lampau (PM/OM, beralasan) hanya boleh sampai sekian hari ke belakang; sama dengan API. */
+export const BACKDATE_DAYS = 7;
+
 /** Tanggal ISO (YYYY-MM-DD) menurut WIB. */
 export const wibDate = (d: Date = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
 
@@ -84,6 +87,12 @@ export const useCreateDailyPlan = () =>
 export const useUpdateDailyPlan = (id: string) =>
   useDailyMutation(async (body: DailyPlanUpdate) => (await api.put<DailyPlan>(`/work-plans/daily/${id}`, body)).data);
 
+export type DailyPlanLocation = S["DailyPlanLocationUpdate"];
+
+/** PATCH lokasi jadwal DISETUJUI yang belum dimulai (PM/OM); status tetap, tidak kembali ke draf. */
+export const useUpdateDailyPlanLocation = (id: string) =>
+  useDailyMutation(async (body: DailyPlanLocation) => (await api.patch<DailyPlan>(`/work-plans/daily/${id}/location`, body)).data);
+
 export const useDeleteDailyPlan = () =>
   useDailyMutation(async (id: string) => (await api.delete(`/work-plans/daily/${id}`)).data);
 
@@ -124,6 +133,22 @@ export const usePrerequisiteOptions = (dailyPlanId: string) =>
 export const useCreatePlanItem = (dailyPlanId: string) =>
   useDailyMutation(async (body: PlanItemCreate) =>
     (await api.post<PlanItem>(`/work-plans/daily/${dailyPlanId}/items`, body)).data);
+
+/** Ringkasan target order: total, sudah dijadwalkan, dan sisa yang belum dijadwalkan (GET /work-plans/orders/{id}/schedule). */
+export interface OrderScheduleSummary {
+  total_target_unit: number;
+  completed_target_unit: number;
+  scheduled_target_qty: number;
+  unscheduled_target_qty: number;
+}
+
+export const useOrderSchedule = (completionId: string) =>
+  useQuery({
+    queryKey: ["order-schedule", completionId],
+    enabled: !!completionId,
+    queryFn: async () =>
+      (await api.get<OrderScheduleSummary>(`/work-plans/orders/${completionId}/schedule`)).data,
+  });
 
 export const useDeletePlanItem = () =>
   useDailyMutation(async (itemId: string) => (await api.delete(`/work-plans/items/${itemId}`)).data);
@@ -182,9 +207,21 @@ export const useCorrectionInbox = () =>
     queryFn: async () => (await api.get<Correction[]>("/work-plans/corrections")).data,
   });
 
-export const useDecideCorrection = () =>
-  useDailyMutation(async ({ id, decision, note }: { id: string; decision: CorrectionDecision; note?: string }) =>
-    (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note })).data);
+/** Keputusan koreksi: respons server langsung menggantikan baris di daftar (tidak menunggu refetch,
+ * yang bisa membawa data lama dan membuat klik pertama seolah tidak berefek), lalu daftar diperbarui ulang. */
+export const useDecideCorrection = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, decision, note, force }: { id: string; decision: CorrectionDecision; note?: string; force?: boolean }) =>
+      (await api.post<Correction>(`/work-plans/corrections/${id}/decision`, { decision, note, force: force ?? false })).data,
+    onSuccess: (updated) => {
+      qc.setQueryData<Correction[]>([...KEY, "corrections"], (old) =>
+        old?.map((c) => (c.correction_id === updated.correction_id ? updated : c)),
+      );
+      return qc.invalidateQueries({ queryKey: KEY });
+    },
+  });
+};
 
 export const CORRECTION_STATUS: Record<Correction["status"], string> = {
   REQUESTED: "Menunggu keputusan",

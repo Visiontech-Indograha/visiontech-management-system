@@ -55,6 +55,14 @@ class WorkTypeController:
         row = await self.service.create(organization_id, data, allowed_divisions)
         return self.map_row_to_out(row)
 
+    async def handle_copy_to_division(
+        self, organization_id: str, type_id: UUID, target_division_id: UUID,
+        allowed_divisions: list[UUID] | None = None,
+    ) -> WorkTypeOut:
+        """Salin jenis pekerjaan ke divisi lain (slot foto + BoM default)."""
+        row = await self.service.copy_to_division(organization_id, type_id, target_division_id, allowed_divisions)
+        return self.map_row_to_out(row)
+
     async def handle_update(
         self, organization_id: str, type_id: UUID, data: WorkTypeIn, allowed_divisions: list[UUID] | None = None
     ) -> WorkTypeOut:

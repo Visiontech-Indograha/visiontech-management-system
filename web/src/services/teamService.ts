@@ -16,6 +16,21 @@ export const useTeams = () =>
     queryFn: async () => (await api.get<Team[]>("/teams")).data,
   });
 
+/**
+ * Logo tim (hanya tampilan; penggantian dilakukan dari aplikasi mobile ketua tim).
+ * Endpoint butuh header Authorization, jadi diunduh lewat axios lalu dijadikan object URL.
+ */
+export const useTeamLogo = (teamId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: [...KEY, teamId, "logo"],
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const res = await api.get<Blob>(`/teams/${teamId}/logo`, { responseType: "blob" });
+      return URL.createObjectURL(res.data);
+    },
+  });
+
 /** Detail tim + anggota (nama, NIK, peran, nomor HP). */
 export const useTeam = (id?: string | null) =>
   useQuery({

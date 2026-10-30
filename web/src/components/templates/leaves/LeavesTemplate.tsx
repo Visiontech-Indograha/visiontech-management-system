@@ -2,6 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { LeaveApplyButton } from "@/components/organisms/leaves/LeaveApplyButton";
 import { LeaveApplyDialog } from "@/components/organisms/leaves/LeaveApplyDialog";
 import { LeaveReviewDialog } from "@/components/organisms/leaves/LeaveReviewDialog";
+import { CancelLeaveDialog } from "@/components/organisms/leaves/CancelLeaveDialog";
 import { LeaveBalanceCard } from "@/components/organisms/leaves/LeaveBalanceCard";
 import { LeaveList } from "@/components/organisms/leaves/LeaveList";
 import type { Paged } from "@/lib/paged";
@@ -21,6 +22,10 @@ export function LeavesTemplate({
   onResetFilters,
   canReview,
   canFinalReview,
+  canCancel,
+  cancelling,
+  onCancel,
+  onCloseCancel,
   applying,
   reviewing,
   onApply,
@@ -40,6 +45,10 @@ export function LeavesTemplate({
   onResetFilters: () => void;
   canReview: boolean;
   canFinalReview: boolean;
+  canCancel: (leave: LeaveRequest) => boolean;
+  cancelling: LeaveRequest | null;
+  onCancel: (leave: LeaveRequest) => void;
+  onCloseCancel: () => void;
   applying: boolean;
   reviewing: LeaveRequest | null;
   onApply: () => void;
@@ -67,8 +76,10 @@ export function LeavesTemplate({
           onResetFilters={onResetFilters}
           canReview={canReview}
           canFinalReview={canFinalReview}
+          canCancel={canCancel}
           onApply={onApply}
           onReview={onReview}
+          onCancel={onCancel}
         />
       </div>
 
@@ -76,6 +87,7 @@ export function LeavesTemplate({
       {reviewing && (
         <LeaveReviewDialog leave={reviewing} onClose={onCloseReview} />
       )}
+      {cancelling && <CancelLeaveDialog leave={cancelling} onClose={onCloseCancel} />}
     </PageTemplate>
   );
 }

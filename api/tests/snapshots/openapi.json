@@ -9495,6 +9495,11 @@
    "OvertimeResponse": {
     "description": "Schema for a detailed overtime record response.",
     "properties": {
+     "can_review": {
+      "default": false,
+      "title": "Can Review",
+      "type": "boolean"
+     },
      "created_at": {
       "format": "date-time",
       "title": "Created At",

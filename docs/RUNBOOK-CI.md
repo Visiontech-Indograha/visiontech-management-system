@@ -58,5 +58,16 @@ resmi `actions/runner`), bangun ulang image, lalu daftarkan ulang seperti di ata
 
 ## Di luar cakupan
 
-Workflow rilis/deploy (`apk.yml`, `cd.yml`, `images.yml`, `rilis.yml`) masih `ubuntu-latest` dan
-belum dipindah ke runner ini.
+Workflow rilis/deploy kini memakai runner ini (`[self-hosted, linux, vms]`):
+
+- `cd.yml` (penjaga sumber prod), `images.yml` (build & dorong citra api/web ke GHCR lewat
+  `docker/build-push-action`), `rilis.yml` (tag & GitHub Release). `rilis.yml` tidak memakai CLI `gh`
+  (tidak ada di image); ia memanggil REST API GitHub dengan `curl` + `jq`.
+- `apk.yml` TETAP di `ubuntu-latest`: build APK butuh Android SDK, yang belum ada di image runner.
+  Memasangnya ke image (`C:/actions-runner/Dockerfile`) berarti rebuild + daftar ulang runner; dikerjakan
+  terpisah. Bila ingin dipindah: tambahkan Android SDK (platform-tools, build-tools, platform sesuai
+  `mobile/android`) ke image, ganti `runs-on`, lalu uji dengan `workflow_dispatch` (itu menerbitkan
+  `rilis-apk-<env>`, jadi uji hanya bila pemilik setuju).
+
+Catatan keamanan: workflow `cd`, `images`, dan `rilis` berjalan setiap push ke `prod`. Runner ini punya akses
+socket Docker dan berjalan sebagai root, jadi repo harus tetap privat dan tidak menerima workflow dari fork.

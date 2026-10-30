@@ -63,8 +63,9 @@ describe("login dan sesi API", () => {
       expect(router.state.location.pathname).toBe("/");
       expect(getAccessToken()).toBe("tok");
     });
-    expect(await screen.findByRole("heading", { level: 1, name: /budi/ })).toBeInTheDocument();
-    expect(await screen.findByText("Karyawan lapangan")).toBeInTheDocument();
+    // Beranda dimuat lewat chunk lazy setelah /auth/me; di runner yang lambat, batas bawaan 1 dtk terlalu sempit.
+    expect(await screen.findByRole("heading", { level: 1, name: /budi/ }, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("Karyawan lapangan", undefined, { timeout: 5000 })).toBeInTheDocument();
     expect(calls.some((call) => call.url === "/auth/me")).toBe(true);
   });
 

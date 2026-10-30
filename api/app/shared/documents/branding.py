@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
+from pathlib import Path
 from typing import Any, Literal
 
 import filetype
@@ -17,6 +18,9 @@ from app.core import storage
 from app.core.errors import AppError, ValidationError
 
 LogoRole = Literal["company", "client"]
+# (logo Visiontech — selalu ada, logo tim — None bila tim belum punya logo)
+KopLogos = tuple[bytes, bytes | None]
+VISIONTECH_LOGO = Path(__file__).resolve().parent / "templates" / "assets" / "logo-visiontech.png"
 DPI = 300
 # Ukuran baku (cm) diambil dari kop template ACS/CCTV; dipakai sebagai format resmi logo pengganti.
 STANDARD: dict[str, dict[str, Any]] = {
@@ -144,8 +148,9 @@ def team_logo_storage_key(organization_id: str, team_id: str, file_id: str, ext:
 _logo_warned = False  # peringatan kegagalan ambil logo tim hanya sekali per proses (bukan per dokumen)
 
 
-def team_logo_or_default(team_id: str | None, storage_key: str | None) -> bytes | None:
-    """Isi logo tim dari storage, atau None (→ pakai logo bawaan repo di kop). MinIO mati/berkas hilang = bawaan.
+def team_logo_bytes(team_id: str | None, storage_key: str | None) -> bytes | None:
+    """Isi logo tim dari storage, atau None bila tim tak punya logo / berkas tak terbaca.
+    MinIO mati/berkas hilang = None (dokumen tetap terbit, hanya logo tim yang tidak tampil).
 
     Kunci logo tercatat di DB tetapi tidak terbaca → WARNING sekali (agar tidak senyap)."""
     global _logo_warned
@@ -153,15 +158,30 @@ def team_logo_or_default(team_id: str | None, storage_key: str | None) -> bytes 
         return None
     try:
         data = storage.get_object_bytes(storage_key)
-    except Exception:  # noqa: BLE001 - dokumen tetap terbit dengan logo bawaan
+    except Exception:  # noqa: BLE001 - dokumen tetap terbit dengan logo Visiontech
         data = None
     if data:
         return data
     if not _logo_warned:
         _logo_warned = True
-        logger.warning("Logo tim %s tidak dapat diambil dari storage (%s); dokumen memakai logo bawaan.",
+        logger.warning("Logo tim %s tidak dapat diambil dari storage (%s); dokumen memakai logo Visiontech saja.",
                        team_id, storage_key)
     return None
+
+
+def visiontech_logo() -> bytes:
+    """Logo Visiontech bawaan repo. Selalu tampil di kop dokumen; tidak dapat diubah lewat aplikasi."""
+    return VISIONTECH_LOGO.read_bytes()
+
+
+def kop_logos(team_id: str | None, storage_key: str | None) -> KopLogos:
+    """Logo kop dokumen: (logo Visiontech, logo tim atau None). Logo Visiontech selalu ada."""
+    return visiontech_logo(), team_logo_bytes(team_id, storage_key)
+
+
+def default_kop_logos() -> KopLogos:
+    """Kop tanpa logo tim (dipakai bila pemanggil tidak memberi logo tim)."""
+    return visiontech_logo(), None
 
 
 def fit_contain_png(logo: bytes, box: tuple[int, int] = COMPANY_BOX_PX) -> bytes:

@@ -14,7 +14,12 @@ from fastapi import Depends
 
 from app.core.security import CurrentUser
 from app.modules.accounts.dependencies import get_account_service
-from app.modules.accounts.schemas.account_schema import AccountCreate, AccountOut, AccountWithPassword
+from app.modules.accounts.schemas.account_schema import (
+    AccountCreate,
+    AccountOut,
+    AccountRoleUpdate,
+    AccountWithPassword,
+)
 from app.modules.accounts.services.account_service import AccountService
 
 
@@ -39,6 +44,7 @@ class AccountProfileController:
             last_login_at=row.last_login_at,
             failed_logins=getattr(row, "failures", None) or 0,
             locked_until=getattr(row, "locked_until", None),
+            system_role=getattr(row, "role", None),
         )
 
     async def handle_get_account(self, emp_id: UUID, organization_id: str) -> AccountOut:
@@ -47,14 +53,21 @@ class AccountProfileController:
         return self.map_row_to_out(row)
 
     async def handle_create_account(
-        self, emp_id: UUID, organization_id: str, data: AccountCreate
+        self, emp_id: UUID, actor: CurrentUser, data: AccountCreate
     ) -> AccountWithPassword:
-        """Membuat akun login baru untuk karyawan."""
-        row, password = await self.account_service.create(emp_id, organization_id, data.login.strip().lower())
+        """Membuat akun login baru untuk karyawan (peran lapangan; default EMPLOYEE)."""
+        row, password = await self.account_service.create(
+            emp_id, actor, data.login.strip().lower(), data.system_role
+        )
         return AccountWithPassword(
             **self.map_row_to_out(row).model_dump(),
             temporary_password=password,
         )
+
+    async def handle_set_role(self, emp_id: UUID, actor: CurrentUser, data: AccountRoleUpdate) -> AccountOut:
+        """Mengubah peran lapangan akun karyawan."""
+        row = await self.account_service.set_field_role(emp_id, actor, data.system_role)
+        return self.map_row_to_out(row)
 
     async def handle_reset_password(self, emp_id: UUID, organization_id: str) -> AccountWithPassword:
         """Mereset kata sandi akun karyawan ke sandi sementara baru."""

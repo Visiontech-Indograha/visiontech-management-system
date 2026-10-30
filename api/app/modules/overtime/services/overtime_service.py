@@ -104,6 +104,26 @@ class OvertimeService:
             return await self.repo.list_by_employee(user.employee_id)
         return []
 
+    async def with_review_flags(self, user: CurrentUser, rows: Sequence[Any]) -> list[dict[str, Any]]:
+        """Baris lembur + `can_review`, dengan aturan yang sama seperti review(): pending, bukan pengaju sendiri,
+        dan PM/OM divisi jadwal (atau admin). Kueri tambahan hanya bila ada baris pending non-admin."""
+        pending = [r._mapping for r in rows if r._mapping["status"] == "PENDING_PM"]
+        managed: set[str] = set()
+        if user.employee_id and not is_admin(user) and pending:
+            managed = await self.repo.managed_pending_plan_ids(user.employee_id)
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            m = dict(r._mapping)
+            plan = str(m["daily_plan_id"]) if m["daily_plan_id"] is not None else None
+            m["can_review"] = bool(
+                user.employee_id
+                and m["status"] == "PENDING_PM"
+                and str(m["employee_id"]) != user.employee_id
+                and (is_admin(user) or (plan is not None and plan in managed))
+            )
+            out.append(m)
+        return out
+
     async def list_by_plan(self, user: CurrentUser, daily_plan_id: UUID) -> Sequence[Any]:
         await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
         return await self.repo.list_by_plan(daily_plan_id)

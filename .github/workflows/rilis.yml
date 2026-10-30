@@ -1,6 +1,7 @@
 # Rilis (docs/RILIS.md): setiap push ke prod membuat tag vX.Y.Z dan GitHub Release dari VERSION.
 # Catatan: bagian [X.Y.Z] CHANGELOG.md bila ada (lokal, opsional), selain itu otomatis dari PR (--generate-notes).
 # Gagal jelas bila VERSION belum naik atau tag sudah ada. Hanya memakai GITHUB_TOKEN (izin contents: write), tanpa secret baru.
+# Berjalan di runner self-hosted (docs/RUNBOOK-CI.md); tanpa CLI gh, memakai REST API.
 name: Rilis
 
 on:
@@ -17,7 +18,7 @@ concurrency:
 jobs:
   rilis:
     name: Tag & GitHub Release dari VERSION
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     permissions:
       contents: write
     steps:
@@ -56,11 +57,16 @@ jobs:
           fi
 
       - name: Buat tag dan GitHub Release
+        # Runner self-hosted tidak memuat CLI gh; pakai REST API langsung (curl + jq ada di image runner).
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
+          api() { curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "Content-Type: application/json" "$@"; }
           if [ "$CATATAN" = file ]; then
-            gh release create "v$VERSI" --target "$GITHUB_SHA" --title "v$VERSI" --notes-file "$RUNNER_TEMP/notes.md"
+            body=$(cat "$RUNNER_TEMP/notes.md")
           else
-            gh release create "v$VERSI" --target "$GITHUB_SHA" --title "v$VERSI" --generate-notes
+            body=$(api -X POST "https://api.github.com/repos/$REPO/releases/generate-notes"               -d "$(jq -n --arg t "v$VERSI" --arg c "$GITHUB_SHA" '{tag_name: $t, target_commitish: $c}')" | jq -r .body)
           fi
+          api -X POST "https://api.github.com/repos/$REPO/releases"             -d "$(jq -n --arg t "v$VERSI" --arg c "$GITHUB_SHA" --arg b "$body" '{tag_name: $t, target_commitish: $c, name: $t, body: $b}')" >/dev/null
+          echo "Rilis v$VERSI dibuat."

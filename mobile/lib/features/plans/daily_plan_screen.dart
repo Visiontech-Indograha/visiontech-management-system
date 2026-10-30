@@ -614,6 +614,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _ItemCard(
                         item: Map<String, dynamic>.from(item),
+                        dayStatus: '${plan['status']}',
                         onTap: () => _openItem(Map<String, dynamic>.from(item)),
                       ),
                     ),
@@ -685,9 +686,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
 }
 
 class _ItemCard extends StatelessWidget {
-  const _ItemCard({required this.item, required this.onTap});
+  const _ItemCard({required this.item, required this.dayStatus, required this.onTap});
 
   final Map<String, dynamic> item;
+  final String dayStatus;
   final VoidCallback onTap;
 
   @override
@@ -702,6 +704,7 @@ class _ItemCard extends StatelessWidget {
       done: done,
       target: target,
       photoCount: photoRefsOf(item['realization_photos_json']).length,
+      dayStatus: dayStatus,
     );
     final accent = statusStyle(state).accent;
     return Material(

@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.exception_handlers import register_exception_handlers
 from app.core.lifespan import lifespan
 from app.core.logging_config import RequestIDMiddleware, setup_logging
+from app.core.version import APP_VERSION
 from app.database.health_check import check_database_health
 
 setup_logging()
@@ -29,7 +30,7 @@ def create_app() -> FastAPI:
     Fungsi pembuat instance FastAPI utama (factory method).
     Mendaftarkan middleware, error handler, lifespan, dan router rute (endpoints).
     """
-    app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+    app = FastAPI(title=settings.PROJECT_NAME, version=APP_VERSION, lifespan=lifespan)
 
     # Daftarkan middleware CORS
     # Wildcard + credentials membuat situs mana pun bisa memakai cookie refresh pengguna; credentials hanya
@@ -58,7 +59,12 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check() -> dict[str, str]:
         """Endpoint pemeriksaan kesehatan sederhana (liveness probe)."""
-        return {"status": "ok"}
+        return {"status": "ok", "version": APP_VERSION}
+
+    @app.get(f"{API_PREFIX}/version")
+    async def version_info() -> dict[str, str]:
+        """Versi API (SemVer) — sama dengan berkas VERSION di root repo."""
+        return {"version": APP_VERSION}
 
     @app.get("/ready")
     async def readiness_check() -> JSONResponse:
@@ -68,8 +74,10 @@ def create_app() -> FastAPI:
         """
         is_healthy = await check_database_health()
         if not is_healthy:
-            return JSONResponse({"status": "not_ready", "db": "unreachable"}, status_code=503)
-        return JSONResponse({"status": "ready", "db": "ok"})
+            return JSONResponse(
+                {"status": "not_ready", "db": "unreachable", "version": APP_VERSION}, status_code=503
+            )
+        return JSONResponse({"status": "ready", "db": "ok", "version": APP_VERSION})
 
     # Memasukkan router utama v1 ke dalam aplikasi
     from app.api.v1.router import api_router

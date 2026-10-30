@@ -35,11 +35,12 @@ _OPEN_LOAN = """
 _TOOL_SELECT = f"""
     SELECT t.tool_id, t.office_id, o.name AS office_name, t.division_id, d.name AS division_name,
            t.ownership_type::text AS ownership_type, t.category::text AS category, t.name, t.tool_code,
-           t.status::text AS status, fo.id AS photo_file_id,
+           t.status::text AS status, fo.id AS photo_file_id, t.team_id, tm.name AS team_name,
            loan.assignment_id, loan.holder_employee_id, loan.holder_name, loan.daily_plan_id
     FROM tool t
     JOIN office o ON o.office_id = t.office_id
     LEFT JOIN division d ON d.division_id = t.division_id
+    LEFT JOIN team tm ON tm.team_id = t.team_id
     LEFT JOIN file_object fo ON fo.storage_key = t.photo_path
     {_OPEN_LOAN.format(col="tool_id", alias="t")}
 """
@@ -47,7 +48,7 @@ _TOOL_SELECT = f"""
 _VEHICLE_SELECT = f"""
     SELECT v.vehicle_id, v.office_id, o.name AS office_name, v.division_id, d.name AS division_name,
            v.vehicle_type::text AS vehicle_type, v.name, v.number_plate, v.status::text AS status,
-           fo.id AS photo_file_id,
+           fo.id AS photo_file_id, v.team_id, tm.name AS team_name,
            (SELECT max({_wib_date("vf.expired_at")}) FROM vehicle_file vf
              WHERE vf.vehicle_id = v.vehicle_id AND vf.type = 'STNK' AND vf.status = 'active'
                AND vf.delete_at IS NULL) AS stnk_expired_at,
@@ -58,6 +59,7 @@ _VEHICLE_SELECT = f"""
     FROM vehicle v
     JOIN office o ON o.office_id = v.office_id
     JOIN division d ON d.division_id = v.division_id
+    LEFT JOIN team tm ON tm.team_id = v.team_id
     LEFT JOIN file_object fo ON fo.storage_key = v.photo_path
     {_OPEN_LOAN.format(col="vehicle_id", alias="v")}
 """
@@ -151,9 +153,11 @@ class AssetRepository(BaseRepository):
                    (t.leader_employee_id = CAST(:emp AS uuid)
                     OR EXISTS (SELECT 1 FROM member m
                                WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
-                                 AND m.is_active AND m.delete_at IS NULL)) AS on_team
+                                 AND m.is_active AND m.delete_at IS NULL)) AS on_team,
+                   (d.pm_id = CAST(:emp AS uuid) OR d.om_id = CAST(:emp AS uuid)) AS manages
             FROM work_plan_daily wpd
             JOIN team t ON t.team_id = wpd.team_id
+            JOIN division d ON d.division_id = wpd.division_id
             WHERE wpd.daily_plan_id = CAST(:id AS uuid) AND wpd.delete_at IS NULL
             """,
             {"id": str(daily_plan_id), "emp": str(employee_id)},
@@ -186,10 +190,10 @@ class AssetRepository(BaseRepository):
     async def insert_tool(self, fields: dict[str, Any]) -> UUID:
         tool_id: UUID = await self.scalar(
             """
-            INSERT INTO tool (office_id, division_id, ownership_type, category, name, tool_code, photo_path)
+            INSERT INTO tool (office_id, division_id, ownership_type, category, name, tool_code, photo_path, team_id)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid),
                     CAST(:ownership_type AS tool_ownership_enum), CAST(:category AS tool_category_enum),
-                    :name, :tool_code, :photo_path)
+                    :name, :tool_code, :photo_path, CAST(:team_id AS uuid))
             RETURNING tool_id
             """,
             fields,
@@ -207,6 +211,7 @@ class AssetRepository(BaseRepository):
                 name = COALESCE(:name, name),
                 tool_code = COALESCE(:tool_code, tool_code),
                 photo_path = COALESCE(:photo_path, photo_path),
+                team_id = COALESCE(CAST(:team_id AS uuid), team_id),
                 update_at = now()
             WHERE tool_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
@@ -241,9 +246,9 @@ class AssetRepository(BaseRepository):
     async def insert_vehicle(self, fields: dict[str, Any]) -> UUID:
         vehicle_id: UUID = await self.scalar(
             """
-            INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, photo_path)
+            INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, photo_path, team_id)
             VALUES (CAST(:office_id AS uuid), CAST(:division_id AS uuid), CAST(:vehicle_type AS vehicle_type_enum),
-                    :name, :number_plate, :photo_path)
+                    :name, :number_plate, :photo_path, CAST(:team_id AS uuid))
             RETURNING vehicle_id
             """,
             fields,
@@ -260,6 +265,7 @@ class AssetRepository(BaseRepository):
                 name = COALESCE(:name, name),
                 number_plate = COALESCE(:number_plate, number_plate),
                 photo_path = COALESCE(:photo_path, photo_path),
+                team_id = COALESCE(CAST(:team_id AS uuid), team_id),
                 update_at = now()
             WHERE vehicle_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
@@ -293,6 +299,64 @@ class AssetRepository(BaseRepository):
             "AND returned_at IS NULL AND delete_at IS NULL)",
             {"id": str(asset_id)},
         ))
+
+    async def open_loan_conflict(self, asset_type: str, asset_id: UUID | str, work_date: date | None) -> Any:
+        """Peminjaman berjalan yang bentrok. `work_date` None (pinjaman biasa): bentrok bila ada peminjaman apa pun.
+        Dengan tanggal (jadwal harian): hanya peminjaman tanpa jadwal atau berjadwal pada tanggal yang sama.
+        Mengembalikan baris (nama tim pemegang, tanggal) atau None bila tidak bentrok."""
+        col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
+        return await self.fetchone(
+            f"""
+            SELECT t.name AS team_name, wpd.work_date
+            FROM asset_assignment aa
+            LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+            LEFT JOIN team t ON t.team_id = wpd.team_id
+            WHERE aa.{col} = CAST(:id AS uuid) AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+              AND (CAST(:date AS date) IS NULL OR aa.daily_plan_id IS NULL OR wpd.work_date = CAST(:date AS date))
+            ORDER BY aa.loaned_at DESC
+            LIMIT 1
+            """,
+            {"id": str(asset_id), "date": work_date},
+        )
+
+    async def availability(self, work_date: date) -> list[Any]:
+        """Setiap alat & kendaraan aktif beserta tim pemakai pada `work_date` (NULL bila tidak dipakai tanggal itu)."""
+        return list(await self.fetchall(
+            """
+            SELECT 'TOOL' AS asset_type, t.tool_id AS asset_id, t.name AS asset_name, t.status::text AS status,
+                   (SELECT wpd.team_id FROM asset_assignment aa
+                      JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                    WHERE aa.tool_id = t.tool_id AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                      AND wpd.work_date = CAST(:date AS date)
+                    ORDER BY aa.loaned_at DESC LIMIT 1) AS team_id
+            FROM tool t
+            WHERE t.delete_at IS NULL
+            UNION ALL
+            SELECT 'VEHICLE', v.vehicle_id, v.name, v.status::text,
+                   (SELECT wpd.team_id FROM asset_assignment aa
+                      JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+                    WHERE aa.vehicle_id = v.vehicle_id AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+                      AND wpd.work_date = CAST(:date AS date)
+                    ORDER BY aa.loaned_at DESC LIMIT 1)
+            FROM vehicle v
+            WHERE v.delete_at IS NULL
+            ORDER BY 3
+            """,
+            {"date": work_date},
+        ))
+
+    async def team_office(self, team_id: UUID | str) -> Any:
+        return await self.fetchone(
+            "SELECT office_id, name FROM team WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(team_id)})
+
+    async def team_names(self, team_ids: list[Any]) -> dict[str, str]:
+        ids = sorted({str(t) for t in team_ids if t})
+        if not ids:
+            return {}
+        rows = await self.fetchall(
+            "SELECT team_id::text AS team_id, name FROM team WHERE team_id = ANY(CAST(:ids AS uuid[]))", {"ids": ids})
+        return {r.team_id: r.name for r in rows}
 
     async def archive(self, asset_type: str, asset_id: UUID | str) -> None:
         table, col = ("tool", "tool_id") if asset_type == "TOOL" else ("vehicle", "vehicle_id")
@@ -366,18 +430,25 @@ class AssetRepository(BaseRepository):
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
     async def loans(
-        self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None
+        self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None,
+        managed_by: UUID | str | None,
     ) -> list[Any]:
+        """`managed_by` (PM/OM): batasi ke pinjaman karyawan di divisi yang ia pimpin/kelola, atau miliknya sendiri."""
         return list(await self.fetchall(
             _LOAN_SELECT + """
             WHERE aa.delete_at IS NULL
               AND (NOT CAST(:open AS boolean) OR aa.returned_at IS NULL)
               AND (CAST(:emp AS uuid) IS NULL OR aa.employee_id = CAST(:emp AS uuid))
               AND (CAST(:plan AS uuid) IS NULL OR aa.daily_plan_id = CAST(:plan AS uuid))
+              AND (CAST(:mgr AS uuid) IS NULL OR aa.employee_id = CAST(:mgr AS uuid)
+                   OR aa.employee_id IN (
+                       SELECT e.employee_id FROM employee e JOIN division d ON d.division_id = e.division_id
+                       WHERE d.pm_id = CAST(:mgr AS uuid) OR d.om_id = CAST(:mgr AS uuid)))
             ORDER BY aa.returned_at IS NULL DESC, aa.loaned_at DESC
             """,
             {"open": open_only, "emp": str(employee_id) if employee_id else None,
-             "plan": str(daily_plan_id) if daily_plan_id else None},
+             "plan": str(daily_plan_id) if daily_plan_id else None,
+             "mgr": str(managed_by) if managed_by else None},
         ))
 
     async def get_loan(self, assignment_id: UUID | str) -> Any:

@@ -222,13 +222,28 @@ export const useAccount = (employeeId: string) =>
     queryFn: async () => (await api.get<Account>(`/employees/${employeeId}/account`)).data,
   });
 
-/** Buat akun / reset password / nonaktifkan / aktifkan. Password sementara hanya ada di respons (sekali). */
+/** Peran lapangan akun (pilihan HR/SUPER_ADMIN). */
+export type FieldRole = "EMPLOYEE" | "TEAM_LEADER";
+export const FIELD_ROLE_LABEL: Record<FieldRole, string> = {
+  EMPLOYEE: "Karyawan Lapangan",
+  TEAM_LEADER: "Team Leader",
+};
+
+/** Buat akun / reset password / nonaktifkan / aktifkan / ubah peran lapangan. Password sementara hanya ada di respons. */
 export function useAccountAction(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (a: { kind: "create"; login: string } | { kind: "reset" | "deactivate" | "activate" }) => {
+    mutationFn: async (
+      a:
+        | { kind: "create"; login: string; systemRole: FieldRole }
+        | { kind: "role"; systemRole: FieldRole }
+        | { kind: "reset" | "deactivate" | "activate" },
+    ) => {
       const base = `/employees/${employeeId}/account`;
-      if (a.kind === "create") return (await api.post<AccountWithPassword>(base, { login: a.login })).data;
+      if (a.kind === "create")
+        return (await api.post<AccountWithPassword>(base, { login: a.login, system_role: a.systemRole })).data;
+      if (a.kind === "role")
+        return (await api.post<Account>(`${base}/role`, { system_role: a.systemRole })).data;
       const path = a.kind === "reset" ? "reset-password" : a.kind;
       return (await api.post<Account | AccountWithPassword>(`${base}/${path}`)).data;
     },

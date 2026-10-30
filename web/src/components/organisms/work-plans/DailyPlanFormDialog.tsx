@@ -6,12 +6,17 @@ import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
 import { SiteMapPicker } from "@/components/organisms/sites/SiteMapPicker";
+import { DailyPlanAssetsPanel } from "@/components/organisms/work-plans/DailyPlanAssetsPanel";
 import {
+  addDays,
+  BACKDATE_DAYS,
   useCreateDailyPlan,
   useRecentSites,
   useUpdateDailyPlan,
+  wibDate,
   type DailyFormOptions,
   type DailyPlan,
 } from "@/services/dailyPlanService";
@@ -34,6 +39,11 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const [lat, setLat] = useState(plan ? String(plan.site_lat ?? "") : "");
   const [lng, setLng] = useState(plan ? String(plan.site_lng ?? "") : "");
   const [radius, setRadius] = useState(String(plan?.attendance_radius_m ?? 150));
+  const [workDate, setWorkDate] = useState(plan?.work_date ?? initial?.work_date ?? "");
+  // F10: jadwal tanggal lampau (<= BACKDATE_DAYS hari, hanya saat membuat) wajib beralasan; tercatat audit.
+  const [backdateReason, setBackdateReason] = useState("");
+  const today = wibDate();
+  const backdated = !plan && !!workDate && workDate < today;
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const recent = useRecentSites(plan ? "" : teamId);   // hanya saat membuat jadwal baru
@@ -66,6 +76,8 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
     )) {
       return setErrors({ site_lat: "Koordinat tidak valid (latitude -90..90, longitude -180..180)." });
     }
+    // Koordinat tanpa nama membuat kartu "Lokasi belum ditentukan": nama wajib bila koordinat diisi.
+    if (latitude && !siteName.trim()) return setErrors({ site_name: "Isi nama lokasi bila koordinat diisi (mis. Gudang Cikarang)." });
     const body = {
       site_name: siteName.trim() || null,
       site_lat: latitude ? Number(latitude) : null,
@@ -74,13 +86,21 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
       clock_in_time: value("clock_in_time") || "07:00",
       clock_out_time: value("clock_out_time") || "16:00",
     };
+    if (backdated && !backdateReason.trim()) return setErrors({ backdate_reason: "Isi alasan untuk tanggal lampau." });
     try {
       if (plan) {
         await update.mutateAsync({ ...body, team_id: team.team_id, work_date: value("work_date") || plan.work_date });
         toast.success("Jadwal diperbarui.");
       } else {
-        await create.mutateAsync({ ...body, division_id: team.division_id, team_id: team.team_id, work_date: value("work_date") });
-        toast.success("Jadwal dibuat sebagai draf.");
+        await create.mutateAsync({
+          ...body,
+          kind: "WORK",
+          division_id: team.division_id,
+          team_id: team.team_id,
+          work_date: value("work_date"),
+          ...(backdated ? { backdate_reason: backdateReason.trim() } : {}),
+        });
+        toast.success(backdated ? "Jadwal tanggal lampau dibuat sebagai draf (tercatat)." : "Jadwal dibuat sebagai draf.");
       }
       onClose();
     } catch (err) {
@@ -89,9 +109,10 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
     }
   };
 
+  const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
-      <FormBlock id="daily-plan-form" onSubmit={submit} noValidate>
+    <VmsDialog dirty={dirtyForm.dirty} open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
+      <FormBlock {...dirtyForm.formProps} id="daily-plan-form" onSubmit={submit} noValidate>
         <FormErrorText message={formError} />
         <SelectField label="Tim" value={teamId} onChange={(e) => setTeamId(e.target.value)} error={errors.team_id}>
           <ControlOption value="">Pilih tim</ControlOption>
@@ -101,8 +122,27 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
             </ControlOption>
           ))}
         </SelectField>
-        <TextField name="work_date" label="Tanggal" type="date" defaultValue={plan?.work_date ?? initial?.work_date} error={errors.work_date} />
-        <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui; koordinat wajib dilengkapi sebelum presensi." />
+        <TextField
+          name="work_date"
+          label="Tanggal"
+          type="date"
+          value={workDate}
+          min={plan ? today : addDays(today, -BACKDATE_DAYS)}
+          onChange={(e) => setWorkDate(e.target.value)}
+          error={errors.work_date}
+        />
+        {backdated && (
+          <TextField
+            name="backdate_reason"
+            label={`Alasan tanggal lampau (maks. ${BACKDATE_DAYS} hari)`}
+            value={backdateReason}
+            onChange={(e) => setBackdateReason(e.target.value)}
+            maxLength={300}
+            error={errors.backdate_reason}
+            hint="Dicatat di audit. Jadwal dibuat sebagai draf dan tetap perlu diajukan/disetujui."
+          />
+        )}
+        <TextField label="Lokasi site (opsional)" value={siteName} onChange={(e) => setSiteName(e.target.value)} error={errors.site_name} hint="Jadwal dapat dibuat sebelum lokasi diketahui. Bila koordinat diisi, nama lokasi wajib diisi." />
         <ChoiceChips
           label="Lokasi terakhir tim:"
           testId="recent-sites"
@@ -122,13 +162,15 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           onPick={(p, label) => {
             setLat(p[0].toFixed(7));
             setLng(p[1].toFixed(7));
-            if (label && !siteName.trim()) setSiteName(label.split(",")[0]!.trim());
+            // Nama dari hasil cari; bila klik peta tanpa hasil cari, pakai teks koordinat agar nama tidak kosong.
+            if (!siteName.trim()) setSiteName(label ? label.split(",")[0]!.trim() : `Titik ${p[0].toFixed(5)},${p[1].toFixed(5)}`);
           }}
         />
         <div className="grid gap-x-3 md:grid-cols-2">
           <TextField label="Lintang (lat)" inputMode="decimal" value={lat} onChange={(e) => setLat(e.target.value)} error={errors.site_lat} />
           <TextField label="Bujur (lng)" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} error={errors.site_lng} />
         </div>
+        <DailyPlanAssetsPanel teamId={teamId} workDate={workDate} />
         <div className="grid gap-x-3 md:grid-cols-3">
           <TextField name="attendance_radius_m" label="Radius absen (m)" inputMode="numeric" value={radius} onChange={(e) => setRadius(e.target.value)} error={errors.attendance_radius_m} />
           <TextField name="clock_in_time" label="Jam masuk" type="time" defaultValue={(plan?.clock_in_time ?? "07:00").slice(0, 5)} />

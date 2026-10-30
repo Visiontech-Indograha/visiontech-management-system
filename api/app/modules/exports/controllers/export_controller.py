@@ -16,6 +16,7 @@ from app.core.security import CurrentUser
 from app.modules.exports.dependencies import get_export_service
 from app.modules.exports.schemas.export_schema import (
     CompletionExportRequest,
+    DailyReportExportRequest,
     ExportOut,
     PeriodicExportRequest,
     SurveyLogoOut,
@@ -77,6 +78,9 @@ class ExportController:
     async def export_periodic(self, user: CurrentUser, body: PeriodicExportRequest) -> Response:
         return _file(*await self.service.export_periodic(user, body.division_id, body.start_date, body.end_date,
                                                         body.export_format))
+
+    async def export_daily_report(self, user: CurrentUser, body: DailyReportExportRequest) -> Response:
+        return _file(*await self.service.export_daily_report(user, body.daily_plan_id))
 
     async def export_team_week(self, user: CurrentUser, body: TeamWeekExportRequest) -> Response:
         return _file(*await self.service.export_team_week(user, body.team_id, body.start_date))

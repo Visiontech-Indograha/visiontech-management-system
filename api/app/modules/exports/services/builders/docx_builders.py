@@ -8,8 +8,27 @@ dokumentasi per titik (foto + remark), Bill of Material estimasi, penutup & pena
 """
 from __future__ import annotations
 
-from app.modules.exports.services.builders.model import COMPANY, CompletionReport, qty, tgl
+import io
+from collections import defaultdict
+from datetime import date, timedelta
+from typing import Any
+
+from docx.document import Document as DocxDocument
+from docx.shared import Cm
+
+from app.modules.exports.services.builders.model import (
+    COMPANY,
+    AssetLine,
+    CompletionReport,
+    DailyReport,
+    ReportPoint,
+    coord_text,
+    plan_status_label,
+    qty,
+    tgl,
+)
 from app.shared.documents import docx_kit as kit
+from app.shared.documents.static_map import STATUS_LABEL
 
 
 def _signature_blocks(r: CompletionReport) -> list[tuple[str, str, str, bytes | None]]:
@@ -30,10 +49,224 @@ def _integrity(doc: object, r: CompletionReport) -> None:
     kit.para(doc, text, italic=True, size=8)  # type: ignore[arg-type]
 
 
+def _schedule_days(order: dict[str, Any], points: list[ReportPoint]) -> list[date]:
+    """Seluruh tanggal jadwal order: rentang start..end order ditambah tanggal item (urut, tanpa duplikat)."""
+    days: set[date] = {p.work_date for p in points if p.work_date}
+    start, end = order.get("start_work_date"), order.get("end_work_date")
+    if isinstance(start, date) and isinstance(end, date) and start <= end and (end - start).days <= 62:
+        days.update(start + timedelta(days=n) for n in range((end - start).days + 1))
+    return sorted(days)
+
+
+def _daily_summary(doc: DocxDocument, points: list[ReportPoint], start_no: int, days: list[date] | None = None) -> None:
+    """Ringkasan laporan harian per tanggal jadwal: tim, item, progres, catatan, alasan tunda.
+    `days` = semua tanggal jadwal order (tanggal tanpa item tetap tampil)."""
+    kit.heading(doc, f"{start_no}. Ringkasan Laporan Harian")
+    if not points and not days:
+        kit.para(doc, "Belum ada laporan harian.", italic=True)
+        return
+    by_day: dict[date, list[ReportPoint]] = defaultdict(list)
+    for p in points:
+        by_day[p.work_date].append(p)
+    for day in sorted(set(by_day) | set(days or [])):
+        rows = by_day.get(day, [])
+        if not rows:
+            kit.para(doc, f"{tgl(day)} - Tidak ada pekerjaan tercatat.")
+            continue
+        teams = ", ".join(sorted({p.team_name for p in rows if p.team_name})) or "-"
+        kit.para(doc, f"{tgl(day)} - Tim: {teams}")
+        kit.grid(
+            doc,
+            ["Item", "Status", "Progres", "Catatan"],
+            [
+                (
+                    p.title,
+                    p.status_label,
+                    f"{qty(p.completed)} / {qty(p.target)} ({qty(p.progress)}%)",
+                    "; ".join(x for x in (p.notes, f"Tunda: {p.delay_reason}" if p.delay_reason else None) if x),
+                )
+                for p in rows
+            ],
+            [6, 3, 3.5, 4.5],
+        )
+
+
+def _map_section(doc: DocxDocument, r: CompletionReport, no: int) -> None:
+    """Halaman peta lokasi: citra satelit dengan penanda bernomor (sama dengan nomor pada tabel)."""
+    kit.heading(doc, f"{no}. Peta Lokasi")
+    if not r.has_coordinates:
+        kit.para(doc, "Koordinat lokasi belum diisi.", italic=True)
+        return
+    if r.map_image:
+        doc.add_paragraph().add_run().add_picture(io.BytesIO(r.map_image), width=Cm(16.5))
+        kit.para(
+            doc,
+            f"Hijau = {STATUS_LABEL['EXISTING']}, biru = {STATUS_LABEL['PROPOSED']}. "
+            "Nomor sesuai urutan titik pada tabel.",
+            italic=True,
+            size=8,
+        )
+    else:
+        kit.para(doc, "Peta tidak tersedia (tanpa koneksi ke citra satelit).", italic=True)
+
+
+def _work_period(order: dict[str, Any], points: list[ReportPoint]) -> str:
+    """Periode kerja: tanggal order; bila kosong, rentang tanggal item; bila keduanya kosong → belum ditetapkan."""
+    start, end = order.get("start_work_date"), order.get("end_work_date")
+    if not (start or end) and points:
+        dates = [p.work_date for p in points if p.work_date]
+        start, end = (min(dates), max(dates)) if dates else (None, None)
+    if not (start or end):
+        return "Belum ditetapkan"
+    return f"{tgl(start)} s.d. {tgl(end)}"
+
+
+def order_sheet_docx(r: CompletionReport) -> bytes:
+    """Surat tugas / lembar order: dibuat PM dari data order, tanpa tanda tangan."""
+    o = r.order
+    doc = kit.new_document()
+    kit.letterhead(doc, COMPANY, "Surat Tugas Pekerjaan", f"Nomor order: {r.number}", o.get("client_name"),
+                   logos=r.logos)
+
+    kit.heading(doc, "1. Data Order")
+    kit.info_table(
+        doc,
+        [
+            ("Klien", o.get("client_name")),
+            ("Proyek / Judul pekerjaan", o.get("project_title")),
+            ("Divisi", o.get("division_name")),
+            ("Project Manager", o.get("pm_name")),
+            ("Lokasi", o.get("site_address")),
+            ("Koordinat lokasi", coord_text(o.get("site_lat"), o.get("site_lng"))),
+            ("Jadwal kerja", _work_period(o, r.points)),
+            ("Target volume", f"{qty(o.get('total_target_unit'))} {o.get('unit_measure') or ''}".strip()),
+        ],
+    )
+
+    kit.heading(doc, "2. Ruang Lingkup Pekerjaan")
+    if r.points:
+        kit.grid(
+            doc,
+            ["No", "Titik / Pekerjaan", "Lokasi", "Fase", "Target", "Tanggal rencana"],
+            [
+                (i, p.title, p.location, p.phase_label, qty(p.target), tgl(p.work_date))
+                for i, p in enumerate(r.points, start=1)
+            ],
+            [1, 6, 4, 2.5, 2, 3],
+        )
+    else:
+        kit.para(doc, "Rincian titik belum dibuat.", italic=True)
+
+    kit.heading(doc, "3. Material Perkiraan (BoM)")
+    if r.bom:
+        kit.grid(
+            doc,
+            ["No", "Kode", "Material", "Estimasi", "Satuan"],
+            [
+                (i, b.get("material_code"), b.get("material_name"), qty(b.get("estimated_qty")), b.get("unit"))
+                for i, b in enumerate(r.bom, start=1)
+            ],
+            [1, 2.5, 8, 3, 2.5],
+        )
+    else:
+        kit.para(doc, "Belum ada BoM.", italic=True)
+
+    kit.heading(doc, "4. Catatan")
+    kit.para(doc, o.get("summary_notes") or "Pekerjaan dilaksanakan sesuai lingkup dan jadwal di atas.")
+    kit.para(
+        doc,
+        f"Diterbitkan oleh {r.generated_by} pada {tgl(r.generated_at)}. Dokumen ini tidak memerlukan tanda tangan.",
+        italic=True,
+        size=8,
+    )
+    return kit.to_bytes(doc)
+
+
+def _assets_table(doc: DocxDocument, assets: list[AssetLine], *, with_date: bool) -> None:
+    """Tabel kendaraan & alat yang dipinjam; kosong → kalimat keterangan (bukan tabel kosong)."""
+    if not assets:
+        kit.para(doc, "Tidak ada kendaraan atau alat yang dipinjam.", italic=True)
+        return
+    headers = ["No", "Jenis", "Nama / kode", "Pemegang", "Status"]
+    if with_date:
+        headers.insert(1, "Tanggal")
+    rows = []
+    for i, a in enumerate(assets, start=1):
+        name = f"{a.name}\n{a.code}" if a.code else a.name
+        row: list[Any] = [i, a.kind, name, a.holder or "-", a.status or "-"]
+        if with_date:
+            row.insert(1, tgl(a.work_date))
+        rows.append(tuple(row))
+    widths = [1, 3, 2.6, 5, 3, 3] if with_date else [1, 2.6, 6, 4, 3]
+    kit.grid(doc, headers, rows, widths)
+
+
+def daily_report_docx(r: DailyReport) -> bytes:
+    """Laporan harian satu jadwal (cetak per hari): header jadwal, tabel item, foto, laporan ketua."""
+    doc = kit.new_document()
+    kit.letterhead(doc, COMPANY, "Laporan Harian Tim", tgl(r.work_date), r.team_name, logos=r.logos)
+
+    kit.heading(doc, "1. Informasi Jadwal")
+    kit.info_table(
+        doc,
+        [
+            ("Tanggal kerja", tgl(r.work_date)),
+            ("Tim / Divisi", f"{r.team_name} / {r.division_name}"),
+            ("Ketua tim", r.leader_name),
+            ("Lokasi", r.site_name),
+            ("Status jadwal", plan_status_label(r.status)),
+            ("Anggota", ", ".join(sorted({m.full_name for m in r.roster if not m.is_leader})) or "-"),
+        ],
+    )
+
+    kit.heading(doc, "2. Item Pekerjaan")
+    if r.points:
+        kit.grid(
+            doc,
+            ["No", "Pekerjaan", "Status", "Progres", "Catatan / alasan tunda"],
+            [
+                (
+                    i,
+                    f"{p.title}\n{p.location}" if p.location else p.title,
+                    p.status_label,
+                    f"{qty(p.completed)} / {qty(p.target)} ({qty(p.progress)}%)",
+                    "; ".join(x for x in (p.notes, f"Tunda: {p.delay_reason}" if p.delay_reason else None) if x),
+                )
+                for i, p in enumerate(r.points, start=1)
+            ],
+            [1, 6, 2.6, 3, 5],
+        )
+    else:
+        kit.para(doc, "Belum ada item pekerjaan pada jadwal ini.", italic=True)
+
+    kit.heading(doc, "3. Kendaraan & Alat")
+    _assets_table(doc, r.assets, with_date=False)
+
+    kit.heading(doc, "4. Laporan Ketua Tim")
+    kit.para(doc, r.summary or "Belum ada laporan ringkasan dari ketua tim.")
+    if r.obstacles:
+        kit.para(doc, f"Kendala: {r.obstacles}")
+
+    photos = [(f"{p.title} - {ph.label}", ph.image) for p in r.points for ph in p.photos]
+    if photos:
+        kit.heading(doc, "5. Dokumentasi")
+        kit.picture_pair(doc, photos[:12])
+
+    kit.para(
+        doc,
+        f"Dicetak oleh {r.generated_by} pada {tgl(r.generated_at)}"
+        + (f"; laporan dikirim {tgl(r.report_submitted_at)}" if r.report_submitted_at else ""),
+        italic=True,
+        size=8,
+    )
+    return kit.to_bytes(doc)
+
+
 def bast_docx(r: CompletionReport) -> bytes:
     o = r.order
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Berita Acara Serah Terima Pekerjaan", f"Nomor: {r.number}", o.get("client_name"))
+    kit.letterhead(doc, COMPANY, "Berita Acara Serah Terima Pekerjaan", f"Nomor: {r.number}", o.get("client_name"),
+                   logos=r.logos)
 
     kit.heading(doc, "1. Informasi Pekerjaan")
     kit.info_table(doc, [
@@ -44,6 +277,7 @@ def bast_docx(r: CompletionReport) -> bytes:
         ("Periode", f"{tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}"),
         ("Realisasi volume",
          f"{qty(o.get('completed_target_unit'))} / {qty(o.get('total_target_unit'))} {o.get('unit_measure') or ''}"),
+        ("Koordinat lokasi", coord_text(o.get("site_lat"), o.get("site_lng"))),
     ])
 
     kit.heading(doc, "2. Rincian Pekerjaan per Titik")
@@ -67,9 +301,12 @@ def bast_docx(r: CompletionReport) -> bytes:
     if o.get("obstacles"):
         kit.para(doc, f"Kendala: {o['obstacles']}")
 
+    _daily_summary(doc, r.points, start_no=5, days=_schedule_days(o, r.points))
+    _map_section(doc, r, no=6)
+
     photos = r.all_photos
     if photos:
-        kit.heading(doc, "5. Dokumentasi")
+        kit.heading(doc, "7. Dokumentasi")
         kit.picture_pair(doc, photos[:12])
 
     kit.heading(doc, "Pengesahan")
@@ -83,7 +320,8 @@ def survey_report_docx(r: CompletionReport) -> bytes:
     o = r.order
     points = r.survey_points
     doc = kit.new_document()
-    kit.letterhead(doc, COMPANY, "Survey Report", o.get("project_title"), o.get("client_name"))
+    kit.letterhead(doc, COMPANY, "Survey Report", o.get("project_title"), o.get("client_name"),
+                   logos=r.logos)
 
     dates = sorted({p.work_date for p in points})
     kit.heading(doc, "1. Informasi Survei")

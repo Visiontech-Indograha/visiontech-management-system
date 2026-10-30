@@ -9,6 +9,15 @@
       "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
       "title": "Login",
       "type": "string"
+     },
+     "system_role": {
+      "default": "EMPLOYEE",
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role",
+      "type": "string"
      }
     },
     "required": [
@@ -75,6 +84,17 @@
       ],
       "title": "Login"
      },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
+     },
      "user_id": {
       "anyOf": [
        {
@@ -92,6 +112,24 @@
      "exists"
     ],
     "title": "AccountOut",
+    "type": "object"
+   },
+   "AccountRoleUpdate": {
+    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).",
+    "properties": {
+     "system_role": {
+      "enum": [
+       "EMPLOYEE",
+       "TEAM_LEADER"
+      ],
+      "title": "System Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "system_role"
+    ],
+    "title": "AccountRoleUpdate",
     "type": "object"
    },
    "AccountWithPassword": {
@@ -151,6 +189,17 @@
        }
       ],
       "title": "Login"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
      },
      "temporary_password": {
       "title": "Temporary Password",
@@ -325,6 +374,81 @@
      "current_build"
     ],
     "title": "AppUpdateOut",
+    "type": "object"
+   },
+   "AssetAvailabilityOut": {
+    "description": "Ketersediaan satu alat/kendaraan pada satu tanggal jadwal.",
+    "properties": {
+     "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+     },
+     "asset_name": {
+      "title": "Asset Name",
+      "type": "string"
+     },
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     },
+     "available": {
+      "title": "Available",
+      "type": "boolean"
+     },
+     "status": {
+      "enum": [
+       "ready",
+       "allocated",
+       "loaned",
+       "damaged",
+       "lost",
+       "pension"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "used_by_requested_team": {
+      "default": false,
+      "title": "Used By Requested Team",
+      "type": "boolean"
+     },
+     "used_by_team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Used By Team Id"
+     },
+     "used_by_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Used By Team Name"
+     }
+    },
+    "required": [
+     "asset_type",
+     "asset_id",
+     "asset_name",
+     "status",
+     "available"
+    ],
+    "title": "AssetAvailabilityOut",
     "type": "object"
    },
    "AssetStatusUpdate": {
@@ -855,6 +979,17 @@
        }
       ],
       "title": "Face Similarity"
+     },
+     "face_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Face Status"
      },
      "id": {
       "format": "uuid",
@@ -1505,6 +1640,20 @@
      "file"
     ],
     "title": "Body_set_survey_logo_api_v1_exports_survey_logos__role__put",
+    "type": "object"
+   },
+   "Body_set_team_logo_api_v1_teams__team_id__logo_put": {
+    "properties": {
+     "file": {
+      "contentMediaType": "application/octet-stream",
+      "title": "File",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file"
+    ],
+    "title": "Body_set_team_logo_api_v1_teams__team_id__logo_put",
     "type": "object"
    },
    "Body_upload_document_api_v1_files_upload_post": {
@@ -2274,7 +2423,8 @@
        "SURVEY_REPORT",
        "BAST_PDF",
        "BOQ",
-       "PROGRESS_SLIDES"
+       "PROGRESS_SLIDES",
+       "ORDER_SHEET"
       ],
       "title": "Template",
       "type": "string"
@@ -2284,6 +2434,21 @@
      "template"
     ],
     "title": "CompletionExportRequest",
+    "type": "object"
+   },
+   "CopyToDivisionIn": {
+    "description": "Divisi tujuan salinan jenis pekerjaan.",
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "division_id"
+    ],
+    "title": "CopyToDivisionIn",
     "type": "object"
    },
    "CorrectionCreate": {
@@ -2313,6 +2478,11 @@
       ],
       "title": "Decision",
       "type": "string"
+     },
+     "force": {
+      "default": false,
+      "title": "Force",
+      "type": "boolean"
      },
      "note": {
       "anyOf": [
@@ -2429,6 +2599,327 @@
      "create_at"
     ],
     "title": "CorrectionOut",
+    "type": "object"
+   },
+   "DailyActivateIn": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien: minimal satu item (pekerjaan, order, lokasi).",
+    "properties": {
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/PlanItemCreate"
+      },
+      "maxItems": 50,
+      "minItems": 1,
+      "title": "Items",
+      "type": "array"
+     }
+    },
+    "required": [
+     "items"
+    ],
+    "title": "DailyActivateIn",
+    "type": "object"
+   },
+   "DailyBulkAsset": {
+    "description": "Aset yang akan dipakai pekerjaan massal; hanya dipakai untuk peringatan bentrok per sel (tidak menulis).",
+    "properties": {
+     "asset_id": {
+      "format": "uuid",
+      "title": "Asset Id",
+      "type": "string"
+     },
+     "asset_type": {
+      "enum": [
+       "TOOL",
+       "VEHICLE"
+      ],
+      "title": "Asset Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "asset_type",
+     "asset_id"
+    ],
+    "title": "DailyBulkAsset",
+    "type": "object"
+   },
+   "DailyBulkCellOut": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "message": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Message"
+     },
+     "reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     },
+     "status": {
+      "enum": [
+       "CREATED",
+       "SKIPPED"
+      ],
+      "title": "Status",
+      "type": "string"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "warnings": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "work_date",
+     "status"
+    ],
+    "title": "DailyBulkCellOut",
+    "type": "object"
+   },
+   "DailyBulkIn": {
+    "description": "Alokasi massal (matriks mingguan): banyak tim × banyak tanggal dalam satu permintaan.",
+    "properties": {
+     "assets": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkAsset"
+      },
+      "maxItems": 20,
+      "title": "Assets",
+      "type": "array"
+     },
+     "attendance_radius_m": {
+      "anyOf": [
+       {
+        "maximum": 5000.0,
+        "minimum": 10.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": 150,
+      "title": "Attendance Radius M"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "maxLength": 150,
+        "minLength": 2,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "target": {
+      "default": "DRAFT",
+      "enum": [
+       "DRAFT",
+       "APPROVED"
+      ],
+      "title": "Target",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkIn",
+    "type": "object"
+   },
+   "DailyBulkOut": {
+    "properties": {
+     "cells": {
+      "items": {
+       "$ref": "#/components/schemas/DailyBulkCellOut"
+      },
+      "title": "Cells",
+      "type": "array"
+     },
+     "created": {
+      "title": "Created",
+      "type": "integer"
+     },
+     "skipped": {
+      "title": "Skipped",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "created",
+     "skipped",
+     "cells"
+    ],
+    "title": "DailyBulkOut",
+    "type": "object"
+   },
+   "DailyBulkStandbyIn": {
+    "description": "Siaga untuk hari kosong: tim × tanggal; sel yang sudah punya jadwal dilewati.",
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "team_ids": {
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 30,
+      "minItems": 1,
+      "title": "Team Ids",
+      "type": "array"
+     },
+     "work_dates": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "maxItems": 31,
+      "minItems": 1,
+      "title": "Work Dates",
+      "type": "array"
+     }
+    },
+    "required": [
+     "division_id",
+     "team_ids",
+     "work_dates"
+    ],
+    "title": "DailyBulkStandbyIn",
+    "type": "object"
+   },
+   "DailyBulkWarning": {
+    "description": "Peringatan per sel yang tidak menggagalkan pembuatan: LEADER_CUTI (ketua cuti), ASET_BENTROK (aset dipinjam).",
+    "properties": {
+     "code": {
+      "enum": [
+       "LEADER_CUTI",
+       "ASET_BENTROK"
+      ],
+      "title": "Code",
+      "type": "string"
+     },
+     "message": {
+      "title": "Message",
+      "type": "string"
+     }
+    },
+    "required": [
+     "code",
+     "message"
+    ],
+    "title": "DailyBulkWarning",
     "type": "object"
    },
    "DailyFormOptions": {
@@ -2607,6 +3098,18 @@
       "default": 150,
       "title": "Attendance Radius M"
      },
+     "backdate_reason": {
+      "anyOf": [
+       {
+        "maxLength": 300,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Backdate Reason"
+     },
      "clock_in_time": {
       "default": "07:00:00",
       "format": "time",
@@ -2622,6 +3125,15 @@
      "division_id": {
       "format": "uuid",
       "title": "Division Id",
+      "type": "string"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
       "type": "string"
      },
      "project_id": {
@@ -2746,6 +3258,11 @@
       ],
       "title": "Attendance Radius M"
      },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
+     },
      "clock_in_time": {
       "format": "time",
       "title": "Clock In Time",
@@ -2792,6 +3309,15 @@
       },
       "title": "Items",
       "type": "array"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
      },
      "leader_employee_id": {
       "format": "uuid",
@@ -2958,6 +3484,57 @@
     "title": "DailyPlanDetail",
     "type": "object"
    },
+   "DailyPlanLocationUpdate": {
+    "description": "Ubah lokasi jadwal DISETUJUI yang belum dimulai (PM/OM). Lokasi selalu lengkap: nama dan koordinat.",
+    "properties": {
+     "attendance_radius_m": {
+      "maximum": 5000.0,
+      "minimum": 10.0,
+      "title": "Attendance Radius M",
+      "type": "integer"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "maximum": 90.0,
+        "minimum": -90.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "maximum": 180.0,
+        "minimum": -180.0,
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Site Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "site_name",
+     "site_lat",
+     "site_lng",
+     "attendance_radius_m"
+    ],
+    "title": "DailyPlanLocationUpdate",
+    "type": "object"
+   },
    "DailyPlanOut": {
     "properties": {
      "approved_at": {
@@ -2994,6 +3571,11 @@
        }
       ],
       "title": "Attendance Radius M"
+     },
+     "can_manage": {
+      "default": false,
+      "title": "Can Manage",
+      "type": "boolean"
      },
      "clock_in_time": {
       "format": "time",
@@ -3033,6 +3615,15 @@
       "default": 0,
       "title": "Item Count",
       "type": "integer"
+     },
+     "kind": {
+      "default": "WORK",
+      "enum": [
+       "WORK",
+       "STANDBY"
+      ],
+      "title": "Kind",
+      "type": "string"
      },
      "leader_employee_id": {
       "format": "uuid",
@@ -3368,6 +3959,20 @@
     "title": "DailyReportCreate",
     "type": "object"
    },
+   "DailyReportExportRequest": {
+    "properties": {
+     "daily_plan_id": {
+      "format": "uuid",
+      "title": "Daily Plan Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "daily_plan_id"
+    ],
+    "title": "DailyReportExportRequest",
+    "type": "object"
+   },
    "DailyReportOut": {
     "properties": {
      "create_at": {
@@ -3465,7 +4070,8 @@
      },
      "default_qty": {
       "default": 1.0,
-      "minimum": 0.0,
+      "exclusiveMinimum": 0.0,
+      "maximum": 99999999.99,
       "title": "Default Qty",
       "type": "number"
      },
@@ -3507,6 +4113,7 @@
      "unit": {
       "default": "Unit",
       "maxLength": 50,
+      "minLength": 1,
       "title": "Unit",
       "type": "string"
      }
@@ -3609,7 +4216,8 @@
      "default_qty": {
       "anyOf": [
        {
-        "minimum": 0.0,
+        "exclusiveMinimum": 0.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -3670,6 +4278,7 @@
       "anyOf": [
        {
         "maxLength": 50,
+        "minLength": 1,
         "type": "string"
        },
        {
@@ -4332,6 +4941,17 @@
        }
       ],
       "title": "File Id"
+     },
+     "file_mime": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Mime"
      },
      "id": {
       "format": "uuid",
@@ -5770,6 +6390,56 @@
     "title": "LeaveBalanceResponse",
     "type": "object"
    },
+   "LeaveCancel": {
+    "properties": {
+     "reason": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reason"
+     }
+    },
+    "title": "LeaveCancel",
+    "type": "object"
+   },
+   "LeaveConflict": {
+    "description": "Jadwal tim (APPROVED/ONGOING) yang bertabrakan dengan hari cuti karyawan.",
+    "properties": {
+     "plan_id": {
+      "format": "uuid",
+      "title": "Plan Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "plan_id",
+     "work_date",
+     "team_name",
+     "status"
+    ],
+    "title": "LeaveConflict",
+    "type": "object"
+   },
    "LeaveCreate": {
     "properties": {
      "attachment_file_id": {
@@ -5845,6 +6515,24 @@
        }
       ],
       "title": "Attachment Path"
+     },
+     "cancel_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cancel Note"
+     },
+     "conflicts": {
+      "items": {
+       "$ref": "#/components/schemas/LeaveConflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
      },
      "create_at": {
       "format": "date-time",
@@ -5930,6 +6618,17 @@
       ],
       "title": "Rejection Note"
      },
+     "review_note": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Note"
+     },
      "reviewed_at": {
       "anyOf": [
        {
@@ -5992,6 +6691,11 @@
    },
    "LeaveReview": {
     "properties": {
+     "acknowledge_conflicts": {
+      "default": false,
+      "title": "Acknowledge Conflicts",
+      "type": "boolean"
+     },
      "decision": {
       "enum": [
        "APPROVED",
@@ -7109,6 +7813,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -7309,6 +8025,18 @@
       "format": "date",
       "title": "Stay Start Date",
       "type": "string"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      }
     },
     "required": [
@@ -8695,6 +9423,45 @@
     "title": "OrderOption",
     "type": "object"
    },
+   "OrderScheduleOut": {
+    "description": "Jadwal harian yang memuat order + ringkasan target order (untuk mencegah alokasi melebihi target).",
+    "properties": {
+     "completed_target_unit": {
+      "title": "Completed Target Unit",
+      "type": "integer"
+     },
+     "plans": {
+      "items": {
+       "$ref": "#/components/schemas/DailyPlanOut"
+      },
+      "title": "Plans",
+      "type": "array"
+     },
+     "scheduled_target_qty": {
+      "description": "Jumlah target item yang sudah dijadwalkan untuk order ini",
+      "title": "Scheduled Target Qty",
+      "type": "number"
+     },
+     "total_target_unit": {
+      "title": "Total Target Unit",
+      "type": "integer"
+     },
+     "unscheduled_target_qty": {
+      "description": "Sisa target yang belum dijadwalkan (total - terjadwal)",
+      "title": "Unscheduled Target Qty",
+      "type": "number"
+     }
+    },
+    "required": [
+     "total_target_unit",
+     "completed_target_unit",
+     "scheduled_target_qty",
+     "unscheduled_target_qty",
+     "plans"
+    ],
+    "title": "OrderScheduleOut",
+    "type": "object"
+   },
    "OvertimeCreate": {
     "description": "Schema for reporting overtime (domain.js REPORT_OVERTIME).\n\nAturan validasi seperti jam 0–12 dan alasan yang wajib diisi akan\ndiperiksa secara terpusat di OvertimeService. Hal ini dilakukan\nagar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.",
     "properties": {
@@ -8777,6 +9544,11 @@
    "OvertimeResponse": {
     "description": "Schema for a detailed overtime record response.",
     "properties": {
+     "can_review": {
+      "default": false,
+      "title": "Can Review",
+      "type": "boolean"
+     },
      "created_at": {
       "format": "date-time",
       "title": "Created At",
@@ -9272,7 +10044,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -9283,22 +10055,41 @@
       "title": "Target Qty"
      },
      "task_phase": {
-      "default": "INSTALLATION",
-      "enum": [
-       "SURVEY",
-       "PREPARATION",
-       "INSTALLATION",
-       "REPLACEMENT",
-       "MAINTENANCE"
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
       ],
-      "title": "Task Phase",
-      "type": "string"
+      "title": "Task Phase"
      },
      "title": {
       "maxLength": 200,
       "minLength": 3,
       "title": "Title",
       "type": "string"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
      },
      "work_type_id": {
       "format": "uuid",
@@ -9573,6 +10364,17 @@
       "title": "Title",
       "type": "string"
      },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
+     },
      "update_at": {
       "format": "date-time",
       "title": "Update At",
@@ -9749,7 +10551,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 99999999.0,
+        "maximum": 99999999.99,
         "type": "number"
        },
        {
@@ -9791,6 +10593,19 @@
        }
       ],
       "title": "Title"
+     },
+     "unit_measure": {
+      "anyOf": [
+       {
+        "maxLength": 50,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Unit Measure"
      },
      "work_type_id": {
       "anyOf": [
@@ -10320,7 +11135,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "type": "number"
        },
        {
@@ -10570,7 +11385,7 @@
       "anyOf": [
        {
         "exclusiveMinimum": 0.0,
-        "maximum": 9999999999.0,
+        "maximum": 9999999999.99,
         "type": "number"
        },
        {
@@ -11428,6 +12243,29 @@
       ],
       "title": "Leader Name"
      },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
+     },
      "member_count": {
       "default": 0,
       "title": "Member Count",
@@ -11522,6 +12360,29 @@
       ],
       "title": "Leader Name"
      },
+     "logo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo File Id"
+     },
+     "logo_url": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Logo Url"
+     },
      "member_count": {
       "default": 0,
       "title": "Member Count",
@@ -11567,6 +12428,31 @@
      "create_at"
     ],
     "title": "TeamListItem",
+    "type": "object"
+   },
+   "TeamLogoOut": {
+    "properties": {
+     "logo_file_id": {
+      "format": "uuid",
+      "title": "Logo File Id",
+      "type": "string"
+     },
+     "logo_url": {
+      "title": "Logo Url",
+      "type": "string"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "logo_file_id",
+     "logo_url"
+    ],
+    "title": "TeamLogoOut",
     "type": "object"
    },
    "TeamOption": {
@@ -11748,6 +12634,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "maxLength": 50,
       "minLength": 2,
@@ -11894,6 +12792,29 @@
       "title": "Status",
       "type": "string"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "tool_code": {
       "title": "Tool Code",
       "type": "string"
@@ -12002,6 +12923,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "tool_code": {
       "anyOf": [
        {
@@ -12094,6 +13027,18 @@
        }
       ],
       "title": "Photo File Id"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
      },
      "vehicle_type": {
       "enum": [
@@ -12350,6 +13295,29 @@
       ],
       "title": "Stnk Expired At"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
      "vehicle_id": {
       "format": "uuid",
       "title": "Vehicle Id",
@@ -12443,6 +13411,18 @@
       ],
       "title": "Photo File Id"
      },
+     "team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
      "vehicle_type": {
       "anyOf": [
        {
@@ -12461,6 +13441,281 @@
      }
     },
     "title": "VehicleUpdate",
+    "type": "object"
+   },
+   "WeeklyCell": {
+    "properties": {
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "item_count": {
+      "default": 0,
+      "title": "Item Count",
+      "type": "integer"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyItemBrief"
+      },
+      "maxItems": 20,
+      "title": "Items",
+      "type": "array"
+     },
+     "kind": {
+      "anyOf": [
+       {
+        "enum": [
+         "WORK",
+         "STANDBY"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kind"
+     },
+     "orders": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyOrderRef"
+      },
+      "title": "Orders",
+      "type": "array"
+     },
+     "status": {
+      "anyOf": [
+       {
+        "enum": [
+         "DRAFT",
+         "SUBMITTED",
+         "APPROVED",
+         "ONGOING",
+         "COMPLETED"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Status"
+     },
+     "work_date": {
+      "format": "date",
+      "title": "Work Date",
+      "type": "string"
+     }
+    },
+    "required": [
+     "work_date"
+    ],
+    "title": "WeeklyCell",
+    "type": "object"
+   },
+   "WeeklyDivision": {
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "division_id",
+     "name"
+    ],
+    "title": "WeeklyDivision",
+    "type": "object"
+   },
+   "WeeklyItemBrief": {
+    "properties": {
+     "completed_qty": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completed Qty"
+     },
+     "completion_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Completion Id"
+     },
+     "item_id": {
+      "format": "uuid",
+      "title": "Item Id",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "target_qty": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Qty"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
+     }
+    },
+    "required": [
+     "item_id",
+     "title",
+     "status"
+    ],
+    "title": "WeeklyItemBrief",
+    "type": "object"
+   },
+   "WeeklyMatrixOut": {
+    "properties": {
+     "days": {
+      "items": {
+       "format": "date",
+       "type": "string"
+      },
+      "title": "Days",
+      "type": "array"
+     },
+     "divisions": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyDivision"
+      },
+      "title": "Divisions",
+      "type": "array"
+     },
+     "rows": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyRow"
+      },
+      "title": "Rows",
+      "type": "array"
+     },
+     "week_end": {
+      "format": "date",
+      "title": "Week End",
+      "type": "string"
+     },
+     "week_start": {
+      "format": "date",
+      "title": "Week Start",
+      "type": "string"
+     }
+    },
+    "required": [
+     "week_start",
+     "week_end",
+     "days",
+     "divisions",
+     "rows"
+    ],
+    "title": "WeeklyMatrixOut",
+    "type": "object"
+   },
+   "WeeklyOrderRef": {
+    "description": "Order klien yang dikerjakan pada sel. `remaining_qty` = total - selesai; `unscheduled_qty` = total - sudah\ndijadwalkan di semua jadwal (sisa yang belum dialokasikan).",
+    "properties": {
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "completion_id": {
+      "format": "uuid",
+      "title": "Completion Id",
+      "type": "string"
+     },
+     "order_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Order Number"
+     },
+     "project_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Project Title"
+     },
+     "remaining_qty": {
+      "title": "Remaining Qty",
+      "type": "number"
+     },
+     "total_target_unit": {
+      "title": "Total Target Unit",
+      "type": "integer"
+     },
+     "unscheduled_qty": {
+      "title": "Unscheduled Qty",
+      "type": "number"
+     }
+    },
+    "required": [
+     "completion_id",
+     "total_target_unit",
+     "remaining_qty",
+     "unscheduled_qty"
+    ],
+    "title": "WeeklyOrderRef",
     "type": "object"
    },
    "WeeklyPresentationOut": {
@@ -12529,6 +13784,55 @@
      "completed_plans"
     ],
     "title": "WeeklyPresentationOut",
+    "type": "object"
+   },
+   "WeeklyRow": {
+    "properties": {
+     "cells": {
+      "items": {
+       "$ref": "#/components/schemas/WeeklyCell"
+      },
+      "title": "Cells",
+      "type": "array"
+     },
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "division_name": {
+      "title": "Division Name",
+      "type": "string"
+     },
+     "leader_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Name"
+     },
+     "team_id": {
+      "format": "uuid",
+      "title": "Team Id",
+      "type": "string"
+     },
+     "team_name": {
+      "title": "Team Name",
+      "type": "string"
+     }
+    },
+    "required": [
+     "team_id",
+     "team_name",
+     "division_id",
+     "division_name",
+     "cells"
+    ],
+    "title": "WeeklyRow",
     "type": "object"
    },
    "WorkCompletionAccDecision": {
@@ -12886,21 +14190,8 @@
         "type": "null"
        }
       ],
+      "description": "Klien dari master (wajib, kecuali lewat proyek)",
       "title": "Client Id"
-     },
-     "client_name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "minLength": 2,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "Nama klien (kosong = dari proyek)",
-      "title": "Client Name"
      },
      "division_id": {
       "anyOf": [
@@ -13665,18 +14956,6 @@
       ],
       "title": "Client Id"
      },
-     "client_name": {
-      "anyOf": [
-       {
-        "maxLength": 150,
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Client Name"
-     },
      "order_number": {
       "anyOf": [
        {
@@ -13905,6 +15184,24 @@
    "WorkTypeIn": {
     "description": "Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.",
     "properties": {
+     "default_phase": {
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
+     },
      "description": {
       "anyOf": [
        {
@@ -13971,6 +15268,13 @@
       },
       "title": "Photos",
       "type": "array"
+     },
+     "unit_measure": {
+      "default": "Unit",
+      "maxLength": 50,
+      "minLength": 1,
+      "title": "Unit Measure",
+      "type": "string"
      }
     },
     "required": [
@@ -13989,6 +15293,24 @@
       },
       "title": "Default Materials",
       "type": "array"
+     },
+     "default_phase": {
+      "anyOf": [
+       {
+        "enum": [
+         "SURVEY",
+         "PREPARATION",
+         "INSTALLATION",
+         "REPLACEMENT",
+         "MAINTENANCE"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Default Phase"
      },
      "description": {
       "anyOf": [
@@ -14085,6 +15407,11 @@
       },
       "title": "Photos",
       "type": "array"
+     },
+     "unit_measure": {
+      "default": "Unit",
+      "title": "Unit Measure",
+      "type": "string"
      }
     },
     "required": [
@@ -14200,7 +15527,7 @@
  },
  "info": {
   "title": "Visiontech VMS",
-  "version": "0.1.0"
+  "version": "1.5.0"
  },
  "openapi": "3.1.0",
  "paths": {
@@ -14343,6 +15670,80 @@
     "summary": "Check Android Update",
     "tags": [
      "App"
+    ]
+   }
+  },
+  "/api/v1/assets/availability": {
+   "get": {
+    "description": "Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana).",
+    "operationId": "asset_availability_api_v1_assets_availability_get",
+    "parameters": [
+     {
+      "description": "Tanggal jadwal (YYYY-MM-DD)",
+      "in": "query",
+      "name": "date",
+      "required": true,
+      "schema": {
+       "description": "Tanggal jadwal (YYYY-MM-DD)",
+       "format": "date",
+       "title": "Date",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Tim peminta: tandai aset yang dipakai tim ini",
+      "in": "query",
+      "name": "team_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tim peminta: tandai aset yang dipakai tim ini",
+       "title": "Team Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AssetAvailabilityOut"
+         },
+         "title": "Response Asset Availability Api V1 Assets Availability Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Asset Availability",
+    "tags": [
+     "Assets"
     ]
    }
   },
@@ -17185,7 +18586,7 @@
   },
   "/api/v1/clients": {
    "get": {
-    "description": "Daftar klien.",
+    "description": "Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat.",
     "operationId": "list_clients_api_v1_clients_get",
     "parameters": [
      {
@@ -18140,7 +19541,7 @@
     ]
    },
    "post": {
-    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara.",
+    "description": "Membuat akun baru untuk karyawan dengan kata sandi sementara. Peran lapangan (EMPLOYEE/TEAM_LEADER) opsional;\nhanya HR/SUPER_ADMIN.",
     "operationId": "create_account_api_v1_employees__emp_id__account_post",
     "parameters": [
      {
@@ -18344,6 +19745,65 @@
     ]
    }
   },
+  "/api/v1/employees/{emp_id}/account/role": {
+   "post": {
+    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountRoleUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set Field Role",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
   "/api/v1/employees/{emp_id}/documents": {
    "get": {
     "description": "Daftar dokumen karyawan (milik sendiri, atau semua bagi pengelola dokumen).",
@@ -18471,7 +19931,7 @@
     ]
    },
    "post": {
-    "description": "Mencatat dokumen baru dari berkas yang sudah diunggah; dokumen sejenis yang lama menjadi `extended`.",
+    "description": "Mencatat dokumen dari berkas terunggah (karyawan: dokumen sendiri); yang sejenis jadi `extended`.",
     "operationId": "upload_document_api_v1_employees__emp_id__documents_post",
     "parameters": [
      {
@@ -19124,6 +20584,49 @@
     "summary": "Events",
     "tags": [
      "Events"
+    ]
+   }
+  },
+  "/api/v1/exports/daily-report": {
+   "post": {
+    "description": "Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan\nketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).",
+    "operationId": "export_daily_report_api_v1_exports_daily_report_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyReportExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/octet-stream": {}
+      },
+      "description": "Berkas dokumen"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Export Daily Report",
+    "tags": [
+     "Ekspor Dokumen"
     ]
    }
   },
@@ -20959,7 +22462,7 @@
   },
   "/api/v1/leaves/{leave_id}/cancel": {
    "post": {
-    "description": "Pembatalan permohonan cuti oleh pemohon (status PENDING / APPROVED_BY_PM).",
+    "description": "Pembatalan cuti oleh pemohon, HR, atau OM (PENDING/APPROVED_BY_PM/APPROVED_BY_HR, sebelum hari cuti berakhir).",
     "operationId": "cancel_leave_api_v1_leaves__leave_id__cancel_post",
     "parameters": [
      {
@@ -20973,6 +22476,23 @@
       }
      }
     ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "anyOf": [
+         {
+          "$ref": "#/components/schemas/LeaveCancel"
+         },
+         {
+          "type": "null"
+         }
+        ],
+        "title": "Data"
+       }
+      }
+     }
+    },
     "responses": {
      "200": {
       "content": {
@@ -24125,6 +25645,145 @@
     ]
    }
   },
+  "/api/v1/teams/{team_id}/logo": {
+   "delete": {
+    "description": "Menghapus logo tim → kembali ke logo default. Hanya ketua tim tersebut.",
+    "operationId": "delete_team_logo_api_v1_teams__team_id__logo_delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Delete Team Logo",
+    "tags": [
+     "Teams"
+    ]
+   },
+   "get": {
+    "description": "Isi logo tim (gambar). Anggota tim, PM/OM divisi, HR, dan SUPER_ADMIN; selain itu/tanpa logo → 404.",
+    "operationId": "get_team_logo_api_v1_teams__team_id__logo_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Team Logo",
+    "tags": [
+     "Teams"
+    ]
+   },
+   "put": {
+    "description": "Mengganti logo tim (PNG/JPEG/WebP, maks 2 MB). Hanya ketua tim tersebut (SUPER_ADMIN darurat).",
+    "operationId": "set_team_logo_api_v1_teams__team_id__logo_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "team_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Team Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/Body_set_team_logo_api_v1_teams__team_id__logo_put"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TeamLogoOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Set Team Logo",
+    "tags": [
+     "Teams"
+    ]
+   }
+  },
   "/api/v1/teams/{team_id}/members": {
    "post": {
     "description": "Menambahkan anggota karyawan ke dalam tim.",
@@ -24305,6 +25964,29 @@
     "tags": [
      "Verifikasi Dokumen"
     ]
+   }
+  },
+  "/api/v1/version": {
+   "get": {
+    "description": "Versi API (SemVer) — sama dengan berkas VERSION di root repo.",
+    "operationId": "version_info_api_v1_version_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Version Info Api V1 Version Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Version Info"
    }
   },
   "/api/v1/work-completions": {
@@ -25679,6 +27361,100 @@
     ]
    }
   },
+  "/api/v1/work-plans/daily/bulk": {
+   "post": {
+    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.",
+    "operationId": "bulk_create_daily_api_v1_work_plans_daily_bulk_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Create Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/bulk-standby": {
+   "post": {
+    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).",
+    "operationId": "bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyBulkStandbyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyBulkOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Bulk Standby Daily",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-plans/daily/recent-sites": {
    "get": {
     "description": "Lokasi site yang pernah dipakai tim, terbaru dulu (dipilih ulang di form Jadwal harian).",
@@ -25896,6 +27672,65 @@
      }
     ],
     "summary": "Update Daily Plan",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/activate": {
+   "post": {
+    "description": "Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim.",
+    "operationId": "activate_daily_plan_api_v1_work_plans_daily__daily_plan_id__activate_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyActivateIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyPlanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Activate Daily Plan",
     "tags": [
      "Work Plans (Daily-First)"
     ]
@@ -26396,6 +28231,65 @@
     "summary": "Create Item",
     "tags": [
      "Work Plan Items"
+    ]
+   }
+  },
+  "/api/v1/work-plans/daily/{daily_plan_id}/location": {
+   "patch": {
+    "description": "Ubah lokasi jadwal DISETUJUI yang belum dimulai tanpa mengembalikannya ke draf (PM/OM); tercatat di audit.",
+    "operationId": "update_daily_plan_location_api_v1_work_plans_daily__daily_plan_id__location_patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "daily_plan_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Daily Plan Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DailyPlanLocationUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DailyPlanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update Daily Plan Location",
+    "tags": [
+     "Work Plans (Daily-First)"
     ]
    }
   },
@@ -27238,7 +29132,7 @@
   },
   "/api/v1/work-plans/orders/{completion_id}/schedule": {
    "get": {
-    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu).",
+    "description": "Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order.",
     "operationId": "order_schedule_api_v1_work_plans_orders__completion_id__schedule_get",
     "parameters": [
      {
@@ -27257,11 +29151,7 @@
       "content": {
        "application/json": {
         "schema": {
-         "items": {
-          "$ref": "#/components/schemas/DailyPlanOut"
-         },
-         "title": "Response Order Schedule Api V1 Work Plans Orders  Completion Id  Schedule Get",
-         "type": "array"
+         "$ref": "#/components/schemas/OrderScheduleOut"
         }
        }
       },
@@ -28137,6 +30027,74 @@
     ]
    }
   },
+  "/api/v1/work-plans/weekly": {
+   "get": {
+    "description": "Matriks alokasi mingguan: tim × 7 hari (Senin–Minggu) untuk divisi yang dikelola PM/OM. `division_id` opsional\n(kosong = semua divisi yang dikelola). Sel memuat status, jenis (WORK/STANDBY), ringkasan item, dan sisa target\norder.",
+    "operationId": "weekly_matrix_api_v1_work_plans_weekly_get",
+    "parameters": [
+     {
+      "description": "Senin awal minggu (YYYY-MM-DD)",
+      "in": "query",
+      "name": "week_start",
+      "required": true,
+      "schema": {
+       "description": "Senin awal minggu (YYYY-MM-DD)",
+       "format": "date",
+       "title": "Week Start",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "division_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WeeklyMatrixOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Weekly Matrix",
+    "tags": [
+     "Work Plans (Daily-First)"
+    ]
+   }
+  },
   "/api/v1/work-types": {
    "get": {
     "description": "Daftar jenis pekerjaan beserta template foto (GET).\nJika pengguna adalah Project Manager, daftar otomatis difilter ke divisi miliknya.",
@@ -28504,6 +30462,65 @@
      }
     ],
     "summary": "Update Work Type",
+    "tags": [
+     "Work Types"
+    ]
+   }
+  },
+  "/api/v1/work-types/{type_id}/copy-to-division": {
+   "post": {
+    "description": "Menyalin jenis pekerjaan (template foto + BoM default) ke divisi lain sebagai jenis baru.\nPM hanya dapat menyalin ke divisinya sendiri.",
+    "operationId": "copy_work_type_to_division_api_v1_work_types__type_id__copy_to_division_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "type_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Type Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CopyToDivisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkTypeOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Copy Work Type To Division",
     "tags": [
      "Work Types"
     ]

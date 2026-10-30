@@ -15,7 +15,7 @@ from app.core.repository import BaseRepository, safe_columns
 
 _SELECT = """
     SELECT i.item_id, i.daily_plan_id, wpd.work_date, i.work_type_id, wt.name AS work_type_name, i.title,
-           i.task_phase, i.is_main_deliverable, i.completion_id, wc.project_title AS order_title,
+           i.task_phase, i.unit_measure, i.is_main_deliverable, i.completion_id, wc.project_title AS order_title,
            i.depends_on_item_id, dep.title AS depends_on_title, dep_team.name AS depends_on_team_name,
            -- Pekerjaan yang ditunggu sudah selesai? (mengikuti rantai pindah hari)
            (WITH RECURSIVE ch AS (
@@ -39,8 +39,9 @@ _SELECT = """
     LEFT JOIN team dep_team ON dep_team.team_id = dep_day.team_id
 """
 
-_FIELDS = ("work_type_id", "title", "task_phase", "is_main_deliverable", "completion_id", "depends_on_item_id",
-           "target_qty", "start_time", "end_time", "location_name", "site_lat", "site_lng", "notes")
+_FIELDS = ("work_type_id", "title", "task_phase", "unit_measure", "is_main_deliverable",
+           "completion_id", "depends_on_item_id", "target_qty", "start_time", "end_time", "location_name",
+           "site_lat", "site_lng", "notes")
 
 
 def _params(fields: dict[str, Any]) -> dict[str, Any]:
@@ -84,6 +85,36 @@ class PlanItemRepository(BaseRepository):
             {"id": str(work_type_id)},
         )
         return str(val) if val else None
+
+    async def work_type_kind(self, work_type_id: UUID | str) -> str | None:
+        """Jenis (kind) jenis pekerjaan — menentukan fase default item."""
+        val = await self.scalar(
+            "SELECT kind FROM work_type WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(work_type_id)},
+        )
+        return str(val) if val else None
+
+    async def work_type_template(self, work_type_id: UUID | str) -> Any:
+        """Bawaan jenis pekerjaan untuk item baru: kind, fase bawaan (NULL = ikut kind), dan satuan."""
+        return await self.fetchone(
+            "SELECT kind, default_phase, unit_measure FROM work_type "
+            "WHERE work_type_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(work_type_id)},
+        )
+
+    async def user_division_ids(self, user_id: UUID | str) -> set[str]:
+        """Divisi yang dipimpin/diurus pengguna (divisi karyawan + divisi tempat ia PM/OM)."""
+        rows = await self.fetchall(
+            """
+            SELECT DISTINCT CAST(d.division_id AS text) AS division_id FROM users u
+            JOIN employee e ON e.employee_id = u.employee_id
+            JOIN division d ON d.delete_at IS NULL
+                 AND (d.division_id = e.division_id OR d.pm_id = e.employee_id OR d.om_id = e.employee_id)
+            WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
+            """,
+            {"uid": str(user_id)},
+        )
+        return {r.division_id for r in rows}
 
     async def order_division(self, completion_id: UUID | str) -> Any:
         """(division_id, terbuka?) order klien."""
@@ -165,11 +196,13 @@ class PlanItemRepository(BaseRepository):
         p = _params(fields)
         item_id: UUID = await self.scalar(
             """
-            INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
+            INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, unit_measure,
+                                        is_main_deliverable,
                                         completion_id, depends_on_item_id, target_qty, completed_qty, progress_percent,
                                         status, start_time, end_time, location_name, site_lat, site_lng,
                                         assigned_employee_ids, notes, origin_item_id)
-            VALUES (CAST(:daily AS uuid), CAST(:work_type_id AS uuid), :title, :task_phase, :is_main_deliverable,
+            VALUES (CAST(:daily AS uuid), CAST(:work_type_id AS uuid), :title, :task_phase, :unit_measure,
+                    :is_main_deliverable,
                     CAST(:completion_id AS uuid), CAST(:depends_on_item_id AS uuid), :target_qty, 0, 0, 'TODO',
                     CAST(:start_time AS time), CAST(:end_time AS time), :location_name,
                     CAST(:site_lat AS numeric), CAST(:site_lng AS numeric), CAST(:assigned_employee_ids AS jsonb),
@@ -224,6 +257,28 @@ class PlanItemRepository(BaseRepository):
             {"id": str(item_id)},
         )
         return [r.name for r in rows if r.id not in requirement_ids]
+
+    async def done_items_photo_gaps(self, daily_plan_id: UUID | str) -> list[tuple[str, list[str]]]:
+        """Pekerjaan DONE pada jadwal yang syarat foto wajibnya belum terpenuhi: [(judul, nama syarat), ...].
+        Item survei dilewati (fotonya per titik survei, dicek di layanan survei)."""
+        rows = await self.fetchall(
+            """
+            SELECT i.item_id, i.title, i.realization_photos_json
+            FROM work_plan_item i
+            WHERE i.daily_plan_id = CAST(:id AS uuid) AND i.delete_at IS NULL AND i.status = 'DONE'
+              AND i.task_phase IS DISTINCT FROM 'SURVEY'
+            ORDER BY i.title
+            """,
+            {"id": str(daily_plan_id)},
+        )
+        gaps: list[tuple[str, list[str]]] = []
+        for row in rows:
+            given = {str(p.get("requirement_id")) for p in (row.realization_photos_json or [])
+                     if p.get("requirement_id")}
+            missing = await self.missing_required_photos(row.item_id, given)
+            if missing:
+                gaps.append((row.title, missing))
+        return gaps
 
     async def existing_files(self, file_ids: list[str]) -> int:
         return int(await self.scalar(

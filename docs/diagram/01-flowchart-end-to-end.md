@@ -31,17 +31,17 @@ flowchart TD
     end
 
     subgraph JADWAL["D. Jadwal harian (web)"]
-        D1["Buat jadwal harian DRAFT per tim per tanggal<br/>Peran: PM, OM divisinya, SUPER_ADMIN<br/>Web: /work-plans, POST /work-plans/daily"]
+        D1["Buat jadwal harian DRAFT per tim per tanggal<br/>Peran: PM, OM divisinya, SUPER_ADMIN<br/>Web: /work-plans, POST /work-plans/daily<br/>Salin ke tanggal lain: POST /work-plans/daily/:id/copy (item ikut disalin)"]
         D2["Tambah item pekerjaan per titik<br/>Jenis pekerjaan, order, tim, lokasi<br/>POST /work-plans/daily/:id/items"]
-        D3["Submit: DRAFT ke SUBMITTED<br/>Peran: PM, OM divisinya"]
+        D3["Setujui langsung dari DRAFT (satu langkah)<br/>Peran: PM, OM divisinya saja (ketua & anggota tidak melihat tombol)<br/>POST /work-plans/daily/:id/approve; audit mencatat SUBMITTED dan APPROVED<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)"]
         D4{"Setujui atau tolak"}
-        D5["Jadwal APPROVED, dirilis ke tim<br/>Notifikasi ke tim"]
+        D5["Jadwal APPROVED, dirilis ke tim<br/>Syarat: minimal 1 item (422 PLAN_EMPTY)<br/>Notifikasi ke tim"]
     end
 
     subgraph LAPANGAN["E. Lapangan (HP)"]
         E1["Absen masuk: swafoto wajah dan GPS<br/>Peran: ketua, anggota (kanal MOBILE)<br/>HP: AttendanceScreen, tab /<br/>POST /attendance/check-in"]
         E2{"Absen lolos validasi?"}
-        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start"]
+        E3["Ketua mulai hari kerja: ONGOING<br/>Peran: ketua jadwal<br/>HP: DailyPlanScreen, tab /plans<br/>POST /work-plans/daily/:id/start<br/>Syarat: absen masuk ketua pada tanggal jadwal atau hari ini (409 CHECKIN_REQUIRED)"]
         E4["Kerjakan item: isi progres dan foto wajib<br/>Peran: ketua, anggota tim<br/>HP: ItemProgressScreen<br/>PATCH /work-plans/items/:id/progress"]
         E5{"Item selesai (qty tercapai)?"}
         E6["Ajukan pindah hari dengan alasan<br/>Peran: ketua<br/>POST /work-plans/items/:id/request-rollover"]
@@ -50,7 +50,7 @@ flowchart TD
         E9["Ajukan lembur (opsional)<br/>Peran: ketua, anggota saat ONGOING<br/>HP: DailyPlanScreen<br/>POST /overtime, diputus PM atau OM"]
         E11["Isi laporan harian<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/report"]
         E12["Absen pulang<br/>Peran: ketua, anggota<br/>POST /attendance/check-out"]
-        E13["Selesaikan hari kerja: COMPLETED<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/complete<br/>Syarat: laporan harian ada"]
+        E13["Selesaikan hari kerja: COMPLETED<br/>Peran: ketua atau PM, OM<br/>POST /work-plans/daily/:id/complete<br/>Syarat: laporan harian ada (422 REPORT_REQUIRED), tanpa koreksi terbuka (409 CORRECTION_OPEN) dan tanpa pindah hari menunggu (409 ROLLOVER_PENDING)"]
     end
 
     subgraph ABSENREVIEW["F. Tinjau absensi"]
@@ -75,12 +75,14 @@ flowchart TD
     end
 
     subgraph EKSPOR["I. Ekspor dan verifikasi"]
-        I1["Ekspor dokumen order<br/>POST /exports/work-completions/:id<br/>BAST docx, survei docx, BAST PDF ber-QR, BoQ xlsx, slide pptx"]
+        I1["Ekspor dokumen order<br/>POST /exports/work-completions/:id<br/>BAST docx (dengan ringkasan harian dan halaman peta), survei docx, BAST PDF ber-QR, BoQ xlsx, slide pptx, surat tugas order (ORDER_SHEET, docx)"]
         I2{"Template BAST_PDF?"}
         I3["Ditolak 409 NOT_SIGNED<br/>sebelum PM tanda tangan"]
         I4["Berkas tersimpan di MinIO<br/>Unduh: GET /exports/:id/file"]
         I5["Verifikasi publik lewat QR, tanpa login<br/>Web: /verify/work-completion/:id?h=sha256<br/>GET /verify/work-completions/:id"]
         I6["Rekap periodik xlsx atau pptx<br/>Peran: PM, OM, OPS, SUPER_ADMIN<br/>POST /exports/periodic"]
+        I7["Laporan harian satu jadwal (docx)<br/>Peran: ketua atau anggota tim, PM atau OM divisi (jadwal dirilis)<br/>POST /exports/daily-report"]
+        I8["Laporan mingguan tim (pptx) dari web<br/>Peran: ketua atau anggota tim, PM atau OM divisi<br/>POST /exports/team-week"]
     end
 
     A1 --> B1
@@ -141,6 +143,28 @@ flowchart TD
     I4 --> I5
     I1 --> I6
 ```
+
+## Alokasi mingguan (PM/OM, web) dan siaga
+
+Layar `/alokasi-mingguan` (menu hanya untuk izin `create:plan`). Sel kosong menjadi jadwal DRAFT lewat `POST /work-plans/daily/bulk`, lalu tiap jadwal yang dibuat diberi item lewat `POST /work-plans/daily/:id/items`. Siaga memakai `kind = STANDBY`.
+
+```mermaid
+flowchart TD
+    A1[PM/OM buka Alokasi mingguan] --> A2{Sel kosong?}
+    A2 -->|ya, satu sel| A3[Dialog Alokasikan]
+    A2 -->|pilih beberapa sel| A3
+    A3 --> A4[POST /work-plans/daily/bulk, hasil per sel]
+    A4 --> A5{Sel dibuat?}
+    A5 -->|ya| A6[POST /work-plans/daily/:id/items]
+    A5 -->|dilewati| A7[Tampilkan alasan dan peringatan]
+    A6 --> A8[Jadwal DRAFT, setujui dari Jadwal harian]
+    A1 --> A9[Siaga hari kosong: POST /work-plans/daily/bulk-standby]
+    A9 --> A10[Sel SIAGA]
+    A10 -->|Ubah jadi pekerjaan| A11[POST /work-plans/daily/:id/activate]
+    A11 --> A12[Jadwal WORK, notifikasi DAILY_ACTIVATED ke ketua dan anggota]
+```
+
+Di HP, jadwal `kind = STANDBY` tampil sebagai kartu 'Siaga — menunggu perintah PM' tanpa tombol 'Mulai hari kerja'; absen tetap tersedia.
 
 ## Catatan membaca diagram
 

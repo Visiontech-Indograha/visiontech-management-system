@@ -1,4 +1,5 @@
 import { formatDate } from "@/lib/format";
+import { useSession } from "@/stores/sessionStore";
 import { useState } from "react";
 import {
   Building,
@@ -42,6 +43,9 @@ export function WorkCompletionDetailModal({
   canManage,
 }: WorkCompletionDetailModalProps) {
   const [activeTab, setActiveTab] = useState<string>("ringkasan");
+  // Tanda tangan BAST sebagai PM hanya untuk PM/OM divisi (API sign_order); OPS & admin tidak menandatangani.
+  const role = useSession().me?.role ?? "";
+  const canSignAsPm = ["PROJECT_MANAGER", "OPERATIONAL_MANAGER", "SUPER_ADMIN"].includes(role);
   const [isSignDialogOpen, setIsSignDialogOpen] = useState(false);
 
   const { data: order, isPending, isError } = useWorkCompletion(completionId || "");
@@ -288,7 +292,7 @@ export function WorkCompletionDetailModal({
                               : "Ketua tim harus menandatangani berita acara lebih dulu sebelum PM dapat memvalidasi."}
                           </TextBlock>
                         </div>
-                        {order.leader_signed_at && canManage && (
+                        {order.leader_signed_at && canSignAsPm && (
                           <ActionButton
                             type="button"
                             variant="default"

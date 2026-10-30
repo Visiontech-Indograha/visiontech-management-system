@@ -10,7 +10,21 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import CRUDBase
+from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
 from app.shared.attendance_sql import IS_LATE_A
+
+# Bawahan peninjau (scope "subordinates"): karyawan yang berada di bawah kewenangan PM (divisi yang dipimpin,
+# atau tim pada jadwal/proyek yang dikelolanya), dan karyawan divisi yang dipimpin OM.
+_SUBORDINATES = f"""(
+    {pm_reaches_employee(VIEWER_EMPLOYEE_BY_USER, 'a.employee_id')}
+    OR a.employee_id IN (
+        SELECT m.employee_id FROM member m
+        JOIN team t ON t.team_id = m.team_id
+        JOIN division d ON d.division_id = t.division_id
+        JOIN users u ON u.user_id = CAST(:viewer AS uuid)
+        WHERE d.om_id = u.employee_id
+    )
+)"""
 
 
 class CRUDMonitoring(CRUDBase):
@@ -42,7 +56,7 @@ class CRUDMonitoring(CRUDBase):
         """
         return list(
             await self.fetchall(
-                """
+                f"""
             SELECT CAST(e.employee_id AS text) AS employee_id, e.full_name,
                    count(*) FILTER (
                        WHERE a.is_within_attendance_radius = TRUE OR a.om_approval_status = 'APPROVED_BY_OM'
@@ -63,16 +77,7 @@ class CRUDMonitoring(CRUDBase):
               AND a.attendance_date >= :starts AND a.attendance_date < :ends
               AND (
                   CAST(:scope AS text) = 'all'
-                  OR (
-                      CAST(:scope AS text) = 'subordinates'
-                      AND a.employee_id IN (
-                          SELECT m.employee_id FROM member m
-                          JOIN team t ON t.team_id = m.team_id
-                          JOIN division d ON d.division_id = t.division_id
-                          JOIN users u ON u.user_id = CAST(:viewer AS uuid)
-                          WHERE d.pm_id = u.employee_id OR d.om_id = u.employee_id
-                      )
-                  )
+                  OR (CAST(:scope AS text) = 'subordinates' AND {_SUBORDINATES})
                   OR (
                       CAST(:scope AS text) = 'own'
                       AND a.employee_id = (SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid))
@@ -118,16 +123,7 @@ class CRUDMonitoring(CRUDBase):
               AND a.attendance_date >= :starts AND a.attendance_date < :ends
               AND (
                   CAST(:scope AS text) = 'all'
-                  OR (
-                      CAST(:scope AS text) = 'subordinates'
-                      AND a.employee_id IN (
-                          SELECT m.employee_id FROM member m
-                          JOIN team t ON t.team_id = m.team_id
-                          JOIN division d ON d.division_id = t.division_id
-                          JOIN users u ON u.user_id = CAST(:viewer AS uuid)
-                          WHERE d.pm_id = u.employee_id OR d.om_id = u.employee_id
-                      )
-                  )
+                  OR (CAST(:scope AS text) = 'subordinates' AND {_SUBORDINATES})
                   OR (
                       CAST(:scope AS text) = 'own'
                       AND a.employee_id = (SELECT employee_id FROM users WHERE user_id = CAST(:viewer AS uuid))

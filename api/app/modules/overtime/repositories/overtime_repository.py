@@ -64,6 +64,21 @@ class OvertimeRepository(BaseRepository):
         )
         return updated is not None
 
+    async def managed_pending_plan_ids(self, employee_id: str) -> set[str]:
+        """Jadwal (yang punya lembur PENDING_PM) di divisi yang PM/OM-nya karyawan ini."""
+        rows = await self.fetchall(
+            """
+            SELECT DISTINCT wpd.daily_plan_id
+            FROM work_plan_daily wpd
+            JOIN division d ON d.division_id = wpd.division_id
+            WHERE CAST(:emp AS uuid) IN (d.pm_id, d.om_id)
+              AND wpd.daily_plan_id IN (SELECT o.daily_plan_id FROM overtime o
+                                        WHERE o.status = 'PENDING_PM' AND o.delete_at IS NULL)
+            """,
+            {"emp": employee_id},
+        )
+        return {str(r._mapping["daily_plan_id"]) for r in rows}
+
     async def list_by_plan(self, daily_plan_id: UUID | str) -> Sequence[Any]:
         return await self.fetchall(
             f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "

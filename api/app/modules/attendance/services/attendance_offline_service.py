@@ -287,6 +287,6 @@ class AttendanceOfflineService:
         else:
             await self.repo.request_checkout(target.id, event)
             result = "CHECK_OUT_PENDING_REVIEW"
-        outcome = await self.sessions.verify_face(worker.employee_id, selfie_file_id, online=False)
+        outcome = await self.sessions.verify_face(worker.employee_id, selfie_file_id, online=False, mobile=True)
         await self.sessions.record_face(target, "CHECK_OUT", outcome, online=False)
         return result, target.id

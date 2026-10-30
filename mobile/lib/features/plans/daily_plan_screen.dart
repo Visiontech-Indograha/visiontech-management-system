@@ -13,7 +13,9 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
+import 'day_resources_card.dart';
 import 'item_progress_screen.dart';
+import 'item_state.dart';
 import 'overtime_hours.dart';
 import 'survey_screen.dart';
 
@@ -48,6 +50,19 @@ Map<String, dynamic>? openCorrectionOf(List<Map<String, dynamic>> corrections) {
   return null;
 }
 
+/// Pesan untuk galat aksi hari kerja: kode dari backend lebih spesifik daripada pesan umum.
+String dayActionErrorMessage(Object error) => switch (apiErrorCode(error)) {
+  'CHECKIN_REQUIRED' =>
+    'Absen masuk hari ini belum tercatat. Lakukan absen masuk dulu di menu Absensi, lalu mulai hari kerja.',
+  'ROLLOVER_PENDING' =>
+    'Ada pekerjaan yang masih menunggu keputusan PM untuk pindah hari. Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+  _ => apiErrorMessage(error),
+};
+
+/// Jumlah item hari ini yang masih menunggu keputusan PM untuk pindah hari (menahan penutupan hari).
+int pendingRolloverCount(Map<String, dynamic> plan) =>
+    (plan['items'] as List? ?? const []).where((i) => i is Map && i['status'] == 'PENDING_ROLLOVER').length;
+
 String correctionStateTitle(String status) => switch (status) {
   'REQUESTED' => 'Koreksi menunggu keputusan PM',
   'REVISING' => 'PM meminta revisi laporan',
@@ -73,6 +88,11 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   bool _busy = false;
   bool _reportPending = false;
   List<Map<String, dynamic>> _corrections = const [];
+  /// Kendaraan & alat jadwal ini; null = belum dimuat / tidak bisa dimuat (kartu disembunyikan).
+  List<Map<String, dynamic>>? _assets;
+  List<Map<String, dynamic>> _messStays = const [];
+  /// Ketua sudah absen masuk pada tanggal jadwal (null = belum bisa dipastikan, mis. luring / gagal muat).
+  bool? _checkedIn;
 
   String get _me {
     final auth = ref.read(authControllerProvider);
@@ -85,6 +105,18 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   void initState() {
     super.initState();
     _load();
+    // Hasil antrean yang baru diterima server ditampilkan tanpa perlu keluar-masuk layar.
+    SyncEngine.appliedRevision.addListener(_onSynced);
+  }
+
+  @override
+  void dispose() {
+    SyncEngine.appliedRevision.removeListener(_onSynced);
+    super.dispose();
+  }
+
+  void _onSynced() {
+    if (mounted) _load();
   }
 
   Future<void> _load() async {
@@ -122,8 +154,43 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
           // riwayat koreksi hanya tambahan; layar tetap tampil tanpanya
         }
       }
+      var assets = _assets;
+      var messStays = _messStays;
+      if (!NetworkHint.probablyOffline) {
+        try {
+          assets = await engine.api.dayAssets(widget.dailyPlanId);
+        } on DioException {
+          assets = null; // bukan anggota tim / gagal muat: kartu aset tidak ditampilkan
+        }
+        try {
+          messStays = await engine.api.myMess();
+        } on DioException {
+          messStays = const []; // hunian hanya tambahan; layar tetap tampil tanpanya
+        }
+      }
+      var checkedIn = _checkedIn;
+      if (plan['leader_employee_id'] == _me && plan['status'] == 'APPROVED') {
+        checkedIn = null;
+        if (!NetworkHint.probablyOffline) {
+          try {
+            final att = await engine.api.myAttendance(employeeId: _me);
+            final day = '${plan['work_date']}';
+            checkedIn = att.items.any((a) => a['work_date'] == day && a['check_in_at'] != null);
+          } on DioException {
+            // tanpa data absen tombol tetap nonaktif; pesan di layar menjelaskan
+          }
+        }
+      }
       if (mounted) {
-        setState(() => (_plan = plan, _dailyReport = report, _corrections = corrections, _error = null));
+        setState(() {
+          _plan = plan;
+          _dailyReport = report;
+          _corrections = corrections;
+          _assets = assets;
+          _messStays = messStays;
+          _checkedIn = checkedIn;
+          _error = null;
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
@@ -248,7 +315,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       _snack(done);
       await _load();
     } catch (e) {
-      _snack(apiErrorMessage(e), error: true);
+      _snack(dayActionErrorMessage(e), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -347,6 +414,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   Widget build(BuildContext context) {
     final plan = _plan;
     final theme = Theme.of(context);
+    final messStay = plan == null ? null : messStayForDay(_messStays, '${plan['work_date']}');
+    final assets = _assets;
     return Scaffold(
       appBar: AppBar(title: const Text('Jadwal harian')),
       body: plan == null
@@ -405,16 +474,51 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       ],
                     ),
                   ),
-                  if (_isLeader && plan['status'] == 'APPROVED') ...[
+                  if (plan['kind'] == 'STANDBY') ...[
                     const SizedBox(height: 12),
+                    SurfaceCard(
+                      key: const Key('standby-card'),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.hourglass_top_rounded),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text('Siaga — menunggu perintah PM', style: theme.textTheme.titleSmall),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (assets != null) ...[
+                    const SizedBox(height: 12),
+                    DayAssetsCard(assets: assets),
+                  ],
+                  if (messStay != null) ...[
+                    const SizedBox(height: 12),
+                    DayMessCard(stay: messStay),
+                  ],
+                  if (_isLeader && plan['status'] == 'APPROVED' && plan['kind'] != 'STANDBY') ...[
+                    const SizedBox(height: 12),
+                    if (_checkedIn != true)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NoticeBanner(
+                          icon: Icons.login_rounded,
+                          text: _checkedIn == null
+                              ? 'Status absen masuk belum bisa dimuat. Periksa sinyal, lalu tarik ke bawah untuk memuat ulang.'
+                              : 'Absen masuk hari ini belum tercatat. Lakukan absen masuk di menu Absensi, lalu mulai hari kerja.',
+                        ),
+                      ),
                     PrimaryAction(
                       label: 'Mulai hari kerja',
                       icon: Icons.play_arrow_rounded,
                       busy: _busy,
-                      onTap: () => _run(
-                        () => ref.read(syncEngineProvider).api.startDay(widget.dailyPlanId),
-                        'Hari kerja dimulai.',
-                      ),
+                      onTap: _checkedIn == true
+                          ? () => _run(
+                                () => ref.read(syncEngineProvider).api.startDay(widget.dailyPlanId),
+                                'Hari kerja dimulai.',
+                              )
+                          : null,
                     ),
                   ],
                   if (_isLeader && plan['status'] == 'COMPLETED' && _openCorrection == null) ...[
@@ -474,12 +578,21 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       onTap: _busy ? null : _dailyReportForm,
                     ),
                     const SizedBox(height: 12),
-                    if (_openCorrection == null)
+                    if (_openCorrection == null && pendingRolloverCount(plan) > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: NoticeBanner(
+                          icon: Icons.update_rounded,
+                          text: '${pendingRolloverCount(plan)} pekerjaan masih menunggu keputusan PM untuk pindah hari. '
+                              'Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+                        ),
+                      ),
+                    if (_openCorrection == null) ...[
                     PrimaryAction(
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: _dailyReport == null || _reportPending ? null : () async {
+                      onTap: _dailyReport == null || _reportPending || pendingRolloverCount(plan) > 0 ? null : () async {
                         if (!await confirmAction(
                           context,
                           title: 'Selesaikan hari kerja?',
@@ -494,6 +607,16 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         );
                       },
                     ),
+                    if (closeDayBlockReason(
+                          hasReport: _dailyReport != null,
+                          reportPending: _reportPending,
+                          pendingRollovers: pendingRolloverCount(plan),
+                        ) case final reason?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(reason, style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                    ],
                   ],
                   const SectionTitle('Daftar pekerjaan hari ini'),
                   for (final item in (plan['items'] as List? ?? const []).cast<Map>().where(
@@ -503,6 +626,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       padding: const EdgeInsets.only(bottom: 10),
                       child: _ItemCard(
                         item: Map<String, dynamic>.from(item),
+                        dayStatus: '${plan['status']}',
                         onTap: () => _openItem(Map<String, dynamic>.from(item)),
                       ),
                     ),
@@ -549,13 +673,14 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
             future: ref.read(syncEngineProvider).api.workCompletion(id),
             builder: (context, snap) {
               final o = snap.data;
+              final proyek = textOr(o?['project_title'], 'Proyek');
               final (title, subtitle) = o == null
                   ? ('Serah terima pekerjaan', 'Memuat status…')
                   : o['pm_signed_at'] != null
-                  ? ('Sudah disetujui PM', '${o['project_title']} · pekerjaan selesai')
+                  ? ('Sudah disetujui PM', '$proyek · pekerjaan selesai')
                   : o['leader_signed_at'] != null
-                  ? ('Menunggu persetujuan PM', '${o['project_title']} · bisa tanda tangan ulang')
-                  : ('Tanda tangan serah terima', '${o['project_title']} · ringkasan, foto hasil kerja, tanda tangan');
+                  ? ('Menunggu persetujuan PM', '$proyek · bisa tanda tangan ulang')
+                  : ('Tanda tangan serah terima', '$proyek · ringkasan, foto hasil kerja, tanda tangan');
               return _Tile(
                 icon: o?['pm_signed_at'] != null ? Icons.verified_rounded : Icons.draw_rounded,
                 title: title,
@@ -573,9 +698,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
 }
 
 class _ItemCard extends StatelessWidget {
-  const _ItemCard({required this.item, required this.onTap});
+  const _ItemCard({required this.item, required this.dayStatus, required this.onTap});
 
   final Map<String, dynamic> item;
+  final String dayStatus;
   final VoidCallback onTap;
 
   @override
@@ -585,10 +711,13 @@ class _ItemCard extends StatelessWidget {
     final done = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
     final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
     final pct = target <= 0 ? 0.0 : (done / target).clamp(0, 1).toDouble();
-    final raw = '${item['status']}';
-    final state = raw == 'DONE'
-        ? 'DONE'
-        : (done > 0 && raw != 'SHIFTED_DAY' && raw != 'PENDING_ROLLOVER' ? 'PARTIAL' : raw);
+    final state = itemDisplayState(
+      raw: '${item['status']}',
+      done: done,
+      target: target,
+      photoCount: photoRefsOf(item['realization_photos_json']).length,
+      dayStatus: dayStatus,
+    );
     final accent = statusStyle(state).accent;
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -666,12 +795,16 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SurfaceCard(
     padding: EdgeInsets.zero,
-    child: ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: onTap,
+    // ListTile butuh Material sendiri: tanpanya latar kartu (DecoratedBox) menutupi efek tekan.
+    child: Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      ),
     ),
   );
 }

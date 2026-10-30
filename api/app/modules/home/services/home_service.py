@@ -60,7 +60,7 @@ class HomeService:
         out.my_leaves_pending = sum(
             1 for r in leaves if str(r.employee_id) == own and r.status in ("PENDING", "APPROVED_BY_PM")
         )
-        wanted = _LEAVE_REVIEWERS.get(user.role, ())
+        wanted = {status for role, statuses in _LEAVE_REVIEWERS.items() if user.has_role(role) for status in statuses}
         out.leaves_to_review = sum(1 for r in leaves if r.status in wanted and str(r.employee_id) != own)
 
         if Permission.REVIEW_ATTENDANCE.value in perms:
@@ -87,7 +87,7 @@ class HomeService:
         if Permission.MANAGE_ASSETS.value in perms:
             out.loan_requests_to_review = len(await self.assets.requests(user, status="PENDING"))
 
-        if user.role in _CORRECTION_REVIEWERS:
+        if user.has_role(*_CORRECTION_REVIEWERS):
             inbox = await self.corrections.inbox(user, None)
             out.corrections_to_review = sum(1 for r in inbox if r.status in ("REQUESTED", "IN_REVIEW"))
 

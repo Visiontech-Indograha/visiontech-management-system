@@ -9,7 +9,7 @@ export type WorkCompletion = WorkCompletionOrder;
 export type WorkCompletionListResponse = WorkCompletionOrder[];
 
 export interface WorkCompletionCreate {
-  client_name: string;
+  client_id: string | null;
   project_title: string;
   total_target_unit: number;
   unit_measure?: string;
@@ -118,7 +118,7 @@ export function useCreateWorkCompletion() {
 }
 
 export interface WorkCompletionUpdate {
-  client_name?: string;
+  client_id?: string | null;
   project_title?: string;
   order_number?: string | null;
   total_target_unit?: number;

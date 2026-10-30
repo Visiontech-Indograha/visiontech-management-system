@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/error_message.dart';
-
 import '../../core/providers.dart';
+import '../../core/team_logo.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
@@ -307,22 +307,36 @@ class _PlanCard extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Text(
-                                '${plan['site_name']}',
+                                jadwalTitle(plan),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                                 style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            StatusPill(state),
+                            plan['kind'] == 'STANDBY'
+                                ? const StatusPill('SUBMITTED', label: 'Siaga')
+                                : StatusPill(state),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          '${plan['team_name']} · ketua ${plan['leader_name']}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.bodySmall,
+                        Row(
+                          children: [
+                            TeamLogoAvatar(
+                              key: const Key('team-card-logo'),
+                              teamId: '${plan['team_id']}',
+                              size: 22,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${plan['team_name']} · ketua ${plan['leader_name']}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.bodySmall,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(

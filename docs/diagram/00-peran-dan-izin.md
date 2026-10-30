@@ -14,9 +14,9 @@ Setiap permintaan diperiksa dua kali, dan keduanya harus lolos.
 
 Catatan pemetaan peran:
 
-- `CurrentUser.role` = `roles[0]` (`api/app/api/deps.py:97` dan `:163`). Service membandingkan satu nilai `role` ini, bukan seluruh daftar peran.
+- `CurrentUser.role` = `roles[0]` (`api/app/api/deps.py:97` dan `:163`), dipakai untuk tampilan. Pemeriksaan peran memakai `has_role` atas seluruh daftar `roles` (T13 diperbaiki, `api/app/core/security.py:190`).
 - Peran legacy (`RoleCode`, `permissions.py:12-21`): ADMIN, OPS, PM, LEADER, HR, MEMBER, FINANCE, ASSET.
-- Peran Master V2 (`SystemRole`, `permissions.py:24-31`): SUPER_ADMIN, OPERATIONAL_MANAGER (OM), PROJECT_MANAGER (PM), TEAM_LEADER (ketua), ADMIN_HR_GA (HR), EMPLOYEE (anggota).
+- Peran Master V2 (`SystemRole`, `permissions.py:24-33`): SUPER_ADMIN, OPERATIONAL_MANAGER (OM), PROJECT_MANAGER (PM), TEAM_LEADER (ketua), ADMIN_HR_GA (HR), FINANCE, EMPLOYEE (anggota).
 - LEADER dan MEMBER legacy tidak memberi izin global (`permissions.py:124-125`). Kewenangan ketua dan anggota berasal dari relasi tim pada jadwal.
 - Akun tanpa baris `user_role` mendapat label `field` dan hanya izin dasar (`permissions.py:35`, `:155-156`).
 
@@ -27,13 +27,13 @@ Izin dasar untuk semua akun login: `VIEW_USERS`, `VIEW_DOCUMENTS`, `UPLOAD_DOCUM
 | Peran | Setara | Izin tambahan utama | Sumber |
 |---|---|---|---|
 | SUPER_ADMIN | (Master V2) | Semua izin termasuk `DELETE_ANY` | `permissions.py:130` |
-| ADMIN | legacy | Semua kecuali `DELETE_ANY`. Route `require_permission` tetap meloloskan (lihat temuan T1) | `permissions.py:108`, `deps.py:180` |
+| ADMIN | legacy | Semua kecuali `DELETE_ANY`. T1 diperbaiki (PR #186): hapus permanen hanya SUPER_ADMIN | `permissions.py:108`, `deps.py:180` |
 | OPERATIONAL_MANAGER (OM) | Master V2 | CREATE_PLAN, PUBLISH_PLAN, REVIEW_OVERTIME, VIEW_ALL_ATTENDANCE, REVIEW_ATTENDANCE, VIEW_TIMELINE, VIEW_AUDIT, VIEW_TEAMS, VIEW_MESS, REVIEW_MESS, VIEW_OFFBOARDING, MANAGE_SITES, MANAGE_DIVISIONS | `permissions.py:132-136` |
-| PROJECT_MANAGER (PM) | Master V2 | CREATE_PLAN, PUBLISH_PLAN, VIEW_TIMELINE, REVIEW_ATTENDANCE, MANAGE_TEAMS, VIEW_TEAMS, VIEW_MESS, REVIEW_MESS, VIEW_OFFBOARDING, MANAGE_IMAGE_REQUIREMENTS. Tidak punya VIEW_ALL_ATTENDANCE. | `permissions.py:138-141` |
+| PROJECT_MANAGER (PM) | Master V2 | CREATE_PLAN, PUBLISH_PLAN, VIEW_TIMELINE, REVIEW_ATTENDANCE, MANAGE_TEAMS, VIEW_TEAMS, VIEW_MESS, REVIEW_MESS, VIEW_OFFBOARDING, MANAGE_IMAGE_REQUIREMENTS. Tidak punya VIEW_ALL_ATTENDANCE; absensi hanya atas karyawan dalam jangkauan PM (A1, PR #211; `shared/access/pm_reach.py`). | `permissions.py:138-141` |
 | PM (legacy) | legacy | CREATE_PLAN, PUBLISH_PLAN, VIEW_TIMELINE, REVIEW_ATTENDANCE, MANAGE_SITES | `permissions.py:113-115` |
 | ADMIN_HR_GA (HR) | Master V2 | MANAGE_USERS, VERIFY_DOCUMENTS, MANAGE_EMPLOYEE_DOCUMENTS, MANAGE_ASSETS, MANAGE_MESS, VIEW_MESS, REVIEW_MESS, MANAGE_OFFBOARDING, VIEW_OFFBOARDING, VIEW_TEAMS | `permissions.py:142-145` |
 | HR | legacy | MANAGE_USERS, VERIFY_DOCUMENTS, MANAGE_EMPLOYEE_DOCUMENTS | `permissions.py:116-118` |
-| FINANCE | legacy | VIEW_ALL_ATTENDANCE, REVIEW_ATTENDANCE, EXPORT_ATTENDANCE, REVIEW_OVERTIME, MANAGE_SITES. Tidak punya CREATE_PLAN. | `permissions.py:119-122` |
+| FINANCE | Master V2 dan legacy | VIEW_ALL_ATTENDANCE, REVIEW_ATTENDANCE, EXPORT_ATTENDANCE, REVIEW_OVERTIME, MANAGE_SITES. Tidak punya CREATE_PLAN. | `permissions.py:119-122`, `:148-150` (PR #213) |
 | OPS | legacy | CREATE_PLAN, PUBLISH_PLAN, REVIEW_OVERTIME, VIEW_TIMELINE, VIEW_AUDIT, VIEW_ALL_ATTENDANCE, REVIEW_ATTENDANCE | `permissions.py:109-112` |
 | ASSET | legacy | MANAGE_ASSETS | `permissions.py:123` |
 | TEAM_LEADER (ketua) | Master V2 | Tidak ada (hanya izin dasar). Kewenangan ketua dari relasi tim jadwal. | `permissions.py:146` |
@@ -80,31 +80,51 @@ Kode kesalahan: 401 tanpa token. 403 izin atau relasi kurang. 404 jadwal atau or
 | 25 | Putuskan lembur | `overtime_route.py:59` (LOGIN) | Ya (tanpa jadwal) | Tidak | Relasi | Relasi | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Ber-jadwal: MANAGE. Tanpa jadwal: admin saja. Pengaju tidak boleh memutuskan sendiri (`overtime_service.py:72-84`) |
 | 26 | Rekap lembur | `overtime_recap_route.py` | Ya | Ya | Ya | Relasi (PM) | Tidak | Ya | Ya | Tidak | Tidak | Tidak | REVIEW_OVERTIME atau admin, atau peran PM (`overtime_service.py:111-116`). Cakupan PM perlu verifikasi (T20). |
 | 27 | Absen masuk dan pulang | `attendance_route.py:92,105` (LOGIN) | Ya | Ya | Ya | Ya | Ya | Ya | Ya | Ya | Ya (HP) | Ya (HP) | Kanal sesuai mode: FIELD ke MOBILE, OFFICE ke WEB (`attendance_session_service.py:79-107`) |
-| 28 | Tinjau absensi NEEDS_REVIEW | `attendance_route.py:130` (REVIEW_ATTENDANCE) | Ya | Tidak | Ya | Ya | Tidak | Tidak* | Tidak* | Tidak | Tidak | Tidak | `can_review` (SQL: SUPER_ADMIN, OM, PM, ADMIN_HR_GA; bukan diri sendiri). *Lihat T3. |
-| 29 | Lihat semua absensi | `attendance_route.py:37` | Ya | Ya | Ya | Relasi [VERIFIKASI] | Tidak | Ya | Ya | Tidak | Tidak | Tidak | VIEW_ALL_ATTENDANCE (`permissions.py:60`) |
+| 28 | Tinjau absensi NEEDS_REVIEW | `attendance_route.py:130` (REVIEW_ATTENDANCE) | Ya | Tidak | Ya | Relasi | Tidak | Ya | Tidak | Tidak | Tidak | Tidak | `can_review` (SQL: SUPER_ADMIN, OM, FINANCE, ADMIN_HR_GA; PM sejauh jangkauan; bukan diri sendiri). T3 diperbaiki (PR #213). |
+| 29 | Lihat semua absensi | `attendance_route.py:37` | Ya | Ya | Ya | Relasi | Tidak | Ya | Ya | Tidak | Tidak | Tidak | VIEW_ALL_ATTENDANCE (`permissions.py:60`) |
 | 30 | Ekspor absensi CSV | `attendance_route.py:169` (EXPORT_ATTENDANCE) | Ya | Ya | Tidak | Tidak | Tidak | Ya | Tidak | Tidak | Tidak | Tidak | EXPORT_ATTENDANCE |
-| 31 | Hapus absensi | `attendance_route.py:148,158` (DELETE_ANY) | Ya | Tidak* | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | *Legacy ADMIN lolos lewat bypass (T1). |
+| 31 | Hapus absensi | `attendance_route.py:148,158` (DELETE_ANY) | Ya | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Hanya SUPER_ADMIN (T1 diperbaiki, PR #186). |
 | 32 | Buat order klien | `work_completion_route.py:63` (CREATE_PLAN) | Ya | Tidak | Ya | Ya (atas nama sendiri) | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Peran wajib SUPER_ADMIN, OM, atau PM (`work_completion_service.py:183-189`). PM hanya pm_id diri sendiri (`:185-189`). |
 | 33 | Ubah order, status, BoM, revisi, hapus order | `work_completion_route.py:110-259` (CREATE_PLAN) | Ya | Tidak | Relasi | Relasi | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | `_access` manage (PM order atau PM/OM divisi, SUPER_ADMIN) (`work_completion_service.py:143-144`). Terkunci setelah PM tanda tangan (`:148-153`). Hapus ditolak bila ketua sudah tanda tangan kecuali SUPER_ADMIN (`:240-241`). |
 | 34 | Lihat order (detail, daftar, revisi) | `work_completion_route.py:39,77,259` (LOGIN) | Ya | Tidak | Relasi | Relasi | Ya (HR) | Tidak | Tidak | Tidak | Relasi (tim) | Relasi (tim) | `visible` = manage, ADMIN_HR_GA, atau anggota tim berjadwal (`work_completion_service.py:138-142`). Tak terlihat: 404. |
 | 35 | ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK) | `work_completion_route.py:231` (CREATE_PLAN) | Ya | Tidak | Relasi | Relasi | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | manage (`work_completion_service.py:406`) |
 | 36 | Tanda tangan BAST ketua | `work_completion_route.py:147` (LOGIN) | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | Relasi (peran TEAM_LEADER + anggota tim order) | Tidak | `work_completion_service.py:288-293`. Peran FIELD_ROLES ditolak (`:298-299`). |
 | 37 | Tanda tangan BAST PM/OM (mengunci order) | `work_completion_route.py:147` (LOGIN) | Ya | Tidak | Relasi | Relasi | Tidak | Tidak | Tidak | Tidak | Tidak | Tidak | manage + ketua sudah tanda tangan (409 `LEADER_SIGNATURE_REQUIRED`, `work_completion_service.py:301-304`) |
-| 38 | Ekspor dokumen order (BAST docx, survei docx, BAST PDF, BoQ, slide) | `export_route.py:36` (LOGIN) | Ya | Ya | Ya | Ya | Ya (HR) | Tidak | Tidak | Tidak | Relasi (tim) | Relasi (tim) | Lewat `get_order_detail` (visibilitas). BAST PDF hanya setelah PM tanda tangan (`export_service.py:228-229`). |
+| 38 | Ekspor dokumen order (BAST docx, survei docx, BAST PDF, BoQ, slide, surat tugas order docx) | `export_route.py:36` (LOGIN) | Ya | Ya | Ya | Ya | Ya (HR) | Tidak | Tidak | Tidak | Relasi (tim) | Relasi (tim) | Lewat `get_order_detail` (visibilitas). BAST PDF hanya setelah PM tanda tangan (`export_service.py:228-229`). |
 | 39 | Ekspor periodik (rekap xlsx dan slide pptx) | `export_route.py:105,126` (CREATE_PLAN) | Ya | Ya | Ya | Ya | Tidak | Tidak | Ya | Tidak | Tidak | Tidak | Rentang maks 31 hari (`export_service.py:250`) |
 | 40 | Ekspor laporan survei | `export_route.py:85,47` (LOGIN) | Ya | Ya | Relasi | Relasi | Tidak | Tidak | Tidak | Tidak | Relasi (ketua) | Tidak | Survei harus sudah dikirim (`export_service.py:118-121`) |
 | 41 | Logo kop survei | `export_route.py:58,64` (CREATE_PLAN) | Ya | Ya | Ya | Ya | Tidak | Tidak | Ya | Tidak | Tidak | Tidak | Izin CREATE_PLAN (`export_route.py:33`) |
 | 42 | Verifikasi publik BAST (QR) | `work_completion_route.py:276` (tanpa login) | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Publik | Wajib sidik SHA-256 64 hex. Sidik salah atau belum disahkan: 404 (`work_completion_service.py:338-345`) |
 | 43 | Kelola peran, pengguna, dokumen karyawan | modul `employees`, `accounts` | Ya | Ya | Tidak | Tidak | Ya | Tidak | Tidak | Tidak | Tidak | Tidak | `MANAGE_USERS` (lihat bagian 2). Di luar cakupan dokumen alur work ini. |
 
+## 3b. Tombol per peran di web (dengan status)
+
+Fungsi murni di `web/src/lib/aksiPeran.ts`; matriks uji `web/src/test/peran-status-matrix.test.ts` (peran × status).
+Tampilan saja: otorisasi tetap di API.
+
+| Layar | Status | SUPER_ADMIN / ADMIN | OM / PM | HR | ASSET, FINANCE, ketua, anggota |
+|---|---|---|---|---|---|
+| Jenis pekerjaan | aktif | Ubah, BoM, Salin, Nonaktifkan | sama | tidak ada | tidak ada |
+| Jenis pekerjaan | nonaktif | Ubah, BoM | sama | tidak ada | tidak ada |
+| Aset (alat/kendaraan) | siap, tidak dipinjam | Serahkan, Status (+Berkas kendaraan) | Berkas kendaraan saja | sama dengan SUPER_ADMIN | Berkas kendaraan saja |
+| Mess | kelola hunian & tempat | ya | tidak | ya | tidak |
+| Mess | permintaan | ya | ya | ya | tidak |
+
+## 3c. Jenis pekerjaan sebagai template
+
+- Kolom bawaan `work_type.unit_measure` (default `Unit`) dan `work_type.default_phase` (NULL = ikut peran) dipakai saat item jadwal dibuat dari template (`plan_item_service.add_validated`). Field di item tetap bisa diubah PM.
+- PM yang memegang lebih dari satu divisi boleh memakai template dari divisi lain miliknya (`PlanItemService._validate`, `extra_divisions`). Template tidak disalin. Divisi yang dipimpin orang lain ditolak (422).
+
 ## 4. Catatan temuan izin
 
 Setiap item berikut perlu dikonfirmasi pemilik kode. Nomor T mengacu ke daftar di `README.md`.
 
-- **T1 (DELETE_ANY).** `require_permission` membebaskan akun ber-peran `ADMIN` dari semua pengecekan (`api/app/api/deps.py:180`). `permissions.py:108` sengaja mengecualikan `DELETE_ANY` dari ADMIN, dan komentar di `permissions.py:42` menyatakan hapus permanen hanya untuk SUPER_ADMIN. Akibatnya ADMIN bisa menghapus absensi (`attendance_route.py:148,158`). [VERIFIKASI] apakah bypass ini disengaja.
+- **Tombol persetujuan jadwal (web & HP).** Tombol Setujui, Ubah, Salin, Kembalikan, dan Hapus pada jadwal harian hanya tampil bila API menandai `can_manage` (PM/OM divisi jadwal atau SUPER_ADMIN). Ketua dan anggota tidak melihat Setujui. PM/OM menyetujui draf miliknya langsung (satu langkah, audit mencatat SUBMITTED dan APPROVED); "Ajukan ke PM" tidak ditampilkan karena endpoint submit hanya menerima PM/OM.
+- **Dokumen pribadi (disengaja).** Anggota tidak dapat mencatat dokumen pribadi sendiri (403). Pencatatan dokumen karyawan dilakukan HR (`MANAGE_EMPLOYEE_DOCUMENTS`); anggota hanya mengunggah berkas (`UPLOAD_DOCUMENTS`).
+- **T1 (DELETE_ANY).** Diperbaiki (PR #186): ADMIN tidak lagi lolos hapus permanen; `DELETE_ANY` hanya SUPER_ADMIN (`permissions.py:108`).
 - **T2 (ADMIN di jadwal).** Akun ADMIN lolos `_PLANNER` karena bypass, tetapi `is_admin` hanya bernilai SUPER_ADMIN (`access_service.py:67-68`). Akibatnya approve, submit, dan lainnya ditolak 403 untuk ADMIN. [VERIFIKASI] apakah ADMIN memang tidak boleh memutuskan jadwal.
-- **T3 (tinjau absensi).** Izin `REVIEW_ATTENDANCE` dimiliki FINANCE dan OPS legacy (`permissions.py:111`, `:120`), tetapi SQL `can_review` hanya mengenali `system_role` SUPER_ADMIN, OPERATIONAL_MANAGER, PROJECT_MANAGER, dan ADMIN_HR_GA (`attendance_session_repository.py:599-611`). Komentar R-33 di `review_attendance` menyebut Finance dan OPS. [VERIFIKASI].
-- **T13 (multi-peran).** `CurrentUser.role` = `roles[0]`. Jika akun punya lebih dari satu peran, hasil cek `role ==` bergantung urutan peran. [VERIFIKASI] urutan peran di token.
+- **T3 (tinjau absensi).** Diperbaiki (PR #213): FINANCE masuk `can_review` (`attendance_session_repository.py:617`); jangkauan PM diatur `shared/access/pm_reach.py`. OPS legacy memiliki `REVIEW_ATTENDANCE` tetapi tetap tidak masuk `can_review`.
+- **T13 (multi-peran).** Diperbaiki (PR #211, #213): pemeriksaan peran memakai `CurrentUser.has_role(...)` atas seluruh daftar `roles`. `CurrentUser.role` tetap `roles[0]` untuk tampilan.
 - **Ketua di dua tempat.** Ketua jadwal harian dikenali dari relasi tim (`access_service.py:44-87`). Ketua BAST dikenali dari peran `TEAM_LEADER` plus `on_team` (`work_completion_service.py:288`). Akun berperan `EMPLOYEE` yang menjadi ketua tim tidak bisa menandatangani BAST. [VERIFIKASI].
 - **T16 (proyek dan klien).** Tidak ada cek divisi atau kepemilikan pada ubah dan hapus proyek maupun klien. Siapa pun ber-CREATE_PLAN bisa mengubah proyek divisi lain. [VERIFIKASI] apakah disengaja.
 - **T20 (rekap lembur PM).** Untuk PM, `recap` memanggil `repo.recap(month, user.employee_id)` (`overtime_service.py:111-115`). Cakupan yang dihasilkan (divisi atau hanya diri sendiri) belum dipastikan dari kode yang dibaca. [VERIFIKASI].

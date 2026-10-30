@@ -64,6 +64,19 @@ CHECKOUT_NOT_VALID = (
     "Absen pulang hanya bisa dilakukan setelah absen masuk valid. Absen masuk Anda masih menunggu pemeriksaan."
 )
 FACE_NOT_ENROLLED = "Daftarkan wajah Anda dulu di menu Profil sebelum absen."
+# Hasil pemeriksaan wajah yang disimpan eksplisit di attendance.face_status (tidak pernah diam-diam "lolos").
+FACE_STATUS_OF_RESULT = {
+    "MATCH": "MATCHED",
+    "MISMATCH": "MISMATCH",
+    "UNAVAILABLE": "SERVICE_DOWN",
+    "NOT_ENROLLED": "NOT_ENROLLED",
+    "STALE": "STALE",
+}
+
+
+def face_status_of(outcome: FaceOutcome | None) -> str:
+    """None (pemeriksaan wajah tidak dijalankan) dan hasil tak dikenal → NOT_CHECKED."""
+    return FACE_STATUS_OF_RESULT.get(outcome.result, "NOT_CHECKED") if outcome is not None else "NOT_CHECKED"
 FACE_MISMATCH = "Wajah pada swafoto tidak cocok dengan wajah terdaftar. Ambil ulang swafoto dengan wajah jelas."
 # docs/35 §5: absen di lokasi tugas harian hanya untuk anggota/ketua tim jadwal itu, pada tanggalnya, setelah disetujui.
 DAILY_OPEN_STATUSES = ("APPROVED", "ONGOING")
@@ -160,23 +173,26 @@ class AttendanceSessionService:
     async def meal_allowance(self, user: Any, start: Any, end: Any, division_id: UUID | None = None) -> list[Any]:
         """Rekap uang makan (docs/35 §5): pemegang export:attendance semua divisi; PM hanya divisi yang dipimpinnya
         (keputusan pemilik 2026-10-21). Lainnya → 403."""
+        divisions: list[str] | None = None  # None = semua divisi (pemegang export:attendance)
+        if division_id is not None:
+            divisions = [str(division_id)]
         if "export:attendance" not in user.permissions:
-            if user.role != "PROJECT_MANAGER" or not user.employee_id:
+            if not user.has_role("PROJECT_MANAGER") or not user.employee_id:
                 raise ForbiddenError("Rekap uang makan hanya untuk PM divisi atau pengelola absensi.")
-            own = await self.repo.scalar(
-                "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL LIMIT 1",
+            own = [str(r.division_id) for r in await self.repo.fetchall(
+                "SELECT division_id FROM division WHERE pm_id = CAST(:e AS uuid) AND delete_at IS NULL",
                 {"e": user.employee_id},
-            )
-            if own is None:
+            )]
+            if not own:
                 raise ForbiddenError("Anda belum memimpin divisi mana pun.")
-            if division_id is not None and str(division_id) != str(own):
+            if divisions is not None and divisions[0] not in own:
                 raise ForbiddenError("PM hanya dapat melihat rekap uang makan divisinya.")
-            division_id = own
+            divisions = divisions or own  # PM dengan >1 divisi: rekap seluruh divisi yang dipimpinnya
         if end < start:
             raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
         if (end - start).days > 62:
             raise ValidationError("Rentang rekap paling lama 62 hari.")
-        return await self.repo.meal_allowance_recap(start, end, division_id)
+        return await self.repo.meal_allowance_recap(start, end, divisions)
 
     async def my_recap(self, user: Any, month: str | None) -> dict[str, Any]:
         """Rekap absensi bulanan milik sendiri: hari hadir, terlambat, pulang awal, uang makan (hanya absensi sah)."""
@@ -228,11 +244,13 @@ class AttendanceSessionService:
         if today is not None and plan.work_date != today:
             raise AppError("SITE_NOT_ALLOWED", "Jadwal kerja ini bukan untuk hari ini.", status=403)
 
-    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool) -> FaceOutcome | None:
+    async def verify_face(self, employee_id: Any, selfie_file_id: UUID | None, *, online: bool,
+                          mobile: bool = False) -> FaceOutcome | None:
         """Cocokkan swafoto dengan wajah terdaftar SEBELUM absen ditulis. Online & tidak cocok → ditolak (422);
         offline tidak ditolak (sudah terjadi) — hasilnya ditandai untuk OM oleh `record_face`."""
         if self.faces is None or selfie_file_id is None:
-            return None
+            # Absen HP wajib diperiksa: tanpa pemeriksaan ditandai NOT_CHECKED. Absen web tidak memakai wajah.
+            return FaceOutcome("NOT_CHECKED", None) if mobile else None
         outcome = await self.faces.verify_selfie(employee_id, selfie_file_id)
         if online and outcome.result == "MISMATCH":
             raise AppError("FACE_MISMATCH", FACE_MISMATCH, status=422)
@@ -241,18 +259,22 @@ class AttendanceSessionService:
     async def record_face(self, row: Any, event: str, outcome: FaceOutcome | None, *, online: bool) -> Any:
         """Hasil yang tidak bisa dipastikan → PENDING_OM dengan catatan; wajah tidak boleh dilewati diam-diam."""
         label = "masuk" if event == "CHECK_IN" else "pulang"
-        if outcome is None or outcome.result == "MATCH":
+        if outcome is not None and outcome.result == "MATCH":
             return row
-        if outcome.result == "UNAVAILABLE":
+        if outcome is None:  # absen web: wajah tidak dipakai
+            return row
+        if outcome.result == "NOT_CHECKED":
+            note = f"wajah absen {label} tidak diperiksa: pemeriksaan wajah tidak dijalankan"
+        elif outcome.result == "UNAVAILABLE":
             note = f"wajah absen {label} belum diperiksa: layanan pengenalan wajah tidak tersedia"
         elif outcome.result == "STALE":
             note = f"wajah absen {label} belum diperiksa: pendaftaran wajah perlu diulang (model berganti)"
         elif outcome.result == "MISMATCH":
             note = f"wajah absen {label} tidak cocok (skor {outcome.score:.0f})"
-        elif not online and settings.FACE_ENROLLMENT_REQUIRED:  # NOT_ENROLLED, absen offline
-            note = "belum mendaftar wajah"
+        elif outcome.result == "NOT_ENROLLED":  # selalu ditandai, walau FACE_ENROLLMENT_REQUIRED dimatikan
+            note = f"wajah absen {label} tidak diperiksa: karyawan belum mendaftar wajah"
         else:
-            return row
+            note = f"wajah absen {label} belum diperiksa ({outcome.result})"
         return await self.repo.flag_missing_face(row.id, event, note)
 
     async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
@@ -347,11 +369,14 @@ class AttendanceSessionService:
                     status=409,
                 )
 
-        # Sesi valid yang lupa ditutup mengunci absen masuk berikutnya (O-10); absen hari lalu yang masih
-        # menunggu pemeriksaan tidak mengunci hari baru (R-33).
         await self.repo.lock_employee(employee_id)
         if await self.repo.active_on(employee_id, today):
             raise AppError("ALREADY_CHECKED_IN", ALREADY_TODAY, status=409)
+        # Sesi tanggal sebelumnya yang lupa absen pulang ditutup otomatis (lihat repositori) sehingga tidak
+        # lagi mengunci absen masuk hari baru (menggantikan O-10). Absen ganda pada hari yang sama tetap ditolak.
+        if isinstance(today, date):
+            close_h, close_m = [int(p) for p in settings.ATTENDANCE_CLOSE_TIME.split(":")]
+            await self.repo.auto_close_stale_sessions(employee_id, today, time(close_h, close_m))
         opened = await self.repo.open_session(employee_id)
         if opened is not None and opened.status in VALID_STATUSES:
             raise AppError("OPEN_SESSION", OPEN_SESSION, status=409)
@@ -361,6 +386,13 @@ class AttendanceSessionService:
         site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
         if site is None:
             raise NotFoundError("Lokasi")
+        # Anggota/ketua tim yang punya jadwal hari itu (disetujui/berjalan) absen di LOKASI JADWAL itu, bukan kantor
+        # default yang terpilih di HP. Tanpa jadwal → lokasi yang dipilih tetap dipakai.
+        if site.kind != "WORK_PLAN_DAILY":
+            day_site = await self.repo.running_day_site(employee_id, today)
+            if day_site is not None:
+                site = await self.repo.site_for_check_in(day_site.daily_plan_id, org_id, lng, lat)
+                site_id = day_site.daily_plan_id
         if site.distance_m is None or site.radius_m is None:
             raise AppError(
                 "SITE_LOCATION_REQUIRED",
@@ -393,7 +425,7 @@ class AttendanceSessionService:
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
         await self._check_daily_target(site, employee_id, today)
-        outcome = await self.verify_face(employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
         try:
             row = await self.repo.insert(
                 org_id=org_id,
@@ -407,6 +439,7 @@ class AttendanceSessionService:
                 selfie_file_id=selfie_file_id,
                 face_result=outcome.result if outcome else None,
                 face_similarity=outcome.similarity if outcome else None,
+                face_status=face_status_of(outcome),
                 source=channel,
                 explanation=note,
                 at=at or (local_clock.local_now if local_clock else None),
@@ -454,6 +487,16 @@ class AttendanceSessionService:
         effective_org_id = org_id or str(getattr(session, "organization_id", ""))
         local_clock = await self.clock.local_now(effective_org_id) if effective_org_id else None
         now_local = local_clock.local_now if local_clock else jakarta_now()
+        # Sesi tanggal sebelumnya sudah berakhir pada tengah malam (aturan kerja malam, docs/35 §5): pulang
+        # online setelah itu ditolak, agar durasi tidak terhitung lintas hari. Sesi itu ditutup otomatis.
+        if online and isinstance(now_local, datetime) and isinstance(session.work_date, date) \
+                and session.work_date < now_local.date():
+            raise AppError(
+                "NO_OPEN_SESSION",
+                f"Sesi absensi tanggal {session.work_date:%d-%m-%Y} sudah berakhir pada tengah malam dan ditutup "
+                "otomatis. Lakukan absen masuk untuk hari ini bila Anda sedang bekerja.",
+                status=409,
+            )
 
         # Validasi laporan harian: jika ketua tim belum mengisi laporan harian jadwal kerja hari ini
         work_date = getattr(session, "attendance_date", None) or (
@@ -503,7 +546,7 @@ class AttendanceSessionService:
                     status=422,
                 )
 
-        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online)
+        outcome = await self.verify_face(worker.employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
 
         # Evaluasi durasi kerja: 9 jam kotor = 8 jam kerja efektif + 1 jam istirahat.
         is_under_required_hours = False
@@ -616,7 +659,8 @@ class AttendanceSessionService:
             return today, None, 0, None
         required_out = None
         opened = await self.repo.open_hint(employee_id)
-        if opened is not None:
+        # Sesi tanggal sebelumnya tidak lagi punya jam pulang untuk hari ini (sudah berakhir pada tengah malam).
+        if opened is not None and not (isinstance(today, date) and opened.attendance_date < today):
             checked_in = opened.clock_in_at.astimezone(WIB)
             if opened.is_late and opened.scheduled_out is not None:
                 required_out = datetime.combine(checked_in.date(), opened.scheduled_out, tzinfo=WIB)

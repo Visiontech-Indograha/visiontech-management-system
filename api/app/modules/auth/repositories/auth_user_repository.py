@@ -10,7 +10,7 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
-OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA")
+OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA", "FINANCE")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
 _MAIN_OFFICE = "(SELECT office_id FROM office WHERE is_main_office AND delete_at IS NULL LIMIT 1)"
@@ -188,7 +188,8 @@ class AuthUserRepository(BaseRepository):
             """
             INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
             VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true)
-            RETURNING user_id AS id, email AS login, is_active, update_at AS last_login_at
+            RETURNING user_id AS id, email AS login, is_active, update_at AS last_login_at,
+                      system_role::text AS role
             """,
             {
                 "emp": employee_id,
@@ -198,6 +199,20 @@ class AuthUserRepository(BaseRepository):
                 "role": system_role,
             },
         )
+
+    async def set_system_role(self, user_id: UUID | str, system_role: str) -> None:
+        await self.execute(
+            "UPDATE users SET system_role = CAST(:role AS system_role_enum), update_at = now() "
+            "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"role": system_role, "id": str(user_id)},
+        )
+
+    async def leads_a_team(self, employee_id: UUID | str) -> bool:
+        """Karyawan ini ketua (leader_employee_id) dari sedikitnya satu tim yang belum dihapus."""
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM team WHERE leader_employee_id = CAST(:emp AS uuid) AND delete_at IS NULL)",
+            {"emp": str(employee_id)},
+        ))
 
     async def set_active(self, user_id: UUID | str, active: bool) -> None:
         await self.execute(

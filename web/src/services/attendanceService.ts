@@ -2,6 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { saveBlob } from "@/services/exportService";
 
 export type Attendance = components["schemas"]["AttendanceResponse"];
 export type AttendanceList = components["schemas"]["AttendanceListResponse"];
@@ -83,4 +84,13 @@ export async function checkOut(body: components["schemas"]["CheckOutRequest"]): 
 /** DELETE /attendance/{id} — SUPER_ADMIN menghapus permanen satu absensi. */
 export async function deleteAttendance(id: string): Promise<unknown> {
   return (await api.delete(`/attendance/${id}`)).data;
+}
+
+/** GET /attendance/export — CSV absensi seluruh organisasi (izin export:attendance, Finance); berkas langsung terunduh. */
+export async function exportAttendanceCsv(startDate: string, endDate: string): Promise<void> {
+  const res = await api.get<Blob>("/attendance/export", {
+    params: { start_date: startDate, end_date: endDate },
+    responseType: "blob",
+  });
+  saveBlob(res.data, res.headers["content-disposition"] as string | undefined, `absensi-${startDate}_${endDate}.csv`);
 }

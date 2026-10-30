@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
@@ -135,6 +137,30 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
     }
   }
 
+  /// Work completion (.docx) untuk ketua: hanya item timnya (server membatasi). Disimpan ke folder dokumen aplikasi
+  /// lalu dibuka; dari pemilih aplikasi itu pengguna bisa membagikannya.
+  Future<void> _bastDocx() async {
+    setState(() => _exporting = true);
+    try {
+      final bytes = await ref
+          .read(syncEngineProvider)
+          .api
+          .completionBastDocx(widget.completionId);
+      final dir = await getApplicationDocumentsDirectory();
+      final name = 'Work-completion-${widget.completionId.substring(0, 8)}.docx';
+      final file = File('${dir.path}/$name');
+      await file.writeAsBytes(bytes, flush: true);
+      final opened = await OpenFilex.open(file.path);
+      if (opened.type != ResultType.done) {
+        _snack('Tersimpan di aplikasi sebagai $name. Pasang Word/WPS untuk membukanya.');
+      }
+    } catch (e) {
+      _snack(apiErrorMessage(e), error: true);
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (_summary.text.trim().isEmpty) return _snack('Isi ringkasan pekerjaan.');
@@ -191,7 +217,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${order['project_title']}',
+                        textOr(order['project_title'], 'Proyek'),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 6),
@@ -234,6 +260,12 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                         ? 'Menyiapkan slide…'
                         : 'Unduh laporan slide (.pptx)',
                   ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _exporting ? null : _bastDocx,
+                  icon: const Icon(Icons.description_rounded),
+                  label: const Text('Unduh work completion (.docx)'),
                 ),
                 ...[
                   // Setelah disetujui PM tetap tampil (hanya baca) agar hasil kerja bisa dilihat ulang.

@@ -47,12 +47,14 @@ class OvertimeController:
     async def handle_list(self, current_user: CurrentUser, daily_plan_id: UUID | None = None) -> list[OvertimeResponse]:
         """Mengambil daftar lembur untuk satu work plan atau rekap lembur pengguna aktif."""
         rows = await self.overtime_service.list_overtimes(current_user, daily_plan_id)
-        return [OvertimeResponse(**r._mapping) for r in rows]
+        flagged = await self.overtime_service.with_review_flags(current_user, rows)
+        return [OvertimeResponse(**m) for m in flagged]
 
     async def handle_list_by_plan(self, current_user: CurrentUser, daily_plan_id: UUID) -> list[OvertimeResponse]:
         """Mengambil daftar lembur untuk satu work plan."""
         rows = await self.overtime_service.list_by_plan(current_user, daily_plan_id)
-        return [OvertimeResponse(**r._mapping) for r in rows]
+        flagged = await self.overtime_service.with_review_flags(current_user, rows)
+        return [OvertimeResponse(**m) for m in flagged]
 
     async def handle_review(self, current_user: CurrentUser, ot_id: UUID, data: OvertimeReview) -> OvertimeResponse:
         """Meninjau (menyetujui atau menolak) pengajuan lembur."""

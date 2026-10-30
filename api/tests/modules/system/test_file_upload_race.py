@@ -28,11 +28,11 @@ def test_upload_that_loses_the_dedup_race_reuses_the_existing_file(client, world
                         files={"file": ("a.png", body, "image/png")})
     assert first.status_code == 200, first.text
 
-    async def missed(self, org_id, sha256):   # jendela balapan: pemeriksaan duplikat belum melihat baris pertama
+    async def missed(self, org_id, user_id, keys):   # jendela balapan: pemeriksaan duplikat belum melihat baris pertama
         return None
 
     monkeypatch.setattr(FileService, "duplicate_of", missed)
-    second = client.post("/files/upload", headers=world.headers(client, "leader"),
+    second = client.post("/files/upload", headers=world.headers(client, "member"),
                          files={"file": ("b.png", body, "image/png")})
 
     assert second.status_code == 200, second.text

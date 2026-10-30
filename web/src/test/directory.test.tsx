@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { mockApi, renderRoute } from "./utils";
+import { apiError, mockApi, renderRoute } from "./utils";
 
 const page = (items: unknown[]) => ({ items, total: items.length, page: 1, size: 25 });
 const employee = (id = "00000000-0000-4000-8000-0000000000e1") => ({
@@ -340,7 +340,7 @@ describe("akun login karyawan (M1-01)", () => {
     fireEvent.change(screen.getByLabelText("Email login"), { target: { value: "baru@contoh.id" } });
     fireEvent.click(screen.getByRole("button", { name: "Buat akun" }));
     expect(await screen.findByText("Sementara123")).toBeInTheDocument();
-    expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id" });
+    expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id", system_role: "EMPLOYEE" });
   });
 
   it("HR melihat penanda akun terkunci karena gagal login (R-21)", async () => {
@@ -378,5 +378,72 @@ describe("alamat karyawan (1─N, V2)", () => {
     expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/addresses")!.data).toEqual({
       address_line: "Jl. Melati 3", city: "Jakarta", postal_code: "10110",
     });
+  });
+});
+
+describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
+  const ID = "00000000-0000-4000-8000-0000000000e1";
+  const ACCOUNT = `/employees/${ID}/account`;
+
+  it("HR memilih Team Leader saat membuat akun", async () => {
+    let exists = false;
+    const calls = mockApi((c) => {
+      if (c.url === `/employees/${ID}`) return { data: employee() };
+      if (c.url === ACCOUNT && c.method === "get")
+        return { data: exists ? { exists: true, login: "tl@contoh.id", is_active: true, system_role: "TEAM_LEADER" } : { exists: false } };
+      if (c.url === ACCOUNT && c.method === "post") {
+        exists = true;
+        return { data: { exists: true, login: "tl@contoh.id", is_active: true, system_role: "TEAM_LEADER", temporary_password: "Sementara123" } };
+      }
+    });
+    renderRoute(`/directory/${ID}`, { role: "HR" });
+    await screen.findByText("Karyawan ini belum punya akun login.");
+    fireEvent.change(screen.getByLabelText("Email login"), { target: { value: "tl@contoh.id" } });
+    fireEvent.change(screen.getByLabelText("Peran"), { target: { value: "TEAM_LEADER" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buat akun" }));
+    await screen.findByText("Sementara123");
+    expect(calls.find((c) => c.url === ACCOUNT && c.method === "post")!.data)
+      .toEqual({ login: "tl@contoh.id", system_role: "TEAM_LEADER" });
+  });
+
+  it("akun lapangan: ubah peran lewat POST /role; tombol nonaktif bila belum berubah", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === `/employees/${ID}`) return { data: employee() };
+      if (c.url === ACCOUNT && c.method === "get")
+        return { data: { exists: true, login: "a@contoh.id", is_active: true, system_role: "EMPLOYEE" } };
+      if (c.url === `${ACCOUNT}/role`) return { data: { exists: true, login: "a@contoh.id", is_active: true, system_role: "TEAM_LEADER" } };
+    });
+    renderRoute(`/directory/${ID}`, { role: "HR" });
+    const simpan = await screen.findByRole("button", { name: "Simpan peran" });
+    expect(simpan).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Peran"), { target: { value: "TEAM_LEADER" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    await waitFor(() => expect(calls.find((c) => c.url === `${ACCOUNT}/role`)).toBeDefined());
+    expect(calls.find((c) => c.url === `${ACCOUNT}/role`)!.data).toEqual({ system_role: "TEAM_LEADER" });
+  });
+
+  it("ketua yang masih memimpin tim: galat 409 dari API ditampilkan", async () => {
+    mockApi((c) => {
+      if (c.url === `/employees/${ID}`) return { data: employee() };
+      if (c.url === ACCOUNT && c.method === "get")
+        return { data: { exists: true, login: "a@contoh.id", is_active: true, system_role: "TEAM_LEADER" } };
+      if (c.url === `${ACCOUNT}/role`)
+        return apiError(409, "LEADER_ACTIVE_TEAM", "Karyawan ini masih memimpin tim; ganti ketua tim sebelum menurunkan perannya.");
+    });
+    renderRoute(`/directory/${ID}`, { role: "HR" });
+    fireEvent.change(await screen.findByLabelText("Peran"), { target: { value: "EMPLOYEE" } });
+    fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("masih memimpin tim");
+  });
+
+  it("akun peran kantor tidak menampilkan pilihan peran lapangan", async () => {
+    mockApi((c) => {
+      if (c.url === `/employees/${ID}`) return { data: employee() };
+      if (c.url === ACCOUNT && c.method === "get")
+        return { data: { exists: true, login: "a@contoh.id", is_active: true, system_role: "PROJECT_MANAGER" } };
+    });
+    renderRoute(`/directory/${ID}`, { role: "HR" });
+    expect(await screen.findByText(/Peran kantor: PROJECT_MANAGER/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Peran")).not.toBeInTheDocument();
   });
 });

@@ -91,8 +91,8 @@ class SyncService:
             await PlanItemService(self.db).progress(user, UUID(str(p["item_id"])), data)
         elif op_type == "PLAN_ROLLOVER_REQUEST":
             # Permintaan pindah hari dari HP (ketua): aturan & status sama dengan endpoint request-rollover.
-            data = RolloverRequest(delay_reason=str(p["delay_reason"]), completed_qty=p["completed_qty"])
-            await PlanItemService(self.db).request_rollover(user, UUID(str(p["item_id"])), data)
+            rollover = RolloverRequest(delay_reason=str(p["delay_reason"]), completed_qty=p["completed_qty"])
+            await PlanItemService(self.db).request_rollover(user, UUID(str(p["item_id"])), rollover)
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

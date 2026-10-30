@@ -141,18 +141,27 @@ def team_logo_storage_key(organization_id: str, team_id: str, file_id: str, ext:
     return f"{organization_id}/team-logo/{team_id}/{file_id}.{ext}"
 
 
+_logo_warned = False  # peringatan kegagalan ambil logo tim hanya sekali per proses (bukan per dokumen)
+
+
 def team_logo_or_default(team_id: str | None, storage_key: str | None) -> bytes | None:
-    """Isi logo tim dari storage, atau None (→ pakai logo default Visiontech). Berkas hilang/MinIO mati = default."""
+    """Isi logo tim dari storage, atau None (→ pakai logo bawaan repo di kop). MinIO mati/berkas hilang = bawaan.
+
+    Kunci logo tercatat di DB tetapi tidak terbaca → WARNING sekali (agar tidak senyap)."""
+    global _logo_warned
     if not storage_key:
         return None
     try:
         data = storage.get_object_bytes(storage_key)
-    except Exception:  # noqa: BLE001 - dokumen tetap terbit dengan logo default
+    except Exception:  # noqa: BLE001 - dokumen tetap terbit dengan logo bawaan
         data = None
-    if not data:
-        logger.debug("Logo tim %s tidak ditemukan di storage; memakai logo default.", team_id)
-        return None
-    return data
+    if data:
+        return data
+    if not _logo_warned:
+        _logo_warned = True
+        logger.warning("Logo tim %s tidak dapat diambil dari storage (%s); dokumen memakai logo bawaan.",
+                       team_id, storage_key)
+    return None
 
 
 def fit_contain_png(logo: bytes, box: tuple[int, int] = COMPANY_BOX_PX) -> bytes:

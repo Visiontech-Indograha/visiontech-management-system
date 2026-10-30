@@ -23,7 +23,7 @@ async def list_clients(
     current_user: CurrentUser = Depends(get_current_user),
     controller: ClientController = Depends(),
 ) -> list[ClientOut]:
-    """Daftar klien."""
+    """Daftar klien: pengelola rencana (create:plan) dan PM/OM/HR. Pekerja lapangan dan ketua tim tidak melihat."""
     return await controller.list_all(current_user, q, active_only)
 
 

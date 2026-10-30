@@ -39,7 +39,8 @@ class ProjectCreate(BaseModel):
     pm_id: UUID | None = None  # kosong = PM divisi
     spk_number: str = Field(min_length=2, max_length=100)
     project_title: str = Field(min_length=3, max_length=255)
-    total_target_qty: Decimal = Field(Decimal("1"), gt=0, le=Decimal("9999999999"))
+    total_target_qty: Decimal = Field(Decimal("1"), gt=0, max_digits=12, decimal_places=2,
+                                      le=Decimal("9999999999.99"))
     unit_measure: str = Field("Unit", min_length=1, max_length=50)
     start_date: date
     end_date: date
@@ -58,7 +59,8 @@ class ProjectUpdate(BaseModel):
     pm_id: UUID | None = None
     spk_number: str | None = Field(None, min_length=2, max_length=100)
     project_title: str | None = Field(None, min_length=3, max_length=255)
-    total_target_qty: Decimal | None = Field(None, gt=0, le=Decimal("9999999999"))
+    total_target_qty: Decimal | None = Field(None, gt=0, max_digits=12, decimal_places=2,
+                                             le=Decimal("9999999999.99"))
     unit_measure: str | None = Field(None, min_length=1, max_length=50)
     start_date: date | None = None
     end_date: date | None = None

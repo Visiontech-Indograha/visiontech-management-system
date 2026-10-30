@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { TextField, SelectField } from "@/components/molecules/Field";
@@ -10,13 +10,30 @@ import { DialogActions } from "@/components/molecules/DialogActions";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
-import { useCreateMessStay, useMessPlaces } from "@/services/messService";
+import { useCreateMessStay, useMessPlaces, useMessStays, type MessStay } from "@/services/messService";
 import { useEmployees } from "@/services/employeeService";
+import { useTeams } from "@/services/teamService";
+
+const DAY_MS = 86_400_000;
+const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
+const dmy = (d: string) => d.split("-").reverse().join("-");
+
+/** Tanggal (YYYY-MM-DD) dalam [start, end] ketika jumlah hunian APPROVED di mess ini sudah mencapai kapasitas. */
+function fullOn(stays: MessStay[], messId: string, start: string, end: string, capacity: number): string[] {
+  const out: string[] = [];
+  for (let t = Date.parse(`${start}T00:00:00Z`); iso(t) <= end; t += DAY_MS) {
+    const day = iso(t);
+    const count = stays.filter((s) => s.mess_id === messId && s.stay_start_date <= day && s.stay_end_date >= day).length;
+    if (count >= capacity) out.push(day);
+  }
+  return out;
+}
 
 const messSchema = z
   .object({
     employee_id: z.string().trim().min(1, "Karyawan wajib dipilih."),
     mess_id: z.string().trim().min(1, "Mess wajib dipilih."),
+    team_id: z.string().trim().optional(),
     stay_start_date: z
       .string()
       .trim()
@@ -49,12 +66,14 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
     register,
     handleSubmit,
     setError,
+    control,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<MessValues>({
     resolver: zodResolver(messSchema),
     defaultValues: {
       employee_id: "",
       mess_id: "",
+      team_id: "",
       stay_start_date: "",
       stay_end_date: "",
     },
@@ -62,11 +81,26 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
 
   const employeeList = employeesQuery.data?.items ?? [];
   const placeList = places.data ?? [];
+  const teams = useTeams();
+  const [messId, startDate, endDate] = useWatch({
+    control,
+    name: ["mess_id", "stay_start_date", "stay_end_date"],
+  });
+  const place = placeList.find((p) => p.mess_id === messId);
+  // Kapasitas per tanggal: hunian yang sudah disetujui pada mess ini dihitung per hari dalam rentang.
+  const occupancy = useMessStays(
+    messId && startDate && endDate && endDate >= startDate
+      ? { start: startDate, end: endDate, status: "APPROVED" }
+      : undefined,
+  );
+  const fullDays = place?.capacity && startDate && endDate && endDate >= startDate
+    ? fullOn(occupancy.data ?? [], messId, startDate, endDate, place.capacity)
+    : [];
 
   const onSubmit = async (values: MessValues) => {
     setFormError(null);
     try {
-      await create.mutateAsync(values);
+      await create.mutateAsync({ ...values, team_id: values.team_id || null });
       toast.success("Hunian mess berhasil dicatat.");
       onClose();
     } catch (err) {
@@ -122,6 +156,13 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
           </TextBlock>
         )}
 
+        <SelectField label="Tim yang menginap (opsional)" {...register("team_id")}>
+          <ControlOption value="">Tanpa tim</ControlOption>
+          {teams.data?.map((t) => (
+            <ControlOption key={t.team_id} value={t.team_id}>{t.name}</ControlOption>
+          ))}
+        </SelectField>
+
         <div className="grid grid-cols-2 gap-2">
           <TextField
             label="Tanggal Mulai Inap"
@@ -136,6 +177,11 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
             {...register("stay_end_date")}
           />
         </div>
+        {fullDays.length > 0 && (
+          <TextBlock role="alert" className="text-sm text-danger">
+            Mess penuh pada {fullDays.map(dmy).join(", ")} (kapasitas {place?.capacity} orang). Pilih tanggal lain atau mess lain.
+          </TextBlock>
+        )}
       </FormBlock>
     </VmsDialog>
   );

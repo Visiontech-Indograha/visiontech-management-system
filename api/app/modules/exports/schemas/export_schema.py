@@ -11,7 +11,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field, model_validator
 
 # Dokumen per order → format tetap (docs/35 §8: DOCX BAST & Survey Report, PDF resmi ber-QR, XLSX BoQ, PPTX progres).
-CompletionTemplate = Literal["BAST", "SURVEY_REPORT", "BAST_PDF", "BOQ", "PROGRESS_SLIDES"]
+CompletionTemplate = Literal["BAST", "SURVEY_REPORT", "BAST_PDF", "BOQ", "PROGRESS_SLIDES", "ORDER_SHEET"]
 PeriodicFormat = Literal["EXCEL_XLSX", "PPTX"]
 
 
@@ -28,6 +28,10 @@ class SurveyLogoOut(BaseModel):
 
 class CompletionExportRequest(BaseModel):
     template: CompletionTemplate
+
+
+class DailyReportExportRequest(BaseModel):
+    daily_plan_id: UUID  # jadwal harian yang laporannya dicetak (satu hari, satu tim)
 
 
 class TeamWeekExportRequest(BaseModel):

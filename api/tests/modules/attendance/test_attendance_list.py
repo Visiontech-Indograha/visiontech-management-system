@@ -89,13 +89,19 @@ def test_scope_mine_for_account_without_employee_is_empty_and_rejects_bad_value(
     assert bad.status_code == 422
 
 
-@pytest.mark.parametrize("who", ["member", "leader", "hr"])
+@pytest.mark.parametrize("who", ["member", "leader"])
 def test_everyone_else_sees_only_their_own(client, world, day, who):
     listed = _list(client, world, who, employee_id=world.employees["leader"])   # upaya melihat milik orang lain
 
     own = {day[who]} if who in day else set()
     assert {a["id"] for a in listed["items"]} == (own if who == "leader" else set())
     assert all(a["employee_id"] == world.employees[who] for a in listed["items"])
+
+
+def test_hr_sees_other_employees_attendance(client, world, day):
+    """HR/GA (ADMIN_HR_GA) melihat absensi seluruh karyawan, termasuk milik ketua tim."""
+    listed = _list(client, world, "hr", employee_id=world.employees["leader"])
+    assert {a["id"] for a in listed["items"]} == ({day["leader"]} if "leader" in day else set())
 
 
 def test_filters_status_employee_and_dates(client, world, day):

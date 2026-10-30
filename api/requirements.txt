@@ -17,6 +17,7 @@ PyJWT==2.15.1
 cryptography==50.0.2
 minio==7.2.20
 Pillow>=10.4.0
+pillow-heif==1.8.1  # dekoder HEIC asli (foto kamera iPhone/Android), lihat app/core/image.py
 filetype==1.2.0
 python-multipart==0.0.32
 tzdata==2026.5

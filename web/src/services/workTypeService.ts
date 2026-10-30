@@ -49,6 +49,16 @@ export function useSaveWorkType(id?: string) {
   });
 }
 
+/** POST /work-types/{id}/copy-to-division: salin slot foto + BoM default ke divisi lain. */
+export function useCopyWorkTypeToDivision() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, division_id }: { id: string; division_id: string }) =>
+      (await api.post<WorkType>(`/work-types/${id}/copy-to-division`, { division_id })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 /** DELETE /work-types/{id} menonaktifkan (rencana kerja lama tetap utuh). */
 export function useDeactivateWorkType() {
   const qc = useQueryClient();

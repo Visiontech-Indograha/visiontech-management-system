@@ -20,7 +20,11 @@ _LEAVE_SELECT = """
            lr.end_date, lr.total_days, lr.reason, lr.status::text AS status,
            lr.attachment_path,
            COALESCE(rev_hr.full_name, rev_pm.full_name) AS reviewed_by_name,
-           lr.reviewed_at, lr.rejection_note, lr.create_at
+           lr.reviewed_at,
+           -- Kolom rejection_note dipakai bersama oleh catatan persetujuan & penolakan; dipisah menurut status.
+           CASE WHEN lr.status::text = 'REJECTED' THEN lr.rejection_note END AS rejection_note,
+           CASE WHEN lr.status::text <> 'REJECTED' THEN lr.rejection_note END AS review_note,
+           lr.cancel_note, lr.create_at
     FROM leave_request lr
     JOIN employee e ON e.employee_id = lr.employee_id
     LEFT JOIN division d ON d.division_id = e.division_id
@@ -205,13 +209,41 @@ class LeaveRepository(BaseRepository):
             {"id": str(leave_id), "st": status, "rev": str(reviewer_id), "note": note},
         )
 
-    async def cancel_leave(self, leave_id: UUID | str) -> None:
-        """Pembatalan cuti oleh pemohon sendiri."""
+    async def cancel_leave(self, leave_id: UUID | str, note: str | None) -> None:
+        """Pembatalan cuti (oleh pemohon, HR, atau OM) beserta alasannya."""
         await self.execute(
             """
             UPDATE leave_request
-            SET status = CAST('CANCELLED' AS approval_status_enum), update_at = now()
+            SET status = CAST('CANCELLED' AS approval_status_enum), cancel_note = :note, update_at = now()
             WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
-            {"id": str(leave_id)},
+            {"id": str(leave_id), "note": note},
+        )
+
+    async def schedule_conflicts(
+        self, employee_ids: list[str], start_date: date, end_date: date
+    ) -> Sequence[Any]:
+        """
+        Jadwal harian tim (APPROVED/ONGOING) pada rentang tanggal yang melibatkan karyawan, sebagai ketua
+        tim atau anggota aktif. Satu baris per (karyawan, jadwal harian).
+        """
+        return await self.fetchall(
+            """
+            SELECT DISTINCT CAST(x.employee_id AS text) AS employee_id,
+                   CAST(wpd.daily_plan_id AS text) AS plan_id, wpd.work_date, wpd.status::text AS status,
+                   t.name AS team_name
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id AND t.delete_at IS NULL
+            JOIN (
+                SELECT team_id, leader_employee_id AS employee_id FROM team WHERE delete_at IS NULL
+                UNION ALL
+                SELECT team_id, employee_id FROM member WHERE is_active AND delete_at IS NULL
+            ) x ON x.team_id = wpd.team_id
+            WHERE wpd.delete_at IS NULL
+              AND wpd.status IN ('APPROVED', 'ONGOING')
+              AND wpd.work_date BETWEEN :start AND :end
+              AND x.employee_id = ANY(CAST(:ids AS uuid[]))
+            ORDER BY wpd.work_date, t.name
+            """,
+            {"ids": employee_ids, "start": start_date, "end": end_date},
         )

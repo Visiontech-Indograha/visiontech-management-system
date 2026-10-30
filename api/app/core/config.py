@@ -139,6 +139,10 @@ class Settings(BaseSettings):
     # Bawaan True (keputusan pemilik 2026-10-08): absen HP ditolak tanpa wajah terdaftar. Lingkungan yang belum punya
     # face-service harus mematikannya LEWAT SKRIP `scripts/saklar-wajah.sh off`, kalau tidak semua pekerja terkunci.
     FACE_ENROLLMENT_REQUIRED: bool = True
+    # Mode wajah palsu KHUSUS DEV (uji): enroll menyimpan embedding sintetis deterministik per karyawan dan verifikasi
+    # mencocokkan swafoto apa pun dengan skor tinggi (tanpa face-service). Hanya berlaku bila APP_ENV=development;
+    # nilai true di lingkungan lain membuat API menolak start (lihat `_fake_face_only_in_development`).
+    FACE_FAKE_MODE: bool = False
 
     # Folder rilis aplikasi HP (docs/32): berisi `android/latest.json` + APK berversi, di-mount read-only.
     # Kosong = belum ada rilis; pemeriksaan pembaruan selalu menjawab UP_TO_DATE.
@@ -194,6 +198,16 @@ class Settings(BaseSettings):
                     make_url(fixed_port).host,
                 )
                 object.__setattr__(self, field, fixed_port)
+        return self
+
+    @model_validator(mode="after")
+    def _fake_face_only_in_development(self) -> Settings:
+        """Penjaga mode wajah palsu: tidak boleh aktif di luar APP_ENV=development (API gagal start)."""
+        if self.FACE_FAKE_MODE and self.APP_ENV.strip().lower() != "development":
+            raise ValueError(
+                "FACE_FAKE_MODE=true hanya boleh di APP_ENV=development "
+                f"(APP_ENV saat ini: {self.APP_ENV!r}). Matikan FACE_FAKE_MODE."
+            )
         return self
 
     @model_validator(mode="after")

@@ -24,12 +24,7 @@ def _clean_coordinate(val: Any, max_abs: float) -> float | None:
         f = float(val)
     except (ValueError, TypeError):
         raise ValueError("Koordinat harus berupa angka desimal valid.") from None
-    if abs(f) > max_abs:
-        for scale in (1e6, 1e7, 1e5):
-            candidate = f / scale
-            if abs(candidate) <= max_abs:
-                f = candidate
-                break
+    # Tanpa penskalaan diam-diam: 123 untuk latitude adalah galat masukan, bukan 0.000123.
     if abs(f) > max_abs:
         raise ValueError(f"Koordinat di luar batas jangkauan (-{max_abs} s/d {max_abs}).")
     return round(f, 7)
@@ -40,8 +35,7 @@ class WorkCompletionCreate(BaseModel):
     division_id: UUID | None = None
     pm_id: UUID | None = None
     project_id: UUID | None = None
-    client_id: UUID | None = None
-    client_name: str | None = Field(None, min_length=2, max_length=150, description="Nama klien (kosong = dari proyek)")
+    client_id: UUID | None = Field(None, description="Klien dari master (wajib, kecuali lewat proyek)")
     project_title: str | None = Field(None, min_length=3, max_length=255, description="Judul (kosong = dari proyek)")
     order_number: str | None = Field(None, max_length=50, description="Nomor SPK / PO / WO")
     total_target_unit: int = Field(default=1, ge=1, description="Total target unit volume pekerjaan")
@@ -69,7 +63,6 @@ class WorkCompletionCreate(BaseModel):
 class WorkCompletionUpdate(BaseModel):
     """Schema pembaruan detail Order Klien."""
     client_id: UUID | None = None
-    client_name: str | None = Field(None, max_length=150)
     project_title: str | None = Field(None, max_length=255)
     order_number: str | None = Field(None, max_length=50)
     total_target_unit: int | None = None

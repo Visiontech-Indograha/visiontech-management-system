@@ -4,6 +4,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  CalendarRange,
   ClipboardCheck,
   Clock,
   ChartColumn,
@@ -35,6 +36,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: "/", label: "Beranda", icon: House },
   { path: "/work-plans", label: "Jadwal harian", icon: ClipboardList },
+  { path: "/alokasi-mingguan", label: "Alokasi mingguan", icon: CalendarRange, requires: ["create:plan"] },
   { path: "/surveys", label: "Survei", icon: ClipboardCheck, requires: ["create:plan"] },
   { path: "/work-completions", label: "Pekerjaan klien", icon: Briefcase, requires: ["create:plan"] },
   { path: "/projects", label: "Proyek", icon: FolderKanban, requires: ["create:plan"] },

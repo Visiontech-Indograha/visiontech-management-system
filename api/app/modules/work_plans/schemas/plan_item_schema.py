@@ -33,11 +33,13 @@ def _check(phase: str | None, main: bool | None, start: time | None, end: time |
 class PlanItemCreate(BaseModel):
     work_type_id: UUID
     title: str = Field(min_length=3, max_length=200)
-    task_phase: TaskPhase = "INSTALLATION"
+    # Kosong = fase mengikuti jenis pekerjaan (template work type), lihat `PlanItemService.create`.
+    task_phase: TaskPhase | None = None
+    unit_measure: str | None = Field(default=None, min_length=1, max_length=50)  # kosong = satuan jenis pekerjaan
     is_main_deliverable: bool = False
     completion_id: UUID | None = None  # order klien
     depends_on_item_id: UUID | None = None  # prasyarat (mis. survei titik ini)
-    target_qty: Decimal = Field(Decimal("1"), gt=0, le=Decimal("99999999"))
+    target_qty: Decimal = Field(Decimal("1"), gt=0, max_digits=10, decimal_places=2, le=Decimal("99999999.99"))
     start_time: time | None = None
     end_time: time | None = None
     location_name: str | None = Field(default=None, max_length=150)
@@ -57,10 +59,12 @@ class PlanItemUpdate(BaseModel):
     work_type_id: UUID | None = None
     title: str | None = Field(default=None, min_length=3, max_length=200)
     task_phase: TaskPhase | None = None
+    unit_measure: str | None = Field(default=None, min_length=1, max_length=50)
     is_main_deliverable: bool | None = None
     completion_id: UUID | None = None
     depends_on_item_id: UUID | None = None
-    target_qty: Decimal | None = Field(default=None, gt=0, le=Decimal("99999999"))
+    target_qty: Decimal | None = Field(default=None, gt=0, max_digits=10, decimal_places=2,
+                                       le=Decimal("99999999.99"))
     start_time: time | None = None
     end_time: time | None = None
     location_name: str | None = Field(default=None, max_length=150)
@@ -120,6 +124,7 @@ class PlanItemOut(BaseModel):
     work_type_name: str
     title: str
     task_phase: TaskPhase
+    unit_measure: str | None = None  # satuan item (dari jenis pekerjaan bila tidak diisi saat dibuat)
     is_main_deliverable: bool
     completion_id: UUID | None = None
     order_title: str | None = None

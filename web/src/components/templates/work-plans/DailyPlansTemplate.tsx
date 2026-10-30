@@ -5,7 +5,12 @@ import { WeeklyPresentationDialog } from "@/components/organisms/work-plans/Week
 import { DailyPlanDetailDialog } from "@/components/organisms/work-plans/DailyPlanDetailDialog";
 import { DailyPlanFormDialog } from "@/components/organisms/work-plans/DailyPlanFormDialog";
 import { DailyWeekMatrix, type MatrixTeam } from "@/components/organisms/work-plans/DailyWeekMatrix";
-import { ApproveWeekButton, DailyWeekToolbar, WeekRecapButtons } from "@/components/organisms/work-plans/DailyWeekToolbar";
+import {
+  ApproveWeekButton,
+  DailyWeekToolbar,
+  TeamWeekButton,
+  WeekRecapButtons,
+} from "@/components/organisms/work-plans/DailyWeekToolbar";
 import type { DailyFormOptions, DailyPlan } from "@/services/dailyPlanService";
 import { PageTemplate } from "../PageTemplate";
 
@@ -55,6 +60,14 @@ export function DailyPlansTemplate(props: {
             start={start}
             end={end}
             onOpenPresentation={() => setPresentationOpen(true)}
+          />
+        </div>
+      )}
+      {canPlan && options && (
+        <div className="mb-4">
+          <TeamWeekButton
+            teams={options.teams.filter((t) => !divisionId || t.division_id === divisionId)}
+            start={start}
           />
         </div>
       )}

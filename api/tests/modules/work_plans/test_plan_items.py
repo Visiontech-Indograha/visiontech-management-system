@@ -23,6 +23,12 @@ def _work_type(world: World, name: str = "Instalasi CCTV uji", mandatory_photo: 
     return wt
 
 
+def _survey_work_type(world: World) -> str:
+    wt = _work_type(world, name="Survei CCTV uji")
+    sync_query("UPDATE work_type SET kind = 'SURVEY_TASK' WHERE work_type_id = %s", (wt,))
+    return wt
+
+
 def _item(client, world: World, plan_id: str, wt: str, who: str = "pm", **over):
     body = {"work_type_id": wt, "title": "Titik CCTV 1", "task_phase": "INSTALLATION", "is_main_deliverable": True,
             "target_qty": "4", **over}
@@ -46,6 +52,10 @@ def test_pm_adds_items_only_while_editable(client, world: World):
 
 def test_template_must_belong_to_plan_division(client, world: World):
     other = world.add_unit("Lain")
+    # PM dunia uji juga PM divisi "Lain" (multi-divisi boleh memakai template di sana); di sini divisi itu
+    # dipimpin orang lain, sehingga template-nya bukan milik PM ini.
+    stranger = world.add_person(f"pm_lain_{world.tag}", "PM")
+    sync_query("UPDATE division SET pm_id = %s WHERE division_id = %s", (stranger, other))
     foreign_wt = str(sync_query("INSERT INTO work_type (division_id, name) VALUES (%s, 'Survei lain') "
                                 "RETURNING work_type_id", (other,))[0][0])
     draft = make_daily_plan(world, status="DRAFT", days_from_today=1)
@@ -65,11 +75,21 @@ def test_assignment_only_for_team_members(client, world: World):
     assert _item(client, world, draft, wt, assigned_employee_ids=[world.employees["member"]]).status_code == 201
 
 
+def test_survey_phase_only_on_survey_template(client, world: World):
+    """Fase SURVEY eksplisit ditolak pada template pekerjaan biasa (WORK), diterima pada template survei."""
+    plan = make_daily_plan(world, status="DRAFT", days_from_today=0)
+    rejected = _item(client, world, plan, _work_type(world), task_phase="SURVEY", is_main_deliverable=False)
+    assert rejected.status_code == 422, rejected.text
+    accepted = _item(client, world, plan, _survey_work_type(world), task_phase="SURVEY",
+                     is_main_deliverable=False)
+    assert accepted.status_code == 201, accepted.text
+
+
 def test_prerequisite_blocks_progress_until_done(client, world: World):
     plan = make_daily_plan(world, status="DRAFT", days_from_today=0)
     wt = _work_type(world)
-    survey = _item(client, world, plan, wt, title="Survei titik 1", task_phase="SURVEY", is_main_deliverable=False,
-                   target_qty="1").json()["item_id"]
+    survey = _item(client, world, plan, _survey_work_type(world), title="Survei titik 1", task_phase="SURVEY",
+                   is_main_deliverable=False, target_qty="1").json()["item_id"]
     main = _item(client, world, plan, wt, depends_on_item_id=survey).json()["item_id"]
     _start(plan)
     member = world.headers(client, "member")

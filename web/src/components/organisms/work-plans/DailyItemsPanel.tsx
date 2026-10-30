@@ -10,10 +10,13 @@ import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { Pill } from "@/components/molecules/Pill";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ApiError } from "@/lib/apiClient";
+import { applyFieldErrors } from "@/lib/errors";
+import { parseTargetQty } from "@/lib/quantity";
 import {
   addDays,
   useDailyFormOptions,
   useCreatePlanItem,
+  useOrderSchedule,
   usePrerequisiteOptions,
   useDecideRollover,
   useDeletePlanItem,
@@ -23,12 +26,16 @@ import {
 import { useWorkTypes } from "@/services/workTypeService";
 import { PHASE_LABEL } from "@/lib/workPhase";
 import { ItemEvidence } from "./ItemEvidence";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { koordinatError } from "@/lib/inputRules";
 
 const PHASE: Record<string, string> = PHASE_LABEL;
 const MAIN = ["INSTALLATION", "REPLACEMENT", "MAINTENANCE"];
 const STATUS: Record<string, string> = {
   TODO: "Belum mulai", IN_PROGRESS: "Dikerjakan", DONE: "Selesai", PENDING_ROLLOVER: "Minta pindah hari", SHIFTED_DAY: "Pindah hari",
 };
+/** Kolom formulir item yang boleh diberi galat dari API (kunci = nama field body). */
+const ITEM_FIELDS = ["work_type_id", "title", "task_phase", "unit_measure", "target_qty", "location_name", "start_time", "end_time", "site_lat", "site_lng", "depends_on_item_id", "notes"];
 const message = (err: unknown) => (err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
 
 /** Item per titik pada jadwal harian: daftar, tambah (PM saat draf), hapus, dan keputusan geser (PM). */
@@ -39,6 +46,8 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
   const [adding, setAdding] = useState(false);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [shown, setShown] = useState<string | null>(null);
+  // Hapus item minta konfirmasi dulu (tidak langsung menghapus).
+  const [removing, setRemoving] = useState<{ id: string; title: string } | null>(null);
 
   return (
     <section aria-label="Daftar pekerjaan">
@@ -77,7 +86,7 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
                     size="sm"
                     variant="ghost"
                     disabled={remove.isPending}
-                    onClick={() => remove.mutate(i.item_id, { onSuccess: () => toast.success("Item dihapus."), onError: (e) => toast.error(message(e)) })}
+                    onClick={() => setRemoving({ id: i.item_id, title: i.title })}
                   >
                     Hapus
                   </ActionButton>
@@ -123,13 +132,36 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
         ))}
       </ListBlock>
       {adding && detail && <ItemForm detail={detail} onDone={() => setAdding(false)} />}
+      <ConfirmDialog
+        open={removing !== null}
+        title="Hapus pekerjaan?"
+        message={removing ? `Pekerjaan "${removing.title}" akan dihapus dari jadwal ini.` : ""}
+        confirmLabel="Hapus"
+        danger
+        busy={remove.isPending}
+        onConfirm={() => {
+          if (!removing) return;
+          remove.mutate(removing.id, {
+            onSuccess: () => {
+              toast.success("Item dihapus.");
+              setRemoving(null);
+            },
+            onError: (e) => {
+              toast.error(message(e));
+              setRemoving(null);
+            },
+          });
+        }}
+        onClose={() => setRemoving(null)}
+      />
     </section>
   );
 }
 
 function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => void }) {
-  // Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal.
-  const types = useWorkTypes(false, detail.division_id).data?.filter((w) => w.kind !== "SURVEY_POINT");
+  // Jenis titik survei hanya dipakai di dalam survei, bukan sebagai item jadwal. Tidak dibatasi divisi jadwal:
+  // PM multi-divisi boleh memakai template divisi lain miliknya (API yang membatasi); label divisi ditampilkan.
+  const types = useWorkTypes(false).data?.filter((w) => w.kind !== "SURVEY_POINT");
   const formOptions = useDailyFormOptions(true).data;
   const orders = (formOptions?.orders ?? []).filter(
     (o) => !o.division_id || o.division_id === detail.division_id
@@ -137,52 +169,93 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
   const create = useCreatePlanItem(detail.daily_plan_id);
   const prereqs = usePrerequisiteOptions(detail.daily_plan_id).data ?? [];
   const [phase, setPhase] = useState("SURVEY");
+  // Template terpilih mengisi fase & satuan bawaan; PM hanya mengubah bila perlu.
+  const [workTypeId, setWorkTypeId] = useState("");
+  const [unit, setUnit] = useState("");
+  const pickTemplate = (id: string) => {
+    setWorkTypeId(id);
+    const picked = types?.find((w) => w.id === id);
+    if (!picked) return;
+    setUnit(picked.unit_measure || "Unit");
+    if (picked.default_phase) setPhase(picked.default_phase);
+  };
   const [error, setError] = useState<string | null>(null);
+  // Galat per kolom: dari validasi lokal dan dari 422 API (dipetakan ke kolom, bukan hanya satu pesan umum).
+  const [fe, setFe] = useState<Record<string, string>>({});
+  // Order terpilih: sisa target yang belum dijadwalkan; target item yang diisi dibandingkan dengan sisa itu.
+  const [orderId, setOrderId] = useState("");
+  const [qtyText, setQtyText] = useState("1");
+  const schedule = useOrderSchedule(orderId).data;
+  const qtyNow = parseTargetQty(qtyText);
+  const overBy = schedule && qtyNow.ok ? Number(qtyNow.value) - schedule.unscheduled_target_qty : 0;
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const v = (k: string) => String(f.get(k) ?? "").trim();
     setError(null);
+    setFe({});
     const latVal = v("site_lat");
     const lngVal = v("site_lng");
     const startTimeVal = v("start_time");
     const endTimeVal = v("end_time");
+    const title = v("title");
+    const qty = parseTargetQty(v("target_qty"));
+
+    const problems: Record<string, string> = {};
+    if (!v("work_type_id")) problems.work_type_id = "Pilih template (jenis pekerjaan) divisi ini.";
+    if (title.length < 3) problems.title = "Nama pekerjaan minimal 3 huruf.";
+    if (!qty.ok) problems.target_qty = qty.message;
+    // Batas koordinat sama dengan API (lintang -90..90, bujur -180..180) dan harus berpasangan.
+    const coordErr = koordinatError(latVal, lngVal);
+    if (coordErr?.startsWith("Bujur")) problems.site_lng = coordErr;
+    else if (coordErr) {
+      problems.site_lat = coordErr;
+      if (coordErr.includes("berpasangan")) problems.site_lng = coordErr;
+    }
+    if (startTimeVal && endTimeVal && endTimeVal <= startTimeVal) {
+      problems.end_time = "Jam selesai item harus setelah jam mulai.";
+    }
+    if (Object.keys(problems).length) {
+      setFe(problems);
+      return setError("Periksa kolom yang ditandai.");
+    }
 
     const body: PlanItemCreate = {
       work_type_id: v("work_type_id"),
-      title: v("title"),
+      title,
       task_phase: phase as PlanItemCreate["task_phase"],
+      unit_measure: unit.trim() || undefined,
       is_main_deliverable: MAIN.includes(phase) && v("main") === "yes",
       completion_id: v("completion_id") || undefined,
-      target_qty: v("target_qty") || "1",
+      target_qty: qty.ok ? qty.value : "1",
       location_name: v("location_name") || null,
       start_time: startTimeVal || null,
       end_time: endTimeVal || null,
-      site_lat: latVal ? Number(latVal) : null,
-      site_lng: lngVal ? Number(lngVal) : null,
+      site_lat: latVal ? Number(latVal.replace(",", ".")) : null,
+      site_lng: lngVal ? Number(lngVal.replace(",", ".")) : null,
       depends_on_item_id: v("depends_on_item_id") || null,
       notes: v("notes") || null,
     };
-    if (!body.work_type_id) return setError("Pilih template (jenis pekerjaan) divisi ini.");
-    if (body.title.length < 3) return setError("Nama pekerjaan minimal 3 huruf.");
-    if (Number(body.target_qty) <= 0 || isNaN(Number(body.target_qty))) {
-      return setError("Target volume harus lebih dari 0.");
-    }
-    if ((latVal && !lngVal) || (!latVal && lngVal)) {
-      return setError("Lintang dan bujur lokasi harus diisi berpasangan.");
-    }
-    if (startTimeVal && endTimeVal && endTimeVal <= startTimeVal) {
-      return setError("Jam selesai item harus setelah jam mulai.");
-    }
-    create.mutate(body, { onSuccess: () => { toast.success("Item ditambahkan."); onDone(); }, onError: (err) => setError(message(err)) });
+    create.mutate(body, {
+      onSuccess: () => { toast.success("Item ditambahkan."); onDone(); },
+      onError: (err) => {
+        const mapped = applyFieldErrors(
+          err,
+          (name, er) => setFe((prev) => ({ ...prev, [String(name)]: er.message })),
+          ITEM_FIELDS,
+        );
+        setError(mapped ? "Periksa kolom yang ditandai." : message(err));
+      },
+    });
   };
 
   return (
     <FormBlock className="mt-3 space-y-1 rounded-control border border-line p-3" onSubmit={submit} noValidate>
       {error && <TextBlock role="alert" className="text-danger">{error}</TextBlock>}
       {orders.length > 0 && (
-        <SelectField name="completion_id" label="Pekerjaan Klien / Order SPK (opsional)" defaultValue="">
+        <SelectField name="completion_id" label="Pekerjaan Klien / Order SPK (opsional)" value={orderId}
+          onChange={(e) => setOrderId(e.target.value)}>
           <ControlOption value="">Bukan bagian order tertentu</ControlOption>
           {orders.map((o) => (
             <ControlOption key={o.completion_id} value={o.completion_id}>
@@ -191,33 +264,57 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           ))}
         </SelectField>
       )}
-      <SelectField name="work_type_id" label="Template (jenis pekerjaan divisi)" defaultValue="">
+      {schedule && (
+        <TextBlock className="rounded-control border border-dashed border-line p-2 text-sm text-mist">
+          Target order {schedule.total_target_unit} · sudah dijadwalkan {schedule.scheduled_target_qty} · sisa belum
+          dijadwalkan {schedule.unscheduled_target_qty}
+        </TextBlock>
+      )}
+      {overBy > 0 && (
+        <TextBlock role="alert" className="text-sm text-danger">
+          Alokasi melebihi sisa target order ({overBy} di atas sisa). Periksa kembali target volume.
+        </TextBlock>
+      )}
+      <SelectField name="work_type_id" label="Template (jenis pekerjaan)" value={workTypeId}
+        onChange={(e) => pickTemplate(e.target.value)} error={fe.work_type_id}>
         <ControlOption value="">Pilih template</ControlOption>
-        {types?.map((t) => <ControlOption key={t.id} value={t.id}>{t.name}</ControlOption>)}
+        {types?.map((t) => (
+          <ControlOption key={t.id} value={t.id}>{t.division_name ? `${t.name} · ${t.division_name}` : t.name}</ControlOption>
+        ))}
       </SelectField>
-      <TextField name="title" label="Judul titik" hint="Contoh: Titik CCTV 03 — Pos Jaga Utara" />
+      <TextField name="title" label="Judul titik" hint="Contoh: Titik CCTV 03 — Pos Jaga Utara" error={fe.title} />
       <div className="grid gap-x-3 md:grid-cols-2">
-        <SelectField label="Fase" value={phase} onChange={(e) => setPhase(e.target.value)}>
+        <SelectField label="Fase" value={phase} onChange={(e) => setPhase(e.target.value)} error={fe.task_phase}>
           {Object.entries(PHASE).map(([k, l]) => <ControlOption key={k} value={k}>{l}</ControlOption>)}
         </SelectField>
-        {MAIN.includes(phase) && (
-          <SelectField name="main" label="Hasil utama pekerjaan klien?" defaultValue="yes">
-            <ControlOption value="yes">Ya</ControlOption>
-            <ControlOption value="no">Tidak</ControlOption>
-          </SelectField>
-        )}
+        <TextField name="unit_measure" label="Satuan" value={unit} onChange={(e) => setUnit(e.target.value)}
+          hint="Terisi dari jenis pekerjaan; boleh diubah." error={fe.unit_measure} />
+      </div>
+      {MAIN.includes(phase) && (
+        <SelectField name="main" label="Hasil utama pekerjaan klien?" defaultValue="yes">
+          <ControlOption value="yes">Ya</ControlOption>
+          <ControlOption value="no">Tidak</ControlOption>
+        </SelectField>
+      )}
+      <div className="grid gap-x-3 md:grid-cols-2">
+        <TextField
+          name="target_qty"
+          label="Target volume"
+          inputMode="decimal"
+          defaultValue="1"
+          onChange={(e) => setQtyText(e.target.value)}
+          hint="Angka, paling besar 99.999.999, boleh 2 angka di belakang koma."
+          error={fe.target_qty}
+        />
+        <TextField name="location_name" label="Nama titik/lokasi (opsional)" error={fe.location_name} />
       </div>
       <div className="grid gap-x-3 md:grid-cols-2">
-        <TextField name="target_qty" label="Target volume" inputMode="decimal" defaultValue="1" />
-        <TextField name="location_name" label="Nama titik/lokasi (opsional)" />
+        <TextField name="start_time" label="Jam mulai (opsional)" type="time" error={fe.start_time} />
+        <TextField name="end_time" label="Jam selesai (opsional)" type="time" error={fe.end_time} />
       </div>
       <div className="grid gap-x-3 md:grid-cols-2">
-        <TextField name="start_time" label="Jam mulai (opsional)" type="time" />
-        <TextField name="end_time" label="Jam selesai (opsional)" type="time" />
-      </div>
-      <div className="grid gap-x-3 md:grid-cols-2">
-        <TextField name="site_lat" label="Latitude titik (opsional)" inputMode="decimal" placeholder="misal: -6.2088" />
-        <TextField name="site_lng" label="Longitude titik (opsional)" inputMode="decimal" placeholder="misal: 106.8456" />
+        <TextField name="site_lat" label="Latitude titik (opsional)" inputMode="decimal" placeholder="misal: -6.2088" error={fe.site_lat} />
+        <TextField name="site_lng" label="Longitude titik (opsional)" inputMode="decimal" placeholder="misal: 106.8456" error={fe.site_lng} />
       </div>
       {prereqs.length > 0 && (
         <SelectField
@@ -225,6 +322,7 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           label="Harus selesai dulu (opsional)"
           hint="Pekerjaan ini baru bisa dikerjakan setelah pekerjaan yang dipilih selesai — boleh pekerjaan tim lain di lokasi yang sama."
           defaultValue=""
+          error={fe.depends_on_item_id}
         >
           <ControlOption value="">Tidak ada</ControlOption>
           {prereqs.map((i) => (
@@ -234,7 +332,7 @@ function ItemForm({ detail, onDone }: { detail: DailyPlanDetail; onDone: () => v
           ))}
         </SelectField>
       )}
-      <TextAreaField name="notes" label="Remark (hasil survei, kebutuhan alat)" />
+      <TextAreaField name="notes" label="Remark (hasil survei, kebutuhan alat)" error={fe.notes} />
       <div className="flex gap-2">
         <ActionButton type="submit" size="sm" disabled={create.isPending}>Simpan pekerjaan</ActionButton>
         <ActionButton size="sm" variant="ghost" onClick={onDone}>Batal</ActionButton>

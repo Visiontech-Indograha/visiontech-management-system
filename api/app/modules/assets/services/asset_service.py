@@ -18,6 +18,7 @@ Inventaris aset (Milestone 4, docs/36; alur docs/35 §6): alat pribadi/umum, ken
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -39,6 +40,7 @@ from app.modules.assets.schemas.asset_schema import (
     VehicleUpdate,
 )
 from app.modules.notifications.services.notification_service import NotificationService
+from app.shared.access.access_service import DailyNeed, check_daily_access
 
 LICENCES = {
     "Motorcycle": ({"SIM_C"}, "SIM C"),
@@ -52,6 +54,9 @@ def _in_use(asset_type: str) -> AppError:
     return AppError(
         "ASSET_IN_USE", f"{_LABEL[asset_type]} sedang dipinjam. Selesaikan pengembaliannya dulu.", status=409
     )
+
+
+_NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
 
 class AssetService:
@@ -88,11 +93,23 @@ class AssetService:
             raise NotFoundError("Alat")
         return tool
 
+    async def _team(self, team_id: UUID | None, office_id: UUID | None) -> str | None:
+        """Tim pemakai bawaan harus ada dan berada di kantor yang sama dengan aset (bila kantor diketahui)."""
+        if team_id is None:
+            return None
+        row = await self.repo.team_office(team_id)
+        if row is None:
+            raise ValidationError("Tim tidak ditemukan.")
+        if office_id is not None and str(row.office_id) != str(office_id):
+            raise ValidationError("Tim berbeda kantor dengan aset ini.")
+        return str(team_id)
+
     async def create_tool(self, data: ToolCreate) -> Any:
         await self._check_place(data.office_id, data.division_id)
         if await self.repo.tool_code_taken(data.tool_code):
             raise AppError("TOOL_CODE_TAKEN", "Kode alat sudah dipakai.", status=409)
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip(), photo_path=await self._path(data.photo_file_id, "foto"))
         return await self.repo.get_tool(await self.repo.insert_tool(fields))
@@ -105,6 +122,7 @@ class AssetService:
         if data.ownership_type and data.ownership_type != tool.ownership_type and tool.assignment_id:
             raise _in_use("TOOL")
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id) if data.office_id else None,
                       division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip() if data.name else None,
@@ -127,6 +145,7 @@ class AssetService:
         if await self.repo.plate_taken(data.number_plate):
             raise AppError("PLATE_TAKEN", "Nomor polisi sudah terdaftar.", status=409)
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id), name=data.name.strip(),
                       photo_path=await self._path(data.photo_file_id, "foto"))
         return await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
@@ -139,6 +158,7 @@ class AssetService:
         if data.vehicle_type and data.vehicle_type != vehicle.vehicle_type and vehicle.assignment_id:
             raise _in_use("VEHICLE")
         fields = data.model_dump(exclude={"photo_file_id"})
+        fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id) if data.office_id else None,
                       division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip() if data.name else None,
@@ -190,19 +210,52 @@ class AssetService:
         return await self.repo.inspections(vehicle_id)
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
+    async def availability(self, work_date: date, team_id: UUID | None) -> list[dict[str, Any]]:
+        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana."""
+        rows = await self.repo.availability(work_date)
+        names = await self.repo.team_names([r.team_id for r in rows])
+        out: list[dict[str, Any]] = []
+        for r in rows:
+            used_by = str(r.team_id) if r.team_id else None
+            out.append({
+                "asset_type": r.asset_type,
+                "asset_id": r.asset_id,
+                "asset_name": r.asset_name,
+                "status": r.status,
+                "available": used_by is None and r.status in ("ready", "allocated", "loaned"),
+                "used_by_team_id": used_by,
+                "used_by_team_name": names.get(used_by) if used_by else None,
+                "used_by_requested_team": bool(used_by and team_id and used_by == str(team_id)),
+            })
+        return out
+
     async def loans(
         self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None
     ) -> list[Any]:
-        """Pengelola aset & peran kantor (view:teams) melihat semua; anggota tim melihat aset jadwal timnya;
-        selain itu hanya pinjaman miliknya sendiri."""
-        if not ({Permission.MANAGE_ASSETS.value, Permission.VIEW_TEAMS.value} & set(user.permissions)):
-            own = await self.repo.employee_of_user(user.user_id)
-            if own is None:
-                return []
-            plan = await self.repo.plan_for_loan(daily_plan_id, own) if daily_plan_id else None
-            if plan is None or not plan.on_team:
-                employee_id = UUID(own)
-        return await self.repo.loans(open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id)
+        """Pengelola aset (MANAGE_ASSETS) melihat semua. Pemegang VIEW_TEAMS hanya melihat pinjaman jadwal yang
+        ia kelola (atau tim jadwalnya sendiri) dan pinjaman karyawan di divisi yang ia pimpin; selain itu hanya
+        pinjaman miliknya sendiri."""
+        perms = set(user.permissions)
+        own = await self.repo.employee_of_user(user.user_id)
+        if Permission.MANAGE_ASSETS.value in perms:
+            if daily_plan_id and await self.repo.plan_for_loan(daily_plan_id, own or _NIL_UUID) is None:
+                raise NotFoundError("Jadwal harian")
+            return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                         daily_plan_id=daily_plan_id, managed_by=None)
+        if own is None:
+            return []
+        if daily_plan_id:
+            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)
+            plan = await self.repo.plan_for_loan(daily_plan_id, own)
+            if plan is not None and (plan.on_team or (Permission.VIEW_TEAMS.value in perms and plan.manages)):
+                return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                             daily_plan_id=daily_plan_id, managed_by=None)
+            return await self.repo.loans(open_only=open_only, employee_id=UUID(own),
+                                         daily_plan_id=daily_plan_id, managed_by=None)
+        if Permission.VIEW_TEAMS.value in perms:
+            return await self.repo.loans(open_only=open_only, employee_id=employee_id,
+                                         daily_plan_id=None, managed_by=own)
+        return await self.repo.loans(open_only=open_only, employee_id=UUID(own), daily_plan_id=None, managed_by=None)
 
     async def _check_vehicle_papers(self, vehicle_id: UUID, vehicle_type: str, employee_id: UUID) -> None:
         vehicle = await self._vehicle(vehicle_id)
@@ -222,11 +275,10 @@ class AssetService:
         asset = await self.repo.lock_asset(data.asset_type, asset_id)
         if asset is None:
             raise NotFoundError(_LABEL[data.asset_type])
-        if asset.status != "ready" or await self.repo.has_open_loan(data.asset_type, asset_id):
-            raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
         if not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan, nonaktif, atau sedang proses keluar.")
 
+        plan = None
         if data.daily_plan_id is not None:
             if data.asset_type == "TOOL" and asset.ownership_type == "PERSONAL_LOAN":
                 raise ValidationError("Alat pribadi dipinjamkan ke karyawan, tidak dikaitkan ke jadwal harian.")
@@ -237,6 +289,20 @@ class AssetService:
                 raise ValidationError("Jadwal harian sudah lewat.")
             if not plan.on_team:
                 raise ValidationError("Karyawan bukan anggota tim pada jadwal harian ini.")
+
+        # Bentrok dicek per tanggal: aset yang dipakai tim lain pada tanggal jadwal ini ditolak, pada tanggal lain
+        # boleh. Pinjaman tanpa jadwal tetap bentrok dengan peminjaman berjalan apa pun.
+        work_date = plan.work_date if plan is not None else None
+        if asset.status not in ("ready", "allocated", "loaned"):
+            raise AppError("ASSET_NOT_AVAILABLE", f"{_LABEL[data.asset_type]} tidak siap dipinjam.", status=409)
+        conflict = await self.repo.open_loan_conflict(data.asset_type, asset_id, work_date)
+        if conflict is not None:
+            if work_date is None:
+                msg = f"{_LABEL[data.asset_type]} sedang dipinjam dan belum dikembalikan."
+            else:
+                msg = (f"{_LABEL[data.asset_type]} sudah dipakai tim {conflict.team_name or 'lain'} "
+                       f"pada {work_date.isoformat()}.")
+            raise AppError("ASSET_NOT_AVAILABLE", msg, status=409)
 
         if data.asset_type == "VEHICLE":
             await self._check_vehicle_papers(asset_id, asset.vehicle_type, data.employee_id)

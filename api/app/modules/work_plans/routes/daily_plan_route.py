@@ -19,14 +19,20 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     AttachmentsIn,
     BulkApproveIn,
     BulkApproveOut,
+    DailyActivateIn,
+    DailyBulkIn,
+    DailyBulkOut,
+    DailyBulkStandbyIn,
     DailyFormOptions,
     DailyPlanCopy,
     DailyPlanCreate,
     DailyPlanDetail,
+    DailyPlanLocationUpdate,
     DailyPlanOut,
     DailyPlanUpdate,
     DailyStatus,
     GeoResult,
+    OrderScheduleOut,
     RecentSiteOut,
     RejectIn,
 )
@@ -35,6 +41,7 @@ from app.modules.work_plans.schemas.daily_report_schema import (
     DailyReportOut,
     WeeklyPresentationOut,
 )
+from app.modules.work_plans.schemas.weekly_schema import WeeklyMatrixOut
 from app.shared.access.access_service import DailyAccess, DailyNeed
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans (Daily-First)"])
@@ -48,6 +55,17 @@ async def form_options(current_user: CurrentUser = _PLANNER, controller: DailyPl
                        ) -> DailyFormOptions:
     """Pilihan divisi, tim, dan order terbuka yang dikelola pengguna."""
     return await controller.handle_form_options(current_user)
+
+
+@router.get("/weekly", response_model=WeeklyMatrixOut)
+async def weekly_matrix(week_start: date = Query(description="Senin awal minggu (YYYY-MM-DD)"),
+                        division_id: UUID | None = Query(default=None),
+                        current_user: CurrentUser = _PLANNER,
+                        controller: DailyPlanController = Depends()) -> WeeklyMatrixOut:
+    """Matriks alokasi mingguan: tim × 7 hari (Senin–Minggu) untuk divisi yang dikelola PM/OM. `division_id` opsional
+    (kosong = semua divisi yang dikelola). Sel memuat status, jenis (WORK/STANDBY), ringkasan item, dan sisa target
+    order."""
+    return await controller.handle_weekly(current_user, week_start, division_id)
 
 
 @router.get("/geo/search", response_model=list[GeoResult])
@@ -86,6 +104,27 @@ async def create_daily_plan(data: DailyPlanCreate, current_user: CurrentUser = _
     return await controller.handle_create(current_user, data)
 
 
+@router.post("/daily/bulk", response_model=DailyBulkOut)
+async def bulk_create_daily(data: DailyBulkIn, current_user: CurrentUser = _PLANNER,
+                            controller: DailyPlanController = Depends()) -> DailyBulkOut:
+    """Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain."""
+    return await controller.handle_bulk_create(current_user, data)
+
+
+@router.post("/daily/bulk-standby", response_model=DailyBulkOut)
+async def bulk_standby_daily(data: DailyBulkStandbyIn, current_user: CurrentUser = _PLANNER,
+                             controller: DailyPlanController = Depends()) -> DailyBulkOut:
+    """Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui)."""
+    return await controller.handle_bulk_standby(current_user, data)
+
+
+@router.post("/daily/{daily_plan_id}/activate", response_model=DailyPlanOut)
+async def activate_daily_plan(daily_plan_id: UUID, data: DailyActivateIn, current_user: CurrentUser = _PLANNER,
+                              controller: DailyPlanController = Depends()) -> DailyPlanOut:
+    """Ubah jadwal siaga jadi pekerjaan klien (STANDBY → WORK) dan beri tahu ketua serta anggota tim."""
+    return await controller.handle_activate(current_user, daily_plan_id, data)
+
+
 @router.post("/daily/approve", response_model=BulkApproveOut)
 async def bulk_approve(data: BulkApproveIn, current_user: CurrentUser = _PLANNER,
                        controller: DailyPlanController = Depends()) -> BulkApproveOut:
@@ -97,7 +136,7 @@ async def bulk_approve(data: BulkApproveIn, current_user: CurrentUser = _PLANNER
 async def get_daily_plan(daily_plan_id: UUID, access: DailyAccess = _VIEW,
                          controller: DailyPlanController = Depends()) -> DailyPlanDetail:
     """Detail jadwal beserta item & lampirannya."""
-    return await controller.handle_detail(daily_plan_id)
+    return await controller.handle_detail(access.user, daily_plan_id)
 
 
 @router.put("/daily/{daily_plan_id}", response_model=DailyPlanOut)
@@ -105,6 +144,14 @@ async def update_daily_plan(daily_plan_id: UUID, data: DailyPlanUpdate, current_
                             controller: DailyPlanController = Depends()) -> DailyPlanOut:
     """Mengubah jadwal (DRAFT/SUBMITTED)."""
     return await controller.handle_update(current_user, daily_plan_id, data)
+
+
+@router.patch("/daily/{daily_plan_id}/location", response_model=DailyPlanOut)
+async def update_daily_plan_location(daily_plan_id: UUID, data: DailyPlanLocationUpdate,
+                                     current_user: CurrentUser = _PLANNER,
+                                     controller: DailyPlanController = Depends()) -> DailyPlanOut:
+    """Ubah lokasi jadwal DISETUJUI yang belum dimulai tanpa mengembalikannya ke draf (PM/OM); tercatat di audit."""
+    return await controller.handle_update_location(current_user, daily_plan_id, data)
 
 
 @router.delete("/daily/{daily_plan_id}")
@@ -193,10 +240,10 @@ async def get_daily_report(
     return await controller.handle_get_report(current_user, daily_plan_id)
 
 
-@router.get("/orders/{completion_id}/schedule", response_model=list[DailyPlanOut])
+@router.get("/orders/{completion_id}/schedule", response_model=OrderScheduleOut)
 async def order_schedule(completion_id: UUID, current_user: CurrentUser = _LOGIN,
-                         controller: DailyPlanController = Depends()) -> list[DailyPlanOut]:
-    """Jadwal harian yang memuat item order klien ini (proyek multi-minggu)."""
+                         controller: DailyPlanController = Depends()) -> OrderScheduleOut:
+    """Jadwal harian yang memuat item order klien ini (proyek multi-minggu) + ringkasan target order."""
     return await controller.handle_order_schedule(current_user, completion_id)
 
 

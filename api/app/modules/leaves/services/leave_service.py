@@ -5,14 +5,17 @@ Service logika bisnis cuti, izin, dan sakit.
 """
 from __future__ import annotations
 
-from datetime import timedelta
+from collections import defaultdict
+from collections.abc import Iterable
+from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
+from app.core.time import jakarta_now
 from app.modules.leaves.repositories.leave_repository import LeaveRepository
-from app.modules.leaves.schemas.leave_schema import LeaveCreate, LeaveReview
+from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, LeaveReview
 from app.modules.notifications.services.notification_service import NotificationService
 
 LEAVE_TYPES = (
@@ -22,9 +25,26 @@ LEAVE_TYPES = (
     ("UNPAID", "Cuti tanpa gaji", False),
     ("OTHER", "Izin lainnya", False),
 )
-CANCELLABLE_STATUSES = ("PENDING", "APPROVED_BY_PM")
+CANCELLABLE_STATUSES = ("PENDING", "APPROVED_BY_PM", "APPROVED_BY_HR")
+# Status yang sudah memotong kuota cuti tahunan (dikembalikan saat dibatalkan)
+QUOTA_HELD_STATUSES = ("APPROVED_BY_PM", "APPROVED_BY_HR")
 ALLOWED_REVIEW_ROLES = ("PROJECT_MANAGER", "ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
 ORG_WIDE_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
+CANCEL_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER")
+
+
+def _conflict_dict(row: Any) -> dict[str, Any]:
+    """Konflik jadwal dalam bentuk JSON-aman (dipakai respons dan detail galat 409)."""
+    return {
+        "plan_id": str(row.plan_id),
+        "work_date": row.work_date.isoformat(),
+        "team_name": row.team_name,
+        "status": row.status,
+    }
+
+
+def _fmt_date(iso: str) -> str:
+    return date.fromisoformat(iso).strftime("%d/%m/%Y")
 
 
 class LeaveService:
@@ -39,7 +59,7 @@ class LeaveService:
     async def apply(self, user: CurrentUser, data: LeaveCreate) -> Any:
         # Karyawan biasa hanya boleh mengajukan cuti untuk dirinya sendiri
         emp_id: UUID | str | None
-        if user.role not in ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"):
+        if not user.has_role("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"):
             if data.employee_id and str(data.employee_id) != str(user.employee_id):
                 raise ForbiddenError("Hanya HR atau Admin yang dapat mengajukan cuti atas nama karyawan lain.")
             emp_id = user.employee_id
@@ -98,7 +118,7 @@ class LeaveService:
         return await self.repo.get_leave(leave_id)
 
     async def review(self, user: CurrentUser, leave_id: UUID, data: LeaveReview) -> Any:
-        if user.role not in ALLOWED_REVIEW_ROLES:
+        if not user.has_role(*ALLOWED_REVIEW_ROLES):
             raise ForbiddenError("Hanya PM, HR, OM, atau Super Admin yang berwenang meninjau permohonan cuti.")
 
         if user.employee_id is None:
@@ -112,13 +132,13 @@ class LeaveService:
         if str(user.employee_id) == str(leave.employee_id):
             raise ForbiddenError("Pemohon cuti tidak dapat menyetujui atau menolak permohonannya sendiri.")
 
-        if user.role == "PROJECT_MANAGER" and not await self._pm_owns(user, leave.employee_id):
+        if user.has_role("PROJECT_MANAGER") and not await self._pm_owns(user, leave.employee_id):
             raise ForbiddenError("PM hanya dapat meninjau cuti karyawan di divisinya.")
 
         if leave.status in ("APPROVED_BY_HR", "REJECTED", "CANCELLED"):
             raise AppError("ALREADY_DECIDED", "Permohonan cuti ini sudah diputuskan.", status=409)
 
-        is_pm = user.role == "PROJECT_MANAGER"
+        is_pm = user.has_role("PROJECT_MANAGER")
         if is_pm and leave.status == "APPROVED_BY_PM":
             raise AppError(
                 "ALREADY_APPROVED_BY_PM",
@@ -127,6 +147,18 @@ class LeaveService:
             )
 
         new_status = "REJECTED" if data.decision == "REJECTED" else ("APPROVED_BY_PM" if is_pm else "APPROVED_BY_HR")
+
+        # Cuti yang bertabrakan dengan jadwal tim berjalan hanya boleh disetujui bila peninjau mengonfirmasinya
+        conflicts: list[dict[str, Any]] = []
+        if data.decision == "APPROVED":
+            conflicts = await self._conflicts_of(leave.employee_id, leave.start_date, leave.end_date)
+            if conflicts and not data.acknowledge_conflicts:
+                raise AppError(
+                    "LEAVE_CONFLICT",
+                    "Pemohon masih terjadwal di tim pada hari cuti. Konfirmasi konflik jadwal untuk tetap menyetujui.",
+                    status=409,
+                    details={"conflicts": conflicts},
+                )
 
         await self.repo.update_review(
             leave_id=leave_id,
@@ -166,36 +198,85 @@ class LeaveService:
                 ["ADMIN_HR_GA"], "LEAVE_REQUESTED",
                 f"Cuti {await notifier.employee_name(leave.employee_id)} menunggu persetujuan HR", "", target="leave",
             )
+        if conflicts:
+            who = await notifier.employee_name(leave.employee_id)
+            detail = "; ".join(
+                f"{c['team_name']} {_fmt_date(c['work_date'])}" for c in conflicts
+            )
+            await notifier.notify_division_managers(
+                leave.employee_id, "LEAVE_CONFLICT", f"{who} cuti pada jadwal tim", detail, target="leave",
+                roles=("PROJECT_MANAGER",),
+            )
         return await self.repo.get_leave(leave_id)
 
-    async def cancel(self, user: CurrentUser, leave_id: UUID) -> Any:
-        leave = await self.repo.get_leave(leave_id)
+    async def cancel(self, user: CurrentUser, leave_id: UUID, data: LeaveCancel | None = None) -> Any:
+        # Dikunci agar pembatalan tidak berbarengan dengan persetujuan (pengembalian kuota ganda)
+        leave = await self.repo.get_leave(leave_id, for_update=True)
         if leave is None:
             raise NotFoundError("Permohonan cuti")
-        if user.employee_id is None or str(user.employee_id) != str(leave.employee_id):
-            raise ForbiddenError("Hanya pemohon yang dapat membatalkan permohonan cutinya.")
+        is_owner = user.employee_id is not None and str(user.employee_id) == str(leave.employee_id)
+        if not is_owner and not user.has_role(*CANCEL_ROLES):
+            raise ForbiddenError("Hanya pemohon, HR, atau OM yang dapat membatalkan permohonan cuti ini.")
         if leave.status not in CANCELLABLE_STATUSES:
             raise AppError("NOT_CANCELLABLE", "Permohonan cuti ini sudah tidak dapat dibatalkan.", status=409)
+        if leave.end_date < jakarta_now().date():
+            raise AppError(
+                "NOT_CANCELLABLE", "Cuti yang hari terakhirnya sudah lewat tidak dapat dibatalkan.", status=409,
+            )
 
-        await self.repo.cancel_leave(leave_id)
-        # Kuota sudah dipotong saat disetujui PM; kembalikan bila dibatalkan
-        if leave.leave_type == "ANNUAL" and leave.status == "APPROVED_BY_PM":
+        reason = ((data.reason or "").strip() if data else "") or None
+        await self.repo.cancel_leave(leave_id, reason)
+        # Kuota tahunan sudah dipotong saat persetujuan pertama; kembalikan sesuai status sebelum dibatalkan
+        if leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES:
             await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
+
         notifier = self._notify()
+        who = await notifier.employee_name(leave.employee_id)
         await notifier.notify_division_managers(
             leave.employee_id, "LEAVE_CANCELLED",
-            f"{await notifier.employee_name(leave.employee_id)} membatalkan pengajuan cuti/izin", "", target="leave",
+            f"{who} membatalkan pengajuan cuti/izin" if is_owner else f"Cuti {who} dibatalkan",
+            reason or "", target="leave",
         )
+        if not is_owner:
+            await notifier.notify_employees(
+                [leave.employee_id], "LEAVE_CANCELLED", "Cuti/izin Anda dibatalkan", reason or "", target="leave",
+            )
         return await self.repo.get_leave(leave_id)
+
+    async def _conflicts_of(self, employee_id: UUID | str, start: date, end: date) -> list[dict[str, Any]]:
+        rows = await self.repo.schedule_conflicts([str(employee_id)], start, end)
+        return [_conflict_dict(r) for r in rows]
+
+    async def conflicts_for(self, rows: Iterable[Any]) -> dict[str, list[dict[str, Any]]]:
+        """Konflik jadwal tim per cuti (kunci: leave_id). Satu kueri untuk seluruh daftar."""
+        rows = list(rows)
+        if not rows:
+            return {}
+        found = await self.repo.schedule_conflicts(
+            sorted({str(r.employee_id) for r in rows}),
+            min(r.start_date for r in rows),
+            max(r.end_date for r in rows),
+        )
+        by_emp: dict[str, list[Any]] = defaultdict(list)
+        for c in found:
+            by_emp[str(c.employee_id)].append(c)
+        return {
+            str(r.leave_id): [
+                _conflict_dict(c)
+                for c in by_emp.get(str(r.employee_id), [])
+                if r.start_date <= c.work_date <= r.end_date
+            ]
+            for r in rows
+        }
 
     async def _pm_owns(self, user: CurrentUser, employee_id: UUID | str) -> bool:
         pm_id = await self.repo.division_pm_of(employee_id)
         return pm_id is not None and str(pm_id) == str(user.employee_id)
 
     async def _ensure_can_view(self, user: CurrentUser, employee_id: UUID | str) -> None:
-        if user.role in ORG_WIDE_ROLES or str(employee_id) == str(user.employee_id):
+        if user.has_role(*ORG_WIDE_ROLES) or str(employee_id) == str(user.employee_id):
             return
-        if user.role == "PROJECT_MANAGER" and await self._pm_owns(user, employee_id):
+        if user.has_role("PROJECT_MANAGER") and await self._pm_owns(user, employee_id):
             return
         raise ForbiddenError("Anda tidak berhak melihat data cuti karyawan ini.")
 
@@ -215,9 +296,9 @@ class LeaveService:
         year: int | None = None,
     ) -> list[Any]:
         pm_id = None
-        if user.role == "PROJECT_MANAGER":
+        if user.has_role("PROJECT_MANAGER"):
             pm_id = user.employee_id
-        elif user.role not in ORG_WIDE_ROLES:
+        elif not user.has_role(*ORG_WIDE_ROLES):
             if user.employee_id is None:
                 return []
             employee_id = UUID(str(user.employee_id))

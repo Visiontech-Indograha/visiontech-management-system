@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 import urllib3
 from minio import Minio
+from minio.error import S3Error
 
 from app.core.config import settings
 
@@ -110,6 +111,12 @@ def get_object_bytes(object_name: str) -> bytes | None:
     try:
         response = minio_client.get_object(settings.MINIO_BUCKET, object_name)
         return response.read()
+    except S3Error as e:
+        if e.code == "NoSuchKey":  # objek memang belum ada (mis. logo pengganti belum diunggah): bukan galat
+            logger.debug(f"Objek MinIO belum ada: {object_name}")
+        else:
+            logger.error(f"Gagal membaca dari MinIO {object_name}: {e}")
+        return None
     except Exception as e:  # noqa: BLE001
         logger.error(f"Gagal membaca dari MinIO {object_name}: {e}")
         return None

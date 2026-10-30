@@ -14,6 +14,8 @@ from app.core.security import CurrentUser
 from app.modules.leaves.dependencies import get_leave_service
 from app.modules.leaves.schemas.leave_schema import (
     LeaveBalanceResponse,
+    LeaveCancel,
+    LeaveConflict,
     LeaveCreate,
     LeaveResponse,
     LeaveReview,
@@ -22,8 +24,11 @@ from app.modules.leaves.schemas.leave_schema import (
 from app.modules.leaves.services.leave_service import LEAVE_TYPES, LeaveService
 
 
-def _response(row: Any) -> LeaveResponse:
-    return LeaveResponse(**row._mapping)
+def _response(row: Any, conflicts: list[dict[str, Any]] | None = None) -> LeaveResponse:
+    return LeaveResponse(
+        **row._mapping,
+        conflicts=[LeaveConflict(**c) for c in (conflicts or [])],
+    )
 
 
 class LeaveController:
@@ -32,14 +37,18 @@ class LeaveController:
     def __init__(self, service: LeaveService = Depends(get_leave_service)) -> None:
         self.service = service
 
+    async def _with_conflicts(self, rows: list[Any]) -> list[LeaveResponse]:
+        cmap = await self.service.conflicts_for(rows)
+        return [_response(r, cmap.get(str(r.leave_id))) for r in rows]
+
     async def handle_apply(self, user: CurrentUser, data: LeaveCreate) -> LeaveResponse:
-        return _response(await self.service.apply(user, data))
+        return (await self._with_conflicts([await self.service.apply(user, data)]))[0]
 
     async def handle_review(self, user: CurrentUser, leave_id: UUID, data: LeaveReview) -> LeaveResponse:
-        return _response(await self.service.review(user, leave_id, data))
+        return (await self._with_conflicts([await self.service.review(user, leave_id, data)]))[0]
 
     async def handle_get(self, user: CurrentUser, leave_id: UUID) -> LeaveResponse:
-        return _response(await self.service.get(user, leave_id))
+        return (await self._with_conflicts([await self.service.get(user, leave_id)]))[0]
 
     async def handle_list(
         self,
@@ -49,7 +58,7 @@ class LeaveController:
         year: int | None = None,
     ) -> list[LeaveResponse]:
         rows = await self.service.list(user, employee_id=employee_id, status=status, year=year)
-        return [_response(r) for r in rows]
+        return await self._with_conflicts(list(rows))
 
     async def handle_balance(self, user: CurrentUser, employee_id: UUID, year: int) -> LeaveBalanceResponse:
         bal = await self.service.balance(user, employee_id, year)
@@ -63,8 +72,8 @@ class LeaveController:
             remaining_quota=bal.remaining_quota,
         )
 
-    async def handle_cancel(self, user: CurrentUser, leave_id: UUID) -> LeaveResponse:
-        return _response(await self.service.cancel(user, leave_id))
+    async def handle_cancel(self, user: CurrentUser, leave_id: UUID, data: LeaveCancel | None) -> LeaveResponse:
+        return (await self._with_conflicts([await self.service.cancel(user, leave_id, data)]))[0]
 
     def handle_types(self) -> list[LeaveTypeOption]:
         return [LeaveTypeOption(code=c, label=lbl, uses_quota=q) for c, lbl, q in LEAVE_TYPES]  # type: ignore[arg-type]

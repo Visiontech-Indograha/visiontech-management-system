@@ -5,6 +5,7 @@ Rute endpoint HTTP inventaris aset (/assets): alat, kendaraan (+ berkas & inspek
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -15,6 +16,7 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.assets.controllers.asset_controller import AssetController
 from app.modules.assets.schemas.asset_schema import (
+    AssetAvailabilityOut,
     AssetStatus,
     AssetStatusUpdate,
     InspectionCreate,
@@ -39,6 +41,18 @@ from app.modules.assets.schemas.asset_schema import (
 router = APIRouter(prefix="/assets", tags=["Assets"])
 _MANAGE = Depends(require_permission(Permission.MANAGE_ASSETS))
 _LOGIN = Depends(get_current_user)
+
+
+# ── Ketersediaan per tanggal ───────────────────────────────────────────────────
+@router.get("/availability", response_model=list[AssetAvailabilityOut])
+async def asset_availability(
+    work_date: date = Query(..., alias="date", description="Tanggal jadwal (YYYY-MM-DD)"),
+    team_id: UUID | None = Query(None, description="Tim peminta: tandai aset yang dipakai tim ini"),
+    current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+) -> list[AssetAvailabilityOut]:
+    """Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana)."""
+    return await controller.handle_availability(work_date, team_id)
 
 
 # ── Alat ───────────────────────────────────────────────────────────────────────

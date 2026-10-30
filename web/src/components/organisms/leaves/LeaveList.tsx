@@ -15,10 +15,16 @@ import { lastPageOf, type Paged } from "@/lib/paged";
 import { LeaveApplyButton } from "./LeaveApplyButton";
 import { LEAVE_TYPE_LABEL, type LeaveRequest } from "@/services/leaveService";
 
+/** Status final cuti: APPROVED_BY_HR dipakai untuk setiap persetujuan non-PM (HR, OM, admin), jadi label netral. */
+function leaveStatusLabel(l: Pick<LeaveRequest, 'status' | 'reviewed_by_name'>): string {
+  if (l.status === 'APPROVED_BY_HR') return l.reviewed_by_name ? 'Disetujui · ' + l.reviewed_by_name : 'Disetujui';
+  return STATUS_BADGE[l.status]?.label ?? l.status;
+}
+
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PENDING: { label: "Menunggu Persetujuan", className: "bg-amber-500/15 text-amber-600 font-medium" },
   APPROVED_BY_PM: { label: "Disetujui PM", className: "bg-leaf/15 text-leaf font-medium" },
-  APPROVED_BY_HR: { label: "Disetujui HR", className: "bg-leaf/15 text-leaf font-medium" },
+  APPROVED_BY_HR: { label: "Disetujui", className: "bg-leaf/15 text-leaf font-medium" },
   APPROVED_BY_FINANCE: { label: "Disetujui Finance", className: "bg-leaf/15 text-leaf font-medium" },
   REJECTED: { label: "Ditolak", className: "bg-danger/15 text-danger font-medium" },
   CANCELLED: { label: "Dibatalkan", className: "bg-hover text-mist font-medium" },
@@ -36,8 +42,10 @@ export function LeaveList({
   onResetFilters,
   canReview,
   canFinalReview,
+  canCancel,
   onApply,
   onReview,
+  onCancel,
 }: {
   leaves: UseQueryResult<Paged<LeaveRequest>>;
   statusFilter: string;
@@ -50,8 +58,10 @@ export function LeaveList({
   onResetFilters: () => void;
   canReview: boolean;
   canFinalReview: boolean;
+  canCancel: (leave: LeaveRequest) => boolean;
   onApply: () => void;
   onReview: (leave: LeaveRequest) => void;
+  onCancel: (leave: LeaveRequest) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -71,7 +81,7 @@ export function LeaveList({
             <ControlOption value="">-- Semua Status --</ControlOption>
             <ControlOption value="PENDING">Menunggu Persetujuan</ControlOption>
             <ControlOption value="APPROVED_BY_PM">Disetujui PM</ControlOption>
-            <ControlOption value="APPROVED_BY_HR">Disetujui HR</ControlOption>
+            <ControlOption value="APPROVED_BY_HR">Disetujui (final)</ControlOption>
             <ControlOption value="REJECTED">Ditolak</ControlOption>
             <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
           </SelectField>
@@ -108,9 +118,9 @@ export function LeaveList({
       {leaves.data && leaves.data.items.length > 0 && (
         <ListBlock className="grid gap-3 md:grid-cols-2">
           {leaves.data.items.map((l) => {
-            const statusBadge = STATUS_BADGE[l.status] ?? {
-              label: l.status,
-              className: "bg-hover text-mist",
+            const statusBadge = {
+              label: leaveStatusLabel(l),
+              className: STATUS_BADGE[l.status]?.className ?? "bg-hover text-mist",
             };
             const isPending = l.status === "PENDING";
 
@@ -154,6 +164,29 @@ export function LeaveList({
                     </div>
                   </div>
 
+                  {(l.conflicts?.length ?? 0) > 0 && (
+                    <div role="status" className="mt-2 p-2 rounded-control bg-amber-500/10 text-xs text-amber-700 flex items-start gap-1.5">
+                      <Clock size={14} className="shrink-0 mt-0.5" />
+                      <TextBlock as="span">
+                        Bertabrakan dengan jadwal tim: {l.conflicts?.map((c) => `${c.team_name} (${formatDate(c.work_date)})`).join(", ")}
+                      </TextBlock>
+                    </div>
+                  )}
+
+                  {l.cancel_note && (
+                    <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
+                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Alasan pembatalan:</TextBlock>
+                      <TextBlock as="span">{l.cancel_note}</TextBlock>
+                    </div>
+                  )}
+
+                  {l.review_note && (
+                    <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
+                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Catatan persetujuan:</TextBlock>
+                      <TextBlock as="span">{l.review_note}</TextBlock>
+                    </div>
+                  )}
+
                   {l.rejection_note && (
                     <div className="mt-2 p-2 rounded-control bg-danger/10 text-xs text-danger flex items-start gap-1.5">
                       <XCircle size={14} className="shrink-0 mt-0.5" />
@@ -175,16 +208,28 @@ export function LeaveList({
                   <TextBlock as="span" className="text-mist">
                     Diajukan {formatDate(String(l.create_at))}
                   </TextBlock>
-                  {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
-                    <ActionButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onReview(l)}
-                      aria-label={`Tinjau cuti ${l.employee_name}`}
-                    >
-                      Tinjau Permohonan
-                    </ActionButton>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {canReview && (isPending || (canFinalReview && l.status === "APPROVED_BY_PM")) && (
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReview(l)}
+                        aria-label={`Tinjau cuti ${l.employee_name}`}
+                      >
+                        Tinjau Permohonan
+                      </ActionButton>
+                    )}
+                    {canCancel(l) && (
+                      <ActionButton
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onCancel(l)}
+                        aria-label={`Batalkan cuti ${l.employee_name}`}
+                      >
+                        Batalkan cuti
+                      </ActionButton>
+                    )}
+                  </div>
                 </div>
               </ListEntry>
             );

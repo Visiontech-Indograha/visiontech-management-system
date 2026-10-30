@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { CheckControl } from "@/components/molecules/CheckControl";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextAreaField } from "@/components/molecules/Field";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -19,11 +20,18 @@ export function LeaveReviewDialog({
   const review = useReviewLeave();
   const [note, setNote] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const conflicts = leave.conflicts ?? [];
+  const blockedByConflict = conflicts.length > 0 && !acknowledged;
 
   const handleReview = async (decision: "APPROVED" | "REJECTED") => {
     setFormError(null);
     if (decision === "REJECTED" && !note.trim()) {
       setFormError("Catatan/alasan penolakan wajib diisi jika menolak permohonan.");
+      return;
+    }
+    if (decision === "APPROVED" && blockedByConflict) {
+      setFormError("Centang konfirmasi konflik jadwal sebelum menyetujui permohonan ini.");
       return;
     }
 
@@ -33,6 +41,7 @@ export function LeaveReviewDialog({
         body: {
           decision,
           note: note.trim() || undefined,
+          ...(decision === "APPROVED" && conflicts.length > 0 ? { acknowledge_conflicts: true } : {}),
         },
       });
       toast.success(
@@ -68,7 +77,7 @@ export function LeaveReviewDialog({
             <ActionButton
               type="button"
               variant="default"
-              disabled={review.isPending}
+              disabled={review.isPending || blockedByConflict}
               onClick={() => handleReview("APPROVED")}
             >
               {review.isPending ? "Memproses..." : "Setujui Permohonan"}
@@ -78,6 +87,30 @@ export function LeaveReviewDialog({
       }
     >
       <div className="space-y-3 mb-4">
+        {conflicts.length > 0 && (
+          <div role="alert" className="rounded-control border border-amber-500/40 bg-amber-500/10 p-3 space-y-2 text-xs">
+            <TextBlock className="font-semibold text-foreground">
+              Peringatan: pemohon terjadwal di tim pada hari cuti
+            </TextBlock>
+            {conflicts.map((c) => (
+              <TextBlock key={c.plan_id} className="block text-foreground">
+                {`• ${c.team_name} · ${formatDate(c.work_date)} (${c.status === "ONGOING" ? "berjalan" : "disetujui"})`}
+              </TextBlock>
+            ))}
+            <div className="flex items-start gap-2 pt-1">
+              <CheckControl
+                aria-label="Konfirmasi konflik jadwal tim"
+                checked={acknowledged}
+                onCheckedChange={(v) => setAcknowledged(v === true)}
+              />
+              <TextBlock as="span">
+                Saya memahami pemohon bertugas di tim pada tanggal tersebut dan tetap menyetujui cuti ini.
+                PM divisi akan diberi tahu.
+              </TextBlock>
+            </div>
+          </div>
+        )}
+
         <div className="p-3 rounded-control bg-hover space-y-1 text-xs">
           <div>
             <TextBlock as="span">

@@ -7,6 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 
 from __future__ import annotations
 
+from datetime import date as _date
 from uuid import UUID
 
 from fastapi import Depends
@@ -14,6 +15,7 @@ from fastapi import Depends
 from app.core.security import CurrentUser
 from app.modules.assets.dependencies import get_asset_service
 from app.modules.assets.schemas.asset_schema import (
+    AssetAvailabilityOut,
     InspectionCreate,
     InspectionOut,
     LoanCreate,
@@ -84,6 +86,9 @@ class AssetController:
         self, user: CurrentUser, vehicle_id: UUID, data: InspectionCreate
     ) -> list[InspectionOut]:
         return [InspectionOut(**r._mapping) for r in await self.service.add_inspection(user, vehicle_id, data)]
+
+    async def handle_availability(self, work_date: _date, team_id: UUID | None) -> list[AssetAvailabilityOut]:
+        return [AssetAvailabilityOut(**r) for r in await self.service.availability(work_date, team_id)]
 
     # Peminjaman
     async def handle_loans(

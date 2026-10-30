@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
 
+from app.shared.documents.branding import KopLogos, default_kop_logos
+
 PHASE_LABEL = {
     "SURVEY": "Survei",
     "PREPARATION": "Persiapan",
@@ -21,6 +23,14 @@ STATUS_LABEL = {
     "DONE": "Selesai",
     "PENDING_ROLLOVER": "Minta pindah hari",
     "SHIFTED_DAY": "Pindah hari",
+}
+PLAN_STATUS_LABEL = {
+    "DRAFT": "Draf",
+    "SUBMITTED": "Diajukan",
+    "APPROVED": "Disetujui",
+    "ONGOING": "Berjalan",
+    "COMPLETED": "Selesai",
+    "REJECTED": "Ditolak",
 }
 MONTHS = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
           "November", "Desember"]
@@ -95,6 +105,9 @@ class CompletionReport:
     photos: list[ReportPhoto] = field(default_factory=list)  # foto realisasi tingkat order (ketua tim)
     leader_signature: bytes | None = None
     pm_signature: bytes | None = None
+    map_image: bytes | None = None  # PNG peta + penanda titik (None: tanpa koneksi / tanpa koordinat)
+    has_coordinates: bool = False  # ada titik berkoordinat (beda 'tanpa koneksi' dan 'tanpa titik')
+    logos: KopLogos = field(default_factory=default_kop_logos)  # (logo Visiontech, logo tim | None)
 
     @property
     def survey_points(self) -> list[ReportPoint]:
@@ -109,6 +122,39 @@ class CompletionReport:
     @property
     def number(self) -> str:
         return str(self.order.get("order_number") or str(self.order["completion_id"])[:8].upper())
+
+
+@dataclass
+class AssetLine:
+    """Kendaraan atau alat yang dipinjam untuk jadwal/tim (satu baris di laporan)."""
+
+    kind: str  # "Kendaraan" | "Alat"
+    name: str
+    code: str | None
+    holder: str | None
+    work_date: date | None
+    status: str | None
+
+
+@dataclass
+class DailyReport:
+    """Laporan harian satu jadwal: tim, ketua, item (progres, catatan, alasan tunda) dan laporan ketua."""
+
+    team_name: str
+    division_name: str
+    work_date: date
+    site_name: str | None
+    status: str
+    leader_name: str
+    points: list[ReportPoint]
+    roster: list[Any]
+    summary: str | None
+    obstacles: str | None
+    generated_by: str
+    generated_at: datetime
+    report_submitted_at: datetime | None = None
+    logos: KopLogos = field(default_factory=default_kop_logos)
+    assets: list[AssetLine] = field(default_factory=list)
 
 
 @dataclass
@@ -135,3 +181,18 @@ class TeamWeekReport:
     roster: list[Any]
     generated_by: str
     generated_at: datetime
+    logos: KopLogos = field(default_factory=default_kop_logos)
+    assets: list[AssetLine] = field(default_factory=list)
+
+
+def plan_status_label(value: str | None) -> str:
+    """Status jadwal harian dalam Bahasa Indonesia (dokumen cetak tidak memuat kode enum)."""
+    return PLAN_STATUS_LABEL.get(value or "", value or "-")
+
+
+def coord_text(lat: Any, lng: Any) -> str:
+    """Koordinat untuk dokumen cetak: '-6.194400, 106.822900'; tanpa koordinat → '-'."""
+    if lat is None or lng is None:
+        return "-"
+    return f"{float(lat):.6f}, {float(lng):.6f}"
+

@@ -4,7 +4,7 @@ Dibuat dari kode per 2026-10-29. Kasus diturunkan dari transisi di `02-state-mac
 
 Kolom:
 
-- **ID**: prefiks area (MS master, JD jadwal, AB absen, PR progres, RO rollover, KO koreksi, LB lembur, SV survei, BA order dan BAST, VP verifikasi publik, EK ekspor, IZ izin umum, BT batas input, HM perilaku manusia).
+- **ID**: prefiks area (MS master, JD jadwal, AB absen, PR progres, RO rollover, KO koreksi, LB lembur, SV survei, BA order dan BAST, VP verifikasi publik, EK ekspor, IZ izin umum, BT batas input, HM perilaku manusia, AT aset tim pada jadwal, MH hunian mess per tanggal).
 - **Tipe**: UI web, HP (Flutter), atau API (pemanggilan langsung ke endpoint, misalnya via Postman CLI atau pytest).
 - **Prioritas**: P1 wajib sebelum rilis, P2 penting, P3 sekadar kelengkapan.
 - Kode galat: 401 belum login, 403 izin atau relasi, 404 tidak terlihat, 409 status tidak sesuai, 422 validasi.
@@ -23,21 +23,29 @@ Kolom:
 | MS-07 | Tipe titik SURVEY_POINT dengan pemasangan lanjutan berjenis SURVEY | PM | 422 | API | P2 | |
 | MS-08 | Tambah material template ke jenis pekerjaan divisi lain | PM | 403 | API | P2 | |
 | MS-09 | Buat klien atau proyek dengan peran HR (tanpa CREATE_PLAN) | HR | 403 | API | P2 | |
+| MS-10 | Daftar klien oleh karyawan biasa | Anggota | 403 | API | P1 | Perbaikan PR #211 (A3) |
 | MS-10 | Ubah nama proyek berstatus COMPLETED | PM | 409 PROJECT_CLOSED | API | P2 | |
 | MS-11 | Hapus proyek yang sudah dipakai jadwal | PM | 409 PROJECT_IN_USE | API | P2 | |
 | MS-12 | Buat jadwal memakai proyek berstatus DRAFT | PM | 422 Proyek tidak sedang berjalan | API | P1 | |
+| MS-13 | Buat item dari template tanpa fase/satuan | PM | 201, fase = fase bawaan template, satuan = satuan template | API | P1 | `test_template_defaults.py` |
+| MS-14 | Fase bawaan SURVEY pada jenis bukan survei | PM | 422 | API | P2 | `test_template_defaults.py` |
+| MS-15 | PM dua divisi memakai template divisi kedua (tanpa salin) | PM multi-divisi | 201, jenis pekerjaan tetap satu | API | P1 | `test_template_defaults.py` |
+| MS-16 | Item memakai template divisi yang dipimpin orang lain | PM | 422 | API | P1 | `test_template_defaults.py` |
+| MS-17 | Tombol per peran di Jenis pekerjaan, Aset, Mess | semua peran | sesuai 00 bagian 3b | UI web (vitest) | P1 | `peran-status-matrix.test.ts` |
 
 ## B. Jadwal harian
 
 | ID | Langkah | Aktor | Harapan | Tipe | Prioritas | Hasil |
 |---|---|---|---|---|---|---|
 | JD-01 | Buat jadwal DRAFT untuk tim aktif, tanggal besok | PM divisi | 201, status DRAFT | UI web | P1 | |
-| JD-02 | Buat jadwal untuk tanggal kemarin | PM | 422 | API | P2 | |
+| JD-02 | Buat jadwal untuk tanggal kemarin tanpa alasan | PM | 422 | API | P2 | |
+| JD-28 | Buat jadwal tanggal kemarin dengan alasan (backdate_reason) | PM | 201 DRAFT, audit BACKDATE_CREATED tercatat | API | P1 | F10 |
+| JD-29 | Buat jadwal tanggal 8 hari lalu, atau oleh Ketua | PM / Ketua | 422 / 403 | API | P1 | F10 |
 | JD-03 | Buat dua jadwal untuk tim dan tanggal yang sama | PM | 409 TEAM_DAY_TAKEN | API | P1 | |
 | JD-04 | PM divisi B membuat jadwal untuk divisi A | PM divisi B | 403 Hanya PM/OM divisi ini | API | P1 | |
 | JD-05 | OPS (punya CREATE_PLAN, bukan PM atau OM divisi) membuat jadwal | OPS | 403 | API | P2 | |
 | JD-06 | Submit jadwal yang sudah APPROVED | PM | 409 INVALID_STATE | API | P2 | |
-| JD-07 | Setujui jadwal yang tanggalnya sudah lewat | PM | 422 | API | P1 | |
+| JD-07 | Setujui jadwal yang tanggalnya lebih dari 7 hari lalu | PM | 422 | API | P1 | F10 (<= 7 hari boleh) |
 | JD-08 | Setujui matriks 5 jadwal, satu milik divisi lain | PM | 200, approved 4, skipped 1 | API | P1 | |
 | JD-09 | Tolak jadwal SUBMITTED tanpa alasan | PM | 422 | API | P2 | |
 | JD-10 | Tolak jadwal APPROVED dengan alasan | PM | 200, status DRAFT, alasan tersimpan | UI web | P1 | |
@@ -53,6 +61,14 @@ Kolom:
 | JD-20 | Anggota melihat jadwal tim yang sudah APPROVED | Anggota | 200 | HP | P1 | |
 | JD-21 | Anggota tim lain melihat jadwal APPROVED tim ini | Anggota tim lain | 404 | API | P1 | |
 | JD-22 | Salin jadwal ke tanggal yang sudah ada jadwal tim | PM | 409 | API | P2 | |
+| JD-23 | Ajukan jadwal tanpa item | PM divisi | 422 PLAN_EMPTY | API | P1 | Perbaikan PR #213 |
+| JD-24 | Setujui jadwal tanpa item | PM divisi | 422 PLAN_EMPTY | API | P1 | Perbaikan PR #213 |
+| JD-25 | Salin jadwal dengan item | PM divisi | 201, item ikut tersalin, progres direset | API | P1 | Perbaikan PR #213 |
+| JD-26 | Mulai hari kerja tanpa absen masuk ketua hari ini | Ketua | 409 CHECKIN_REQUIRED | API | P1 | Perbaikan PR #209 (H1) |
+| JD-30 | Mulai jadwal bertanggal lampau yang belum dimulai, ketua sudah absen HARI INI | Ketua | 200 ONGOING (F11); sebelum perbaikan 409 | API | P1 | F11 |
+| JD-31 | Hapus jadwal APPROVED yang belum dimulai | PM | 200, delete_at terisi (F10); ONGOING tetap 409 | API | P1 | F10 |
+| JD-32 | Selesaikan hari tanpa laporan saat ada item menunggu pindah hari | Ketua | 409 ROLLOVER_PENDING (bukan 422), lalu tetap 409 walau laporan sudah ada | API | P1 | F16 |
+| JD-27 | Ambil aset atau jadwal order dengan ID acak | PM | bukan 200 `[]` (ditolak sesuai akses) | API | P1 | Perbaikan PR #211 (A2) |
 | JD-23 | Akses GET /work-plans/daily tanpa token | Publik | 401 | API | P2 | |
 
 ## C. Absen (masuk, pulang, offline, tinjau)
@@ -83,8 +99,9 @@ Kolom:
 | AB-22 | Tinjau absensi tanpa catatan | PM | 422 Catatan pemeriksaan wajib diisi | API | P2 | |
 | AB-23 | Tinjau absensi yang sudah APPROVED | PM | 409 INVALID_STATE | API | P2 | |
 | AB-24 | HR (ADMIN_HR_GA) meninjau absensi | HR | 403 (tanpa REVIEW_ATTENDANCE di route) | API | P2 | |
-| AB-25 | ADMIN legacy menghapus absensi (lihat T1) | ADMIN | Harapan 403 sesuai niat DELETE_ANY [VERIFIKASI] | API | P1 | |
-| AB-26 | FINANCE meninjau absensi NEEDS_REVIEW (lihat T3) | FINANCE | Harapan 200 bila diizinkan, hasil aktual perlu dicek [VERIFIKASI] | API | P1 | |
+| AB-25 | ADMIN legacy menghapus absensi (lihat T1) | ADMIN | Harapan 403 sesuai niat DELETE_ANY [VERIFIKASI] | API | P1 | Perbaikan PR #186 (T1) |
+| AB-26 | FINANCE meninjau absensi NEEDS_REVIEW (lihat T3) | FINANCE | Harapan 200 bila diizinkan, hasil aktual perlu dicek [VERIFIKASI] | API | P1 | Perbaikan PR #213 (T3) |
+| AB-27 | PM divisi lain membuka daftar absensi karyawan divisi lain | PM divisi B | hanya karyawan divisi B yang tampil | API | P1 | Perbaikan PR #211 (A1) |
 
 ## D. Progres item dan foto
 
@@ -109,6 +126,8 @@ Kolom:
 |---|---|---|---|---|---|---|
 | RO-01 | Minta pindah hari dengan qty 40 persen dan alasan | Ketua | 200, PENDING_ROLLOVER, WAITING_PM | HP | P1 | |
 | RO-02 | Minta pindah hari saat qty sudah mencapai target | Ketua | 422 | API | P2 | |
+| RO-03 | Selesaikan hari saat item masih menunggu keputusan pindah hari | Ketua | 409 ROLLOVER_PENDING | API | P1 | Perbaikan PR #213 (H3) |
+| RO-04 | Persen jadwal setelah satu item dipindah | PM | persen dihitung dari item aktif, bukan 100% | UI web | P2 | Perbaikan PR #210 (W6) |
 | RO-03 | Minta pindah hari dua kali untuk item sama | Ketua | 409 | API | P1 | |
 | RO-04 | PM setujui ke tanggal baru (jadwal tujuan dibuat otomatis) | PM | 200, item lama SHIFTED_DAY, item baru TODO dengan sisa volume | UI web | P1 | |
 | RO-05 | PM setujui ke tanggal sebelum tanggal asal | PM | 422 | API | P1 | |
@@ -136,6 +155,7 @@ Kolom:
 | KO-08 | PM kembalikan revisi | PM | 200, REVISING | UI web | P1 | |
 | KO-09 | Dua tab PM memutuskan koreksi yang sama | PM | satu 200, satu 409 | UI web | P1 | |
 | KO-10 | Ketua menutup jadwal lagi saat koreksi REVISING (lihat T7) | Ketua | Harapan 409 atau ditolak [VERIFIKASI] | API | P1 | |
+| KO-11 | PM terima revisi saat foto wajib pekerjaan DONE belum lengkap | PM | 409 PHOTOS_INCOMPLETE; web tampilkan peringatan dan 'Terima tetap dengan catatan' (force + catatan) | API, UI web | P1 | F9 |
 | KO-11 | PM tolak permintaan koreksi | PM | 200, REJECTED, jadwal tetap COMPLETED | UI web | P2 | |
 | KO-12 | Anggota minta koreksi | Anggota | 403 | API | P2 | |
 
@@ -255,6 +275,12 @@ Kolom:
 | BT-08 | Alasan pindah hari kosong atau spasi | Ketua | 422 | API | P2 | |
 | BT-09 | Catatan tinjau absensi kosong | PM | 422 | API | P1 | |
 | BT-10 | Unggah berkas di atas batas ukuran | Ketua | ditolak, batas perlu dipastikan [VERIFIKASI] | HP | P2 | |
+| BT-11 | Unggah PNG terpotong 18 byte atau HEIC palsu | Ketua | 422, berkas ditolak | API | P1 | Perbaikan PR #211 (A5) |
+| BT-12 | Unggah byte identik yang sudah dimiliki pengguna lain | Anggota | file_id baru atau milik sendiri, tidak membocorkan berkas lain | API | P1 | Perbaikan PR #211 (A4) |
+| BT-13 | Unduh gambar atau PDF dari /files/{id} | Anggota | header X-Content-Type-Options: nosniff ada | API | P2 | Perbaikan PR #211 (A6) |
+| BT-14 | Material jenis pekerjaan dengan nama kosong atau kebutuhan 0 | PM | 422 per kolom | UI web | P2 | Perbaikan PR #210 (W11) |
+| BT-15 | Target item 99999999999 atau 1,5 | PM | 422 menunjuk kolom target | API | P2 | Perbaikan PR #213 (W2) |
+| BT-16 | Nomor kontrak proyek 150 karakter | PM | 422 (maks 100) | API | P2 | Perbaikan PR #213 (W8) |
 
 ## N. Perilaku manusia tidak normal
 
@@ -274,3 +300,15 @@ Kolom:
 | HM-12 | Aplikasi ditutup saat unggah foto | Anggota | foto kembali di antrean | HP | P2 | |
 | HM-13 | Dua tab PM mengubah item yang sama | PM | konflik ditolak 409, tidak menimpa diam-diam [VERIFIKASI] | UI web | P2 | |
 | HM-14 | Akurasi GPS turun ke 110 m di tengah absen | Anggota | diminta pindah ke tempat terbuka, absen belum tercatat | HP | P2 | |
+
+## O. Aset tim pada jadwal dan hunian mess
+
+| ID | Skenario | Peran | Harapan | Tipe | Prioritas | Catatan |
+|---|---|---|---|---|---|---|
+| AT-01 | Buat jadwal tim; aset bawaan tim dipakai tim lain pada tanggal itu | PM | peringatan "Bentrok: dipakai <nama tim>" dengan tanggal jadwal | UI web | P1 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-02 | Aset bawaan tim tersedia pada tanggal jadwal | PM | ditandai "Tersedia"; aset tim lain tidak tampil | UI web | P2 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-03 | Tim belum punya aset bawaan | PM | panel menyebut belum ada aset tim | UI web | P3 | vitest `aset-tim-jadwal.test.tsx` |
+| AT-04 | Ketersediaan diminta per tanggal dan tim | sistem | GET /assets/availability?date=&team_id= | API | P1 | sudah ada di API (PR #235) |
+| MH-01 | Tempatkan karyawan ke mess pada rentang yang sudah penuh di satu hari | HR | peringatan "Mess penuh pada dd-mm-yyyy" dan tanggal lain tidak disebut | UI web | P1 | vitest `mess-hunian-kapasitas.test.tsx` |
+| MH-02 | Rentang masih muat | HR | tanpa peringatan | UI web | P2 | vitest `mess-hunian-kapasitas.test.tsx` |
+| MH-03 | Pilih tim yang menginap | HR | team_id ikut dikirim; kosong = null | UI web | P2 | vitest `mess-hunian-kapasitas.test.tsx` |

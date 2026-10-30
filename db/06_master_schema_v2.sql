@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Idempoten: dijalankan ulang pada DB berisi tidak menghapus kolom enum (dulu DROP TYPE ... CASCADE).
 -- ============================================================================
 DO $$ BEGIN
-    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE');
+    CREATE TYPE system_role_enum AS ENUM ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'PROJECT_MANAGER', 'TEAM_LEADER', 'ADMIN_HR_GA', 'EMPLOYEE', 'FINANCE');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -228,6 +228,7 @@ CREATE TABLE IF NOT EXISTS tool (
     category tool_category_enum NOT NULL,
     name VARCHAR(100) NOT NULL,
     tool_code VARCHAR(50) NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim pemakai bawaan (v2_0015)
     photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -245,6 +246,7 @@ CREATE TABLE IF NOT EXISTS vehicle (
     vehicle_type vehicle_type_enum NOT NULL,
     name TEXT NOT NULL,
     number_plate VARCHAR(20) NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim pemakai bawaan (v2_0015)
     photo_path VARCHAR(255) NULL,
     status asset_status_enum NOT NULL DEFAULT 'ready',
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -289,6 +291,10 @@ CREATE TABLE IF NOT EXISTS work_type (
     -- WORK = pekerjaan biasa; SURVEY_TASK = paket survei di jadwal; SURVEY_POINT = jenis titik survei (docs/37 §9)
     kind VARCHAR(20) NOT NULL DEFAULT 'WORK' CHECK (kind IN ('WORK', 'INSTALLATION', 'SURVEY_TASK', 'SURVEY_POINT', 'MAINTENANCE', 'REPLACEMENT')),
     follow_up_work_type_id UUID NULL REFERENCES work_type(work_type_id) ON DELETE SET NULL,  -- pemasangan lanjutan
+    -- Bawaan template (v2_0016): satuan item & fase item saat dibuat dari template; fase NULL = ikut jenis (kind)
+    unit_measure VARCHAR(50) NOT NULL DEFAULT 'Unit',
+    default_phase VARCHAR(30) NULL
+        CONSTRAINT ck_work_type_default_phase CHECK (default_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
@@ -341,6 +347,9 @@ CREATE TABLE IF NOT EXISTS work_plan_daily (
     clock_out_time TIME NOT NULL DEFAULT '16:00:00',
     status VARCHAR(30) NOT NULL DEFAULT 'DRAFT'
         CONSTRAINT ck_work_plan_daily_status CHECK (status IN ('DRAFT','SUBMITTED','APPROVED','ONGOING','COMPLETED')),
+    -- WORK = jadwal kerja biasa; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib). Lihat migrasi v2_0013.
+    kind VARCHAR(10) NOT NULL DEFAULT 'WORK'
+        CONSTRAINT ck_work_plan_daily_kind CHECK (kind IN ('WORK','STANDBY')),
     created_by_id UUID NOT NULL REFERENCES employee(employee_id),
     approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
     approved_at TIMESTAMPTZ NULL,
@@ -365,6 +374,7 @@ CREATE TABLE IF NOT EXISTS work_plan_item (
     title VARCHAR(200) NOT NULL,
     task_phase VARCHAR(30) NOT NULL DEFAULT 'INSTALLATION'
         CONSTRAINT ck_work_plan_item_phase CHECK (task_phase IN ('SURVEY','PREPARATION','INSTALLATION','REPLACEMENT','MAINTENANCE')),
+    unit_measure VARCHAR(50) NULL,  -- satuan item (v2_0016): diisi dari jenis pekerjaan bila tidak diisi
     is_main_deliverable BOOLEAN NOT NULL DEFAULT TRUE,
     depends_on_item_id UUID NULL REFERENCES work_plan_item(item_id),
     point_status VARCHAR(10) NULL CHECK (point_status IN ('EXISTING', 'PROPOSED')),  -- titik survei: sudah terpasang / usulan baru
@@ -410,6 +420,7 @@ CREATE TABLE IF NOT EXISTS company_mess_stay (
     employee_id UUID NOT NULL REFERENCES employee(employee_id),
     stay_start_date DATE NOT NULL,
     stay_end_date DATE NOT NULL,
+    team_id UUID NULL REFERENCES team(team_id), -- tim yang menginap (v2_0015)
     status VARCHAR(20) NOT NULL DEFAULT 'APPROVED',
     requested_by_user_id UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
     request_note TEXT NULL,
@@ -421,6 +432,7 @@ CREATE TABLE IF NOT EXISTS company_mess_stay (
     delete_at TIMESTAMPTZ NULL,
     CONSTRAINT ck_mess_stay_status CHECK (status IN ('REQUESTED','APPROVED','REJECTED','CANCELLED'))
 );
+CREATE INDEX IF NOT EXISTS ix_company_mess_stay_team_dates ON company_mess_stay (team_id, stay_start_date);
 
 -- 20. Tabel asset_assignment (Peminjaman Alat Pribadi, Alat Umum & Kendaraan - Konfirmasi 3A, 3B, 1A)
 CREATE TABLE IF NOT EXISTS asset_assignment (
@@ -546,6 +558,7 @@ CREATE TABLE IF NOT EXISTS attendance (
     in_lng NUMERIC(10,7) NOT NULL,
     face_match_score NUMERIC(5,2) NOT NULL,
     face_photo_path VARCHAR(255) NOT NULL,
+    face_status VARCHAR(20) NULL CHECK (face_status IN ('MATCHED', 'MISMATCH', 'NOT_CHECKED', 'NOT_ENROLLED', 'SERVICE_DOWN', 'STALE')),
     distance_to_target_m INT NOT NULL,
     is_within_attendance_radius BOOLEAN NOT NULL,
     out_of_radius_photo_path VARCHAR(255) NULL,
@@ -717,6 +730,9 @@ CREATE TABLE IF NOT EXISTS file_object (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (office_id, sha256)
 );
+
+-- Logo tim (kolom team ditambahkan setelah file_object ada): dipakai di semua dokumen tim & foto berwatermark.
+ALTER TABLE team ADD COLUMN IF NOT EXISTS logo_file_id uuid NULL REFERENCES file_object(id) ON DELETE SET NULL;
 
 -- 29. Tabel work_plan_attachment (lampiran jadwal harian, N─N work_plan_daily ↔ file_object)
 CREATE TABLE IF NOT EXISTS work_plan_attachment (

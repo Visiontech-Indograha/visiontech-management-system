@@ -20,7 +20,8 @@ def _lend(client, world: World, **body):
 def _daily_plan(world: World, days_from_today: int = 0) -> str:
     return str(sync_query(
         "INSERT INTO work_plan_daily (work_date, site_name, site_lat, site_lng, division_id, team_id, created_by_id) "
-        "VALUES (CURRENT_DATE + %s, 'Site uji', -6.2, 106.8, %s, %s, %s) RETURNING daily_plan_id",
+        "VALUES ((now() AT TIME ZONE 'Asia/Jakarta')::date + %s, 'Site uji', -6.2, 106.8, %s, %s, %s)"
+        "RETURNING daily_plan_id",
         (days_from_today, world.unit_id, world.team_id, world.employees["pm"]))[0][0])
 
 
@@ -57,7 +58,8 @@ def test_shared_tool_for_daily_plan_is_allocated(client, world: World):
     plan_id = _daily_plan(world)
     loan = _lend(client, world, asset_type="TOOL", tool_id=tool_id, daily_plan_id=plan_id)
     assert loan.json()["assignment_status"] == "allocated"
-    # ketua tim melihat aset jadwalnya
+    # ketua tim melihat aset jadwal yang sudah disetujui (jadwal draf belum terlihat tim)
+    sync_query("UPDATE work_plan_daily SET status = 'APPROVED' WHERE daily_plan_id = %s", (plan_id,))
     listed = client.get(f"/work-plans/daily/{plan_id}/assets", headers=world.headers(client, "leader"))
     assert [a["asset_id"] for a in listed.json()] == [tool_id]
 

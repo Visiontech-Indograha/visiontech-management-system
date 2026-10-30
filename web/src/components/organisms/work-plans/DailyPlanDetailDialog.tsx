@@ -5,12 +5,17 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
-import { phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
+import { displayPct, phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { DailyPlanLocationForm } from "@/components/organisms/work-plans/DailyPlanLocationForm";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { DialogCancelButton } from "@/components/molecules/DialogActions";
+import { useDirtyForm } from "@/hooks/useDirtyForm";
+import { parseTanggalInput } from "@/lib/inputRules";
 import { ApiError } from "@/lib/apiClient";
+import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
 import {
   addDays,
@@ -23,6 +28,7 @@ import {
   type DailyPlan,
   wibDate,
 } from "@/services/dailyPlanService";
+import { useExportDailyReport } from "@/services/exportService";
 import { DailyItemsPanel } from "./DailyItemsPanel";
 
 const CONFIRM_MESSAGE: Record<DailyAction | "delete", string> = {
@@ -50,11 +56,31 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
   const reject = useRejectDailyPlan();
   const remove = useDeleteDailyPlan();
   const copy = useCopyDailyPlan();
-  const [mode, setMode] = useState<"view" | "reject" | "copy">("view");
-  const [error, setError] = useState<string | null>(null);
+  const exportReport = useExportDailyReport();
+  const [mode, setMode] = useState<"view" | "reject" | "copy" | "location">("view");
   const [confirm, setConfirm] = useState<DailyAction | "delete" | null>(null);
   const p = detail.data ?? plan;
-  const editable = canPlan && (p.status === "DRAFT" || p.status === "SUBMITTED");
+  // Galat tindakan lama (mis. "Jadwal belum berisi pekerjaan") hanya tampil selama isi jadwal belum berubah.
+  const [errorRaw, setErrorRaw] = useState<{ msg: string; key: string } | null>(null);
+  const snapshot = `${p.item_count}|${p.status}`;
+  const error = errorRaw && errorRaw.key === snapshot ? errorRaw.msg : null;
+  const setError = (msg: string | null) => setErrorRaw(msg ? { msg, key: snapshot } : null);
+  const rejectForm = useDirtyForm();
+  const copyForm = useDirtyForm();
+  const formDirty = (mode === "reject" && rejectForm.dirty) || (mode === "copy" && copyForm.dirty);
+  // Pindah mode membuang isian formulir kecil dan keadaan kotornya.
+  const enterMode = (next: "view" | "reject" | "copy" | "location") => {
+    rejectForm.reset();
+    copyForm.reset();
+    setMode(next);
+  };
+  // Tombol persetujuan hanya untuk PM/OM divisi jadwal (can_manage, dihitung API); ketua & anggota tidak melihatnya.
+  const manages = !!p.can_manage;
+  const editable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED");
+  const deletable = manages && (p.status === "DRAFT" || p.status === "SUBMITTED" || p.status === "APPROVED");
+  // Lokasi disetujui bisa diubah tanpa kembali ke draf, selama hari kerjanya belum mulai (API menegakkan aturan yang sama).
+  const todayJakarta = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const locationEditable = manages && p.status === "APPROVED" && p.work_date > todayJakarta;
 
   const run = async (fn: () => Promise<unknown>, done: string, close = false) => {
     setError(null);
@@ -62,7 +88,7 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
       await fn();
       toast.success(done);
       if (close) onClose();
-      else setMode("view");
+      else enterMode("view");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
     }
@@ -71,17 +97,17 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
     run(() => transition.mutateAsync({ id: p.daily_plan_id, action }), `Jadwal: ${ACTION_LABEL[action].toLowerCase()}.`);
 
   const actions: DailyAction[] = [
-    ...(canPlan && p.status === "DRAFT" ? (["submit"] as const) : []),
-    ...(editable ? (["approve"] as const) : []),
+    // PM/OM menyetujui draf miliknya langsung (satu langkah di API); tidak ada tombol "Ajukan ke PM" bagi PM/OM.
+    ...(manages && (p.status === "DRAFT" || p.status === "SUBMITTED") ? (["approve"] as const) : []),
     ...(isLeader && p.status === "APPROVED" ? (["start"] as const) : []),
-    ...((isLeader || canPlan) && p.status === "ONGOING" ? (["complete"] as const) : []),
+    ...((isLeader || manages) && p.status === "ONGOING" ? (["complete"] as const) : []),
   ];
 
-  const pct = p.progress_pct ?? 0;
+  const pct = displayPct(p);
   const state = WORK_STATE[workState(p, wibDate())];
 
   return (
-    <VmsDialog open title={`${p.team_name} · ${formatDate(p.work_date)}`} onClose={onClose}>
+    <VmsDialog open title={`${p.team_name} · ${formatDate(p.work_date)}`} onClose={onClose} dirty={formDirty}>
       <div className="space-y-4 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={p.status} />
@@ -126,7 +152,9 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
 
         {mode === "reject" && (
           <FormBlock
+            {...rejectForm.formProps}
             className="space-y-2"
+            noValidate
             onSubmit={(e) => {
               e.preventDefault();
               const reason = String(new FormData(e.currentTarget).get("reason") ?? "").trim();
@@ -135,38 +163,88 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
             }}
           >
             <TextAreaField name="reason" label="Alasan dikembalikan" />
-            <ActionButton type="submit" size="sm" disabled={reject.isPending}>Kembalikan ke draf</ActionButton>
+            <div className="flex gap-2">
+              <ActionButton type="submit" size="sm" disabled={reject.isPending}>Kembalikan ke draf</ActionButton>
+              <DialogCancelButton onCancel={() => enterMode("view")} disabled={reject.isPending} />
+            </div>
           </FormBlock>
+        )}
+        {mode === "location" && (
+          <DailyPlanLocationForm plan={p} onDone={() => enterMode("view")} onCancel={() => enterMode("view")} />
         )}
         {mode === "copy" && (
           <FormBlock
+            {...copyForm.formProps}
             className="space-y-2"
+            noValidate
             onSubmit={(e) => {
               e.preventDefault();
-              const from = String(new FormData(e.currentTarget).get("until") ?? "");
+              // Ketikan manual dd/mm/yyyy (atau yyyy-mm-dd); tidak bergantung pada pemilih tanggal peramban.
+              const until = parseTanggalInput(String(new FormData(e.currentTarget).get("until") ?? ""));
+              if (!until) return setError("Tanggal tidak valid. Tulis dengan format dd/mm/yyyy, misalnya 01/11/2026.");
+              // Salin boleh maju atau mundur dari tanggal jadwal ini (tanggal sebelum hari ini ditolak API).
               const dates: string[] = [];
-              for (let d = addDays(p.work_date, 1); from && d <= from; d = addDays(d, 1)) dates.push(d);
-              if (!dates.length) return setError("Pilih tanggal akhir setelah tanggal jadwal ini.");
+              const [from, to] = until >= p.work_date ? [addDays(p.work_date, 1), until] : [until, addDays(p.work_date, -1)];
+              for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
+              if (!dates.length) return setError("Pilih tanggal lain selain tanggal jadwal ini.");
               void run(() => copy.mutateAsync({ id: p.daily_plan_id, work_dates: dates }), `${dates.length} jadwal draf dibuat.`, true);
             }}
           >
-            <TextField name="until" label="Salin setiap hari sampai tanggal" type="date" />
-            <ActionButton type="submit" size="sm" disabled={copy.isPending}>Salin</ActionButton>
+            <TextField
+              name="until"
+              label="Salin setiap hari sampai tanggal"
+              placeholder="dd/mm/yyyy"
+              inputMode="numeric"
+              hint="Contoh: 01/11/2026"
+            />
+            <div className="flex gap-2">
+              <ActionButton type="submit" size="sm" disabled={copy.isPending}>Salin</ActionButton>
+              <DialogCancelButton onCancel={() => enterMode("view")} disabled={copy.isPending} />
+            </div>
           </FormBlock>
         )}
 
         <div className="flex flex-wrap gap-2 border-t border-line pt-3">
-          {actions.map((a) => (
-            <ActionButton key={a} size="sm" disabled={transition.isPending} onClick={() => setConfirm(a)}>
-              {ACTION_LABEL[a]}
+          {actions.map((a) => {
+            // API menolak pengajuan/persetujuan jadwal tanpa item; tombolnya dinonaktifkan dengan petunjuk.
+            const kosong = p.item_count === 0 && (a === "submit" || a === "approve");
+            return (
+              <ActionButton key={a} size="sm" disabled={transition.isPending || kosong} onClick={() => setConfirm(a)}>
+                {ACTION_LABEL[a]}
+              </ActionButton>
+            );
+          })}
+          {p.item_count === 0 && actions.some((a) => a === "submit" || a === "approve") && (
+            <TextBlock as="span" className="basis-full text-xs text-mist">
+              Tambahkan minimal satu pekerjaan sebelum diajukan atau disetujui.
+            </TextBlock>
+          )}
+          {manages && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
+            <ActionButton size="sm" variant="outline" onClick={() => enterMode("reject")}>Kembalikan ke draf</ActionButton>
+          )}
+          {(canPlan || isLeader) && (
+            <ActionButton
+              size="sm"
+              variant="outline"
+              disabled={exportReport.isPending}
+              onClick={() =>
+                exportReport.mutate(
+                  { daily_plan_id: p.daily_plan_id },
+                  {
+                    onSuccess: () => toast.success("Laporan harian siap diunduh."),
+                    onError: (err) => toast.error(errorMessage(err)),
+                  },
+                )
+              }
+            >
+              Cetak laporan harian (.docx)
             </ActionButton>
-          ))}
-          {canPlan && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
-            <ActionButton size="sm" variant="outline" onClick={() => setMode("reject")}>Kembalikan</ActionButton>
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
-          {canPlan && <ActionButton size="sm" variant="outline" onClick={() => setMode("copy")}>Salin ke hari lain</ActionButton>}
-          {editable && (
+          {manages && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}
+          {locationEditable && <ActionButton size="sm" variant="outline" onClick={() => enterMode("location")}>Ubah lokasi</ActionButton>}
+          {/* F10: hapus (lunak) untuk draf, diajukan, dan disetujui yang belum dimulai; API menolak bila sudah dipakai. */}
+          {deletable && (
             <ActionButton
               size="sm"
               variant="ghost"

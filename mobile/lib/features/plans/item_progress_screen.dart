@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart' show OfflineOp, SyncRejectedException;
+import '../../data/sync_engine.dart' show OfflineOp, SyncEngine, SyncRejectedException;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
@@ -78,6 +78,8 @@ class ItemProgressScreen extends ConsumerStatefulWidget {
 class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   Map<String, dynamic>? _item;
   List<Map<String, dynamic>> _slots = const [];
+  // false bila daftar foto wajib belum pernah termuat (tanpa sinyal, belum pernah dibuka di HP ini).
+  bool _slotsKnown = true;
   final List<_Photo> _photos = [];
   final _qty = TextEditingController();
   final _notes = TextEditingController();
@@ -105,39 +107,48 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   }
 
   Future<void> _load() async {
+    final engine = ref.read(syncEngineProvider);
+    final api = engine.api;
+    Map<String, dynamic> item;
     try {
-      final api = ref.read(syncEngineProvider).api;
-      final item = await api.planItem(widget.itemId);
-      final slots = await api.imageRequirements('${item['work_type_id']}');
-      if (!mounted) return;
-      setState(() {
-        _item = item;
-        _slots = slots;
-        _qty.text = qtyText(item['completed_qty']);
-        _notes.text = '${item['notes'] ?? ''}';
-        _photos
-          ..clear()
-          ..addAll([
-            for (final p in photoRefsOf(item['realization_photos_json']))
-              _Photo(fileId: p.fileId, requirementId: p.requirementId),
-          ]);
-        _error = null;
-      });
+      // Salinan item disimpan di HP: tanpa sinyal tetap memakai data terakhir yang dimuat server.
+      item = await engine.fetchMap('plan_item_${widget.itemId}', () => api.planItem(widget.itemId));
     } catch (e) {
       if (!mounted) return;
       final fallback = widget.initialItem;
-      if (fallback != null && _item == null) {
-        setState(() {
-          _item = fallback;
-          _qty.text = qtyText(fallback['completed_qty']);
-          _notes.text = '${fallback['notes'] ?? ''}';
-          _error = null;
-        });
-        _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+      if (fallback == null || _item != null) {
+        setState(() => _error = apiErrorMessage(e));
         return;
       }
-      setState(() => _error = apiErrorMessage(e));
+      _snack('Tidak ada sinyal. Menampilkan data terakhir dari jadwal.', error: true);
+      item = fallback;
     }
+    // Daftar foto wajib = aturan server (syarat foto jenis pekerjaan item). Disalin di HP agar tetap tampil offline.
+    var slots = const <Map<String, dynamic>>[];
+    var slotsKnown = true;
+    try {
+      final wt = '${item['work_type_id']}';
+      final res = await engine.fetchList('image_req_$wt', () => api.imageRequirements(wt));
+      slots = res.items;
+      slotsKnown = !SyncEngine.neverCached(res.cachedAt);
+    } catch (e) {
+      slotsKnown = false;
+    }
+    if (!mounted) return;
+    setState(() {
+      _item = item;
+      _slots = slots;
+      _slotsKnown = slotsKnown;
+      _qty.text = qtyText(item['completed_qty']);
+      _notes.text = '${item['notes'] ?? ''}';
+      _photos
+        ..clear()
+        ..addAll([
+          for (final p in photoRefsOf(item['realization_photos_json']))
+            _Photo(fileId: p.fileId, requirementId: p.requirementId),
+        ]);
+      _error = null;
+    });
   }
 
   void _snack(String text, {bool error = false}) => showVmsToast(context, text, error: error);
@@ -153,6 +164,11 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     setState(() => _saveError = null);
     final qty = num.tryParse(_qty.text.replaceAll(',', '.'));
     if (qty == null || qty < 0) return setState(() => _saveError = 'Isi jumlah yang sudah selesai dengan angka.');
+    final target0 = num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0;
+    if (!_slotsKnown && qty >= target0) {
+      return setState(() => _saveError =
+          'Daftar foto wajib belum termuat. Buka ulang pekerjaan ini saat ada sinyal sebelum menandai selesai.');
+    }
     final problem = progressProblem(
       qty: qty,
       target: num.tryParse('${_item?['target_qty'] ?? 0}') ?? 0,
@@ -417,7 +433,14 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
             ),
           ],
 
-          // Langkah 1 — foto
+          if (!_slotsKnown)
+      const _Banner(
+        accent: Accent.slate,
+        icon: Icons.cloud_off_rounded,
+        text: 'Daftar foto wajib belum termuat. Sambungkan internet lalu buka ulang pekerjaan ini.',
+      ),
+
+    // Langkah 1 — foto
           _Step(
             number: 1,
             title: 'Ambil foto',

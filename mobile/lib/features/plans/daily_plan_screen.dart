@@ -105,6 +105,18 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
   void initState() {
     super.initState();
     _load();
+    // Hasil antrean yang baru diterima server ditampilkan tanpa perlu keluar-masuk layar.
+    SyncEngine.appliedRevision.addListener(_onSynced);
+  }
+
+  @override
+  void dispose() {
+    SyncEngine.appliedRevision.removeListener(_onSynced);
+    super.dispose();
+  }
+
+  void _onSynced() {
+    if (mounted) _load();
   }
 
   Future<void> _load() async {

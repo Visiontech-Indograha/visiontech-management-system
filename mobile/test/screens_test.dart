@@ -679,5 +679,90 @@ void main() {
       expect(find.textContaining('Menunggu koneksi'), findsNothing);
       expect(backend.sentOps.single['op_type'], 'PLAN_ROLLOVER_REQUEST');
     });
+
+    // Slot foto wajib = aturan server (image_requirement jenis pekerjaan item); harus tampil juga tanpa sinyal.
+    final mandatorySlot = <Map<String, dynamic>>[
+      {'image_requirement_id': 'r1', 'work_type_id': 'wt1', 'name': 'Foto sesudah pemasangan', 'is_mandatory': true, 'sort_order': 1},
+    ];
+
+    testWidgets('slot foto wajib tetap tampil tanpa sinyal dari salinan yang sudah pernah dimuat', (tester) async {
+      backend.routes['/work-plans/items/i1'] = (_) => itemRow();
+      backend.routes['/by-work-type/wt1'] = (_) => mandatorySlot;
+      await show(tester, const ItemProgressScreen(itemId: 'i1', dayStatus: 'ONGOING', isLeader: true));
+      expect(find.text('Foto sesudah pemasangan'), findsWidgets);
+
+      backend.offline();
+      await tester.pumpWidget(const SizedBox()); // layar baru: keadaan lama tidak ikut
+      await show(
+        tester,
+        ItemProgressScreen(itemId: 'i1', dayStatus: 'ONGOING', isLeader: true, initialItem: itemRow()),
+      );
+      await settle(tester);
+      expect(find.text('Foto sesudah pemasangan'), findsWidgets);
+      expect(find.textContaining('0 dari 1 foto wajib'), findsOneWidget);
+    });
+
+    testWidgets('tanpa daftar foto wajib yang tersimpan, Simpan tidak masuk antrean yang pasti ditolak', (tester) async {
+      backend.offline();
+      await show(
+        tester,
+        ItemProgressScreen(itemId: 'i1', dayStatus: 'ONGOING', isLeader: true, initialItem: itemRow(saved: 10)),
+      );
+      await settle(tester);
+      await tester.tap(find.text('Simpan hasil kerja'));
+      await settle(tester);
+      expect(find.textContaining('Daftar foto wajib belum termuat'), findsWidgets);
+      expect(backend.sentOps, isEmpty);
+    });
+
+    testWidgets('setelah antrean tersinkron otomatis, jadwal menampilkan hasil server, bukan salinan lama', (tester) async {
+      backend.routes['/work-plans/daily/a'] = (_) => planDetail('ONGOING', items: [itemRow(saved: 0)]);
+      routeReport();
+      await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
+      expect(find.text('0 dari 10 selesai'), findsOneWidget);
+
+      backend.offline();
+      await tester.runAsync(
+        () => engine.submit(OfflineOp.planItemProgress, {'item_id': 'i1', 'completed_qty': 6, 'notes': null, 'photos': []}),
+      );
+      backend.routes['/work-plans/daily/a'] = (_) => planDetail('ONGOING', items: [itemRow(saved: 6)]);
+      backend.answerSync((_) => 'APPLIED');
+      // Pemicu otomatis (bukan tombol sinkron): tidak mengatur ulang status offline.
+      await tester.runAsync(() => engine.syncAll());
+      await settle(tester);
+      expect(find.text('6 dari 10 selesai'), findsOneWidget);
+      expect(find.text('0 dari 10 selesai'), findsNothing);
+    });
+
+    // Entri antrean yang ditolak server (berhenti dicoba) sebagai bahan uji Coba Lagi.
+    Future<void> queueRejectedTask(WidgetTester tester) async {
+      backend.offline();
+      await tester.runAsync(() => engine.submit(OfflineOp.taskToggle, {'task_id': 't1'}));
+      backend.answerSync((_) => 'REJECTED', errorMessage: 'Tugas sudah ditutup.');
+      await tester.runAsync(() => engine.syncAll());
+    }
+
+    testWidgets('Coba Lagi memberi indikator lalu pesan alasan, dan entri tetap bila masih ditolak', (tester) async {
+      await queueRejectedTask(tester);
+      await show(tester, const SyncQueueScreen());
+      await tester.tap(find.text('Coba Lagi'));
+      await tester.pump();
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await settle(tester);
+      expect(find.textContaining('Masih ditolak server: Tugas sudah ditutup.'), findsOneWidget);
+      expect(find.text('Coba Lagi'), findsOneWidget);
+      expect(find.text('Semua data sudah terkirim'), findsNothing);
+    });
+
+    testWidgets('Coba Lagi yang berhasil: pesan Terkirim dan entri hilang dari antrian', (tester) async {
+      await queueRejectedTask(tester);
+      await show(tester, const SyncQueueScreen());
+      backend.answerSync((_) => 'APPLIED');
+      await tester.tap(find.text('Coba Lagi'));
+      await settle(tester);
+      expect(find.textContaining('Terkirim ke server.'), findsOneWidget);
+      expect(find.text('Semua data sudah terkirim'), findsOneWidget);
+    });
   });
 }

@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api_client.dart' show isNetworkFailure;
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
-import '../../data/sync_engine.dart' show OfflineOp;
+import '../../data/sync_engine.dart' show OfflineOp, SyncRejectedException;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'daily_plan_screen.dart' show phaseLabel, qtyText;
@@ -85,6 +85,8 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
   /// Galat simpan ditampilkan di atas tombol Simpan (bukan toast di bawah, yang menutupi tombol).
   String? _saveError;
   bool _busy = false;
+  // Permintaan pindah hari yang masuk antrean HP (belum terkirim ke server).
+  bool _rolloverPending = false;
 
   bool get _editable =>
       widget.dayStatus == 'ONGOING' && const {'TODO', 'IN_PROGRESS', 'DONE'}.contains(_item?['status']);
@@ -245,16 +247,26 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
     if (ok != true) return;
     setState(() => _busy = true);
     try {
-      await ref
-          .read(syncEngineProvider)
-          .api
-          .requestRollover(
-            widget.itemId,
-            reason: reason.text.trim(),
-            completedQty: num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0,
-          );
-      _snack('Permintaan pindah hari terkirim; menunggu keputusan PM.');
-      await _load();
+      // Seperti progres: dicoba langsung; tanpa sinyal masuk antrean HP (alasan ikut tersimpan) dan dikirim saat online.
+      final applied = await ref.read(syncEngineProvider).submit(
+        OfflineOp.planRolloverRequest,
+        {
+          'item_id': widget.itemId,
+          'delay_reason': reason.text.trim(),
+          'completed_qty': num.tryParse(_qty.text.replaceAll(',', '.')) ?? 0,
+        },
+      );
+      if (!mounted) return;
+      if (applied) {
+        setState(() => _rolloverPending = false);
+        _snack('Permintaan pindah hari terkirim; menunggu keputusan PM.');
+        await _load();
+      } else {
+        setState(() => _rolloverPending = true);
+        _snack('Tidak ada koneksi. Permintaan pindah hari disimpan di HP dan dikirim otomatis saat online.');
+      }
+    } on SyncRejectedException catch (e) {
+      _snack(e.message, error: true);
     } catch (e) {
       _snack(apiErrorMessage(e), error: true);
     } finally {
@@ -296,6 +308,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
       done: saved,
       target: target,
       photoCount: _photos.length,
+      dayStatus: widget.dayStatus,
     );
     final stateAccent = statusStyle(state).accent;
     final unsaved = qty != saved;
@@ -495,10 +508,15 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           if (_editable && widget.isLeader && item['status'] != 'DONE') ...[
             const SizedBox(height: 16),
             TextButton.icon(
-              onPressed: _busy ? null : _rollover,
+              onPressed: _busy || _rolloverPending ? null : _rollover,
               icon: const Icon(Icons.update_rounded),
               label: const Text('Tidak selesai hari ini? Minta pindah hari'),
             ),
+            if (_rolloverPending)
+              Text(
+                'Menunggu koneksi untuk dikirim: permintaan pindah hari.',
+                style: theme.textTheme.bodySmall?.copyWith(color: Accent.amber.strong, fontWeight: FontWeight.w700),
+              ),
           ],
         ],
       ),

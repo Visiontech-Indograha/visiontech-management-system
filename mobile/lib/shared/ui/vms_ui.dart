@@ -385,6 +385,7 @@ class SectionTitle extends StatelessWidget {
   'APPEALED' => (label: 'Revisi diminta', accent: Accent.amber),
   'IN_PROGRESS' => (label: 'Berjalan', accent: Accent.blue),
   'ITEM_IN_PROGRESS' => (label: 'Sedang dikerjakan', accent: Accent.blue),
+  'ITEM_PARTIAL' => (label: 'Belum selesai', accent: Accent.amber),
   'COMPLETION_REVIEW' || 'COMPLETION_REQUESTED' => (label: 'Pengajuan penutupan', accent: Accent.violet),
   'COMPLETED' => (label: 'Selesai', accent: Accent.emerald),
   'CANCELLED' => (label: 'Dibatalkan', accent: Accent.rose),
@@ -659,8 +660,18 @@ String textOr(Object? value, String fallback) {
   return s.isEmpty ? fallback : s;
 }
 
-/// Judul kartu jadwal: lokasi, lalu nama proyek, lalu 'Tanpa judul' bila keduanya kosong.
-String jadwalTitle(Map<String, dynamic> p) => textOr(p['site_name'], textOr(p['project_title'], 'Tanpa judul'));
+const _bulanSingkat = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+/// Judul kartu jadwal: lokasi, lalu nama proyek. Bila keduanya kosong: nama tim dan tanggal kerja (mis. "Tim A · 30 Okt").
+String jadwalTitle(Map<String, dynamic> p) {
+  final judul = textOr(p['site_name'], textOr(p['project_title'], ''));
+  if (judul.isNotEmpty) return judul;
+  final tim = textOr(p['team_name'], '');
+  final hari = DateTime.tryParse(textOr(p['work_date'], ''));
+  final tanggal = hari == null ? '' : '${hari.day} ${_bulanSingkat[hari.month - 1]}';
+  final bagian = [if (tim.isNotEmpty) 'Tim $tim', if (tanggal.isNotEmpty) tanggal];
+  return bagian.isEmpty ? 'Jadwal tanpa lokasi' : bagian.join(' · ');
+}
 
 /// Keadaan kerja satu jadwal (sama dengan web): biru berjalan, merah terlambat, hijau selesai,
 /// kuning selesai sebagian, abu belum mulai. Hasilnya kode status untuk [StatusPill]/[statusStyle].

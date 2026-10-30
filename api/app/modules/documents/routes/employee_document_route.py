@@ -22,6 +22,8 @@ from app.modules.documents.schemas.document_schema import (
 
 router = APIRouter(prefix="/employees/{emp_id}/documents", tags=["Employee Documents"])
 _MANAGE = Depends(require_permission(Permission.MANAGE_EMPLOYEE_DOCUMENTS))
+# Setiap karyawan boleh mencatat dokumen pribadinya sendiri; service menolak karyawan lain (404).
+_UPLOAD = Depends(require_permission(Permission.UPLOAD_DOCUMENTS))
 
 
 @router.get("", response_model=DocumentListResponse)
@@ -49,10 +51,10 @@ async def get_employee_documents(
 async def upload_document(
     emp_id: UUID,
     data: EmployeeDocumentCreate,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _UPLOAD,
     controller: DocumentController = Depends(),
 ) -> EmployeeDocumentResponse:
-    """Mencatat dokumen baru dari berkas yang sudah diunggah; dokumen sejenis yang lama menjadi `extended`."""
+    """Mencatat dokumen dari berkas terunggah (karyawan: dokumen sendiri); yang sejenis jadi `extended`."""
     return await controller.handle_upload_document(current_user, emp_id, data)
 
 

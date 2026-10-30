@@ -62,6 +62,7 @@ class EmployeeDocumentResponse(BaseModel):
     active_at: date
     expired_at: date | None = None
     file_id: UUID | None = None  # file_object yang menyimpan berkasnya (path_file = storage_key)
+    file_mime: str | None = None  # tipe asli berkas (mis. image/png, application/pdf) untuk ikon/pratinjau
     created_at: datetime
 
 

@@ -16,7 +16,7 @@ concurrency:
 jobs:
   verify-prod-source:
     name: Pastikan sumber deploy = prod
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, vms]
     steps:
       - name: Checkout branch prod
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

@@ -8,6 +8,9 @@ void main() {
   test('sesi biasa atau dengan penjelasan karyawan tidak dianggap otomatis', () {
     expect(isAutoClosedSession({'explanation': null}), isFalse);
     expect(isAutoClosedSession({'explanation': 'GPS melenceng'}), isFalse);
+  });
+  test('keterangan penutupan otomatis tetap dikenali bila sesi sudah punya catatan lain', () {
+    expect(isAutoClosedSession({'explanation': 'GPS melenceng; Lupa absen pulang (ditutup otomatis)'}), isTrue);
     expect(isAutoClosedSession({}), isFalse);
   });
 }

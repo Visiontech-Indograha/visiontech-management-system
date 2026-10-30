@@ -2960,7 +2960,8 @@ export interface paths {
         put?: never;
         /**
          * Create Account
-         * @description Membuat akun baru untuk karyawan dengan kata sandi sementara.
+         * @description Membuat akun baru untuk karyawan dengan kata sandi sementara. Peran lapangan (EMPLOYEE/TEAM_LEADER) opsional;
+         *     hanya HR/SUPER_ADMIN.
          */
         post: operations["create_account_api_v1_employees__emp_id__account_post"];
         /**
@@ -2968,6 +2969,26 @@ export interface paths {
          * @description Hapus permanen akun login karyawan — hanya SUPER_ADMIN.
          */
         delete: operations["delete_account_api_v1_employees__emp_id__account_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Field Role
+         * @description Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.
+         */
+        post: operations["set_field_role_api_v1_employees__emp_id__account_role_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4226,6 +4247,12 @@ export interface components {
         AccountCreate: {
             /** Login */
             login: string;
+            /**
+             * System Role
+             * @default EMPLOYEE
+             * @enum {string}
+             */
+            system_role: "EMPLOYEE" | "TEAM_LEADER";
         };
         /**
          * AccountOut
@@ -4249,6 +4276,19 @@ export interface components {
             failed_logins: number;
             /** Locked Until */
             locked_until?: string | null;
+            /** System Role */
+            system_role?: string | null;
+        };
+        /**
+         * AccountRoleUpdate
+         * @description Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).
+         */
+        AccountRoleUpdate: {
+            /**
+             * System Role
+             * @enum {string}
+             */
+            system_role: "EMPLOYEE" | "TEAM_LEADER";
         };
         /**
          * AccountWithPassword
@@ -4272,6 +4312,8 @@ export interface components {
             failed_logins: number;
             /** Locked Until */
             locked_until?: string | null;
+            /** System Role */
+            system_role?: string | null;
             /** Temporary Password */
             temporary_password: string;
         };
@@ -16082,6 +16124,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_field_role_api_v1_employees__emp_id__account_role_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountRoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
                 };
             };
             /** @description Validation Error */

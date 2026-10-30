@@ -126,3 +126,18 @@ def test_item_progress_from_outsider_is_rejected(client, world: World, other_wor
     op = _op("PLAN_ITEM_PROGRESS", {"item_id": item_id, "completed_qty": 1, "photos": []})
     result = _sync(client, other_world, "member", [op]).json()["results"][0]
     assert result["status"] == "REJECTED"
+
+
+def test_rollover_request_syncs_offline(client, world: World):
+    """Permintaan pindah hari dari HP lewat antrean: diterima seperti endpoint online (item → menunggu PM)."""
+    _, item_id = _progress_item(client, world)
+    op = _op("PLAN_ROLLOVER_REQUEST", {"item_id": item_id, "completed_qty": 1, "delay_reason": "Hujan deras"})
+    result = _sync(client, world, "leader", [op]).json()["results"][0]
+    assert result["status"] == "APPLIED", result
+    row = sync_query("SELECT rollover_approval_status, delay_reason FROM work_plan_item WHERE item_id = %s",
+                     (item_id,))[0]
+    assert row[0] == "WAITING_PM" and row[1] == "Hujan deras"
+
+    # Permintaan kedua untuk item yang sama ditolak (sudah menunggu PM), bukan digandakan.
+    again = _op("PLAN_ROLLOVER_REQUEST", {"item_id": item_id, "completed_qty": 1, "delay_reason": "Hujan lagi"})
+    assert _sync(client, world, "leader", [again]).json()["results"][0]["status"] == "REJECTED"

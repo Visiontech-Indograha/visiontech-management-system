@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -178,7 +179,7 @@ void main() {
       expect(find.text('Selesai'), findsNothing);
     });
 
-    testWidgets('judul kartu kosong memakai nama proyek atau "Tanpa judul", bukan teks null', (tester) async {
+    testWidgets('judul kartu kosong memakai nama proyek atau tim dan tanggal, bukan teks null', (tester) async {
       backend.routes['/work-plans/daily'] = (_) => [
         {..._day('d', 'APPROVED'), 'site_name': null, 'project_title': 'Proyek Menara'},
         {..._day('e', 'APPROVED', date: '2026-10-22'), 'site_name': null, 'project_title': null},
@@ -186,7 +187,9 @@ void main() {
       await show(tester, const DailyPlansScreen());
 
       expect(find.text('Proyek Menara'), findsOneWidget);
-      expect(find.text('Tanpa judul'), findsOneWidget);
+      expect(find.textContaining('22 Okt'), findsWidgets);
+      expect(find.textContaining('Tim MEP'), findsWidgets);
+      expect(find.textContaining('Tanpa judul'), findsNothing);
       expect(find.textContaining('null'), findsNothing);
     });
   });
@@ -576,6 +579,15 @@ void main() {
       await settle(tester);
     }
 
+    Future<void> tapPindahHari(WidgetTester tester) async {
+      await tester.scrollUntilVisible(
+        find.text('Tidak selesai hari ini? Minta pindah hari'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('Tidak selesai hari ini? Minta pindah hari'));
+    }
+
     Future<void> tapPlus(WidgetTester tester, int times) async {
       for (var i = 0; i < times; i++) {
         await tester.tap(find.byIcon(Icons.add_rounded));
@@ -624,6 +636,48 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
       expect(find.text('Simpan hasil kerja'), findsOneWidget);
       expect(find.text('Kerjakan pekerjaan'), findsOneWidget);
+    });
+
+    testWidgets('pindah hari tanpa sinyal masuk antrean HP dengan alasan utuh, bukan galat', (tester) async {
+      await openItem(tester);
+      backend.offline();
+
+      await tapPindahHari(tester);
+      await settle(tester);
+      await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
+        'Hujan deras sejak siang',
+      );
+      await tester.tap(find.text('Kirim ke PM'));
+      await settle(tester);
+
+      expect(find.textContaining('disimpan di HP'), findsOneWidget);
+      expect(find.textContaining('tidak ada sinyal'), findsNothing);
+      expect(find.textContaining('Menunggu koneksi untuk dikirim: permintaan pindah hari'), findsOneWidget);
+      expect(find.text('Tidak selesai hari ini? Minta pindah hari'), findsOneWidget);
+      final queued = await db.select(db.pendingSyncOperations).get();
+      expect(queued, hasLength(1));
+      final record = jsonDecode(queued.single.payloadJson) as Map<String, dynamic>;
+      expect(record['op_type'], 'PLAN_ROLLOVER_REQUEST');
+      expect((record['payload'] as Map)['delay_reason'], 'Hujan deras sejak siang');
+    });
+
+    testWidgets('pindah hari saat online lewat antrean sinkron dan item dimuat ulang', (tester) async {
+      backend.answerSync((_) => 'APPLIED');
+      await openItem(tester);
+
+      await tapPindahHari(tester);
+      await settle(tester);
+      await tester.enterText(
+        find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
+        'Material belum datang',
+      );
+      await tester.tap(find.text('Kirim ke PM'));
+      await settle(tester);
+
+      expect(find.textContaining('Permintaan pindah hari terkirim'), findsOneWidget);
+      expect(find.textContaining('Menunggu koneksi'), findsNothing);
+      expect(backend.sentOps.single['op_type'], 'PLAN_ROLLOVER_REQUEST');
     });
   });
 }

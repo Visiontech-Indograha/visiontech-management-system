@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../data/app_database.dart';
 import '../../data/sync_engine.dart';
+import '../../shared/ui/vms_ui.dart';
 
 /// Daftar isi antrian sinkronisasi, beserta jalan keluarnya.
 ///
@@ -24,6 +25,8 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
   List<PendingSyncRow> _operations = const [];
   List<PendingAttachmentRow> _photos = const [];
   bool _loading = true;
+  // Kunci entri yang sedang dicoba ulang ('op-<id>' / 'foto-<id>'): tombolnya diganti indikator proses.
+  String? _retrying;
 
   static const _entityLabels = OfflineOp.labels;
 
@@ -43,6 +46,27 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
       _photos = photos;
       _loading = false;
     });
+  }
+
+  /// Coba Lagi: indikator di entri, lalu pesan hasil. Entri yang masih gagal tetap ada di antrian.
+  Future<void> _retryOperation(PendingSyncRow row) async {
+    setState(() => _retrying = 'op-${row.id}');
+    await ref.read(syncEngineProvider).retryOperation(row.id);
+    await _load();
+    if (!mounted) return;
+    setState(() => _retrying = null);
+    final still = _operations.where((r) => r.id == row.id).firstOrNull;
+    if (still == null) {
+      showVmsToast(context, 'Terkirim ke server.');
+    } else if (still.deadLetter) {
+      showVmsToast(
+        context,
+        'Masih ditolak server: ${still.lastError ?? 'alasan tidak diketahui'}. Entri tetap di antrian.',
+        error: true,
+      );
+    } else {
+      showVmsToast(context, 'Belum terkirim (tidak ada koneksi). Akan dicoba otomatis saat ada sinyal.', error: true);
+    }
   }
 
   Future<void> _syncNow() async {
@@ -129,12 +153,8 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
                       attemptCount: row.attemptCount,
                       lastError: row.lastError,
                       deadLetter: row.deadLetter,
-                      onRetry: () async {
-                        await ref
-                            .read(syncEngineProvider)
-                            .retryOperation(row.id);
-                        await _load();
-                      },
+                      busy: _retrying == 'op-${row.id}',
+                      onRetry: () => _retryOperation(row),
                       onDelete: () async {
                         if (!await _confirmDelete(_describeOperation(row))) {
                           return;
@@ -152,11 +172,12 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
                       attemptCount: row.attemptCount,
                       lastError: row.lastError,
                       deadLetter: row.deadLetter,
+                      busy: _retrying == 'foto-${row.id}',
                       onRetry: () async {
-                        await ref
-                            .read(syncEngineProvider)
-                            .retryAttachment(row.id);
+                        setState(() => _retrying = 'foto-${row.id}');
+                        await ref.read(syncEngineProvider).retryAttachment(row.id);
                         await _load();
+                        if (mounted) setState(() => _retrying = null);
                       },
                       onDelete: () async {
                         if (!await _confirmDelete('Foto ${row.label}')) return;
@@ -188,7 +209,10 @@ class _QueueTile extends StatelessWidget {
     required this.deadLetter,
     required this.onRetry,
     required this.onDelete,
+    this.busy = false,
   });
+
+  final bool busy;
 
   final IconData icon;
   final String title;
@@ -244,14 +268,23 @@ class _QueueTile extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (deadLetter)
+                if (deadLetter && busy)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (deadLetter)
                   TextButton.icon(
                     onPressed: onRetry,
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text('Coba Lagi'),
                   ),
                 TextButton.icon(
-                  onPressed: onDelete,
+                  onPressed: busy ? null : onDelete,
                   icon: Icon(
                     Icons.delete_outline,
                     size: 18,

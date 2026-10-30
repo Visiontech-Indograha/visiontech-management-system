@@ -386,6 +386,13 @@ class AttendanceSessionService:
         site = await self.repo.site_for_check_in(site_id, org_id, lng, lat)
         if site is None:
             raise NotFoundError("Lokasi")
+        # Anggota/ketua tim yang punya jadwal hari itu (disetujui/berjalan) absen di LOKASI JADWAL itu, bukan kantor
+        # default yang terpilih di HP. Tanpa jadwal → lokasi yang dipilih tetap dipakai.
+        if site.kind != "WORK_PLAN_DAILY":
+            day_site = await self.repo.running_day_site(employee_id, today)
+            if day_site is not None:
+                site = await self.repo.site_for_check_in(day_site.daily_plan_id, org_id, lng, lat)
+                site_id = day_site.daily_plan_id
         if site.distance_m is None or site.radius_m is None:
             raise AppError(
                 "SITE_LOCATION_REQUIRED",

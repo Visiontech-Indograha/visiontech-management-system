@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { getAccessToken, setAccessToken } from "@/lib/apiClient";
 import { apiError, mockApi, renderRoute } from "./utils";
@@ -58,14 +59,13 @@ describe("login dan sesi API", () => {
     const { router } = renderRoute("/login");
     type("Email", ME.email);
     type("Password", "Rahasia123");
-    fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
+    await userEvent.setup().click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
       expect(getAccessToken()).toBe("tok");
     });
-    // Beranda dimuat lewat chunk lazy setelah /auth/me; di runner yang lambat, batas bawaan 1 dtk terlalu sempit.
-    expect(await screen.findByRole("heading", { level: 1, name: /budi/ }, { timeout: 5000 })).toBeInTheDocument();
-    expect(await screen.findByText("Karyawan lapangan", undefined, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /budi/ })).toBeInTheDocument();
+    expect(await screen.findByText("Karyawan lapangan")).toBeInTheDocument();
     expect(calls.some((call) => call.url === "/auth/me")).toBe(true);
   });
 

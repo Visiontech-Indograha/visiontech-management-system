@@ -303,6 +303,29 @@ class AttendanceSessionRepository(BaseRepository):
             {"site": str(site_id), "lng": lng, "lat": lat},
         )
 
+    async def running_day_site(self, employee_id: UUID | str, work_date: Any) -> Any:
+        """Lokasi tugas tim HARI ITU untuk karyawan (ketua/anggota) — jadwal APPROVED/ONGOING beserta radius
+        dan koordinatnya. None bila tak ada (absen memakai lokasi yang dipilih, mis. kantor)."""
+        return await self.fetchone(
+            """
+            SELECT wpd.daily_plan_id
+            FROM work_plan_daily wpd
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE wpd.work_date = :d
+              AND wpd.status IN ('APPROVED', 'ONGOING')
+              AND wpd.site_lat IS NOT NULL AND wpd.site_lng IS NOT NULL
+              AND wpd.attendance_radius_m IS NOT NULL
+              AND wpd.delete_at IS NULL
+              AND (t.leader_employee_id = CAST(:emp AS uuid) OR EXISTS (
+                    SELECT 1 FROM member m
+                    WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
+                      AND m.is_active AND m.delete_at IS NULL))
+            ORDER BY wpd.daily_plan_id
+            LIMIT 1
+            """,
+            {"d": work_date, "emp": str(employee_id)},
+        )
+
     async def nearest_valid_site(
         self,
         org_id: UUID | str,

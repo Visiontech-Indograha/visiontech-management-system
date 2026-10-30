@@ -66,6 +66,7 @@ dependencies:
   latlong2: ^0.10.1
   url_launcher: ^6.3.3
   geocoding: ^5.0.1
+  file_picker: ^13.3.0
 
 dev_dependencies:
   flutter_test:

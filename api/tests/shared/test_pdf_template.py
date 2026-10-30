@@ -18,3 +18,13 @@ def test_completion_pdf_template_embeds_logo_and_qr() -> None:
                        leader_sig=None, pm_sig=None, qr=qr)
     assert LOGO_DATA_URI in html and qr in html
     assert "ab" * 32 in html
+
+
+def test_completion_pdf_kop_shows_visiontech_and_team_logo() -> None:
+    team = "data:image/png;base64," + base64.b64encode(b"\x89PNG-logo-tim").decode("ascii")
+    order = {"client_name": "PHR", "project_title": "CCTV", "signature_hash": "ab" * 32}
+    html = render_html("completion_report.html", logos=[LOGO_DATA_URI, team], o=order, number="PHR-01",
+                       points=[], bom=[], photos=[], generated_at=datetime(2026, 10, 21, tzinfo=UTC),
+                       generated_by="pm", tgl=tgl, qty=qty, leader_sig=None, pm_sig=None, qr=None)
+    assert html.count('<img src="data:image/png;base64,') == 2  # logo Visiontech + logo tim di kop
+    assert LOGO_DATA_URI in html and team in html

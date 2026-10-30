@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
@@ -18,7 +19,7 @@ from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.presentation import Presentation as PptxPresentation
 from pptx.util import Cm, Emu, Pt
 
-from app.shared.documents.branding import COMPANY_BOX_PX, fit_contain_png
+from app.shared.documents.branding import COMPANY_BOX_PX, KopLogos, fit_contain_png
 from app.shared.documents.docx_kit import LOGO
 
 LOGO_WHITE = Path(LOGO).with_name("logo-visiontech-white.png")
@@ -53,12 +54,19 @@ def rgb(hex_: str) -> RGBColor:
     return RGBColor.from_string(hex_)  # type: ignore[no-untyped-call,no-any-return]
 
 
-def deck(team_logo: bytes | None = None) -> PptxPresentation:
-    """Presentasi kosong. `team_logo` (berkas asli) menggantikan logo default di kepala slide & sampul."""
+def deck(logos: KopLogos | None = None) -> PptxPresentation:
+    """Presentasi kosong. Logo Visiontech selalu tampil; logo tim (`logos[1]`, bila ada) di sampingnya."""
     prs = Presentation()
     prs.slide_width, prs.slide_height = W, H
+    team_logo = logos[1] if logos else None
     setattr(prs, TEAM_LOGO_ATTR, fit_contain_png(team_logo, COMPANY_BOX_PX) if team_logo else None)
     return prs
+
+
+def _logo_width_cm(path: Path, height_cm: float) -> float:
+    """Lebar logo (cm) pada tinggi `height_cm`, mengikuti rasio berkas asli."""
+    with Image.open(path) as img:
+        return height_cm * img.width / img.height
 
 
 def _team_logo(prs: PptxPresentation) -> bytes | None:
@@ -143,11 +151,10 @@ def cover(prs: PptxPresentation, title: str, subtitle: str, tagline: str, badge:
     ring.line.width = Pt(6)
     box(slide, 0, 0, 0.5, 19.05, GOLD)
     team_logo = _team_logo(prs)
+    slide.shapes.add_picture(str(LOGO_WHITE), Cm(2.2), Cm(1.8), height=Cm(1.9))  # logo Visiontech selalu tampil
     if team_logo:  # logo tim di kartu putih (logo tim bisa berwarna gelap; kartu menjaga keterbacaannya)
         box(slide, 24.4, 2.6, 8.6, 4.0, WHITE, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
         slide.shapes.add_picture(io.BytesIO(team_logo), Cm(24.9), Cm(3.5), width=Cm(7.6))
-    elif LOGO_WHITE.exists():
-        slide.shapes.add_picture(str(LOGO_WHITE), Cm(2.2), Cm(1.8), height=Cm(1.9))
     if badge:
         pill(slide, 2.2, 6.1, badge.upper(), (GOLD, NAVY_DARK), size=12)
     text(slide, 2.2, 7.4, 22, 4.2, title, size=40, color=WHITE, bold=True)
@@ -181,11 +188,11 @@ def page(prs: PptxPresentation, title: str, kicker: str = "", *, footer: str = "
         text(slide, 1.3, 0.55, 24, 0.8, kicker.upper(), size=10, color=MUTED, bold=True)
     text(slide, 1.3, 1.15, 26, 1.6, title, size=24, color=NAVY, bold=True, wrap=False)
     team_logo = _team_logo(prs)
-    if team_logo:  # kanan atas, proporsional (tinggi 1,3 cm; lebar mengikuti rasio kotak logo)
+    vms_x = 32.6 - _logo_width_cm(LOGO, 1.3)  # logo Visiontech kanan atas, selalu tampil (tinggi 1,3 cm)
+    slide.shapes.add_picture(str(LOGO), Cm(vms_x), Cm(0.9), height=Cm(1.3))
+    if team_logo:  # logo tim di kirinya, proporsional (lebar mengikuti rasio kotak logo)
         width = 1.3 * COMPANY_BOX_PX[0] / COMPANY_BOX_PX[1]
-        slide.shapes.add_picture(io.BytesIO(team_logo), Cm(32.6 - width), Cm(0.9), height=Cm(1.3))
-    elif LOGO.exists():
-        slide.shapes.add_picture(str(LOGO), Cm(28.0), Cm(0.9), height=Cm(1.3))
+        slide.shapes.add_picture(io.BytesIO(team_logo), Cm(vms_x - 0.6 - width), Cm(0.9), height=Cm(1.3))
     box(slide, 0, 3.2, 33.867, 0.06, LINE)
     number = len(prs.slides)
     text(slide, 1.3, 18.1, 26, 0.7, footer or "PT Visiontech Indograha", size=9, color=MUTED)
@@ -298,10 +305,11 @@ def closing(prs: PptxPresentation, line: str) -> None:
     ring = box(slide, -5.0, 9.0, 14.0, 14.0, NAVY, shape=MSO_SHAPE.OVAL, line=GOLD)
     ring.line.width = Pt(6)
     team_logo = _team_logo(prs)
-    if team_logo:  # logo tim di kartu putih, di tengah (sama seperti sampul)
-        box(slide, 11.9, 4.5, 10.0, 4.0, WHITE, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
-        slide.shapes.add_picture(io.BytesIO(team_logo), Cm(12.43), Cm(5.2), width=Cm(9.0))
-    elif LOGO_WHITE.exists():
+    if team_logo:  # logo Visiontech di kiri, logo tim di kartu putih di kanan (sama seperti sampul)
+        slide.shapes.add_picture(str(LOGO_WHITE), Cm(5.0), Cm(5.2), height=Cm(2.6))
+        box(slide, 19.9, 4.5, 10.0, 4.0, WHITE, shape=MSO_SHAPE.ROUNDED_RECTANGLE)
+        slide.shapes.add_picture(io.BytesIO(team_logo), Cm(20.43), Cm(5.2), width=Cm(9.0))
+    else:
         slide.shapes.add_picture(str(LOGO_WHITE), Cm(12.4), Cm(5.2), height=Cm(2.6))
     text(slide, 2, 8.8, 29.9, 1.8, "Terima kasih", size=36, color=WHITE, bold=True, align=PP_ALIGN.CENTER)
     text(slide, 2, 10.8, 29.9, 1.0, line, size=14, color="BCC3E6", align=PP_ALIGN.CENTER)

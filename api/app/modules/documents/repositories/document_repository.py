@@ -21,7 +21,7 @@ _COLUMNS = """
     ef.employee_file_id AS id, ef.employee_id, ef.type AS doc_type, ef.status::text AS status,
     (ef.active_at AT TIME ZONE 'Asia/Jakarta')::date AS active_at,
     (ef.expired_at AT TIME ZONE 'Asia/Jakarta')::date AS expired_at,
-    fo.id AS file_id, ef.create_at AS created_at
+    fo.id AS file_id, fo.mime_type AS file_mime, ef.create_at AS created_at
 """
 _FROM = "FROM employee_file ef LEFT JOIN file_object fo ON fo.storage_key = ef.path_file"
 

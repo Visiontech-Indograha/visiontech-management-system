@@ -350,6 +350,7 @@ CREATE TABLE IF NOT EXISTS work_plan_daily (
     -- WORK = jadwal kerja biasa; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib). Lihat migrasi v2_0013.
     kind VARCHAR(10) NOT NULL DEFAULT 'WORK'
         CONSTRAINT ck_work_plan_daily_kind CHECK (kind IN ('WORK','STANDBY')),
+    is_out_of_town BOOLEAN NOT NULL DEFAULT FALSE,  -- tugas luar kota (v2_0017): uang makan luar kota
     created_by_id UUID NOT NULL REFERENCES employee(employee_id),
     approved_by_pm_id UUID NULL REFERENCES employee(employee_id),
     approved_at TIMESTAMPTZ NULL,

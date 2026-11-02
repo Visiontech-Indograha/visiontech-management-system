@@ -33,6 +33,7 @@ const PHASE: Record<string, string> = PHASE_LABEL;
 const MAIN = ["INSTALLATION", "REPLACEMENT", "MAINTENANCE"];
 const STATUS: Record<string, string> = {
   TODO: "Belum mulai", IN_PROGRESS: "Dikerjakan", DONE: "Selesai", PENDING_ROLLOVER: "Minta pindah hari", SHIFTED_DAY: "Pindah hari",
+  CANCELLED: "Dibatalkan", CANCELED: "Dibatalkan",
 };
 /** Kolom formulir item yang boleh diberi galat dari API (kunci = nama field body). */
 const ITEM_FIELDS = ["work_type_id", "title", "task_phase", "unit_measure", "target_qty", "location_name", "start_time", "end_time", "site_lat", "site_lng", "depends_on_item_id", "notes"];
@@ -69,7 +70,7 @@ export function DailyItemsPanel({ detail, loading, canPlan }: { detail: DailyPla
                 {i.location_name && !i.title.includes(i.location_name) ? ` · ${i.location_name}` : ""}
               </TextBlock>
               <div className="flex items-center gap-2">
-                <Pill tone={i.status === "DONE" ? "success" : i.status === "PENDING_ROLLOVER" ? "warning" : "neutral"}>
+                <Pill tone={i.status === "DONE" ? "success" : i.status === "PENDING_ROLLOVER" ? "warning" : i.status === "CANCELLED" || i.status === "CANCELED" ? "danger" : "neutral"}>
                   {`${STATUS[i.status] ?? i.status} · ${Number(i.completed_qty)}/${Number(i.target_qty)}`}
                 </Pill>
                 {i.task_phase === "SURVEY" && i.completion_id && (

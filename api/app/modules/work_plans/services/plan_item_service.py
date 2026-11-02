@@ -175,8 +175,8 @@ class PlanItemService:
     async def update(self, user: CurrentUser, item_id: UUID, data: PlanItemUpdate) -> Any:
         item, access = await self._item(user, item_id, DailyNeed.MANAGE)
         require_daily_status(access, *EDITABLE_STATUSES)
-        if item.status == "DONE":
-            raise AppError("ITEM_LOCKED", "Item yang sudah selesai (DONE) tidak dapat diubah.", status=409)
+        if item.status in ("DONE", "CANCELLED"):
+            raise AppError("ITEM_LOCKED", "Item yang sudah selesai atau dibatalkan tidak dapat diubah.", status=409)
         fields = data.model_dump(exclude_unset=True)
         if fields.get("title"):
             fields["title"] = fields["title"].strip()
@@ -204,8 +204,8 @@ class PlanItemService:
     async def delete(self, user: CurrentUser, item_id: UUID) -> None:
         item, access = await self._item(user, item_id, DailyNeed.MANAGE)
         require_daily_status(access, *EDITABLE_STATUSES)
-        if item.status == "DONE":
-            raise AppError("ITEM_LOCKED", "Item yang sudah selesai (DONE) tidak dapat dihapus.", status=409)
+        if item.status in ("DONE", "CANCELLED"):
+            raise AppError("ITEM_LOCKED", "Item yang sudah selesai atau dibatalkan tidak dapat dihapus.", status=409)
         if await self.repo.dependents(item_id):
             raise AppError("ITEM_IS_PREREQUISITE", "Pekerjaan ini masih ditunggu pekerjaan lain.", status=409)
         await self.repo.archive(item_id)
@@ -219,6 +219,8 @@ class PlanItemService:
     async def progress(self, user: CurrentUser, item_id: UUID, data: ProgressIn) -> Any:
         item, access = await self._item(user, item_id, DailyNeed.TEAM)
         require_daily_status(access, "ONGOING")
+        if item.status == "CANCELLED":
+            raise _state("Pekerjaan ini sudah dibatalkan.")
         if item.status in ("PENDING_ROLLOVER", "SHIFTED_DAY"):
             raise _state("Pekerjaan ini sudah dipindah ke hari lain; catat hasilnya di hari baru.")
         if data.completed_qty > item.target_qty:
@@ -249,7 +251,7 @@ class PlanItemService:
     async def request_rollover(self, user: CurrentUser, item_id: UUID, data: RolloverRequest) -> Any:
         item, access = await self._item(user, item_id, DailyNeed.LEADER)
         require_daily_status(access, *FIELD_ACTIVE)
-        if item.status in ("DONE", "SHIFTED_DAY", "PENDING_ROLLOVER"):
+        if item.status in ("DONE", "SHIFTED_DAY", "PENDING_ROLLOVER", "CANCELLED"):
             raise _state("Hanya pekerjaan yang belum selesai dan belum diajukan yang bisa dipindah hari.")
         if data.completed_qty >= item.target_qty:
             raise ValidationError("Jumlah selesai sudah mencapai target — tandai selesai, tidak perlu pindah hari.")
@@ -261,8 +263,8 @@ class PlanItemService:
         locked = await self.repo.lock(item_id)
         if locked is None:
             raise NotFoundError("Item pekerjaan")
-        if locked.status in ("DONE", "SHIFTED_DAY"):
-            raise _state("Pekerjaan yang sudah selesai atau sudah dipindahkan tidak dapat digeser.")
+        if locked.status in ("DONE", "SHIFTED_DAY", "CANCELLED"):
+            raise _state("Pekerjaan yang sudah selesai, dibatalkan, atau sudah dipindahkan tidak dapat digeser.")
 
         if not data.approve:
             if locked.rollover_approval_status != "WAITING_PM":

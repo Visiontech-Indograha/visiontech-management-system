@@ -2744,6 +2744,11 @@
       "title": "Division Id",
       "type": "string"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "kind": {
       "default": "WORK",
       "enum": [
@@ -3127,6 +3132,11 @@
       "title": "Division Id",
       "type": "string"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "kind": {
       "default": "WORK",
       "enum": [
@@ -3296,6 +3306,11 @@
       "default": 0,
       "title": "Done Count",
       "type": "integer"
+     },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
      },
      "item_count": {
       "default": 0,
@@ -3611,6 +3626,11 @@
       "title": "Done Count",
       "type": "integer"
      },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
+     },
      "item_count": {
       "default": 0,
       "title": "Item Count",
@@ -3828,6 +3848,17 @@
        }
       ],
       "title": "Clock Out Time"
+     },
+     "is_out_of_town": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Out Of Town"
      },
      "project_id": {
       "anyOf": [
@@ -13456,6 +13487,11 @@
        }
       ],
       "title": "Daily Plan Id"
+     },
+     "is_out_of_town": {
+      "default": false,
+      "title": "Is Out Of Town",
+      "type": "boolean"
      },
      "item_count": {
       "default": 0,

@@ -37,6 +37,7 @@ class DailyPlanCreate(BaseModel):
     attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
     clock_in_time: time = time(7, 0)
     clock_out_time: time = time(16, 0)
+    is_out_of_town: bool = False
     # F10: tanggal lampau (maks. 7 hari) hanya untuk PM/OM dan wajib beralasan; tercatat di audit.
     backdate_reason: str | None = Field(default=None, max_length=300)
 
@@ -68,6 +69,7 @@ class DailyPlanUpdate(BaseModel):
     attendance_radius_m: int | None = Field(default=None, ge=10, le=5000)
     clock_in_time: time | None = None
     clock_out_time: time | None = None
+    is_out_of_town: bool | None = None
 
     @model_validator(mode="after")
     def _hours(self) -> DailyPlanUpdate:
@@ -123,6 +125,7 @@ class DailyBulkIn(BaseModel):
     site_lat: Decimal | None = Field(default=None, ge=-90, le=90)
     site_lng: Decimal | None = Field(default=None, ge=-180, le=180)
     attendance_radius_m: int | None = Field(default=150, ge=10, le=5000)
+    is_out_of_town: bool = False
     assets: list[DailyBulkAsset] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
@@ -215,6 +218,7 @@ class DailyPlanOut(BaseModel):
     clock_out_time: time
     status: DailyStatus
     kind: DailyKind = "WORK"
+    is_out_of_town: bool = False
     created_by_id: UUID
     approved_by_pm_id: UUID | None = None
     approved_at: datetime | None = None

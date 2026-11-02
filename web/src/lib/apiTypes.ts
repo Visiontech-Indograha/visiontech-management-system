@@ -5273,6 +5273,11 @@ export interface components {
              * @default 150
              */
             attendance_radius_m: number | null;
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /** Assets */
             assets?: components["schemas"]["DailyBulkAsset"][];
         };
@@ -5416,6 +5421,11 @@ export interface components {
              * @default 16:00:00
              */
             clock_out_time: string;
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /** Backdate Reason */
             backdate_reason?: string | null;
         };
@@ -5491,6 +5501,11 @@ export interface components {
              * @enum {string}
              */
             kind: "WORK" | "STANDBY";
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /**
              * Created By Id
              * Format: uuid
@@ -5625,6 +5640,11 @@ export interface components {
              */
             kind: "WORK" | "STANDBY";
             /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
+            /**
              * Created By Id
              * Format: uuid
              */
@@ -5681,6 +5701,8 @@ export interface components {
             clock_in_time?: string | null;
             /** Clock Out Time */
             clock_out_time?: string | null;
+            /** Is Out Of Town */
+            is_out_of_town?: boolean | null;
         };
         /** DailyReportCreate */
         DailyReportCreate: {
@@ -9279,6 +9301,11 @@ export interface components {
             status?: ("DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED") | null;
             /** Kind */
             kind?: ("WORK" | "STANDBY") | null;
+            /**
+             * Is Out Of Town
+             * @default false
+             */
+            is_out_of_town: boolean;
             /**
              * Item Count
              * @default 0

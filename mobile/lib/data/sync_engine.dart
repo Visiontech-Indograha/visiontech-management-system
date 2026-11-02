@@ -340,7 +340,17 @@ class SyncEngine {
       final id = p['daily_plan_id'];
       if (id == null || NetworkHint.probablyOffline) return;
       try {
-        await cachePut('daily_plan_$id', await _api.dailyPlan('$id'));
+        final detail = await _api.dailyPlan('$id');
+        await cachePut('daily_plan_$id', detail);
+        for (final item in (detail['items'] as List? ?? const [])) {
+          if (item is Map && item['item_id'] != null) {
+            await cachePut('plan_item_${item['item_id']}', item);
+            final wt = item['work_type_id'];
+            if (wt != null && (await cacheGet('image_req_$wt')).data == null) {
+              await cachePut('image_req_$wt', await _api.imageRequirements('$wt'));
+            }
+          }
+        }
       } on DioException catch (e) {
         if (isNetworkFailure(e)) return;
       }
@@ -365,6 +375,13 @@ class SyncEngine {
         'daily_today',
         await _api.dailyPlans(start: _today(), end: _today()),
       );
+      final now = DateTime.now();
+      final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+      final start = monday.toIso8601String().substring(0, 10);
+      final end = monday.add(const Duration(days: 6)).toIso8601String().substring(0, 10);
+      final weekPlans = await _api.dailyPlans(start: start, end: end);
+      await cachePut('daily_$start', weekPlans);
+      await prefetchPlanDetails(weekPlans);
     } on DioException catch (e) {
       pull.add(
         isNetworkFailure(e)

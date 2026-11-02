@@ -125,3 +125,61 @@ def test_complete_pending_rollover_comes_before_report_check(client, world: Worl
     still = client.post(f"/work-plans/daily/{plan}/complete", headers=leader)
     assert still.status_code == 409, still.text
     assert still.json()["error"]["code"] == "ROLLOVER_PENDING"
+
+
+def test_pm_closes_partial_day_and_marks_unfinished_items_cancelled(client, world: World):
+    """Keputusan #2: ketua ditolak menutup hari dengan item parsial (ITEMS_INCOMPLETE); PM menutup hari dan item
+    yang belum selesai ditandai CANCELLED."""
+    plan = make_daily_plan(world, status="ONGOING")
+    done_id = add_item(plan, world, "Titik selesai", status="DONE", completed_qty="2", target_qty="2")
+    partial_id = add_item(plan, world, "Titik setengah", status="IN_PROGRESS", completed_qty="1", target_qty="2")
+    todo_id = add_item(plan, world, "Titik belum", status="TODO", completed_qty="0", target_qty="1")
+    leader, pm = world.headers(client, "leader"), world.headers(client, "pm")
+
+    assert client.post(f"/work-plans/daily/{plan}/report", headers=leader,
+                       json={"summary": "Laporan harian parsial", "photos_json": []}).status_code == 201
+
+    by_leader = client.post(f"/work-plans/daily/{plan}/complete", headers=leader)
+    assert by_leader.status_code == 409, by_leader.text
+    assert by_leader.json()["error"]["code"] == "ITEMS_INCOMPLETE"
+
+    by_pm = client.post(f"/work-plans/daily/{plan}/complete", headers=pm)
+    assert by_pm.status_code == 200, by_pm.text
+    body = by_pm.json()
+    assert body["status"] == "COMPLETED"
+    assert body["item_count"] == 3 and body["done_count"] == 1 and body["progress_pct"] == 33
+
+    statuses = dict(sync_query(
+        "SELECT item_id::text, status FROM work_plan_item WHERE daily_plan_id = %s", (plan,)
+    ))
+    assert statuses[done_id] == "DONE"
+    assert statuses[partial_id] == "CANCELLED"
+    assert statuses[todo_id] == "CANCELLED"
+
+    # Item CANCELLED terkunci: tidak bisa diubah progresnya atau diajukan pindah hari
+    assert client.patch(f"/work-plans/items/{partial_id}/progress", headers=leader,
+                        json={"completed_qty": "2"}).status_code == 409
+    assert client.post(f"/work-plans/items/{partial_id}/request-rollover", headers=leader,
+                       json={"completed_qty": "1", "delay_reason": "Terlambat"}).status_code == 409
+
+
+def test_out_of_town_plan_flag_and_attendance_zone(client, world: World):
+    """Keputusan #4: `is_out_of_town` tersimpan pada jadwal harian dan membuat absensi anggota tim dihitung
+    zona LUAR_KOTA meskipun koordinat absen di dalam batas kota kantor utama."""
+    pm = world.headers(client, "pm")
+    created = client.post("/work-plans/daily", headers=pm, json={
+        "division_id": world.unit_id, "team_id": world.team_id,
+        "work_date": str(jakarta_now().date()), "site_name": "Site Luar Kota",
+        "site_lat": "-6.2000000", "site_lng": "106.8000000", "is_out_of_town": True,
+    })
+    assert created.status_code == 201, created.text
+    plan_id = created.json()["daily_plan_id"]
+    assert created.json()["is_out_of_town"] is True
+
+    add_item(plan_id, world, "Titik luar kota")
+    assert client.post(f"/work-plans/daily/{plan_id}/approve", headers=pm).status_code == 200
+
+    check_in(client, world, "leader")
+    sessions = client.get("/attendance", headers=pm).json()["items"]
+    leader_session = next(s for s in sessions if s["employee_id"] == world.employees["leader"])
+    assert leader_session["city_category"] == "LUAR_KOTA"

@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "Visiontech VMS",
-  "version": "1.4.0"
+  "version": "1.5.0"
  },
  "paths": {
   "/health": {
@@ -17970,6 +17970,11 @@
       "title": "Attendance Radius M",
       "default": 150
      },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
      "assets": {
       "items": {
        "$ref": "#/components/schemas/DailyBulkAsset"
@@ -18343,6 +18348,11 @@
       "title": "Clock Out Time",
       "default": "16:00:00"
      },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
      "backdate_reason": {
       "anyOf": [
        {
@@ -18532,6 +18542,11 @@
       ],
       "title": "Kind",
       "default": "WORK"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "created_by_id": {
       "type": "string",
@@ -18856,6 +18871,11 @@
       "title": "Kind",
       "default": "WORK"
      },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
      "created_by_id": {
       "type": "string",
       "format": "uuid",
@@ -19061,6 +19081,17 @@
        }
       ],
       "title": "Clock Out Time"
+     },
+     "is_out_of_town": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Out Of Town"
      }
     },
     "type": "object",
@@ -28646,6 +28677,11 @@
        }
       ],
       "title": "Kind"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "item_count": {
       "type": "integer",

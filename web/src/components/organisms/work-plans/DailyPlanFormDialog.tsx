@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChoiceChips } from "@/components/molecules/ChoiceChips";
+import { CheckControl } from "@/components/molecules/CheckControl";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { SelectField, TextField } from "@/components/molecules/Field";
-import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
@@ -40,6 +42,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const [lng, setLng] = useState(plan ? String(plan.site_lng ?? "") : "");
   const [radius, setRadius] = useState(String(plan?.attendance_radius_m ?? 150));
   const [workDate, setWorkDate] = useState(plan?.work_date ?? initial?.work_date ?? "");
+  const [isOutOfTown, setIsOutOfTown] = useState(Boolean(plan?.is_out_of_town));
   // F10: jadwal tanggal lampau (<= BACKDATE_DAYS hari, hanya saat membuat) wajib beralasan; tercatat audit.
   const [backdateReason, setBackdateReason] = useState("");
   const today = wibDate();
@@ -85,6 +88,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
       attendance_radius_m: Number(value("attendance_radius_m") || 150),
       clock_in_time: value("clock_in_time") || "07:00",
       clock_out_time: value("clock_out_time") || "16:00",
+      is_out_of_town: isOutOfTown,
     };
     if (backdated && !backdateReason.trim()) return setErrors({ backdate_reason: "Isi alasan untuk tanggal lampau." });
     try {
@@ -176,6 +180,10 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           <TextField name="clock_in_time" label="Jam masuk" type="time" defaultValue={(plan?.clock_in_time ?? "07:00").slice(0, 5)} />
           <TextField name="clock_out_time" label="Jam pulang" type="time" defaultValue={(plan?.clock_out_time ?? "16:00").slice(0, 5)} error={errors.clock_out_time} />
         </div>
+        <ControlLabel className="flex cursor-pointer items-center gap-2 pt-1 text-sm">
+          <CheckControl checked={isOutOfTown} onCheckedChange={(v) => setIsOutOfTown(v === true)} />
+          <TextBlock as="span">Tugas luar kota (tarif uang makan luar kota)</TextBlock>
+        </ControlLabel>
       </FormBlock>
     </VmsDialog>
   );

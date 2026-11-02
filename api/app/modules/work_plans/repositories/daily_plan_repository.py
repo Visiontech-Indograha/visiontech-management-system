@@ -21,6 +21,7 @@ _SELECT = """
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,
+           wpd.is_out_of_town,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL))
@@ -29,7 +30,7 @@ _SELECT = """
               AND i.delete_at IS NULL AND i.status = 'DONE'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS done_count,
            -- Persen progres (satu aturan dengan web workPhase.displayPct & mobile workPercent):
-           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) = 0% (dikerjakan di hari baru),
+           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) / 'Dibatalkan' (CANCELLED) = 0%,
            -- item lain = dikerjakan/target. Dibulatkan ke bawah. 100 hanya bila SEMUA item DONE; selainnya maks 99.
            -- Contoh: A 2/2 + B pindah hari 0/1 = 50; A 1/2 = 50; semua DONE = 100.
            (SELECT CASE WHEN EXISTS (SELECT 1 FROM work_plan_item a WHERE a.daily_plan_id = wpd.daily_plan_id
@@ -40,7 +41,7 @@ _SELECT = """
                           AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
                   THEN 100
                   ELSE LEAST(99, COALESCE(FLOOR(AVG(CASE WHEN i.status = 'DONE' THEN 1
-                        WHEN i.status = 'SHIFTED_DAY' THEN 0
+                        WHEN i.status IN ('SHIFTED_DAY', 'CANCELLED') THEN 0
                         ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int)
              END
               FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL
@@ -248,13 +249,13 @@ class DailyPlanRepository(BaseRepository):
             """
             INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
                                          attendance_radius_m, clock_in_time, clock_out_time, status, kind,
-                                         created_by_id)
+                                         is_out_of_town, created_by_id)
             VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), CAST(:project_id AS uuid), :work_date,
                     :site_name, :site_lat, :site_lng, :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT',
-                    :kind, CAST(:created_by_id AS uuid))
+                    :kind, COALESCE(CAST(:is_out_of_town AS boolean), FALSE), CAST(:created_by_id AS uuid))
             RETURNING daily_plan_id
             """,
-            {"project_id": None, **fields},
+            {"project_id": None, "is_out_of_town": False, **fields},
         )
         return daily_plan_id
 
@@ -273,10 +274,11 @@ class DailyPlanRepository(BaseRepository):
                                             ELSE attendance_radius_m END,
                 clock_in_time = COALESCE(CAST(:clock_in_time AS time), clock_in_time),
                 clock_out_time = COALESCE(CAST(:clock_out_time AS time), clock_out_time),
+                is_out_of_town = COALESCE(CAST(:is_out_of_town AS boolean), is_out_of_town),
                 update_at = now()
             WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
-            {**fields, "id": str(daily_plan_id)},
+            {"is_out_of_town": None, **fields, "id": str(daily_plan_id)},
         )
 
     async def release_plan_assets(self, daily_plan_id: UUID | str) -> None:
@@ -474,6 +476,26 @@ class DailyPlanRepository(BaseRepository):
             "AND status = 'PENDING_ROLLOVER' LIMIT 1",
             {"id": str(daily_plan_id)},
         ))
+
+    async def has_unfinished_items(self, daily_plan_id: UUID | str) -> bool:
+        """Ada item aktif (TODO/IN_PROGRESS, bukan titik survei anak) yang belum selesai dan belum pindah hari."""
+        return bool(await self.scalar(
+            "SELECT 1 FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status IN ('TODO', 'IN_PROGRESS') "
+            "AND NOT (task_phase = 'SURVEY' AND depends_on_item_id IS NOT NULL) LIMIT 1",
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def cancel_unfinished_items(self, daily_plan_id: UUID | str) -> int:
+        """PM menutup hari kerja parsial: item TODO/IN_PROGRESS yang belum selesai ditandai CANCELLED."""
+        result = await self.execute(
+            "UPDATE work_plan_item SET status = 'CANCELLED', update_at = now() "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status IN ('TODO', 'IN_PROGRESS') "
+            "AND NOT (task_phase = 'SURVEY' AND depends_on_item_id IS NOT NULL)",
+            {"id": str(daily_plan_id)},
+        )
+        return int(result.rowcount or 0)
 
     async def leader_checked_in(self, daily_plan_id: UUID | str, today: date) -> bool:
         """Ketua tim sudah absen masuk pada tanggal jadwal ATAU pada hari ini (WIB), absensi yang belum dihapus.

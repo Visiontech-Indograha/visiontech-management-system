@@ -11,7 +11,7 @@ from uuid import UUID
 
 from app.core.repository import CRUDBase
 from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
-from app.shared.attendance_sql import IS_LATE_A
+from app.shared.attendance_sql import EFFECTIVE_CITY_ZONE_A, IS_LATE_A
 
 # Bawahan peninjau (scope "subordinates"): karyawan yang berada di bawah kewenangan PM (divisi yang dipimpin,
 # atau tim pada jadwal/proyek yang dikelolanya), dan karyawan divisi yang dipimpin OM.
@@ -115,7 +115,7 @@ class CRUDMonitoring(CRUDBase):
                    ({IS_LATE_A}) AS is_late,
                    (a.clock_out_at IS NOT NULL
                     AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
-                   CAST(a.city_zone_status AS text) AS city_category
+                   {EFFECTIVE_CITY_ZONE_A} AS city_category
             FROM attendance a
             JOIN employee e ON e.employee_id = a.employee_id
             LEFT JOIN office o ON o.office_id = a.office_id

@@ -95,6 +95,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   Widget build(BuildContext context) {
     // Peristiwa realtime (jadwal disetujui / item digeser) → muat ulang.
     ref.listen(liveEventTickProvider, (_, _) => _load());
+    ref.listen(syncTickProvider, (_, _) => _load());
     final fmt = DateFormat('d MMM', 'id_ID');
     final today = isoDate(DateTime.now());
     final thisWeek = _monday == mondayOf(DateTime.now());
@@ -342,7 +343,10 @@ class _PlanCard extends StatelessWidget {
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
-                          children: [for (final ph in (plan['phases'] as List? ?? const [])) _PhaseTag(phase: '$ph')],
+                          children: [
+                            if (plan['is_out_of_town'] == true) const StatusPill('ONGOING', label: 'Luar kota'),
+                            for (final ph in (plan['phases'] as List? ?? const [])) _PhaseTag(phase: '$ph'),
+                          ],
                         ),
                         const SizedBox(height: 10),
                         TweenAnimationBuilder<double>(

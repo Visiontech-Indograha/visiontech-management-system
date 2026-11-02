@@ -22,9 +22,10 @@ void main() {
       expect(itemDisplayState(raw: 'TODO', done: 2, target: 5, photoCount: 0, dayStatus: 'ONGOING'), 'ITEM_IN_PROGRESS');
       expect(itemDisplayState(raw: 'TODO', done: 5, target: 5, photoCount: 0, dayStatus: 'COMPLETED'), 'DONE');
     });
-    test('status pindah hari tidak tertimpa', () {
+    test('status pindah hari dan dibatalkan tidak tertimpa', () {
       expect(itemDisplayState(raw: 'PENDING_ROLLOVER', done: 1, target: 2, photoCount: 3), 'PENDING_ROLLOVER');
       expect(itemDisplayState(raw: 'SHIFTED_DAY', done: 0, target: 2, photoCount: 1), 'SHIFTED_DAY');
+      expect(itemDisplayState(raw: 'CANCELLED', done: 1, target: 2, photoCount: 2, dayStatus: 'COMPLETED'), 'CANCELLED');
     });
   });
 
@@ -32,6 +33,12 @@ void main() {
     test('tanpa laporan memberi alasan', () {
       expect(closeDayBlockReason(hasReport: false, reportPending: false, pendingRollovers: 0),
           'Kirim laporan harian di atas dulu. Setelah terkirim, hari kerja bisa ditutup.');
+    });
+    test('masih ada item belum selesai menahan penutupan hari', () {
+      expect(
+        closeDayBlockReason(hasReport: true, reportPending: false, pendingRollovers: 0, unfinishedItems: 1),
+        'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.',
+      );
     });
     test('pindah hari yang menunggu PM dijelaskan spanduk, tidak diulang sebagai alasan', () {
       expect(closeDayBlockReason(hasReport: false, reportPending: false, pendingRollovers: 2), isNull);

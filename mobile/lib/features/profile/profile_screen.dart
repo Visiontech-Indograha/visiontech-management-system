@@ -303,7 +303,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     // menyebutkan itu secara eksplisit supaya teknisi tidak kehilangan pekerjaan tanpa sadar.
     final tertunda =
         await ref.read(syncEngineProvider).pendingOperationCount() +
-        await ref.read(syncEngineProvider).pendingPhotoCount();
+        await ref.read(syncEngineProvider).pendingPhotoCount() +
+        await ref.read(syncEngineProvider).deadLetterCount();
     if (!mounted) return;
     final yakin = await _konfirmasi(
       judul: 'Keluar dari akun?',

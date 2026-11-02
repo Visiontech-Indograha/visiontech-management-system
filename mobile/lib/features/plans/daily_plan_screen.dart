@@ -56,12 +56,24 @@ String dayActionErrorMessage(Object error) => switch (apiErrorCode(error)) {
     'Absen masuk hari ini belum tercatat. Lakukan absen masuk dulu di menu Absensi, lalu mulai hari kerja.',
   'ROLLOVER_PENDING' =>
     'Ada pekerjaan yang masih menunggu keputusan PM untuk pindah hari. Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+  'ITEMS_INCOMPLETE' =>
+    'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.',
   _ => apiErrorMessage(error),
 };
 
 /// Jumlah item hari ini yang masih menunggu keputusan PM untuk pindah hari (menahan penutupan hari).
 int pendingRolloverCount(Map<String, dynamic> plan) =>
     (plan['items'] as List? ?? const []).where((i) => i is Map && i['status'] == 'PENDING_ROLLOVER').length;
+
+/// Jumlah item kerja utama (bukan titik survei anak) yang masih TODO atau IN_PROGRESS.
+int unfinishedItemCount(Map<String, dynamic> plan) => (plan['items'] as List? ?? const [])
+    .where(
+      (i) =>
+          i is Map &&
+          !_DailyPlanScreenState.isSurveyPoint(Map<String, dynamic>.from(i)) &&
+          const {'TODO', 'IN_PROGRESS'}.contains(i['status']),
+    )
+    .length;
 
 String correctionStateTitle(String status) => switch (status) {
   'REQUESTED' => 'Koreksi menunggu keputusan PM',
@@ -444,6 +456,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                                 style: theme.textTheme.titleMedium,
                               ),
                             ),
+                            if (plan['is_out_of_town'] == true) ...[
+                              const StatusPill('ONGOING', label: 'Luar kota'),
+                              const SizedBox(width: 6),
+                            ],
                             StatusPill('${plan['status']}'),
                           ],
                         ),
@@ -592,7 +608,12 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       label: _dailyReport == null ? 'Kirim laporan untuk menutup hari' : 'Selesaikan hari kerja',
                       icon: Icons.task_alt_rounded,
                       busy: _busy,
-                      onTap: _dailyReport == null || _reportPending || pendingRolloverCount(plan) > 0 ? null : () async {
+                      onTap: _dailyReport == null ||
+                              _reportPending ||
+                              pendingRolloverCount(plan) > 0 ||
+                              unfinishedItemCount(plan) > 0
+                          ? null
+                          : () async {
                         if (!await confirmAction(
                           context,
                           title: 'Selesaikan hari kerja?',
@@ -611,6 +632,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           hasReport: _dailyReport != null,
                           reportPending: _reportPending,
                           pendingRollovers: pendingRolloverCount(plan),
+                          unfinishedItems: unfinishedItemCount(plan),
                         ) case final reason?)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),

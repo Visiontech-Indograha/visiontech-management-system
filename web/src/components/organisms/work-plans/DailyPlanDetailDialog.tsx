@@ -6,6 +6,7 @@ import { TextAreaField, TextField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { ListBlock, ListPair } from "@/components/molecules/ListBlock";
 import { displayPct, phaseLabel, WORK_STATE, workState } from "@/lib/workPhase";
+import { Pill } from "@/components/molecules/Pill";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
@@ -105,12 +106,16 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
 
   const pct = displayPct(p);
   const state = WORK_STATE[workState(p, wibDate())];
+  const hasUnfinished = (detail.data?.items ?? []).some(
+    (i) => !(i.task_phase === "SURVEY" && i.depends_on_item_id) && (i.status === "TODO" || i.status === "IN_PROGRESS"),
+  );
 
   return (
     <VmsDialog open title={`${p.team_name} · ${formatDate(p.work_date)}`} onClose={onClose} dirty={formDirty}>
       <div className="space-y-4 text-sm">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={p.status} />
+          {p.is_out_of_town && <Pill tone="info">Luar kota</Pill>}
           <TextBlock as="span" className="text-mist">{p.division_name}</TextBlock>
         </div>
         {/* Progres penyelesaian */}
@@ -208,8 +213,10 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           {actions.map((a) => {
             // API menolak pengajuan/persetujuan jadwal tanpa item; tombolnya dinonaktifkan dengan petunjuk.
             const kosong = p.item_count === 0 && (a === "submit" || a === "approve");
+            // Keputusan #2: ketua tim tidak boleh menutup hari jika masih ada item belum selesai/pindah hari.
+            const belumTuntas = a === "complete" && !manages && hasUnfinished;
             return (
-              <ActionButton key={a} size="sm" disabled={transition.isPending || kosong} onClick={() => setConfirm(a)}>
+              <ActionButton key={a} size="sm" disabled={transition.isPending || kosong || belumTuntas} onClick={() => setConfirm(a)}>
                 {ACTION_LABEL[a]}
               </ActionButton>
             );
@@ -217,6 +224,11 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
           {p.item_count === 0 && actions.some((a) => a === "submit" || a === "approve") && (
             <TextBlock as="span" className="basis-full text-xs text-mist">
               Tambahkan minimal satu pekerjaan sebelum diajukan atau disetujui.
+            </TextBlock>
+          )}
+          {!manages && hasUnfinished && actions.includes("complete") && (
+            <TextBlock as="span" className="basis-full text-xs text-mist">
+              Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.
             </TextBlock>
           )}
           {manages && mode === "view" && (p.status === "SUBMITTED" || p.status === "APPROVED") && (
@@ -259,7 +271,13 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
       <ConfirmDialog
         open={confirm !== null}
         title={confirm === "delete" ? "Hapus jadwal?" : confirm ? `${ACTION_LABEL[confirm]}?` : ""}
-        message={confirm ? CONFIRM_MESSAGE[confirm] : ""}
+        message={
+          confirm === "complete" && manages && hasUnfinished
+            ? "Hari kerja akan ditutup oleh PM. Pekerjaan yang belum selesai akan otomatis ditandai Dibatalkan."
+            : confirm
+              ? CONFIRM_MESSAGE[confirm]
+              : ""
+        }
         confirmLabel={confirm === "delete" ? "Hapus" : confirm ? ACTION_LABEL[confirm] : ""}
         danger={confirm === "delete"}
         busy={transition.isPending || remove.isPending}

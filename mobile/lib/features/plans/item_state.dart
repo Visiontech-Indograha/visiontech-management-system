@@ -8,6 +8,7 @@ String itemDisplayState({
   required int photoCount,
   String? dayStatus,
 }) {
+  if (raw == 'CANCELLED' || raw == 'CANCELED') return 'CANCELLED';
   if (raw == 'DONE' || (target > 0 && done >= target)) return 'DONE';
   if (raw == 'SHIFTED_DAY' || raw == 'PENDING_ROLLOVER') return raw;
   if (done > 0 || photoCount > 0) {
@@ -21,9 +22,13 @@ String? closeDayBlockReason({
   required bool hasReport,
   required bool reportPending,
   required int pendingRollovers,
+  int unfinishedItems = 0,
 }) {
   // Pindah hari yang menunggu PM sudah dijelaskan spanduk di atas tombol; tidak diulang di sini.
   if (pendingRollovers > 0) return null;
+  if (unfinishedItems > 0) {
+    return 'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.';
+  }
   if (!hasReport) return 'Kirim laporan harian di atas dulu. Setelah terkirim, hari kerja bisa ditutup.';
   if (reportPending) return 'Menunggu koneksi untuk mengirim laporan.';
   return null;

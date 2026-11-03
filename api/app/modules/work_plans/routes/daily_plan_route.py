@@ -32,6 +32,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanUpdate,
     DailyStatus,
     GeoResult,
+    MyExecutionTodayOut,
     OrderScheduleOut,
     RecentSiteOut,
     RejectIn,
@@ -45,9 +46,20 @@ from app.modules.work_plans.schemas.weekly_schema import WeeklyMatrixOut
 from app.shared.access.access_service import DailyAccess, DailyNeed
 
 router = APIRouter(prefix="/work-plans", tags=["Work Plans (Daily-First)"])
+alias_router = APIRouter(prefix="/daily-plans", tags=["Work Plans (Daily-First)"])
 _LOGIN = Depends(get_current_user)
 _PLANNER = Depends(require_permission(Permission.CREATE_PLAN))
 _VIEW = Depends(daily_access(DailyNeed.VIEW))
+
+
+@router.get("/my-execution-today", response_model=MyExecutionTodayOut)
+@alias_router.get("/my-execution-today", response_model=MyExecutionTodayOut)
+async def my_execution_today(
+    current_user: CurrentUser = _LOGIN,
+    controller: DailyPlanController = Depends(),
+) -> MyExecutionTodayOut:
+    """Tugas eksekusi hari ini untuk aplikasi mobile lapangan (jadwal + client work orders + sites + item/BOM)."""
+    return await controller.handle_my_execution_today(current_user)
 
 
 @router.get("/form-options", response_model=DailyFormOptions)

@@ -113,6 +113,238 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/clients/{client_id}/sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Client Sites
+         * @description Daftar cabang / lokasi site milik klien.
+         */
+        get: operations["list_client_sites_api_v1_clients__client_id__sites_get"];
+        put?: never;
+        /**
+         * Create Client Site
+         * @description Tambah cabang / lokasi site baru untuk klien.
+         */
+        post: operations["create_client_site_api_v1_clients__client_id__sites_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/clients/{client_id}/sites/{site_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Client Site
+         * @description Ubah data cabang / lokasi site klien.
+         */
+        put: operations["update_client_site_api_v1_clients__client_id__sites__site_id__put"];
+        post?: never;
+        /**
+         * Delete Client Site
+         * @description Hapus cabang / lokasi site klien.
+         */
+        delete: operations["delete_client_site_api_v1_clients__client_id__sites__site_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Work Orders
+         * @description Daftar work orders dengan filter status, divisi, klien, dan pencarian.
+         */
+        get: operations["list_work_orders_api_v1_work_orders_get"];
+        put?: never;
+        /**
+         * Create Work Order
+         * @description Buat Work Order baru dari klien (Status awal: WAITING_SURVEY).
+         */
+        post: operations["create_work_order_api_v1_work_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Work Order
+         * @description Detail lengkap Work Order termasuk titik survei, item pekerjaan, dan BoM.
+         */
+        get: operations["get_work_order_api_v1_work_orders__work_order_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}/assign-survey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign Survey
+         * @description PM menugaskan tim dan jadwal untuk survei lapangan.
+         */
+        post: operations["assign_survey_api_v1_work_orders__work_order_id__assign_survey_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}/submit-survey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Survey
+         * @description Ketua Tim mengirimkan laporan survei lapangan dari aplikasi mobile / web.
+         */
+        post: operations["submit_survey_api_v1_work_orders__work_order_id__submit_survey_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}/apply-survey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Survey
+         * @description Fitur Inti: PM menyetujui survei dan mengunci item tugas & BOM (Status: READY_TO_EXECUTE).
+         */
+        post: operations["apply_survey_api_v1_work_orders__work_order_id__apply_survey_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}/sign-bast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign Bast
+         * @description Penandatanganan Berita Acara Serah Terima (BAST) pekerjaan klien.
+         */
+        post: operations["sign_bast_api_v1_work_orders__work_order_id__sign_bast_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/items/{item_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Item Progress
+         * @description Perbarui progres dan pemenuhan syarat foto item pekerjaan lapangan.
+         */
+        put: operations["update_item_progress_api_v1_work_orders_items__item_id__progress_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/bom/{bom_id}/actual": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Bom Actual
+         * @description Catat penggunaan aktual material (actual BOM) pekerjaan.
+         */
+        put: operations["update_bom_actual_api_v1_work_orders_bom__bom_id__actual_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/{work_order_id}/export/{template}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Work Order Document
+         * @description Unduh dokumen resmi Work Order: BAST (PDF/Word), Laporan Survei, Surat Tugas, BoQ, atau Slide PPTX.
+         */
+        get: operations["export_work_order_document_api_v1_work_orders__work_order_id__export__template__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects": {
         parameters: {
             query?: never;
@@ -451,6 +683,26 @@ export interface paths {
          * @description PM/OM divisi menyusun item lanjutan per titik dari survei yang disetujui.
          */
         post: operations["plan_from_survey_api_v1_work_plans_surveys__task_id__plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-plans/my-execution-today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Execution Today
+         * @description Tugas eksekusi hari ini untuk aplikasi mobile lapangan (jadwal + client work orders + sites + item/BOM).
+         */
+        get: operations["my_execution_today_api_v1_work_plans_my_execution_today_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -888,6 +1140,26 @@ export interface paths {
          * @description Rekapitulasi presentasi laporan harian selama satu minggu untuk setiap tim pada pertemuan hari Sabtu.
          */
         get: operations["get_team_weekly_presentation_api_v1_work_plans_teams__team_id__weekly_presentation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/daily-plans/my-execution-today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * My Execution Today
+         * @description Tugas eksekusi hari ini untuk aplikasi mobile lapangan (jadwal + client work orders + sites + item/BOM).
+         */
+        get: operations["my_execution_today_api_v1_daily_plans_my_execution_today_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1574,6 +1846,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/teams/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Teams Availability
+         * @description Mengambil status ketersediaan dan beban tugas tim pada tanggal yang dipilih.
+         */
+        get: operations["get_teams_availability_api_v1_teams_availability_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/available-members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Available Members
+         * @description Daftar karyawan lapangan aktif di divisi ini yang belum tergabung dalam tim aktif.
+         */
+        get: operations["list_available_members_api_v1_teams_available_members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams/{team_id}": {
         parameters: {
             query?: never;
@@ -2138,74 +2450,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/image-requirements/by-work-type/{work_type_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List By Work Type
-         * @description Mengambil daftar persyaratan foto dokumentasi untuk jenis pekerjaan tertentu.
-         */
-        get: operations["list_by_work_type_api_v1_image_requirements_by_work_type__work_type_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/image-requirements/{requirement_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get By Id
-         * @description Mengambil detail persyaratan foto dokumentasi.
-         */
-        get: operations["get_by_id_api_v1_image_requirements__requirement_id__get"];
-        /**
-         * Update Requirement
-         * @description Memperbarui informasi persyaratan foto.
-         */
-        put: operations["update_requirement_api_v1_image_requirements__requirement_id__put"];
-        post?: never;
-        /**
-         * Delete Requirement
-         * @description Menghapus persyaratan foto dokumentasi.
-         */
-        delete: operations["delete_requirement_api_v1_image_requirements__requirement_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/image-requirements": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Requirement
-         * @description Menambahkan persyaratan foto wajib dokumentasi lapangan.
-         */
-        post: operations["create_requirement_api_v1_image_requirements_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/backup-registry": {
         parameters: {
             query?: never;
@@ -2248,6 +2492,151 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar kampanye keselamatan K3 */
+        get: operations["list_campaigns_api_v1_hse_campaigns_get"];
+        put?: never;
+        /** Buat kampanye keselamatan K3 baru */
+        post: operations["create_campaign_api_v1_hse_campaigns_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/campaigns/active-popup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ambil popup materi K3 wajib yang belum dibaca pengguna saat ini
+         * @description Dipanggil saat pengguna login atau membuka aplikasi (Web & Mobile).
+         *     Jika mengembalikan kampanye, aplikasi menampilkan Modal Pop-up Non-Skippable
+         *     dengan penghitung waktu mundur (cooldown).
+         */
+        get: operations["get_active_popup_api_v1_hse_campaigns_active_popup_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/campaigns/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail kampanye K3 */
+        get: operations["get_campaign_api_v1_hse_campaigns__campaign_id__get"];
+        /** Perbarui kampanye K3 */
+        put: operations["update_campaign_api_v1_hse_campaigns__campaign_id__put"];
+        post?: never;
+        /** Hapus kampanye K3 (soft delete) */
+        delete: operations["delete_campaign_api_v1_hse_campaigns__campaign_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Konfirmasi telah membaca materi K3 (melewati cooldown & scroll) */
+        post: operations["acknowledge_campaign_api_v1_hse_campaigns__campaign_id__acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/campaigns/{campaign_id}/readers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Audit jejak pengguna yang telah membaca kampanye K3 */
+        get: operations["get_campaign_readers_api_v1_hse_campaigns__campaign_id__readers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar riwayat inspeksi keselamatan kendaraan */
+        get: operations["list_inspections_api_v1_hse_inspections_get"];
+        put?: never;
+        /** Kirim formulir inspeksi kendaraan (checklist & foto) */
+        post: operations["create_inspection_api_v1_hse_inspections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/{inspection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail inspeksi kendaraan */
+        get: operations["get_inspection_api_v1_hse_inspections__inspection_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/{inspection_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Verifikasi hasil inspeksi kendaraan oleh HSE / Super Admin */
+        patch: operations["verify_inspection_api_v1_hse_inspections__inspection_id__verify_patch"];
         trace?: never;
     };
     "/api/v1/auth/login": {
@@ -4761,10 +5150,30 @@ export interface components {
             attendance_mode?: string | null;
             /** Division Id */
             division_id?: string | null;
+            /** Managed Division Ids */
+            managed_division_ids?: string[];
+            /** Managed Divisions */
+            managed_divisions?: components["schemas"]["ManagedDivisionOut"][];
             /** Photo File Id */
             photo_file_id?: string | null;
             /** Full Name */
             full_name?: string | null;
+        };
+        /** AvailableMemberOut */
+        AvailableMemberOut: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name?: string | null;
+            /** Employee No */
+            employee_no?: string | null;
+            /** Phone Number */
+            phone_number?: string | null;
+            /** System Role */
+            system_role?: string | null;
         };
         /** BackupCreate */
         BackupCreate: {
@@ -4848,6 +5257,11 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BomActualIn */
+        BomActualIn: {
+            /** Actual Qty */
+            actual_qty: number | string;
+        };
         /** BomRow */
         BomRow: {
             /** Group */
@@ -4926,7 +5340,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
+            status: "DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "TODO" | "IN_PROGRESS" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
             /** Target Qty */
             target_qty: string;
             /** Completed Qty */
@@ -5076,6 +5490,73 @@ export interface components {
              * @default 0
              */
             project_count: number;
+        };
+        /** ClientSiteCreate */
+        ClientSiteCreate: {
+            /** Site Name */
+            site_name: string;
+            /** Address */
+            address: string;
+            /** Latitude */
+            latitude: number | string;
+            /** Longitude */
+            longitude: number | string;
+            /**
+             * Geofence Radius Meters
+             * @default 100
+             */
+            geofence_radius_meters: number;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
+        };
+        /** ClientSiteOut */
+        ClientSiteOut: {
+            /**
+             * Site Id
+             * Format: uuid
+             */
+            site_id: string;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Site Name */
+            site_name: string;
+            /** Address */
+            address: string;
+            /** Latitude */
+            latitude: string;
+            /** Longitude */
+            longitude: string;
+            /**
+             * Geofence Radius Meters
+             * @default 100
+             */
+            geofence_radius_meters: number;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
+        };
+        /** ClientSiteUpdate */
+        ClientSiteUpdate: {
+            /** Site Name */
+            site_name?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Latitude */
+            latitude?: number | string | null;
+            /** Longitude */
+            longitude?: number | string | null;
+            /** Geofence Radius Meters */
+            geofence_radius_meters?: number | null;
+            /** Pic Name */
+            pic_name?: string | null;
+            /** Pic Phone */
+            pic_phone?: string | null;
         };
         /** ClientUpdate */
         ClientUpdate: {
@@ -5494,7 +5975,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            status: "DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "SUBMITTED" | "APPROVED" | "COMPLETED";
             /**
              * Kind
              * @default WORK
@@ -5632,7 +6113,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED";
+            status: "DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "SUBMITTED" | "APPROVED" | "COMPLETED";
             /**
              * Kind
              * @default WORK
@@ -6231,6 +6712,104 @@ export interface components {
             /** Quality */
             quality?: number | null;
         };
+        /** ExecutionBomOut */
+        ExecutionBomOut: {
+            /**
+             * Bom Id
+             * Format: uuid
+             */
+            bom_id: string;
+            /** Item Name */
+            item_name: string;
+            /**
+             * Unit
+             * @default pcs
+             */
+            unit: string;
+            /**
+             * Estimated Qty
+             * @default 0
+             */
+            estimated_qty: number;
+            /**
+             * Actual Qty
+             * @default 0
+             */
+            actual_qty: number;
+        };
+        /** ExecutionItemOut */
+        ExecutionItemOut: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Title */
+            title: string;
+            /** Work Type Id */
+            work_type_id?: string | null;
+            /** Work Type Name */
+            work_type_name?: string | null;
+            /**
+             * Target Qty
+             * @default 1
+             */
+            target_qty: number;
+            /**
+             * Completed Qty
+             * @default 0
+             */
+            completed_qty: number;
+            /** Photo Slots Snapshot */
+            photo_slots_snapshot?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Status
+             * @default PENDING
+             */
+            status: string;
+            /** Location Detail */
+            location_detail?: string | null;
+        };
+        /** ExecutionSurveyPointOut */
+        ExecutionSurveyPointOut: {
+            /**
+             * Point Id
+             * Format: uuid
+             */
+            point_id: string;
+            /** Point Name */
+            point_name: string;
+            /** Location Detail */
+            location_detail?: string | null;
+            /** Site Lat */
+            site_lat?: number | null;
+            /** Site Lng */
+            site_lng?: number | null;
+            /** Recommended Work Type Id */
+            recommended_work_type_id?: string | null;
+            /** Recommended Bom */
+            recommended_bom?: {
+                [key: string]: unknown;
+            }[];
+            /** Remarks */
+            remarks?: string | null;
+            /** Photos */
+            photos?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Status
+             * @default TODO
+             */
+            status: string;
+        };
         /** ExpiringDocumentList */
         ExpiringDocumentList: {
             /** Items */
@@ -6437,75 +7016,266 @@ export interface components {
              */
             total_to_review: number;
         };
-        /** ImageRequirementCreate */
-        ImageRequirementCreate: {
+        /** HseAcknowledgeCreate */
+        HseAcknowledgeCreate: {
             /**
-             * Work Type Id
+             * Platform
+             * @description Platform: web atau mobile
+             * @default web
+             */
+            platform: string;
+            /**
+             * Device Info
+             * @description Informasi perangkat klien
+             */
+            device_info?: string | null;
+            /**
+             * Scroll Completed
+             * @description Apakah user telah melakukan scroll hingga akhir materi
+             * @default true
+             */
+            scroll_completed: boolean;
+            /**
+             * Read Duration Seconds
+             * @description Total durasi waktu membaca dalam detik
+             * @default 0
+             */
+            read_duration_seconds: number;
+        };
+        /** HseCampaignAuditStats */
+        HseCampaignAuditStats: {
+            /**
+             * Campaign Id
              * Format: uuid
              */
-            work_type_id: string;
-            /** Name */
-            name: string;
-            /** Description */
-            description?: string | null;
+            campaign_id: string;
+            /** Title */
+            title: string;
+            /** Target Audience */
+            target_audience: string;
+            /** Total Acknowledged */
+            total_acknowledged: number;
+            /** Readers */
+            readers: components["schemas"]["HseReaderItem"][];
+        };
+        /** HseCampaignCreate */
+        HseCampaignCreate: {
             /**
-             * Path Image
-             * @description URL contoh foto/panduan
+             * Title
+             * @description Judul kampanye atau briefing K3
              */
-            path_image: string;
+            title: string;
+            /**
+             * Summary
+             * @description Ringkasan singkat kampanye
+             */
+            summary?: string | null;
+            /**
+             * Content Html
+             * @description Isi materi keselamatan (HTML/Markdown)
+             */
+            content_html: string;
+            /**
+             * Media Path
+             * @description Path foto banner atau infografis K3
+             */
+            media_path?: string | null;
+            /**
+             * Target Audience
+             * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
+             * @default ALL
+             */
+            target_audience: string;
+            /**
+             * Target User Ids
+             * @description Daftar user_id jika target_audience=INDIVIDUAL
+             */
+            target_user_ids?: string[] | null;
             /**
              * Is Mandatory
+             * @description Apakah wajib dibaca saat popup muncul
              * @default true
              */
             is_mandatory: boolean;
             /**
-             * Sort Order
-             * @default 1
+             * Cooldown Seconds
+             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @default 5
              */
-            sort_order: number;
+            cooldown_seconds: number;
+            /**
+             * Start Date
+             * Format: date
+             * @description Tanggal awal penayangan kampanye
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             * @description Tanggal akhir penayangan kampanye
+             */
+            end_date: string;
+            /**
+             * Is Active
+             * @description Status keaktifan kampanye
+             * @default true
+             */
+            is_active: boolean;
         };
-        /** ImageRequirementOut */
-        ImageRequirementOut: {
+        /** HseCampaignResponse */
+        HseCampaignResponse: {
             /**
-             * Image Requirement Id
-             * Format: uuid
+             * Title
+             * @description Judul kampanye atau briefing K3
              */
-            image_requirement_id: string;
+            title: string;
             /**
-             * Work Type Id
-             * Format: uuid
+             * Summary
+             * @description Ringkasan singkat kampanye
              */
-            work_type_id: string;
-            /** Work Type Name */
-            work_type_name?: string | null;
-            /** Name */
-            name: string;
-            /** Description */
-            description?: string | null;
-            /** Path Image */
-            path_image: string;
-            /** Is Mandatory */
+            summary?: string | null;
+            /**
+             * Content Html
+             * @description Isi materi keselamatan (HTML/Markdown)
+             */
+            content_html: string;
+            /**
+             * Media Path
+             * @description Path foto banner atau infografis K3
+             */
+            media_path?: string | null;
+            /**
+             * Target Audience
+             * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
+             * @default ALL
+             */
+            target_audience: string;
+            /**
+             * Target User Ids
+             * @description Daftar user_id jika target_audience=INDIVIDUAL
+             */
+            target_user_ids?: string[] | null;
+            /**
+             * Is Mandatory
+             * @description Apakah wajib dibaca saat popup muncul
+             * @default true
+             */
             is_mandatory: boolean;
-            /** Sort Order */
-            sort_order: number;
+            /**
+             * Cooldown Seconds
+             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @default 5
+             */
+            cooldown_seconds: number;
+            /**
+             * Start Date
+             * Format: date
+             * @description Tanggal awal penayangan kampanye
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             * @description Tanggal akhir penayangan kampanye
+             */
+            end_date: string;
+            /**
+             * Is Active
+             * @description Status keaktifan kampanye
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /**
+             * Created By Id
+             * Format: uuid
+             */
+            created_by_id: string;
+            /** Creator Name */
+            creator_name?: string | null;
+            /**
+             * Total Readers
+             * @default 0
+             */
+            total_readers: number;
             /**
              * Create At
              * Format: date-time
              */
             create_at: string;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
         };
-        /** ImageRequirementUpdate */
-        ImageRequirementUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Description */
-            description?: string | null;
-            /** Path Image */
-            path_image?: string | null;
+        /** HseCampaignUpdate */
+        HseCampaignUpdate: {
+            /** Title */
+            title?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Content Html */
+            content_html?: string | null;
+            /** Media Path */
+            media_path?: string | null;
+            /** Target Audience */
+            target_audience?: string | null;
+            /** Target User Ids */
+            target_user_ids?: string[] | null;
             /** Is Mandatory */
             is_mandatory?: boolean | null;
-            /** Sort Order */
-            sort_order?: number | null;
+            /** Cooldown Seconds */
+            cooldown_seconds?: number | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /** Is Active */
+            is_active?: boolean | null;
+        };
+        /** HseReaderItem */
+        HseReaderItem: {
+            /**
+             * Acknowledgment Id
+             * Format: uuid
+             */
+            acknowledgment_id: string;
+            /**
+             * Campaign Id
+             * Format: uuid
+             */
+            campaign_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Employee No */
+            employee_no?: string | null;
+            /** Platform */
+            platform: string;
+            /** Device Info */
+            device_info?: string | null;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Scroll Completed */
+            scroll_completed: boolean;
+            /** Read Duration Seconds */
+            read_duration_seconds: number;
+            /**
+             * Acknowledged At
+             * Format: date-time
+             */
+            acknowledged_at: string;
         };
         /** InspectionCreate */
         InspectionCreate: {
@@ -6561,6 +7331,23 @@ export interface components {
             file_id: string;
             /** Requirement Id */
             requirement_id?: string | null;
+        };
+        /** ItemProgressIn */
+        ItemProgressIn: {
+            /**
+             * Completed Qty
+             * @default 1.0
+             */
+            completed_qty: number | string;
+            /**
+             * Status
+             * @default DONE
+             */
+            status: string;
+            /** Photo Slots Snapshot */
+            photo_slots_snapshot?: {
+                [key: string]: unknown;
+            }[] | null;
         };
         /** JobPositionCreate */
         JobPositionCreate: {
@@ -7029,6 +7816,26 @@ export interface components {
             photo_file_id: string;
         };
         /**
+         * ManagedDivisionOut
+         * @description Ringkasan divisi yang dikelola atau dinaungi pengguna.
+         */
+        ManagedDivisionOut: {
+            /** Division Id */
+            division_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Pm
+             * @default false
+             */
+            is_pm: boolean;
+            /**
+             * Is Om
+             * @default false
+             */
+            is_om: boolean;
+        };
+        /**
          * MealAllowanceRow
          * @description Rekap uang makan per karyawan (docs/35 §5): hanya absensi sah (AUTO_VALID / APPROVED_BY_OM).
          */
@@ -7285,6 +8092,58 @@ export interface components {
             alerted: boolean;
             /** Check Ins Today */
             check_ins_today: number;
+        };
+        /** MyExecutionTodayOut */
+        MyExecutionTodayOut: {
+            /**
+             * Has Assignment
+             * @default false
+             */
+            has_assignment: boolean;
+            /** Daily Plan Id */
+            daily_plan_id?: string | null;
+            /** Work Date */
+            work_date?: string | null;
+            /** Team Id */
+            team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
+            /**
+             * Is Leader
+             * @default false
+             */
+            is_leader: boolean;
+            /** Work Order Id */
+            work_order_id?: string | null;
+            /** Wo Number */
+            wo_number?: string | null;
+            /** Wo Title */
+            wo_title?: string | null;
+            /** Work Order Status */
+            work_order_status?: string | null;
+            /** Client Name */
+            client_name?: string | null;
+            /** Site Id */
+            site_id?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Address */
+            site_address?: string | null;
+            /** Site Lat */
+            site_lat?: number | null;
+            /** Site Lng */
+            site_lng?: number | null;
+            /**
+             * Geofence Radius Meters
+             * @default 100
+             */
+            geofence_radius_meters: number;
+            /** Items */
+            items?: components["schemas"]["ExecutionItemOut"][];
+            /** Bom */
+            bom?: components["schemas"]["ExecutionBomOut"][];
+            /** Survey Points */
+            survey_points?: components["schemas"]["ExecutionSurveyPointOut"][];
         };
         /**
          * MyPhotoIn
@@ -8138,7 +8997,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "TODO" | "IN_PROGRESS" | "DONE" | "PENDING_ROLLOVER" | "SHIFTED_DAY" | "CANCELLED";
+            status: "DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "TODO" | "IN_PROGRESS" | "PENDING_ROLLOVER" | "SHIFTED_DAY";
             /**
              * Rollover Approval Status
              * @enum {string}
@@ -8809,6 +9668,90 @@ export interface components {
              */
             can_move: boolean;
         };
+        /** SurveyPointIn */
+        SurveyPointIn: {
+            /** Point Name */
+            point_name: string;
+            /** Location Detail */
+            location_detail?: string | null;
+            /** Site Lat */
+            site_lat?: number | string | null;
+            /** Site Lng */
+            site_lng?: number | string | null;
+            /**
+             * Recommended Work Type Id
+             * Format: uuid
+             */
+            recommended_work_type_id: string;
+            /** Recommended Bom */
+            recommended_bom?: {
+                [key: string]: unknown;
+            }[];
+            /** Remarks */
+            remarks?: string | null;
+            /** Photos */
+            photos?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** SurveyPointOut */
+        SurveyPointOut: {
+            /**
+             * Point Id
+             * Format: uuid
+             */
+            point_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Survey Id */
+            survey_id?: string | null;
+            /** Point Name */
+            point_name: string;
+            /** Location Detail */
+            location_detail?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /** Recommended Work Type Id */
+            recommended_work_type_id?: string | null;
+            /** Recommended Work Type Name */
+            recommended_work_type_name?: string | null;
+            /** Recommended Bom */
+            recommended_bom?: {
+                [key: string]: unknown;
+            }[];
+            /** Remarks */
+            remarks?: string | null;
+            /** Photos */
+            photos?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Status
+             * @default TODO
+             */
+            status: string;
+        };
+        /** SurveySubmitIn */
+        SurveySubmitIn: {
+            /** Narrative */
+            narrative?: string | null;
+            /**
+             * Format
+             * @default CCTV
+             */
+            format: string;
+            /** Points */
+            points?: components["schemas"]["SurveyPointIn"][];
+            /** General Bom */
+            general_bom?: {
+                [key: string]: unknown;
+            }[];
+        };
         /**
          * SyncBomFromWorkTypesIn
          * @description Schema permintaan sinkronisasi otomatis BoM dari template jenis pekerjaan.
@@ -8831,6 +9774,52 @@ export interface components {
         SyncResponse: {
             /** Results */
             results: components["schemas"]["OperationResult"][];
+        };
+        /** TeamAvailabilityItem */
+        TeamAvailabilityItem: {
+            /**
+             * Team Id
+             * Format: uuid
+             */
+            team_id: string;
+            /** Name */
+            name: string;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Leader Employee Id
+             * Format: uuid
+             */
+            leader_employee_id: string;
+            /** Leader Name */
+            leader_name?: string | null;
+            /**
+             * Member Count
+             * @default 0
+             */
+            member_count: number;
+            /**
+             * Is Available
+             * @default true
+             */
+            is_available: boolean;
+            /**
+             * Status
+             * @default AVAILABLE
+             */
+            status: string;
+            /**
+             * Active Items Count
+             * @default 0
+             */
+            active_items_count: number;
+            /** Active Tasks */
+            active_tasks?: string[];
         };
         /** TeamCreate */
         TeamCreate: {
@@ -9217,6 +10206,104 @@ export interface components {
              */
             created_at: string;
         };
+        /** VehicleInspectionCreate */
+        VehicleInspectionCreate: {
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /** Inspector Id */
+            inspector_id?: string | null;
+            /**
+             * Period Type
+             * @description DAILY, WEEKLY, MONTHLY
+             * @default DAILY
+             */
+            period_type: string;
+            /** Inspection Date */
+            inspection_date?: string | null;
+            /** Odometer Km */
+            odometer_km?: number | null;
+            /**
+             * Checklist Json
+             * @description Status checklist per item (rem, ban, oli, lampu, dll)
+             */
+            checklist_json?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Photos Json
+             * @description Array URL/Path foto bukti inspeksi kendaraan
+             */
+            photos_json?: string[];
+            /** Notes */
+            notes?: string | null;
+        };
+        /** VehicleInspectionResponse */
+        VehicleInspectionResponse: {
+            /**
+             * Inspection Id
+             * Format: uuid
+             */
+            inspection_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /** Vehicle Name */
+            vehicle_name?: string | null;
+            /** Number Plate */
+            number_plate?: string | null;
+            /**
+             * Inspector Id
+             * Format: uuid
+             */
+            inspector_id: string;
+            /** Inspector Name */
+            inspector_name?: string | null;
+            /** Period Type */
+            period_type: string;
+            /**
+             * Inspection Date
+             * Format: date
+             */
+            inspection_date: string;
+            /** Odometer Km */
+            odometer_km?: number | null;
+            /** Checklist Json */
+            checklist_json: {
+                [key: string]: unknown;
+            };
+            /** Photos Json */
+            photos_json: string[];
+            /** Notes */
+            notes?: string | null;
+            /** Status */
+            status: string;
+            /** Verified By Id */
+            verified_by_id?: string | null;
+            /** Verifier Name */
+            verifier_name?: string | null;
+            /** Verified At */
+            verified_at?: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** VehicleInspectionVerify */
+        VehicleInspectionVerify: {
+            /**
+             * Status
+             * @description VERIFIED atau REJECTED
+             */
+            status: string;
+            /** Notes */
+            notes?: string | null;
+        };
         /** VehicleOut */
         VehicleOut: {
             /** Assignment Id */
@@ -9298,7 +10385,7 @@ export interface components {
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Status */
-            status?: ("DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED") | null;
+            status?: ("DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "SUBMITTED" | "APPROVED" | "COMPLETED") | null;
             /** Kind */
             kind?: ("WORK" | "STANDBY") | null;
             /**
@@ -9858,6 +10945,300 @@ export interface components {
             /** Intact */
             intact: boolean;
         };
+        /** WorkOrderAssignSurvey */
+        WorkOrderAssignSurvey: {
+            /**
+             * Lead Team Id
+             * Format: uuid
+             */
+            lead_team_id: string;
+            /** Survey Date */
+            survey_date?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
+        /** WorkOrderBomOut */
+        WorkOrderBomOut: {
+            /**
+             * Bom Id
+             * Format: uuid
+             */
+            bom_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Work Order Item Id */
+            work_order_item_id?: string | null;
+            /** Item Name */
+            item_name: string;
+            /**
+             * Unit
+             * @default pcs
+             */
+            unit: string;
+            /**
+             * Estimated Qty
+             * @default 0.0
+             */
+            estimated_qty: string;
+            /**
+             * Actual Qty
+             * @default 0.0
+             */
+            actual_qty: string;
+        };
+        /** WorkOrderCreate */
+        WorkOrderCreate: {
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Site Id */
+            client_site_id?: string | null;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+            /** Title */
+            title: string;
+            /** Initial Complaint */
+            initial_complaint?: string | null;
+            /** Lead Team Id */
+            lead_team_id?: string | null;
+        };
+        /** WorkOrderDetailOut */
+        WorkOrderDetailOut: {
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Wo Number */
+            wo_number: string;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Client Site Id */
+            client_site_id?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Address */
+            site_address?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+            /** Pm Name */
+            pm_name?: string | null;
+            /** Lead Team Id */
+            lead_team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
+            /** Title */
+            title: string;
+            /** Initial Complaint */
+            initial_complaint?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "WAITING_SURVEY" | "SURVEY_IN_PROGRESS" | "SURVEY_SUBMITTED" | "READY_TO_EXECUTE" | "IN_PROGRESS" | "COMPLETED" | "BAST_SIGNED" | "CANCELLED";
+            /** Survey Assigned At */
+            survey_assigned_at?: string | null;
+            /** Survey Submitted At */
+            survey_submitted_at?: string | null;
+            /** Survey Approved At */
+            survey_approved_at?: string | null;
+            /** Bast Signed At */
+            bast_signed_at?: string | null;
+            /** Bast Signer Name */
+            bast_signer_name?: string | null;
+            /**
+             * Total Items
+             * @default 0
+             */
+            total_items: number;
+            /**
+             * Completed Items
+             * @default 0
+             */
+            completed_items: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Survey Points */
+            survey_points?: components["schemas"]["SurveyPointOut"][];
+            /** Items */
+            items?: components["schemas"]["WorkOrderItemOut"][];
+            /** Bom */
+            bom?: components["schemas"]["WorkOrderBomOut"][];
+        };
+        /** WorkOrderItemOut */
+        WorkOrderItemOut: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Survey Point Id */
+            survey_point_id?: string | null;
+            /**
+             * Work Type Id
+             * Format: uuid
+             */
+            work_type_id: string;
+            /** Work Type Name */
+            work_type_name?: string | null;
+            /** Title */
+            title: string;
+            /** Location Detail */
+            location_detail?: string | null;
+            /**
+             * Target Qty
+             * @default 1.0
+             */
+            target_qty: string;
+            /**
+             * Completed Qty
+             * @default 0.0
+             */
+            completed_qty: string;
+            /** Photo Slots Snapshot */
+            photo_slots_snapshot?: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Status
+             * @default PENDING
+             * @enum {string}
+             */
+            status: "PENDING" | "IN_PROGRESS" | "DONE";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WorkOrderOut */
+        WorkOrderOut: {
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Wo Number */
+            wo_number: string;
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Client Site Id */
+            client_site_id?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Address */
+            site_address?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /** Division Name */
+            division_name?: string | null;
+            /**
+             * Pm Id
+             * Format: uuid
+             */
+            pm_id: string;
+            /** Pm Name */
+            pm_name?: string | null;
+            /** Lead Team Id */
+            lead_team_id?: string | null;
+            /** Team Name */
+            team_name?: string | null;
+            /** Title */
+            title: string;
+            /** Initial Complaint */
+            initial_complaint?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "WAITING_SURVEY" | "SURVEY_IN_PROGRESS" | "SURVEY_SUBMITTED" | "READY_TO_EXECUTE" | "IN_PROGRESS" | "COMPLETED" | "BAST_SIGNED" | "CANCELLED";
+            /** Survey Assigned At */
+            survey_assigned_at?: string | null;
+            /** Survey Submitted At */
+            survey_submitted_at?: string | null;
+            /** Survey Approved At */
+            survey_approved_at?: string | null;
+            /** Bast Signed At */
+            bast_signed_at?: string | null;
+            /** Bast Signer Name */
+            bast_signer_name?: string | null;
+            /**
+             * Total Items
+             * @default 0
+             */
+            total_items: number;
+            /**
+             * Completed Items
+             * @default 0
+             */
+            completed_items: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** WorkOrderSignBast */
+        WorkOrderSignBast: {
+            /** Signer Name */
+            signer_name: string;
+            /** Signature Data Uri */
+            signature_data_uri?: string | null;
+            /** Notes */
+            notes?: string | null;
+        };
         /**
          * WorkTypeIn
          * @description Membuat/mengubah jenis pekerjaan; `photos` mengganti seluruh daftar slot.
@@ -9874,6 +11255,14 @@ export interface components {
              * @default []
              */
             photos: components["schemas"]["WorkTypePhotoIn"][];
+            /** Photo Requirements */
+            photo_requirements?: {
+                [key: string]: unknown;
+            }[];
+            /** Default Bom */
+            default_bom?: {
+                [key: string]: unknown;
+            }[];
             /**
              * Kind
              * @default WORK
@@ -9940,6 +11329,14 @@ export interface components {
              * @default []
              */
             default_materials: components["schemas"]["DefaultMaterialOut"][];
+            /** Photo Requirements */
+            photo_requirements?: {
+                [key: string]: unknown;
+            }[];
+            /** Default Bom */
+            default_bom?: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * WorkTypePhotoIn
@@ -10175,6 +11572,485 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_client_sites_api_v1_clients__client_id__sites_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientSiteOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_client_site_api_v1_clients__client_id__sites_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientSiteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientSiteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_client_site_api_v1_clients__client_id__sites__site_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientSiteUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientSiteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_client_site_api_v1_clients__client_id__sites__site_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+                site_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_work_orders_api_v1_work_orders_get: {
+        parameters: {
+            query?: {
+                division_id?: string | null;
+                status?: string | null;
+                client_id?: string | null;
+                pm_id?: string | null;
+                lead_team_id?: string | null;
+                q?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_work_order_api_v1_work_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_work_order_api_v1_work_orders__work_order_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_survey_api_v1_work_orders__work_order_id__assign_survey_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderAssignSurvey"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_survey_api_v1_work_orders__work_order_id__submit_survey_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SurveySubmitIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_survey_api_v1_work_orders__work_order_id__apply_survey_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sign_bast_api_v1_work_orders__work_order_id__sign_bast_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkOrderSignBast"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_item_progress_api_v1_work_orders_items__item_id__progress_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ItemProgressIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_bom_actual_api_v1_work_orders_bom__bom_id__actual_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                bom_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BomActualIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_work_order_document_api_v1_work_orders__work_order_id__export__template__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                work_order_id: string;
+                template: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -10926,6 +12802,26 @@ export interface operations {
             };
         };
     };
+    my_execution_today_api_v1_work_plans_my_execution_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyExecutionTodayOut"];
+                };
+            };
+        };
+    };
     form_options_api_v1_work_plans_form_options_get: {
         parameters: {
             query?: never;
@@ -11049,7 +12945,7 @@ export interface operations {
                 end?: string | null;
                 division_id?: string | null;
                 team_id?: string | null;
-                status?: ("DRAFT" | "SUBMITTED" | "APPROVED" | "ONGOING" | "COMPLETED") | null;
+                status?: ("DRAFT" | "ONGOING" | "DONE" | "CANCELLED" | "SUBMITTED" | "APPROVED" | "COMPLETED") | null;
             };
             header?: never;
             path?: never;
@@ -11734,6 +13630,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_execution_today_api_v1_daily_plans_my_execution_today_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyExecutionTodayOut"];
                 };
             };
         };
@@ -13304,6 +15220,72 @@ export interface operations {
             };
         };
     };
+    get_teams_availability_api_v1_teams_availability_get: {
+        parameters: {
+            query?: {
+                /** @description Tanggal kerja (default: hari ini) */
+                work_date?: string | null;
+                /** @description Filter ID divisi (opsional) */
+                division_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamAvailabilityItem"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_available_members_api_v1_teams_available_members_get: {
+        parameters: {
+            query: {
+                /** @description ID divisi yang dicari anggotanya */
+                division_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailableMemberOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_team_api_v1_teams__team_id__get: {
         parameters: {
             query?: never;
@@ -14540,169 +16522,6 @@ export interface operations {
             };
         };
     };
-    list_by_work_type_api_v1_image_requirements_by_work_type__work_type_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                work_type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageRequirementOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_by_id_api_v1_image_requirements__requirement_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requirement_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageRequirementOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_requirement_api_v1_image_requirements__requirement_id__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requirement_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ImageRequirementUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageRequirementOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    delete_requirement_api_v1_image_requirements__requirement_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                requirement_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_requirement_api_v1_image_requirements_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ImageRequirementCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImageRequirementOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_backups_api_v1_backup_registry_get: {
         parameters: {
             query?: {
@@ -14785,6 +16604,398 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_campaigns_api_v1_hse_campaigns_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+                is_active?: boolean | null;
+                target_audience?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HseCampaignResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_campaign_api_v1_hse_campaigns_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HseCampaignCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HseCampaignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_active_popup_api_v1_hse_campaigns_active_popup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_campaign_api_v1_hse_campaigns__campaign_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HseCampaignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_campaign_api_v1_hse_campaigns__campaign_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HseCampaignUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HseCampaignResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_campaign_api_v1_hse_campaigns__campaign_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_campaign_api_v1_hse_campaigns__campaign_id__acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HseAcknowledgeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_readers_api_v1_hse_campaigns__campaign_id__readers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HseCampaignAuditStats"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_inspections_api_v1_hse_inspections_get: {
+        parameters: {
+            query?: {
+                vehicle_id?: string | null;
+                period_type?: string | null;
+                status?: string | null;
+                from_date?: string | null;
+                to_date?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_inspection_api_v1_hse_inspections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleInspectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_inspection_api_v1_hse_inspections__inspection_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inspection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_inspection_api_v1_hse_inspections__inspection_id__verify_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                inspection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleInspectionVerify"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"];
                 };
             };
             /** @description Validation Error */

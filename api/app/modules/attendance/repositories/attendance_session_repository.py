@@ -298,6 +298,26 @@ class AttendanceSessionRepository(BaseRepository):
                    wpd.clock_out_time AS clock_out
             FROM work_plan_daily wpd
             WHERE wpd.daily_plan_id = CAST(:site AS uuid) AND wpd.delete_at IS NULL
+            UNION ALL
+            SELECT cs.site_id AS id,
+                   cs.site_name AS name,
+                   NULL::uuid AS unit_id,
+                   'CLIENT_SITE' AS kind,
+                   NULL::uuid AS office_id,
+                   ROUND(
+                       6371000 * 2 * ASIN(
+                           SQRT(
+                               POWER(SIN(RADIANS(:lat - cs.latitude) / 2), 2) +
+                               COS(RADIANS(:lat)) * COS(RADIANS(cs.latitude)) *
+                               POWER(SIN(RADIANS(:lng - cs.longitude) / 2), 2)
+                           )
+                       )
+                   )::numeric AS distance_m,
+                   cs.geofence_radius_meters AS radius_m,
+                   '08:00:00'::time AS clock_in,
+                   '17:00:00'::time AS clock_out
+            FROM client_sites cs
+            WHERE cs.site_id = CAST(:site AS uuid) AND cs.delete_at IS NULL
             LIMIT 1
             """,
             {"site": str(site_id), "lng": lng, "lat": lat},
@@ -359,6 +379,26 @@ class AttendanceSessionRepository(BaseRepository):
                        o.clock_out_time AS clock_out
                 FROM office o
                 WHERE o.delete_at IS NULL
+                UNION ALL
+                SELECT cs.site_id AS id,
+                       cs.site_name AS name,
+                       NULL::uuid AS unit_id,
+                       'CLIENT_SITE' AS kind,
+                       NULL::uuid AS office_id,
+                       ROUND(
+                           6371000 * 2 * ASIN(
+                               SQRT(
+                                   POWER(SIN(RADIANS(:lat - cs.latitude) / 2), 2) +
+                                   COS(RADIANS(:lat)) * COS(RADIANS(cs.latitude)) *
+                                   POWER(SIN(RADIANS(:lng - cs.longitude) / 2), 2)
+                               )
+                           )
+                       )::numeric AS distance_m,
+                       cs.geofence_radius_meters AS radius_m,
+                       '08:00:00'::time AS clock_in,
+                       '17:00:00'::time AS clock_out
+                FROM client_sites cs
+                WHERE cs.delete_at IS NULL
             ) offices
             ORDER BY distance_m - radius_m ASC
             LIMIT 1

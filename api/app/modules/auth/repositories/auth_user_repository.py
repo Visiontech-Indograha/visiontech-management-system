@@ -10,7 +10,7 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
-OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA", "FINANCE")
+OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA", "FINANCE", "HSE")
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
 _MAIN_OFFICE = "(SELECT office_id FROM office WHERE is_main_office AND delete_at IS NULL LIMIT 1)"
@@ -142,6 +142,51 @@ class AuthUserRepository(BaseRepository):
             {"uid": user_id},
         )
         return str(div_id) if div_id else None
+
+    async def get_managed_divisions(self, user_id: UUID | str) -> list[dict[str, Any]]:
+        """
+        Daftar divisi yang terhubung dengan akun pengguna:
+        - Jika SUPER_ADMIN / ADMIN: seluruh divisi aktif.
+        - Karyawan: divisi naungan (employee.division_id), dipimpin sebagai PM (division.pm_id),
+          atau OM (division.om_id).
+        """
+        user_role = await self.scalar(
+            "SELECT system_role::text FROM users WHERE user_id = CAST(:uid AS uuid) AND delete_at IS NULL",
+            {"uid": user_id},
+        )
+        if user_role in ("SUPER_ADMIN", "ADMIN"):
+            rows = await self.fetchall(
+                """
+                SELECT d.division_id, d.name, FALSE AS is_pm, FALSE AS is_om
+                FROM division d
+                WHERE d.delete_at IS NULL
+                ORDER BY d.name
+                """
+            )
+        else:
+            rows = await self.fetchall(
+                """
+                SELECT DISTINCT d.division_id, d.name,
+                       (d.pm_id = e.employee_id) AS is_pm,
+                       (d.om_id = e.employee_id) AS is_om
+                FROM users u
+                JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+                JOIN division d ON d.delete_at IS NULL
+                     AND (d.division_id = e.division_id OR d.pm_id = e.employee_id OR d.om_id = e.employee_id)
+                WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL
+                ORDER BY d.name
+                """,
+                {"uid": user_id},
+            )
+        return [
+            {
+                "division_id": str(r.division_id),
+                "name": str(r.name),
+                "is_pm": bool(r.is_pm),
+                "is_om": bool(r.is_om),
+            }
+            for r in rows
+        ]
 
     async def get_attendance_mode(self, user_id: UUID | str) -> str | None:
         """OFFICE untuk peran kantor (web), FIELD untuk peran lapangan (aplikasi HP) — docs/35 §1."""

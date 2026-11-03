@@ -5,7 +5,18 @@ import { Text } from "../atoms/Text";
 import { cn } from "@/lib/utils";
 import { DialogGuardContext, type DialogGuard } from "@/lib/dialogGuard";
 
-/** Dialog untuk konfirmasi dan formulir singkat. */
+export type VmsDialogSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+
+const SIZE_CLASSES: Record<VmsDialogSize, string> = {
+  sm: "sm:max-w-md",
+  md: "sm:max-w-xl",
+  lg: "sm:max-w-3xl",
+  xl: "sm:max-w-5xl",
+  "2xl": "sm:max-w-7xl sm:w-[94vw]",
+  full: "sm:w-[96vw] sm:max-w-[1500px] sm:h-[92vh]",
+};
+
+/** Dialog VMS: responsif dan proporsional. Di ponsel tampil sebagai bottom-sheet lega, di desktop lega & adaptif. */
 export function VmsDialog({
   open,
   title,
@@ -13,6 +24,7 @@ export function VmsDialog({
   children,
   footer,
   className,
+  size = "lg",
   dirty = false,
 }: {
   open: boolean;
@@ -21,11 +33,11 @@ export function VmsDialog({
   children: ReactNode;
   footer?: ReactNode;
   className?: string;
+  size?: VmsDialogSize;
   /** Formulir berubah dan belum disimpan: Esc/klik luar/X/Batal meminta konfirmasi di dalam dialog. */
   dirty?: boolean;
 }) {
   const [askDiscard, setAskDiscard] = useState(false);
-  // Aksi yang tertahan (mis. Batal → onCancel), dijalankan bila pengguna memilih "Tutup tanpa menyimpan".
   const [pending, setPending] = useState<(() => void) | null>(null);
 
   const guard = useCallback<DialogGuard>(
@@ -37,6 +49,8 @@ export function VmsDialog({
     [dirty],
   );
 
+  const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.lg;
+
   return (
     <ShadcnDialog
       open={open}
@@ -44,14 +58,17 @@ export function VmsDialog({
         if (!val) guard(onClose);
       }}
     >
-      {/* Formulir panjang (mis. peta lokasi) tetap terjangkau di layar pendek. */}
-      <DialogContent className={cn("max-h-[calc(100dvh-2rem)] overflow-y-auto", className)}>
-        <DialogHeader>
+      <DialogContent className={cn(sizeClass, "p-5 sm:p-6", className)}>
+        {/* Indikator pegangan seret ergonomis di ponsel */}
+        <div className="mx-auto -mt-2 mb-2 h-1.5 w-12 rounded-full bg-border sm:hidden" aria-hidden />
+        
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+
         {askDiscard && (
-          <div role="alert" className="rounded-control bg-hover p-3 text-sm">
-            <Text>Perubahan belum disimpan. Tutup tanpa menyimpan?</Text>
+          <div role="alert" className="shrink-0 rounded-control border border-warning-border bg-warning-bg p-3 text-sm my-1">
+            <Text className="font-medium text-warning">Perubahan belum disimpan. Tutup tanpa menyimpan?</Text>
             <div className="mt-2 flex gap-2">
               <Button
                 variant="outline"
@@ -78,8 +95,12 @@ export function VmsDialog({
             </div>
           </div>
         )}
+
         <DialogGuardContext.Provider value={guard}>
-          <div className="py-4">{children}</div>
+          {/* Konten scrollable mandiri yang fleksibel dan tidak terpotong */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 py-1">
+            {children}
+          </div>
           {footer && <DialogFooter>{footer}</DialogFooter>}
         </DialogGuardContext.Provider>
       </DialogContent>

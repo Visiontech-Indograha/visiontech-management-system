@@ -16,7 +16,7 @@ from app.modules.employees.routes import router as employees_router
 from app.modules.exports.routes import router as exports_router
 from app.modules.face.routes import router as face_router
 from app.modules.home.routes import home_router
-from app.modules.image_requirements.routes import router as image_requirements_router
+from app.modules.hse.routes import router as hse_router
 from app.modules.job_positions.routes import router as job_positions_router
 from app.modules.leaves.routes import leaves_router
 from app.modules.mess.routes import router as mess_router
@@ -38,8 +38,10 @@ from app.modules.system_backup.routes import router as backup_router
 from app.modules.teams.routes import router as teams_router
 from app.modules.work_completion.routes import router as work_completion_router
 from app.modules.work_completion.routes import verify_router
+from app.modules.work_orders.routes import router as work_orders_router
 from app.modules.work_plans.routes import (
     daily_corrections_router,
+    daily_plans_mobile_router,
     daily_plans_router,
     plan_items_router,
     surveys_router,
@@ -49,10 +51,12 @@ from app.modules.work_types.routes import router as work_types_router
 api_router = APIRouter()
 
 api_router.include_router(clients_router)
+api_router.include_router(work_orders_router)
 api_router.include_router(projects_router)
 api_router.include_router(job_positions_router)
 api_router.include_router(surveys_router)  # sebelum daily_plans: /work-plans/surveys/* tidak tertangkap rute lain
 api_router.include_router(daily_plans_router)
+api_router.include_router(daily_plans_mobile_router)
 api_router.include_router(daily_corrections_router)
 api_router.include_router(plan_items_router)
 api_router.include_router(work_completion_router)
@@ -62,8 +66,8 @@ api_router.include_router(teams_router)
 api_router.include_router(mess_router)
 api_router.include_router(leaves_router)
 api_router.include_router(offboarding_router)
-api_router.include_router(image_requirements_router)
 api_router.include_router(backup_router)
+api_router.include_router(hse_router)
 
 api_router.include_router(auth_router)
 api_router.include_router(audit_router)

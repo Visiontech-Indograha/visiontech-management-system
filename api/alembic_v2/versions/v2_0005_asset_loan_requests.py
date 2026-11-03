@@ -37,9 +37,7 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS idx_asset_loan_request_employee ON asset_loan_request (employee_id, status)"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_asset_loan_request_employee ON asset_loan_request (employee_id, status)")
     for col, ddl in (
         ("return_requested_at", "TIMESTAMPTZ NULL"),
         ("return_condition", "VARCHAR(20) NULL"),

@@ -1,5 +1,5 @@
 """Skema jenis pekerjaan + template foto laporan + metadata bukti foto (Rencana Kerja v3, T9)."""
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -94,6 +94,8 @@ class WorkTypeIn(BaseModel):
     division_id: UUID | None = None  # ID Divisi pemilik work type
     description: str | None = Field(None, max_length=255)  # Keterangan pekerjaan
     photos: list[WorkTypePhotoIn] = []  # Template foto, urut sesuai daftar
+    photo_requirements: list[dict[str, Any]] = Field(default_factory=list)  # JSONB requirements V2
+    default_bom: list[dict[str, Any]] = Field(default_factory=list)  # JSONB BOM V2
     kind: WorkTypeKind = "WORK"
     follow_up_work_type_id: UUID | None = None  # SURVEY_POINT → jenis pekerjaan pemasangannya (rencana dari survei)
     unit_measure: str = Field("Unit", min_length=1, max_length=50)  # Satuan bawaan item dari template
@@ -115,6 +117,8 @@ class WorkTypeOut(BaseModel):
     default_phase: WorkTypePhase | None = None  # Fase bawaan item (None = ikut jenis)
     photos: list[WorkTypePhotoOut] = []  # Template foto
     default_materials: list[DefaultMaterialOut] = []  # Template material default BoM
+    photo_requirements: list[dict[str, Any]] = Field(default_factory=list)  # JSONB requirements V2
+    default_bom: list[dict[str, Any]] = Field(default_factory=list)  # JSONB BOM V2
 
 
 class EvidenceIn(BaseModel):

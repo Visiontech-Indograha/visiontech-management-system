@@ -20,7 +20,8 @@ DateTime mondayOf(DateTime d) {
   return day.subtract(Duration(days: day.weekday - 1));
 }
 
-/// Jadwal harian tim saya per minggu (Senin–Minggu) — pengganti daftar SK (Milestone 5, daily-first).
+/// Jadwal harian tim saya per minggu (Senin–Minggu) — dilengkapi kartu sorotan "Hari Ini",
+/// pencarian cepat lokasi/tim, dan filter status & jenis pekerjaan.
 class DailyPlansScreen extends ConsumerStatefulWidget {
   const DailyPlansScreen({super.key});
 
@@ -32,6 +33,9 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   DateTime _monday = mondayOf(DateTime.now());
   List<Map<String, dynamic>> _plans = const [];
   String? _only; // filter jenis pekerjaan; null = semua
+  String _statusFilter = 'ALL'; // ALL, TODAY, ONGOING, OUT_OF_TOWN, DONE
+  String _searchQ = '';
+  final _searchCtrl = TextEditingController();
   bool _loading = true;
   String? _error;
   DateTime? _cachedAt;
@@ -40,6 +44,12 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   int _loadSeq = 0;
@@ -99,7 +109,25 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     final fmt = DateFormat('d MMM', 'id_ID');
     final today = isoDate(DateTime.now());
     final thisWeek = _monday == mondayOf(DateTime.now());
-    final shown = _plans.where((p) => _only == null || (p['phases'] as List? ?? const []).contains(_only)).toList();
+    final needle = _searchQ.trim().toLowerCase();
+
+    final shown = _plans.where((p) {
+      if (_only != null && !(p['phases'] as List? ?? const []).contains(_only)) return false;
+      final st = workState(p, today);
+      if (_statusFilter == 'TODAY' && p['work_date'] != today) return false;
+      if (_statusFilter == 'ONGOING' && st != 'ONGOING') return false;
+      if (_statusFilter == 'OUT_OF_TOWN' && p['is_out_of_town'] != true) return false;
+      if (_statusFilter == 'DONE' && st != 'DONE' && st != 'COMPLETED') return false;
+      if (needle.isNotEmpty) {
+        final hay = '${jadwalTitle(p)} ${p['team_name'] ?? ''} ${p['leader_name'] ?? ''}'.toLowerCase();
+        if (!hay.contains(needle)) return false;
+      }
+      return true;
+    }).toList();
+
+    final hasFilter = _only != null || _statusFilter != 'ALL' || needle.isNotEmpty;
+    final todayPlan = _plans.where((p) => p['work_date'] == today).firstOrNull;
+
     return Scaffold(
       appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
@@ -157,6 +185,55 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               ),
             ],
             const SizedBox(height: 10),
+            // Kolom cari cepat lokasi / nama tim
+            TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _searchQ = v),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Cari lokasi atau nama tim...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchQ.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Bersihkan pencarian',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () {
+                          _searchCtrl.clear();
+                          setState(() => _searchQ = '');
+                        },
+                      ),
+                isDense: true,
+                filled: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Baris chip status cepat
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (key, label) in const [
+                    ('ALL', 'Semua status'),
+                    ('TODAY', 'Hari ini'),
+                    ('ONGOING', 'Sedang berjalan'),
+                    ('OUT_OF_TOWN', 'Luar kota'),
+                    ('DONE', 'Sudah selesai'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: _statusFilter == key,
+                        showCheckmark: false,
+                        onSelected: (_) => setState(() => _statusFilter = _statusFilter == key && key != 'ALL' ? 'ALL' : key),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
             // Pisahkan jenis pekerjaan, tiap jenis punya warna sendiri.
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -183,7 +260,44 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            if (hasFilter)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() {
+                      _only = null;
+                      _statusFilter = 'ALL';
+                      _searchQ = '';
+                    });
+                  },
+                  icon: const Icon(Icons.restart_alt_rounded, size: 16),
+                  label: const Text('Atur ulang filter'),
+                ),
+              ),
+            if (hasFilter && _plans.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  'Menampilkan ${shown.length} dari ${_plans.length} jadwal',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            if (!hasFilter && todayPlan != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 4),
+                child: FilledButton.icon(
+                  key: const Key('today-spotlight'),
+                  style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+                  onPressed: () => _open(todayPlan),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: Text(
+                    workState(todayPlan, today) == 'DONE' ? 'Lihat jadwal hari ini' : 'Buka / lanjutkan jadwal hari ini',
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             if (_cachedAt != null && _error == null)
               NoticeBanner(
                 icon: Icons.cloud_off_rounded,
@@ -200,7 +314,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               EmptyState(
                 icon: Icons.event_busy_rounded,
                 title: _only == null ? 'Tidak ada jadwal minggu ini' : 'Tidak ada ${phaseLabel[_only]} minggu ini',
-                message: 'Jadwal muncul setelah disetujui PM.',
+                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui PM.',
               )
             else
               for (final (n, p) in shown.indexed)

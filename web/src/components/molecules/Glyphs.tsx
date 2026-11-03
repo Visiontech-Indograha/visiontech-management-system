@@ -34,6 +34,8 @@ export {
   Lock,
   LogOut,
   MapPin,
+  Map,
+  List,
   Menu,
   Package,
   PanelLeftClose,
@@ -53,6 +55,7 @@ export {
   Sparkles,
   Timer,
   Trash2,
+  Truck,
   Upload,
   User,
   UserCheck,
@@ -71,5 +74,9 @@ export {
   RotateCw,
   ZoomIn,
   ZoomOut,
+  Search,
+  Filter,
+  Eye,
+  Compass,
 } from "../atoms/Icon";
 export type { LucideIcon } from "../atoms/Icon";

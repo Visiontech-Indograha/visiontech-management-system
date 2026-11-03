@@ -86,6 +86,8 @@ class WorkTypeService:
         type_id = await self.repo.insert_type(
             org_id, division_id, name, data.description, data.kind, follow_up, unit_measure=unit, default_phase=phase)
         await self.repo.replace_photos(org_id, type_id, photos)
+        if data.photo_requirements or data.default_bom:
+            await self.repo.save_v2_requirements_and_bom(type_id, data.photo_requirements, data.default_bom)
         return await self.get(org_id, UUID(type_id))
 
     async def update(
@@ -111,6 +113,8 @@ class WorkTypeService:
         unit, phase = self._clean_defaults(data)
         await self.repo.set_defaults(type_id, unit, phase)
         await self.repo.replace_photos(org_id, type_id, photos)
+        if data.photo_requirements or data.default_bom:
+            await self.repo.save_v2_requirements_and_bom(type_id, data.photo_requirements, data.default_bom)
         return await self.get(org_id, type_id)
 
     async def _check_kind(self, data: WorkTypeIn, division_id: str, self_id: UUID | None) -> UUID | None:

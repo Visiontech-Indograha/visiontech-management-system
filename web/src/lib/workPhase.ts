@@ -54,8 +54,8 @@ export function workState(
   today: string,
 ): WorkState {
   const pct = displayPct(p);
-  if (p.item_count > 0 && p.done_count >= p.item_count) return "DONE";
-  if (p.status === "COMPLETED") return pct > 0 ? "PARTIAL" : "LATE";
+  if (p.status === "DONE" || (p.item_count > 0 && p.done_count >= p.item_count)) return "DONE";
+  if (p.status === "COMPLETED") return pct > 0 ? "PARTIAL" : "DONE";
   if (p.work_date < today) return "LATE";
   if (p.status === "ONGOING" || pct > 0) return "ONGOING";
   return "NOT_STARTED";

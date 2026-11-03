@@ -537,7 +537,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           : null,
                     ),
                   ],
-                  if (_isLeader && plan['status'] == 'COMPLETED' && _openCorrection == null) ...[
+                  if (_isLeader && (plan['status'] == 'COMPLETED' || plan['status'] == 'DONE') && _openCorrection == null) ...[
                     const SizedBox(height: 12),
                     _Tile(
                       icon: Icons.edit_note_rounded,
@@ -663,7 +663,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                       subtitle: 'Diputus PM/OM divisi',
                       onTap: _busy ? null : _overtime,
                     ),
-                  ] else if (plan['status'] == 'APPROVED' || plan['status'] == 'COMPLETED') ...[
+                  ] else if (plan['status'] == 'APPROVED' || plan['status'] == 'COMPLETED' || plan['status'] == 'DONE') ...[
                     const SectionTitle('Lembur'),
                     Text(
                       plan['status'] == 'APPROVED'

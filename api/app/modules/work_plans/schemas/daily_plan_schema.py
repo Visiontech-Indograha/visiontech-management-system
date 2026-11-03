@@ -8,14 +8,14 @@ from __future__ import annotations
 
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
 from app.modules.work_plans.schemas.plan_item_schema import PlanItemCreate
 
-DailyStatus = Literal["DRAFT", "SUBMITTED", "APPROVED", "ONGOING", "COMPLETED"]
+DailyStatus = Literal["DRAFT", "ONGOING", "DONE", "CANCELLED", "SUBMITTED", "APPROVED", "COMPLETED"]
 # WORK = jadwal kerja; STANDBY = tim siaga menunggu perintah PM (tanpa item wajib).
 DailyKind = Literal["WORK", "STANDBY"]
 
@@ -277,3 +277,60 @@ class GeoResult(BaseModel):
     lat: float
     lng: float
     type: str = ""
+
+
+class ExecutionItemOut(BaseModel):
+    item_id: UUID
+    work_order_id: UUID
+    title: str
+    work_type_id: UUID | None = None
+    work_type_name: str | None = None
+    target_qty: float = 1.0
+    completed_qty: float = 0.0
+    photo_slots_snapshot: list[dict[str, Any]] = Field(default_factory=list)
+    status: str = "PENDING"
+    location_detail: str | None = None
+
+
+class ExecutionBomOut(BaseModel):
+    bom_id: UUID
+    item_name: str
+    unit: str = "pcs"
+    estimated_qty: float = 0.0
+    actual_qty: float = 0.0
+
+
+class ExecutionSurveyPointOut(BaseModel):
+    point_id: UUID
+    point_name: str
+    location_detail: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    recommended_work_type_id: UUID | None = None
+    recommended_bom: list[dict[str, Any]] = Field(default_factory=list)
+    remarks: str | None = None
+    photos: list[dict[str, Any]] = Field(default_factory=list)
+    status: str = "TODO"
+
+
+class MyExecutionTodayOut(BaseModel):
+    has_assignment: bool = False
+    daily_plan_id: UUID | None = None
+    work_date: date | None = None
+    team_id: UUID | None = None
+    team_name: str | None = None
+    is_leader: bool = False
+    work_order_id: UUID | None = None
+    wo_number: str | None = None
+    wo_title: str | None = None
+    work_order_status: str | None = None
+    client_name: str | None = None
+    site_id: UUID | None = None
+    site_name: str | None = None
+    site_address: str | None = None
+    site_lat: float | None = None
+    site_lng: float | None = None
+    geofence_radius_meters: int = 100
+    items: list[ExecutionItemOut] = Field(default_factory=list)
+    bom: list[ExecutionBomOut] = Field(default_factory=list)
+    survey_points: list[ExecutionSurveyPointOut] = Field(default_factory=list)

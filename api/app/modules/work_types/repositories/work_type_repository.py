@@ -5,6 +5,7 @@ Jenis pekerjaan + template foto SOP Master Schema V2 (tabel work_type & image_re
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from uuid import UUID
 
@@ -13,6 +14,8 @@ from app.core.repository import BaseRepository
 _SELECT = """
     SELECT wt.work_type_id AS id, wt.division_id, d.name AS division_name,
            wt.name, wt.description, (wt.delete_at IS NULL) AS is_active, wt.kind, wt.follow_up_work_type_id,
+           COALESCE(wt.photo_requirements, '[]'::jsonb) AS photo_requirements,
+           COALESCE(wt.default_bom, '[]'::jsonb) AS default_bom,
            (SELECT f.name FROM work_type f WHERE f.work_type_id = wt.follow_up_work_type_id) AS follow_up_name,
            wt.unit_measure, wt.default_phase,
            COALESCE((SELECT jsonb_agg(jsonb_build_object(
@@ -203,6 +206,27 @@ class WorkTypeRepository(BaseRepository):
                 "UPDATE image_requirement SET delete_at = NOW() WHERE image_requirement_id = ANY(CAST(:ids AS uuid[]))",
                 {"ids": gone},
             )
+
+    async def save_v2_requirements_and_bom(
+        self,
+        type_id: UUID | str,
+        photo_requirements: list[dict[str, Any]],
+        default_bom: list[dict[str, Any]],
+    ) -> None:
+        await self.execute(
+            """
+            UPDATE work_type
+            SET photo_requirements = CAST(:pr AS jsonb),
+                default_bom = CAST(:dbom AS jsonb),
+                update_at = NOW()
+            WHERE work_type_id = CAST(:id AS uuid)
+            """,
+            {
+                "id": str(type_id),
+                "pr": json.dumps(photo_requirements),
+                "dbom": json.dumps(default_bom),
+            },
+        )
 
     async def template_of_daily(self, daily_plan_id: UUID | str) -> list[Any]:
         """Slot template foto SOP (image_requirement) dari jenis pekerjaan item jadwal harian ini."""

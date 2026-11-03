@@ -650,3 +650,101 @@ class DailyPlanRepository(BaseRepository):
             {"team": str(team_id), "start": start_date, "end": end_date},
         ))
 
+    async def get_my_execution_today(self, employee_id: UUID | str) -> dict[str, Any] | None:
+        """Mengambil tugas lapangan aktif hari ini (jadwal harian + work order + client sites)."""
+        row = await self.fetchone(
+            """
+            SELECT
+                wpd.daily_plan_id,
+                wpd.work_date,
+                t.team_id,
+                t.name AS team_name,
+                (t.leader_employee_id = CAST(:emp_id AS uuid)) AS is_leader,
+                cwo.work_order_id,
+                cwo.wo_number,
+                cwo.title AS wo_title,
+                cwo.status AS work_order_status,
+                c.name AS client_name,
+                cs.site_id,
+                COALESCE(cs.site_name, wpd.site_name) AS site_name,
+                cs.address AS site_address,
+                COALESCE(cs.latitude, wpd.site_lat) AS site_lat,
+                COALESCE(cs.longitude, wpd.site_lng) AS site_lng,
+                COALESCE(cs.geofence_radius_meters, wpd.attendance_radius_m, 100) AS geofence_radius_meters
+            FROM team t
+            JOIN employee e ON (e.employee_id = t.leader_employee_id OR EXISTS (
+                SELECT 1 FROM member m
+                WHERE m.team_id = t.team_id AND m.employee_id = e.employee_id AND m.is_active AND m.delete_at IS NULL
+            ))
+            LEFT JOIN work_plan_daily wpd ON wpd.team_id = t.team_id
+                AND wpd.work_date = CURRENT_DATE AND wpd.delete_at IS NULL
+            LEFT JOIN client_work_orders cwo ON (
+                cwo.work_order_id = (
+                    SELECT wpi.work_order_id FROM work_plan_item wpi
+                    WHERE wpi.daily_plan_id = wpd.daily_plan_id AND wpi.work_order_id IS NOT NULL LIMIT 1
+                )
+                OR (cwo.lead_team_id = t.team_id AND cwo.status NOT IN ('CANCELLED', 'BAST_SIGNED'))
+            )
+            LEFT JOIN client c ON c.client_id = cwo.client_id
+            LEFT JOIN client_sites cs ON cs.site_id = cwo.client_site_id AND cs.delete_at IS NULL
+            WHERE e.employee_id = CAST(:emp_id AS uuid)
+            ORDER BY cwo.create_at DESC NULLS LAST
+            LIMIT 1
+            """,
+            {"emp_id": str(employee_id)},
+        )
+        if not row:
+            return None
+
+        data = dict(row._mapping)
+        wo_id = data.get("work_order_id")
+        items: list[Any] = []
+        bom: list[Any] = []
+        survey_points: list[Any] = []
+
+        if wo_id:
+            items_rows = await self.fetchall(
+                """
+                SELECT
+                    i.item_id, i.work_order_id, i.title, i.work_type_id,
+                    wt.name AS work_type_name, i.target_qty::float, i.completed_qty::float,
+                    i.photo_slots_snapshot, i.status, i.location_detail
+                FROM work_order_items i
+                LEFT JOIN work_type wt ON wt.work_type_id = i.work_type_id
+                WHERE i.work_order_id = CAST(:wo_id AS uuid) AND i.delete_at IS NULL
+                ORDER BY i.create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            items = [dict(r._mapping) for r in items_rows]
+
+            bom_rows = await self.fetchall(
+                """
+                SELECT bom_id, item_name, unit, estimated_qty::float, actual_qty::float
+                FROM work_order_bom
+                WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+                ORDER BY create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            bom = [dict(r._mapping) for r in bom_rows]
+
+            points_rows = await self.fetchall(
+                """
+                SELECT point_id, point_name, location_detail, site_lat::float, site_lng::float,
+                       recommended_work_type_id, recommended_bom, remarks, photos_json AS photos, status
+                FROM work_order_survey_points
+                WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+                ORDER BY create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            survey_points = [dict(r._mapping) for r in points_rows]
+
+        data["items"] = items
+        data["bom"] = bom
+        data["survey_points"] = survey_points
+        data["has_assignment"] = True
+        return data
+
+

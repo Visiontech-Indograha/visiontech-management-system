@@ -10,6 +10,7 @@ Tim lapangan & anggotanya (Milestone 3, docs/36; struktur docs/35 §2: OM → di
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -65,11 +66,15 @@ class TeamService:
             raise AppError("TEAM_NAME_TAKEN", "Nama tim sudah dipakai di divisi ini.", status=409)
 
     async def create_team(self, user: CurrentUser, data: TeamCreate) -> Any:
+        division_id = data.division_id
         name = data.name.strip()
         await self._check_division(user, data.division_id)
         if not await self.repo.office_active(data.office_id):
             raise ValidationError("Kantor tidak ditemukan atau sudah dihapus.")
         await self._check_leader(data.leader_employee_id)
+        leader_div = await self.repo.employee_division(data.leader_employee_id)
+        if leader_div and str(leader_div) != str(division_id):
+            raise ValidationError("Ketua tim harus berasal dari divisi yang sama dengan tim.")
         await self._check_name(data.division_id, name)
         team_id = await self.repo.insert(data.office_id, data.division_id, data.leader_employee_id, name, data.status)
         await self.repo.add_member(team_id, data.leader_employee_id)
@@ -84,6 +89,11 @@ class TeamService:
             raise ValidationError("Kantor tidak ditemukan atau sudah dihapus.")
         if data.leader_employee_id and data.leader_employee_id != team.leader_employee_id:
             await self._check_leader(data.leader_employee_id)
+        leader_to_check = data.leader_employee_id or (team.leader_employee_id if data.division_id else None)
+        if leader_to_check:
+            leader_div = await self.repo.employee_division(leader_to_check)
+        if leader_div and str(leader_div) != str(division_id):
+            raise ValidationError("Ketua tim harus berasal dari divisi yang sama dengan tim.")
         name = data.name.strip() if data.name else None
         if name or data.division_id:
             await self._check_name(division_id, name or team.name, exclude=team_id)
@@ -107,9 +117,12 @@ class TeamService:
         await self.repo.archive(team_id)
 
     async def add_member(self, user: CurrentUser, team_id: UUID, employee_id: UUID) -> None:
-        await self._team(user, team_id)
+        team = await self._team(user, team_id)
         if await self.repo.employee_role(employee_id) not in FIELD_ROLES:
             raise ValidationError("Anggota tim harus karyawan lapangan aktif (Team Leader atau Employee).")
+        emp_div = await self.repo.employee_division(employee_id)
+        if emp_div and str(emp_div) != str(team.division_id):
+            raise ValidationError("Karyawan berasal dari divisi berbeda dengan tim ini.")
         if await self.repo.is_member(team_id, employee_id):
             raise AppError("MEMBER_EXISTS", "Karyawan ini sudah menjadi anggota tim.", status=409)
         await self.repo.add_member(team_id, employee_id)
@@ -122,3 +135,41 @@ class TeamService:
             )
         if not await self.repo.remove_member(team_id, employee_id):
             raise NotFoundError("Anggota tim")
+
+    async def list_available_members(self, user: CurrentUser, division_id: UUID) -> list[Any]:
+        await self._check_division(user, division_id)
+        return await self.repo.list_available_members(division_id)
+
+    async def get_teams_availability(
+        self, user: CurrentUser, target_date: date, division_id: UUID | None = None
+    ) -> list[dict[str, Any]]:
+        rows = await self.repo.list_teams_availability(target_date, division_id, self._pm_scope(user))
+        result = []
+        for r in rows:
+            is_leave = bool(r.is_leader_on_leave)
+            items_count = int(r.active_items_count)
+            if is_leave:
+                status = "LEAVE"
+                is_available = False
+            elif items_count > 0:
+                status = "BUSY"
+                is_available = False
+            else:
+                status = "AVAILABLE"
+                is_available = True
+            result.append(
+                {
+                    "team_id": r.team_id,
+                    "name": r.name,
+                    "division_id": r.division_id,
+                    "division_name": r.division_name,
+                    "leader_employee_id": r.leader_employee_id,
+                    "leader_name": r.leader_name,
+                    "member_count": r.member_count,
+                    "is_available": is_available,
+                    "status": status,
+                    "active_items_count": items_count,
+                    "active_tasks": list(r.active_tasks) if r.active_tasks else [],
+                }
+            )
+        return result

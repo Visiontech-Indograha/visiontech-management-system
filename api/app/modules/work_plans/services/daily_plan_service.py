@@ -606,3 +606,13 @@ class DailyPlanService:
             "pm_feedback": "Seluruh laporan harian telah ditinjau dan dievaluasi bersama PM & Team Leader.",
         }
 
+    async def get_my_execution_today(self, user: CurrentUser) -> dict[str, Any]:
+        """Tugas eksekusi hari ini untuk ketua/anggota tim di aplikasi mobile."""
+        if not user.employee_id:
+            return {"has_assignment": False}
+        res = await self.repo.get_my_execution_today(user.employee_id)
+        if not res:
+            return {"has_assignment": False}
+        return res
+
+

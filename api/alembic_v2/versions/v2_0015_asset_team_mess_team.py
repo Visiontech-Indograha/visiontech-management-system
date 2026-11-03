@@ -24,8 +24,7 @@ _TABLES = (
     ("company_mess_stay", "fk_mess_stay_team"),
 )
 _INDEX_SQL = (
-    "CREATE INDEX IF NOT EXISTS ix_company_mess_stay_team_dates "
-    "ON company_mess_stay (team_id, stay_start_date)"
+    "CREATE INDEX IF NOT EXISTS ix_company_mess_stay_team_dates ON company_mess_stay (team_id, stay_start_date)"
 )
 
 

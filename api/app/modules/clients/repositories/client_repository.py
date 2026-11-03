@@ -1,6 +1,7 @@
 """client 1─N project."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -72,3 +73,60 @@ class ClientRepository(BaseRepository):
     async def archive(self, client_id: UUID) -> None:
         await self.execute("UPDATE client SET delete_at = now(), update_at = now() WHERE client_id = CAST(:id AS uuid)",
                            {"id": str(client_id)})
+
+    # ── Client Sites ────────────────────────────────────────────────────────
+    async def list_sites(self, client_id: UUID | str) -> Sequence[Any]:
+        return list(await self.fetchall(
+            """
+            SELECT site_id, client_id, site_name, address, latitude, longitude,
+                   geofence_radius_meters, pic_name, pic_phone
+            FROM client_sites
+            WHERE client_id = CAST(:cid AS uuid) AND delete_at IS NULL
+            ORDER BY site_name
+            """,
+            {"cid": str(client_id)},
+        ))
+
+    async def get_site(self, site_id: UUID | str) -> Any:
+        return await self.fetchone(
+            """
+            SELECT site_id, client_id, site_name, address, latitude, longitude,
+                   geofence_radius_meters, pic_name, pic_phone
+            FROM client_sites
+            WHERE site_id = CAST(:sid AS uuid) AND delete_at IS NULL
+            """,
+            {"sid": str(site_id)},
+        )
+
+    async def create_site(self, client_id: UUID | str, data: dict[str, Any]) -> Any:
+        site_id = await self.scalar(
+            """
+            INSERT INTO client_sites (
+                client_id, site_name, address, latitude, longitude,
+                geofence_radius_meters, pic_name, pic_phone
+            )
+            VALUES (
+                CAST(:client_id AS uuid), :site_name, :address, :latitude, :longitude,
+                :geofence_radius_meters, :pic_name, :pic_phone
+            )
+            RETURNING site_id
+            """,
+            {**data, "client_id": str(client_id)},
+        )
+        return await self.get_site(site_id)
+
+    async def update_site(self, site_id: UUID | str, fields: dict[str, Any]) -> Any:
+        if fields:
+            sets = ", ".join(f"{k} = :{k}" for k in safe_columns(fields))
+            await self.execute(
+                f"UPDATE client_sites SET {sets}, update_at = now() WHERE site_id = CAST(:sid AS uuid)",
+                {**fields, "sid": str(site_id)},
+            )
+        return await self.get_site(site_id)
+
+    async def delete_site(self, site_id: UUID | str) -> None:
+        await self.execute(
+            "UPDATE client_sites SET delete_at = now(), update_at = now() WHERE site_id = CAST(:sid AS uuid)",
+            {"sid": str(site_id)},
+        )
+

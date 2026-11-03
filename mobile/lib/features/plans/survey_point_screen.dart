@@ -7,6 +7,7 @@ import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
@@ -301,18 +302,17 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final t in _types)
-                      ChoiceChip(
-                        label: Text('${t['name']}'),
-                        selected: _typeId == '${t['work_type_id']}',
-                        onSelected: _edit ? (_) => _setType('${t['work_type_id']}') : null,
-                      ),
-                  ],
-                ),
+                if (_types.isNotEmpty)
+                  VmsSelectField<String>(
+                    label: 'Jenis Pekerjaan Titik',
+                    icon: Icons.work_outline,
+                    value: _typeId,
+                    options: [
+                      for (final t in _types)
+                        VmsOption('${t['work_type_id']}', '${t['name']}'),
+                    ],
+                    onChanged: _setType,
+                  ),
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: const [

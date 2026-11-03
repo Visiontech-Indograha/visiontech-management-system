@@ -465,3 +465,18 @@ nav a:active {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Sembunyikan bilah gulir pada baris filter horizontal (ponsel/tablet). */
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Ruang aman bawah untuk bilah navigasi bawah ponsel & dialog bottom-sheet. */
+@utility pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}

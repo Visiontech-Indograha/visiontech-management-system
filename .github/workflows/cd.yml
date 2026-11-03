@@ -17,6 +17,7 @@ jobs:
   verify-prod-source:
     name: Pastikan sumber deploy = prod
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 5
     steps:
       - name: Checkout branch prod
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

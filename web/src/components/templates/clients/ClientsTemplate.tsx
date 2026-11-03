@@ -3,6 +3,7 @@ import { WorkCompletionNavTabs } from "@/components/organisms/work-completions/W
 import { ClientAddButton } from "@/components/organisms/clients/ClientAddButton";
 import { ClientFormDialog } from "@/components/organisms/clients/ClientFormDialog";
 import { ClientDeactivateDialog } from "@/components/organisms/clients/ClientDeactivateDialog";
+import { ClientSitesModal } from "@/components/organisms/clients/ClientSitesModal";
 import { ClientList } from "@/components/organisms/clients/ClientList";
 import type { Client } from "@/services/clientService";
 import { PageTemplate } from "../PageTemplate";
@@ -12,26 +13,32 @@ export function ClientsTemplate({
   canManage,
   editing,
   removing,
+  managingSites,
   search,
   onSearchChange,
   onAdd,
   onEdit,
   onDeactivate,
+  onManageSites,
   onCloseEdit,
   onCloseRemove,
+  onCloseManageSites,
   onUseExisting,
 }: {
   clients: UseQueryResult<Client[]>;
   canManage: boolean;
   editing: Client | "new" | null;
   removing: Client | null;
+  managingSites: Client | null;
   search: string;
   onSearchChange: (value: string) => void;
   onAdd: () => void;
   onEdit: (client: Client) => void;
   onDeactivate: (client: Client) => void;
+  onManageSites: (client: Client) => void;
   onCloseEdit: () => void;
   onCloseRemove: () => void;
+  onCloseManageSites: () => void;
   onUseExisting: (clientId: string) => void;
 }) {
   return (
@@ -47,6 +54,7 @@ export function ClientsTemplate({
         onAdd={onAdd}
         onEdit={onEdit}
         onDeactivate={onDeactivate}
+        onManageSites={onManageSites}
         search={search}
         onSearchChange={onSearchChange}
       />
@@ -60,6 +68,9 @@ export function ClientsTemplate({
       )}
       {removing && (
         <ClientDeactivateDialog client={removing} onClose={onCloseRemove} />
+      )}
+      {managingSites && (
+        <ClientSitesModal client={managingSites} onClose={onCloseManageSites} />
       )}
     </PageTemplate>
   );

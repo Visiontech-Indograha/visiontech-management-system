@@ -4,6 +4,7 @@ app/modules/auth/schemas/auth_schema.py
 Request and response schemas for authentication processes.
 """
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -38,6 +39,8 @@ class UserMeResponse(BaseModel):
     # None = akun tanpa karyawan yang terkait.
     attendance_mode: str | None = None
     division_id: str | None = None
+    managed_division_ids: list[str] = Field(default_factory=list)
+    managed_divisions: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ChangePasswordRequest(BaseModel):

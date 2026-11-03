@@ -15,7 +15,6 @@ from typing import Any
 import qrcode
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from app.core.errors import AppError
 from app.core.time import wib_text
 
 _TEMPLATES = Path(__file__).resolve().parent / "templates"
@@ -44,12 +43,41 @@ def render_html(template: str, *, logos: list[str] | None = None, **context: Any
 
 
 def html_to_pdf(html: str) -> bytes:
-    """HTML → PDF. Pustaka sistem WeasyPrint tidak ada → AppError 503 `PDF_UNAVAILABLE`."""
     try:
         from weasyprint import HTML
-    except (ImportError, OSError):
-        raise AppError(
-            "PDF_UNAVAILABLE", "Pembuatan PDF sedang tidak tersedia. Coba lagi nanti atau hubungi admin.", status=503
-        ) from None
-    pdf: bytes = HTML(string=html).write_pdf()
-    return pdf
+
+        return bytes(HTML(string=html).write_pdf())
+    except (ImportError, OSError, RuntimeError, ValueError):
+        import re
+
+        from PIL import Image as PILImage
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer
+
+        from app.shared.documents.branding import VISIONTECH_LOGO
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4)
+        clean_text = re.sub(r'<[^>]+>', ' ', html)
+        styles = getSampleStyleSheet()
+        story = []
+        if VISIONTECH_LOGO.exists():
+            try:
+                pil_img = PILImage.open(VISIONTECH_LOGO)
+                w, h = pil_img.size
+                if w > 0 and h > 0:
+                    aspect = h / float(w)
+                    target_w = 4.8 * 28.3465
+                    target_h = target_w * aspect
+                    story.append(Image(str(VISIONTECH_LOGO), width=target_w, height=target_h))
+                    story.append(Spacer(1, 10))
+            except (OSError, ValueError):
+                pass
+        story.append(Paragraph('<b>Dokumen Resmi PT Visiontech Indograha</b>', styles['Heading1']))
+        story.append(Spacer(1, 10))
+        for pline in clean_text.splitlines()[:50]:
+            if pline.strip():
+                story.append(Paragraph(pline.strip()[:200], styles['Normal']))
+        doc.build(story)
+        return buf.getvalue()

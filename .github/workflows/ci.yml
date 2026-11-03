@@ -25,6 +25,7 @@ jobs:
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.api == 'true' }}
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 15
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
@@ -40,8 +41,8 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"   # sama dengan Dockerfile (T-16)
-          cache: pip
-          cache-dependency-path: api/requirements-dev.txt
+          # Runner self-hosted menyimpan cache pip lokal di /root/.cache/pip.
+          # Menghindari unduh/unggah 95 MB via Actions Cache API lambat.
 
       - name: Jalankan DB — PostgreSQL 18 + PostGIS 3.6 + pgvector dari db/Dockerfile (sama dengan compose)
         # Dulu: service postgis 16-3.4 + apt install pgvector saat berjalan. Repo PGDG bullseye diarsipkan
@@ -97,6 +98,7 @@ jobs:
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.web == 'true' }}
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: web
@@ -105,8 +107,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
-          cache: npm
-          cache-dependency-path: web/package-lock.json
+          # Runner self-hosted menyimpan cache npm lokal di ~/.npm.
+          # Menghindari unggah cache 54 MB via Actions Cache API lambat.
       - run: npm ci --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
@@ -118,6 +120,7 @@ jobs:
     # yang memakan minimal 1 menit tertagih.
     name: Pemindaian rahasia (gitleaks)
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 5
     outputs:
       api: ${{ steps.changes.outputs.api }}
       web: ${{ steps.changes.outputs.web }}
@@ -157,20 +160,28 @@ jobs:
           if [ -z "$BASE_SHA" ]; then   # manual: jalankan semua
             for k in api web mobile; do echo "$k=true" >> "$GITHUB_OUTPUT"; done; exit 0
           fi
-          files=$(git diff --name-only "$(git merge-base "$BASE_SHA" "$HEAD_SHA")" "$HEAD_SHA")
+          mb=$(git merge-base "$BASE_SHA" "$HEAD_SHA" 2>/dev/null || echo "$BASE_SHA")
+          files=$(git diff --name-only "$mb" "$HEAD_SHA" 2>/dev/null || true)
+          echo "Berkas yang berubah ($mb..$HEAD_SHA):"
           echo "$files"
+          if [ -z "$files" ]; then
+            echo "Peringatan: diff kosong atau tidak terdeteksi; menjalankan semua job demi keamanan."
+            for k in api web mobile; do echo "$k=true" >> "$GITHUB_OUTPUT"; done
+            exit 0
+          fi
           hit() { if grep -qE "$1" <<<"$files"; then echo true; else echo false; fi; }
           wf='^\.github/workflows/ci\.yml$'
           echo "api=$(hit "^(api|db|face-service|deploy|scripts)/|$wf")" >> "$GITHUB_OUTPUT"
           echo "web=$(hit "^web/|$wf")" >> "$GITHUB_OUTPUT"
-          echo "mobile=true" >> "$GITHUB_OUTPUT"
+          echo "mobile=$(hit "^mobile/|$wf")" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
   mobile:
     name: Mobile (Flutter analyze + test)
     needs: secrets
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.secrets.outputs.mobile == 'true' }}
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: mobile
@@ -179,7 +190,9 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          cache: true
+          cache: false
+          # Runner self-hosted sudah memiliki Flutter SDK di RUNNER_TOOL_CACHE lokal.
+          # DILARANG memakai cache: true karena mengunggah 1.73 GB ke GitHub Cache (58 menit!).
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -189,6 +202,7 @@ jobs:
     needs: [api, web, mobile, secrets]
     if: always()
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 5
     steps:
       - name: Kirim ke Discord (berhasil & gagal; tanpa data pribadi — dok 17 §2)
         env:

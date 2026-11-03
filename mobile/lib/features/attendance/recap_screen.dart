@@ -87,13 +87,37 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
     final items =
         (data?['items'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
     return Scaffold(
-      appBar: VmsTopBar(onBack: () => context.pop()),
+      appBar: VmsTopBar(
+        onBack: () => context.pop(),
+        trailing: HeaderAction(
+          icon: Icons.more_time_rounded,
+          tooltip: 'Riwayat Lembur',
+          onTap: () => context.push('/overtime'),
+        ),
+      ),
       body: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
           padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Absensi', title: 'Rekap Bulanan', horizontal: 4),
+            HeroHeader(
+              eyebrow: 'Kehadiran & Tunjangan',
+              title: 'Rekap Bulanan',
+              horizontal: 4,
+              bottom: Align(
+                alignment: Alignment.centerLeft,
+                child: ActionChip(
+                  avatar: Icon(Icons.more_time_rounded, size: 16, color: Accent.indigo.strong),
+                  label: Text(
+                    'Buka Riwayat Lembur',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: Accent.indigo.strong),
+                  ),
+                  backgroundColor: Accent.indigo.soft,
+                  side: BorderSide.none,
+                  onPressed: () => context.push('/overtime'),
+                ),
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -159,6 +183,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                       ),
                       style: VmsTextStyles.bodySm.copyWith(
                         fontWeight: FontWeight.w800,
+                        color: Accent.emerald.strong,
                       ),
                     ),
                   ],

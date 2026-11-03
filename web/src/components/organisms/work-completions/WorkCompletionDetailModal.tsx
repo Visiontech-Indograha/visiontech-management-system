@@ -61,7 +61,7 @@ export function WorkCompletionDetailModal({
       open={Boolean(completionId)}
       title={order?.project_title || "Detail pekerjaan klien"}
       onClose={onClose}
-      className="sm:max-w-4xl"
+      size="xl"
     >
       <div className="space-y-4">
         {/* Header Metadata */}

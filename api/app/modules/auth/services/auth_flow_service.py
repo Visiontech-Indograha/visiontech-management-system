@@ -85,6 +85,8 @@ class AuthFlowService:
             employee_id=profile.employee_id,
             attendance_mode=profile.attendance_mode,
             division_id=profile.division_id,
+            managed_division_ids=profile.managed_division_ids,
+            managed_divisions=profile.managed_divisions,
         )
 
     async def full_name(self, user_id: str) -> str | None:

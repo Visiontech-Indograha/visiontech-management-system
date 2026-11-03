@@ -14,7 +14,7 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
 from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
-from app.shared.attendance_sql import IS_LATE, IS_LATE_A
+from app.shared.attendance_sql import EFFECTIVE_CITY_ZONE_A, EFFECTIVE_MEAL_AMOUNT_A, IS_LATE, IS_LATE_A
 
 
 def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> int:
@@ -298,6 +298,26 @@ class AttendanceSessionRepository(BaseRepository):
                    wpd.clock_out_time AS clock_out
             FROM work_plan_daily wpd
             WHERE wpd.daily_plan_id = CAST(:site AS uuid) AND wpd.delete_at IS NULL
+            UNION ALL
+            SELECT cs.site_id AS id,
+                   cs.site_name AS name,
+                   NULL::uuid AS unit_id,
+                   'CLIENT_SITE' AS kind,
+                   NULL::uuid AS office_id,
+                   ROUND(
+                       6371000 * 2 * ASIN(
+                           SQRT(
+                               POWER(SIN(RADIANS(:lat - cs.latitude) / 2), 2) +
+                               COS(RADIANS(:lat)) * COS(RADIANS(cs.latitude)) *
+                               POWER(SIN(RADIANS(:lng - cs.longitude) / 2), 2)
+                           )
+                       )
+                   )::numeric AS distance_m,
+                   cs.geofence_radius_meters AS radius_m,
+                   '08:00:00'::time AS clock_in,
+                   '17:00:00'::time AS clock_out
+            FROM client_sites cs
+            WHERE cs.site_id = CAST(:site AS uuid) AND cs.delete_at IS NULL
             LIMIT 1
             """,
             {"site": str(site_id), "lng": lng, "lat": lat},
@@ -359,6 +379,26 @@ class AttendanceSessionRepository(BaseRepository):
                        o.clock_out_time AS clock_out
                 FROM office o
                 WHERE o.delete_at IS NULL
+                UNION ALL
+                SELECT cs.site_id AS id,
+                       cs.site_name AS name,
+                       NULL::uuid AS unit_id,
+                       'CLIENT_SITE' AS kind,
+                       NULL::uuid AS office_id,
+                       ROUND(
+                           6371000 * 2 * ASIN(
+                               SQRT(
+                                   POWER(SIN(RADIANS(:lat - cs.latitude) / 2), 2) +
+                                   COS(RADIANS(:lat)) * COS(RADIANS(cs.latitude)) *
+                                   POWER(SIN(RADIANS(:lng - cs.longitude) / 2), 2)
+                               )
+                           )
+                       )::numeric AS distance_m,
+                       cs.geofence_radius_meters AS radius_m,
+                       '08:00:00'::time AS clock_in,
+                       '17:00:00'::time AS clock_out
+                FROM client_sites cs
+                WHERE cs.delete_at IS NULL
             ) offices
             ORDER BY distance_m - radius_m ASC
             LIMIT 1
@@ -408,7 +448,24 @@ class AttendanceSessionRepository(BaseRepository):
         if main_office is None:
             raise LookupError("kantor utama belum ditetapkan (office.is_main_office)")
         dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
-        in_city = dist_main <= int(main_office.city_boundary_radius_m)
+        out_of_town_plan = bool(
+            await self.scalar(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM work_plan_daily wpd
+                    JOIN team t ON t.team_id = wpd.team_id
+                    WHERE wpd.work_date = :d AND wpd.is_out_of_town = TRUE
+                      AND wpd.status IN ('APPROVED', 'ONGOING', 'COMPLETED') AND wpd.delete_at IS NULL
+                      AND (t.leader_employee_id = CAST(:emp AS uuid) OR EXISTS (
+                            SELECT 1 FROM member m
+                            WHERE m.team_id = wpd.team_id AND m.employee_id = CAST(:emp AS uuid)
+                              AND m.is_active AND m.delete_at IS NULL))
+                )
+                """,
+                {"d": work_date, "emp": str(employee_id)},
+            )
+        )
+        in_city = (dist_main <= int(main_office.city_boundary_radius_m)) and not out_of_town_plan
         city_zone = "DALAM_KOTA" if in_city else "LUAR_KOTA"
         meal_rate = float(main_office.in_city_meal_rate if in_city else main_office.out_city_meal_rate)
 
@@ -818,8 +875,8 @@ class AttendanceSessionRepository(BaseRepository):
                    FALSE AS check_out_outside,
                    NULL::uuid AS check_out_selfie_file_id,
                    NULL::text AS check_out_explanation,
-                   a.city_zone_status::text AS city_category,
-                   a.meal_allowance_amount::float AS meal_allowance_amount,
+                   {EFFECTIVE_CITY_ZONE_A} AS city_category,
+                   {EFFECTIVE_MEAL_AMOUNT_A}::float AS meal_allowance_amount,
                    a.is_within_attendance_radius AS is_within_attendance_radius,
                    (
                        (
@@ -923,9 +980,9 @@ class AttendanceSessionRepository(BaseRepository):
                         AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                        NULL::float AS check_out_distance_m,
                        FALSE AS check_out_outside,
-                       a.city_zone_status::text AS city_category,
+                       {EFFECTIVE_CITY_ZONE_A} AS city_category,
                        CASE WHEN a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM')
-                            THEN a.meal_allowance_amount ELSE 0 END::float AS meal_allowance_amount
+                            THEN {EFFECTIVE_MEAL_AMOUNT_A} ELSE 0 END::float AS meal_allowance_amount
                 FROM attendance a
                 JOIN employee e ON a.employee_id = e.employee_id
                 LEFT JOIN office o ON o.office_id = a.office_id
@@ -939,15 +996,15 @@ class AttendanceSessionRepository(BaseRepository):
         )
 
     async def meal_allowance_recap(self, start: Any, end: Any, division_ids: list[str] | None = None) -> list[Any]:
-        """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama);
-        hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
+        """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama atau jadwal
+        luar kota); hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
         return list(
             await self.fetchall(
-                """
+                f"""
                 SELECT e.employee_id, e.employee_no, e.full_name,
-                       COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'DALAM_KOTA')::int AS in_city_days,
-                       COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'LUAR_KOTA')::int AS out_city_days,
-                       COALESCE(SUM(a.meal_allowance_amount) FILTER (WHERE ok), 0)::float AS total_amount,
+                       COUNT(*) FILTER (WHERE ok AND {EFFECTIVE_CITY_ZONE_A} = 'DALAM_KOTA')::int AS in_city_days,
+                       COUNT(*) FILTER (WHERE ok AND {EFFECTIVE_CITY_ZONE_A} = 'LUAR_KOTA')::int AS out_city_days,
+                       COALESCE(SUM({EFFECTIVE_MEAL_AMOUNT_A}) FILTER (WHERE ok), 0)::float AS total_amount,
                        COUNT(*) FILTER (WHERE a.om_approval_status = 'PENDING_OM')::int AS pending_days
                 FROM attendance a
                 CROSS JOIN LATERAL (SELECT a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM') AS ok) v
@@ -1029,8 +1086,8 @@ class AttendanceSessionRepository(BaseRepository):
                         AND (a.clock_out_at AT TIME ZONE 'Asia/Jakarta')::time < a.scheduled_out) AS is_early_leave,
                        a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM', 'APPROVED') AS is_valid,
                        a.om_approval_status = 'PENDING_OM' AS is_pending,
-                       a.meal_allowance_amount::float AS meal_allowance_amount,
-                       a.city_zone_status AS city_zone,
+                       {EFFECTIVE_MEAL_AMOUNT_A}::float AS meal_allowance_amount,
+                       {EFFECTIVE_CITY_ZONE_A} AS city_zone,
                        (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                            AS selfie_file_id
                 FROM attendance a

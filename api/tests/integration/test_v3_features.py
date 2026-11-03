@@ -8,36 +8,30 @@ Pengujian fitur-fitur VMS V3:
 5. PM Full Override Authority
 """
 
-from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.modules.image_requirements.schemas.image_requirement_schema import ImageRequirementOut
 from app.modules.work_completion.schemas.work_completion_schema import (
     WorkCompletionCreate,
     WorkCompletionStatusUpdate,
 )
+from app.modules.work_types.schemas.work_type_schema import WorkTypePhotoOut
 
 
 def test_image_requirement_schema_description() -> None:
-    """Memastikan ImageRequirementOut mendukung kolom description opsional."""
+    """Memastikan WorkTypePhotoOut mendukung kolom hint dan label."""
     req_id = uuid4()
-    wt_id = uuid4()
 
-    out = ImageRequirementOut(
-        image_requirement_id=req_id,
-        work_type_id=wt_id,
-        work_type_name="Instalasi CCTV",
-        name="Foto Titik Kamera",
-        description="Ambil foto dari jarak 2 meter dengan sudut pandang mencakup area pantauan.",
-        path_image="/uploads/sop/1312298.png",
-        is_mandatory=True,
+    out = WorkTypePhotoOut(
+        id=req_id,
         sort_order=1,
-        create_at=datetime.now(UTC),
+        label="Foto Titik Kamera",
+        hint="Ambil foto dari jarak 2 meter dengan sudut pandang mencakup area pantauan.",
+        required=True,
     )
 
-    assert out.name == "Foto Titik Kamera"
-    assert out.description is not None
-    assert "jarak 2 meter" in out.description
+    assert out.label == "Foto Titik Kamera"
+    assert out.hint is not None
+    assert "jarak 2 meter" in out.hint
 
 
 def test_work_completion_client_order_schemas() -> None:

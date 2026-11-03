@@ -3,7 +3,17 @@ import type { components } from "./apiTypes";
 type S = components["schemas"];
 
 /** Respons GET /auth/me sesuai API terbaru: {user_id, email, role, permissions[]}. */
-export type Me = S["AuthUserMeResponseSchema"];
+export interface ManagedDivision {
+  division_id: string;
+  name: string;
+  is_pm?: boolean;
+  is_om?: boolean;
+}
+
+export type Me = S["AuthUserMeResponseSchema"] & {
+  managed_division_ids?: string[];
+  managed_divisions?: ManagedDivision[];
+};
 export type TokenOut = S["AuthLoginResponseSchema"];
 
 /** Label peran sesuai RoleCode API. */

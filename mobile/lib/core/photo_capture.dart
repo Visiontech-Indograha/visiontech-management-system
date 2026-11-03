@@ -223,8 +223,12 @@ Uint8List _drawWatermark(_WatermarkArgs args) {
   // Foto kamera asli bisa 12MP+ -- proses gambar murni-Dart (tanpa akselerasi
   // native) pada resolusi sebesar itu bisa sangat lambat, terutama di build
   // debug. Resize eksplisit di sini supaya waktu proses selalu terkendali.
-  if (image.width > 1280) {
-    image = img.copyResize(image, width: 1280);
+  if (image.width > 1280 || image.height > 1280) {
+    if (image.width >= image.height) {
+      image = img.copyResize(image, width: 1280);
+    } else {
+      image = img.copyResize(image, height: 1280);
+    }
   }
 
   // Utama: bakar panel yang PERSIS terlihat di layar kamera (teks, huruf, warna, logo) dengan

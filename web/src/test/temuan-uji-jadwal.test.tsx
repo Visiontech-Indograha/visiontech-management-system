@@ -12,7 +12,7 @@ const todayIso = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).
 const plan = (over: Partial<DailyPlan> = {}): DailyPlan => ({
   daily_plan_id: "p1", kind: "WORK", division_id: "d1", division_name: "Sipil", team_id: "t1", team_name: "Tim Alpha",
   leader_employee_id: "e-lead", leader_name: "Agus", work_date: todayIso, site_name: "Gardu Induk Minas",
-  site_lat: "1.4700000", site_lng: "101.4500000", attendance_radius_m: 150, clock_in_time: "07:00:00",
+  site_lat: "1.4700000", site_lng: "101.4500000", attendance_radius_m: 150, is_out_of_town: false, clock_in_time: "07:00:00",
   clock_out_time: "16:00:00", status: "DRAFT", created_by_id: "e-pm", item_count: 0, done_count: 0, progress_pct: 0, phases: [], can_manage: true, ...over,
 });
 
@@ -98,12 +98,14 @@ describe("salin jadwal ke hari lain", () => {
     renderDialog({ plan: plan({ status: "APPROVED", item_count: 1 }) });
     fireEvent.click(await screen.findByRole("button", { name: "Salin ke hari lain" }));
     const input = screen.getByLabelText("Salin setiap hari sampai tanggal");
-    fireEvent.change(input, { target: { value: "01/11/2026" } });
+    const targetIso = new Date(new Date(`${todayIso}T00:00:00Z`).getTime() + 3 * 86400000).toISOString().slice(0, 10);
+    const [d, m, y] = targetIso.split("-").reverse();
+    fireEvent.change(input, { target: { value: `${d}/${m}/${y}` } });
     fireEvent.click(screen.getByRole("button", { name: "Salin" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/work-plans/daily/p1/copy")).toBe(true));
     const body = calls.find((c) => c.url === "/work-plans/daily/p1/copy")?.data as { work_dates: string[] };
     expect(body.work_dates[0]).toBe(new Date(new Date(`${todayIso}T00:00:00Z`).getTime() + 86400000).toISOString().slice(0, 10));
-    expect(body.work_dates[body.work_dates.length - 1]).toBe("2026-11-01");
+    expect(body.work_dates[body.work_dates.length - 1]).toBe(targetIso);
   });
 
   it("tanggal yang tidak valid ditolak dengan pesan Indonesia, bukan pesan peramban", async () => {

@@ -3,10 +3,10 @@ uvicorn==0.54.0
 sqlmodel==0.0.48
 alembic==1.20.1
 asyncpg==0.32.0
-greenlet>=3.1,<4   # dibutuhkan SQLAlchemy asyncio; versi SQLAlchemy baru tidak lagi membawanya otomatis
+greenlet>=3.5.6,<4   # dibutuhkan SQLAlchemy asyncio; versi SQLAlchemy baru tidak lagi membawanya otomatis
 psycopg2-binary==2.9.13
-pydantic==2.14.1
-pydantic-settings==2.16.1
+pydantic==2.14.2
+pydantic-settings==2.16.2
 httpx==0.28.1
 WeasyPrint==70.0
 pydyf==0.13.0  # dikunci bersama WeasyPrint (62.x rusak dengan pydyf >= 0.11; 70.0 butuh versi baru)
@@ -20,10 +20,11 @@ Pillow>=10.4.0
 pillow-heif==1.8.1  # dekoder HEIC asli (foto kamera iPhone/Android), lihat app/core/image.py
 filetype==1.2.0
 python-multipart==0.0.32
-tzdata==2026.5
+tzdata==2026.6
 qrcode[pil]==8.2
 rfc8785==0.1.4
 # Ekspor dokumen resmi (Milestone 8, docs/35 §8)
 python-docx==1.2.0
 python-pptx==1.0.2
 openpyxl==3.1.5
+reportlab>=5.0.0

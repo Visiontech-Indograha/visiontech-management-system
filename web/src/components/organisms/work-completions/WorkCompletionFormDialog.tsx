@@ -40,7 +40,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
   const editing = !!order;
   const create = useCreateWorkCompletion();
   const update = useUpdateWorkCompletion();
-  const { me } = useSession();
+  const { me, activeDivisionId } = useSession();
   const { data: divisions } = useUserDivisions();
   const { data: clients } = useClients(true);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
           site_lng: order.site_lng ?? null,
         }
       : {
-          division_id: me?.division_id ?? "",
+          division_id: activeDivisionId || me?.division_id || "",
           client_id: "",
           project_id: "",
           project_title: "",

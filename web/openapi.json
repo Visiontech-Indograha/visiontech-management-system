@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "Visiontech VMS",
-  "version": "1.4.0"
+  "version": "1.5.0"
  },
  "paths": {
   "/health": {
@@ -276,6 +276,903 @@
          },
          "title": "Response Delete Client Api V1 Clients  Client Id  Delete"
         }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/clients/{client_id}/sites": {
+   "get": {
+    "tags": [
+     "Clients"
+    ],
+    "summary": "List Client Sites",
+    "description": "Daftar cabang / lokasi site milik klien.",
+    "operationId": "list_client_sites_api_v1_clients__client_id__sites_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "client_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Client Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ClientSiteOut"
+         },
+         "title": "Response List Client Sites Api V1 Clients  Client Id  Sites Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Clients"
+    ],
+    "summary": "Create Client Site",
+    "description": "Tambah cabang / lokasi site baru untuk klien.",
+    "operationId": "create_client_site_api_v1_clients__client_id__sites_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "client_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Client Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClientSiteCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ClientSiteOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/clients/{client_id}/sites/{site_id}": {
+   "put": {
+    "tags": [
+     "Clients"
+    ],
+    "summary": "Update Client Site",
+    "description": "Ubah data cabang / lokasi site klien.",
+    "operationId": "update_client_site_api_v1_clients__client_id__sites__site_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "client_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Client Id"
+      }
+     },
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClientSiteUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ClientSiteOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Clients"
+    ],
+    "summary": "Delete Client Site",
+    "description": "Hapus cabang / lokasi site klien.",
+    "operationId": "delete_client_site_api_v1_clients__client_id__sites__site_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "client_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Client Id"
+      }
+     },
+     {
+      "name": "site_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Site Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Delete Client Site Api V1 Clients  Client Id  Sites  Site Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "List Work Orders",
+    "description": "Daftar work orders dengan filter status, divisi, klien, dan pencarian.",
+    "operationId": "list_work_orders_api_v1_work_orders_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "division_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Division Id"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "client_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Client Id"
+      }
+     },
+     {
+      "name": "pm_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Pm Id"
+      }
+     },
+     {
+      "name": "lead_team_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Lead Team Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Q"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/WorkOrderOut"
+         },
+         "title": "Response List Work Orders Api V1 Work Orders Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Create Work Order",
+    "description": "Buat Work Order baru dari klien (Status awal: WAITING_SURVEY).",
+    "operationId": "create_work_order_api_v1_work_orders_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkOrderCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Get Work Order",
+    "description": "Detail lengkap Work Order termasuk titik survei, item pekerjaan, dan BoM.",
+    "operationId": "get_work_order_api_v1_work_orders__work_order_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}/assign-survey": {
+   "post": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Assign Survey",
+    "description": "PM menugaskan tim dan jadwal untuk survei lapangan.",
+    "operationId": "assign_survey_api_v1_work_orders__work_order_id__assign_survey_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkOrderAssignSurvey"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}/submit-survey": {
+   "post": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Submit Survey",
+    "description": "Ketua Tim mengirimkan laporan survei lapangan dari aplikasi mobile / web.",
+    "operationId": "submit_survey_api_v1_work_orders__work_order_id__submit_survey_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SurveySubmitIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}/apply-survey": {
+   "post": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Apply Survey",
+    "description": "Fitur Inti: PM menyetujui survei dan mengunci item tugas & BOM (Status: READY_TO_EXECUTE).",
+    "operationId": "apply_survey_api_v1_work_orders__work_order_id__apply_survey_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}/sign-bast": {
+   "post": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Sign Bast",
+    "description": "Penandatanganan Berita Acara Serah Terima (BAST) pekerjaan klien.",
+    "operationId": "sign_bast_api_v1_work_orders__work_order_id__sign_bast_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/WorkOrderSignBast"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/items/{item_id}/progress": {
+   "put": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Update Item Progress",
+    "description": "Perbarui progres dan pemenuhan syarat foto item pekerjaan lapangan.",
+    "operationId": "update_item_progress_api_v1_work_orders_items__item_id__progress_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ItemProgressIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Update Item Progress Api V1 Work Orders Items  Item Id  Progress Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/bom/{bom_id}/actual": {
+   "put": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Update Bom Actual",
+    "description": "Catat penggunaan aktual material (actual BOM) pekerjaan.",
+    "operationId": "update_bom_actual_api_v1_work_orders_bom__bom_id__actual_put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "bom_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Bom Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BomActualIn"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Update Bom Actual Api V1 Work Orders Bom  Bom Id  Actual Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/{work_order_id}/export/{template}": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Export Work Order Document",
+    "description": "Unduh dokumen resmi Work Order: BAST (PDF/Word), Laporan Survei, Surat Tugas, BoQ, atau Slide PPTX.",
+    "operationId": "export_work_order_document_api_v1_work_orders__work_order_id__export__template__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_order_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Work Order Id"
+      }
+     },
+     {
+      "name": "template",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Template"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
        }
       }
      },
@@ -1568,6 +2465,33 @@
     }
    }
   },
+  "/api/v1/work-plans/my-execution-today": {
+   "get": {
+    "tags": [
+     "Work Plans (Daily-First)"
+    ],
+    "summary": "My Execution Today",
+    "description": "Tugas eksekusi hari ini untuk aplikasi mobile lapangan (jadwal + client work orders + sites + item/BOM).",
+    "operationId": "my_execution_today_api_v1_work_plans_my_execution_today_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyExecutionTodayOut"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/work-plans/form-options": {
    "get": {
     "tags": [
@@ -1873,9 +2797,11 @@
         {
          "enum": [
           "DRAFT",
+          "ONGOING",
+          "DONE",
+          "CANCELLED",
           "SUBMITTED",
           "APPROVED",
-          "ONGOING",
           "COMPLETED"
          ],
          "type": "string"
@@ -2973,6 +3899,33 @@
       }
      }
     }
+   }
+  },
+  "/api/v1/daily-plans/my-execution-today": {
+   "get": {
+    "tags": [
+     "Work Plans (Daily-First)"
+    ],
+    "summary": "My Execution Today",
+    "description": "Tugas eksekusi hari ini untuk aplikasi mobile lapangan (jadwal + client work orders + sites + item/BOM).",
+    "operationId": "my_execution_today_api_v1_daily_plans_my_execution_today_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MyExecutionTodayOut"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
    }
   },
   "/api/v1/work-plans/corrections": {
@@ -5617,6 +6570,142 @@
     }
    }
   },
+  "/api/v1/teams/availability": {
+   "get": {
+    "tags": [
+     "Teams"
+    ],
+    "summary": "Get Teams Availability",
+    "description": "Mengambil status ketersediaan dan beban tugas tim pada tanggal yang dipilih.",
+    "operationId": "get_teams_availability_api_v1_teams_availability_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "work_date",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal kerja (default: hari ini)",
+       "title": "Work Date"
+      },
+      "description": "Tanggal kerja (default: hari ini)"
+     },
+     {
+      "name": "division_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter ID divisi (opsional)",
+       "title": "Division Id"
+      },
+      "description": "Filter ID divisi (opsional)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TeamAvailabilityItem"
+         },
+         "title": "Response Get Teams Availability Api V1 Teams Availability Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/teams/available-members": {
+   "get": {
+    "tags": [
+     "Teams"
+    ],
+    "summary": "List Available Members",
+    "description": "Daftar karyawan lapangan aktif di divisi ini yang belum tergabung dalam tim aktif.",
+    "operationId": "list_available_members_api_v1_teams_available_members_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "division_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "description": "ID divisi yang dicari anggotanya",
+       "title": "Division Id"
+      },
+      "description": "ID divisi yang dicari anggotanya"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AvailableMemberOut"
+         },
+         "title": "Response List Available Members Api V1 Teams Available Members Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/teams/{team_id}": {
    "get": {
     "tags": [
@@ -7991,263 +9080,6 @@
     }
    }
   },
-  "/api/v1/image-requirements/by-work-type/{work_type_id}": {
-   "get": {
-    "tags": [
-     "Image Requirements"
-    ],
-    "summary": "List By Work Type",
-    "description": "Mengambil daftar persyaratan foto dokumentasi untuk jenis pekerjaan tertentu.",
-    "operationId": "list_by_work_type_api_v1_image_requirements_by_work_type__work_type_id__get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "work_type_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Work Type Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "array",
-         "items": {
-          "$ref": "#/components/schemas/ImageRequirementOut"
-         },
-         "title": "Response List By Work Type Api V1 Image Requirements By Work Type  Work Type Id  Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/image-requirements/{requirement_id}": {
-   "get": {
-    "tags": [
-     "Image Requirements"
-    ],
-    "summary": "Get By Id",
-    "description": "Mengambil detail persyaratan foto dokumentasi.",
-    "operationId": "get_by_id_api_v1_image_requirements__requirement_id__get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "requirement_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Requirement Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ImageRequirementOut"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "put": {
-    "tags": [
-     "Image Requirements"
-    ],
-    "summary": "Update Requirement",
-    "description": "Memperbarui informasi persyaratan foto.",
-    "operationId": "update_requirement_api_v1_image_requirements__requirement_id__put",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "requirement_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Requirement Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ImageRequirementUpdate"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ImageRequirementOut"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "delete": {
-    "tags": [
-     "Image Requirements"
-    ],
-    "summary": "Delete Requirement",
-    "description": "Menghapus persyaratan foto dokumentasi.",
-    "operationId": "delete_requirement_api_v1_image_requirements__requirement_id__delete",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "requirement_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Requirement Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": {
-          "type": "string"
-         },
-         "title": "Response Delete Requirement Api V1 Image Requirements  Requirement Id  Delete"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/image-requirements": {
-   "post": {
-    "tags": [
-     "Image Requirements"
-    ],
-    "summary": "Create Requirement",
-    "description": "Menambahkan persyaratan foto wajib dokumentasi lapangan.",
-    "operationId": "create_requirement_api_v1_image_requirements_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/ImageRequirementCreate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/ImageRequirementOut"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   }
-  },
   "/api/v1/backup-registry": {
    "get": {
     "tags": [
@@ -8380,6 +9212,736 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/BackupOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/campaigns": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Daftar kampanye keselamatan K3",
+    "operationId": "list_campaigns_api_v1_hse_campaigns_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     },
+     {
+      "name": "is_active",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Is Active"
+      }
+     },
+     {
+      "name": "target_audience",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Target Audience"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/HseCampaignResponse"
+         },
+         "title": "Response List Campaigns Api V1 Hse Campaigns Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Buat kampanye keselamatan K3 baru",
+    "operationId": "create_campaign_api_v1_hse_campaigns_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseCampaignCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/campaigns/active-popup": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Ambil popup materi K3 wajib yang belum dibaca pengguna saat ini",
+    "description": "Dipanggil saat pengguna login atau membuka aplikasi (Web & Mobile).\nJika mengembalikan kampanye, aplikasi menampilkan Modal Pop-up Non-Skippable\ndengan penghitung waktu mundur (cooldown).",
+    "operationId": "get_active_popup_api_v1_hse_campaigns_active_popup_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "type": "object",
+         "title": "Response Get Active Popup Api V1 Hse Campaigns Active Popup Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Detail kampanye K3",
+    "operationId": "get_campaign_api_v1_hse_campaigns__campaign_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "put": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Perbarui kampanye K3",
+    "operationId": "update_campaign_api_v1_hse_campaigns__campaign_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseCampaignUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Hapus kampanye K3 (soft delete)",
+    "operationId": "delete_campaign_api_v1_hse_campaigns__campaign_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "boolean"
+         },
+         "title": "Response Delete Campaign Api V1 Hse Campaigns  Campaign Id  Delete"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
+   "post": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Konfirmasi telah membaca materi K3 (melewati cooldown & scroll)",
+    "operationId": "acknowledge_campaign_api_v1_hse_campaigns__campaign_id__acknowledge_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseAcknowledgeCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Acknowledge Campaign Api V1 Hse Campaigns  Campaign Id  Acknowledge Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}/readers": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Audit jejak pengguna yang telah membaca kampanye K3",
+    "operationId": "get_campaign_readers_api_v1_hse_campaigns__campaign_id__readers_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignAuditStats"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/inspections": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Daftar riwayat inspeksi keselamatan kendaraan",
+    "operationId": "list_inspections_api_v1_hse_inspections_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "period_type",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Period Type"
+      }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "name": "from_date",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From Date"
+      }
+     },
+     {
+      "name": "to_date",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To Date"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleInspectionResponse"
+         },
+         "title": "Response List Inspections Api V1 Hse Inspections Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Kirim formulir inspeksi kendaraan (checklist & foto)",
+    "operationId": "create_inspection_api_v1_hse_inspections_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleInspectionCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/inspections/{inspection_id}": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Detail inspeksi kendaraan",
+    "operationId": "get_inspection_api_v1_hse_inspections__inspection_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "inspection_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Inspection Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/inspections/{inspection_id}/verify": {
+   "patch": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Verifikasi hasil inspeksi kendaraan oleh HSE / Super Admin",
+    "operationId": "verify_inspection_api_v1_hse_inspections__inspection_id__verify_patch",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "inspection_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Inspection Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleInspectionVerify"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
         }
        }
       }
@@ -16618,6 +18180,20 @@
       ],
       "title": "Division Id"
      },
+     "managed_division_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Managed Division Ids"
+     },
+     "managed_divisions": {
+      "items": {
+       "$ref": "#/components/schemas/ManagedDivisionOut"
+      },
+      "type": "array",
+      "title": "Managed Divisions"
+     },
      "photo_file_id": {
       "anyOf": [
        {
@@ -16650,6 +18226,64 @@
     ],
     "title": "AuthUserMeResponseSchema",
     "description": "Skema detail identitas pengguna yang sedang terautentikasi (/me)."
+   },
+   "AvailableMemberOut": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Full Name"
+     },
+     "employee_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee No"
+     },
+     "phone_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Phone Number"
+     },
+     "system_role": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "System Role"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id"
+    ],
+    "title": "AvailableMemberOut"
    },
    "BackupCreate": {
     "properties": {
@@ -16822,6 +18456,27 @@
     ],
     "title": "Body_upload_document_api_v1_files_upload_post"
    },
+   "BomActualIn": {
+    "properties": {
+     "actual_qty": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Actual Qty"
+     }
+    },
+    "type": "object",
+    "required": [
+     "actual_qty"
+    ],
+    "title": "BomActualIn"
+   },
    "BomRow": {
     "properties": {
      "group": {
@@ -16983,12 +18638,14 @@
      "status": {
       "type": "string",
       "enum": [
+       "DRAFT",
+       "ONGOING",
+       "DONE",
+       "CANCELLED",
        "TODO",
        "IN_PROGRESS",
-       "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY",
-       "CANCELLED"
+       "SHIFTED_DAY"
       ],
       "title": "Status"
      },
@@ -17471,6 +19128,259 @@
      "status"
     ],
     "title": "ClientOut"
+   },
+   "ClientSiteCreate": {
+    "properties": {
+     "site_name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Site Name"
+     },
+     "address": {
+      "type": "string",
+      "maxLength": 2000,
+      "minLength": 2,
+      "title": "Address"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 6.0,
+        "minimum": -11.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 141.0,
+        "minimum": 95.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "geofence_radius_meters": {
+      "type": "integer",
+      "maximum": 5000.0,
+      "minimum": 10.0,
+      "title": "Geofence Radius Meters",
+      "default": 100
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_name",
+     "address",
+     "latitude",
+     "longitude"
+    ],
+    "title": "ClientSiteCreate"
+   },
+   "ClientSiteOut": {
+    "properties": {
+     "site_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Site Id"
+     },
+     "client_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Id"
+     },
+     "site_name": {
+      "type": "string",
+      "title": "Site Name"
+     },
+     "address": {
+      "type": "string",
+      "title": "Address"
+     },
+     "latitude": {
+      "type": "string",
+      "title": "Latitude"
+     },
+     "longitude": {
+      "type": "string",
+      "title": "Longitude"
+     },
+     "geofence_radius_meters": {
+      "type": "integer",
+      "title": "Geofence Radius Meters",
+      "default": 100
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     }
+    },
+    "type": "object",
+    "required": [
+     "site_id",
+     "client_id",
+     "site_name",
+     "address",
+     "latitude",
+     "longitude"
+    ],
+    "title": "ClientSiteOut"
+   },
+   "ClientSiteUpdate": {
+    "properties": {
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "address": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000,
+        "minLength": 2
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Address"
+     },
+     "latitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 6.0,
+        "minimum": -11.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latitude"
+     },
+     "longitude": {
+      "anyOf": [
+       {
+        "type": "number",
+        "maximum": 141.0,
+        "minimum": 95.0
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Longitude"
+     },
+     "geofence_radius_meters": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 5000.0,
+        "minimum": 10.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Geofence Radius Meters"
+     },
+     "pic_name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 120
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Name"
+     },
+     "pic_phone": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 30,
+        "minLength": 5,
+        "pattern": "^[0-9+()\\-\\s]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pic Phone"
+     }
+    },
+    "type": "object",
+    "title": "ClientSiteUpdate"
    },
    "ClientUpdate": {
     "properties": {
@@ -17970,6 +19880,11 @@
       "title": "Attendance Radius M",
       "default": 150
      },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
      "assets": {
       "items": {
        "$ref": "#/components/schemas/DailyBulkAsset"
@@ -18343,6 +20258,11 @@
       "title": "Clock Out Time",
       "default": "16:00:00"
      },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
+     },
      "backdate_reason": {
       "anyOf": [
        {
@@ -18517,9 +20437,11 @@
       "type": "string",
       "enum": [
        "DRAFT",
+       "ONGOING",
+       "DONE",
+       "CANCELLED",
        "SUBMITTED",
        "APPROVED",
-       "ONGOING",
        "COMPLETED"
       ],
       "title": "Status"
@@ -18532,6 +20454,11 @@
       ],
       "title": "Kind",
       "default": "WORK"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "created_by_id": {
       "type": "string",
@@ -18840,9 +20767,11 @@
       "type": "string",
       "enum": [
        "DRAFT",
+       "ONGOING",
+       "DONE",
+       "CANCELLED",
        "SUBMITTED",
        "APPROVED",
-       "ONGOING",
        "COMPLETED"
       ],
       "title": "Status"
@@ -18855,6 +20784,11 @@
       ],
       "title": "Kind",
       "default": "WORK"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "created_by_id": {
       "type": "string",
@@ -19061,6 +20995,17 @@
        }
       ],
       "title": "Clock Out Time"
+     },
+     "is_out_of_town": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Out Of Town"
      }
     },
     "type": "object",
@@ -20530,6 +22475,218 @@
     ],
     "title": "EnrollResponse"
    },
+   "ExecutionBomOut": {
+    "properties": {
+     "bom_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Bom Id"
+     },
+     "item_name": {
+      "type": "string",
+      "title": "Item Name"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit",
+      "default": "pcs"
+     },
+     "estimated_qty": {
+      "type": "number",
+      "title": "Estimated Qty",
+      "default": 0.0
+     },
+     "actual_qty": {
+      "type": "number",
+      "title": "Actual Qty",
+      "default": 0.0
+     }
+    },
+    "type": "object",
+    "required": [
+     "bom_id",
+     "item_name"
+    ],
+    "title": "ExecutionBomOut"
+   },
+   "ExecutionItemOut": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Item Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Id"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
+     },
+     "target_qty": {
+      "type": "number",
+      "title": "Target Qty",
+      "default": 1.0
+     },
+     "completed_qty": {
+      "type": "number",
+      "title": "Completed Qty",
+      "default": 0.0
+     },
+     "photo_slots_snapshot": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photo Slots Snapshot"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "PENDING"
+     },
+     "location_detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Detail"
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_id",
+     "work_order_id",
+     "title"
+    ],
+    "title": "ExecutionItemOut"
+   },
+   "ExecutionSurveyPointOut": {
+    "properties": {
+     "point_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Point Id"
+     },
+     "point_name": {
+      "type": "string",
+      "title": "Point Name"
+     },
+     "location_detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Detail"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "recommended_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recommended Work Type Id"
+     },
+     "recommended_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recommended Bom"
+     },
+     "remarks": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remarks"
+     },
+     "photos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photos"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "TODO"
+     }
+    },
+    "type": "object",
+    "required": [
+     "point_id",
+     "point_name"
+    ],
+    "title": "ExecutionSurveyPointOut"
+   },
    "ExpiringDocumentList": {
     "properties": {
      "items": {
@@ -20935,69 +23092,90 @@
     "title": "HomeSummary",
     "description": "Semua angka 0 bila peran pengguna tidak berwenang meninjau; tidak pernah null."
    },
-   "ImageRequirementCreate": {
+   "HseAcknowledgeCreate": {
     "properties": {
-     "work_type_id": {
+     "platform": {
       "type": "string",
-      "format": "uuid",
-      "title": "Work Type Id"
+      "title": "Platform",
+      "description": "Platform: web atau mobile",
+      "default": "web"
      },
-     "name": {
-      "type": "string",
-      "maxLength": 150,
-      "minLength": 2,
-      "title": "Name"
-     },
-     "description": {
+     "device_info": {
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 2000
+        "maxLength": 255
        },
        {
         "type": "null"
        }
       ],
-      "title": "Description"
+      "title": "Device Info",
+      "description": "Informasi perangkat klien"
      },
-     "path_image": {
-      "type": "string",
-      "maxLength": 500,
-      "title": "Path Image",
-      "description": "URL contoh foto/panduan"
-     },
-     "is_mandatory": {
+     "scroll_completed": {
       "type": "boolean",
-      "title": "Is Mandatory",
+      "title": "Scroll Completed",
+      "description": "Apakah user telah melakukan scroll hingga akhir materi",
       "default": true
      },
-     "sort_order": {
+     "read_duration_seconds": {
       "type": "integer",
-      "title": "Sort Order",
-      "default": 1
+      "minimum": 0.0,
+      "title": "Read Duration Seconds",
+      "description": "Total durasi waktu membaca dalam detik",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "title": "HseAcknowledgeCreate"
+   },
+   "HseCampaignAuditStats": {
+    "properties": {
+     "campaign_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Campaign Id"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "target_audience": {
+      "type": "string",
+      "title": "Target Audience"
+     },
+     "total_acknowledged": {
+      "type": "integer",
+      "title": "Total Acknowledged"
+     },
+     "readers": {
+      "items": {
+       "$ref": "#/components/schemas/HseReaderItem"
+      },
+      "type": "array",
+      "title": "Readers"
      }
     },
     "type": "object",
     "required": [
-     "work_type_id",
-     "name",
-     "path_image"
+     "campaign_id",
+     "title",
+     "target_audience",
+     "total_acknowledged",
+     "readers"
     ],
-    "title": "ImageRequirementCreate"
+    "title": "HseCampaignAuditStats"
    },
-   "ImageRequirementOut": {
+   "HseCampaignCreate": {
     "properties": {
-     "image_requirement_id": {
+     "title": {
       "type": "string",
-      "format": "uuid",
-      "title": "Image Requirement Id"
+      "maxLength": 255,
+      "title": "Title",
+      "description": "Judul kampanye atau briefing K3"
      },
-     "work_type_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Work Type Id"
-     },
-     "work_type_name": {
+     "summary": {
       "anyOf": [
        {
         "type": "string"
@@ -21006,91 +23184,305 @@
         "type": "null"
        }
       ],
-      "title": "Work Type Name"
+      "title": "Summary",
+      "description": "Ringkasan singkat kampanye"
      },
-     "name": {
+     "content_html": {
       "type": "string",
-      "title": "Name"
+      "title": "Content Html",
+      "description": "Isi materi keselamatan (HTML/Markdown)"
      },
-     "description": {
+     "media_path": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 255
        },
        {
         "type": "null"
        }
       ],
-      "title": "Description"
+      "title": "Media Path",
+      "description": "Path foto banner atau infografis K3"
      },
-     "path_image": {
+     "target_audience": {
       "type": "string",
-      "title": "Path Image"
+      "title": "Target Audience",
+      "description": "Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL",
+      "default": "ALL"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target User Ids",
+      "description": "Daftar user_id jika target_audience=INDIVIDUAL"
      },
      "is_mandatory": {
       "type": "boolean",
-      "title": "Is Mandatory"
+      "title": "Is Mandatory",
+      "description": "Apakah wajib dibaca saat popup muncul",
+      "default": true
      },
-     "sort_order": {
+     "cooldown_seconds": {
       "type": "integer",
-      "title": "Sort Order"
+      "maximum": 300.0,
+      "minimum": 0.0,
+      "title": "Cooldown Seconds",
+      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "default": 5
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date",
+      "description": "Tanggal awal penayangan kampanye"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "End Date",
+      "description": "Tanggal akhir penayangan kampanye"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "description": "Status keaktifan kampanye",
+      "default": true
+     }
+    },
+    "type": "object",
+    "required": [
+     "title",
+     "content_html",
+     "start_date",
+     "end_date"
+    ],
+    "title": "HseCampaignCreate"
+   },
+   "HseCampaignResponse": {
+    "properties": {
+     "title": {
+      "type": "string",
+      "maxLength": 255,
+      "title": "Title",
+      "description": "Judul kampanye atau briefing K3"
+     },
+     "summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Summary",
+      "description": "Ringkasan singkat kampanye"
+     },
+     "content_html": {
+      "type": "string",
+      "title": "Content Html",
+      "description": "Isi materi keselamatan (HTML/Markdown)"
+     },
+     "media_path": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 255
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Path",
+      "description": "Path foto banner atau infografis K3"
+     },
+     "target_audience": {
+      "type": "string",
+      "title": "Target Audience",
+      "description": "Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL",
+      "default": "ALL"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target User Ids",
+      "description": "Daftar user_id jika target_audience=INDIVIDUAL"
+     },
+     "is_mandatory": {
+      "type": "boolean",
+      "title": "Is Mandatory",
+      "description": "Apakah wajib dibaca saat popup muncul",
+      "default": true
+     },
+     "cooldown_seconds": {
+      "type": "integer",
+      "maximum": 300.0,
+      "minimum": 0.0,
+      "title": "Cooldown Seconds",
+      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "default": 5
+     },
+     "start_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Start Date",
+      "description": "Tanggal awal penayangan kampanye"
+     },
+     "end_date": {
+      "type": "string",
+      "format": "date",
+      "title": "End Date",
+      "description": "Tanggal akhir penayangan kampanye"
+     },
+     "is_active": {
+      "type": "boolean",
+      "title": "Is Active",
+      "description": "Status keaktifan kampanye",
+      "default": true
+     },
+     "campaign_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Campaign Id"
+     },
+     "created_by_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Created By Id"
+     },
+     "creator_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Creator Name"
+     },
+     "total_readers": {
+      "type": "integer",
+      "title": "Total Readers",
+      "default": 0
      },
      "create_at": {
       "type": "string",
       "format": "date-time",
       "title": "Create At"
+     },
+     "update_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Update At"
      }
     },
     "type": "object",
     "required": [
-     "image_requirement_id",
-     "work_type_id",
-     "name",
-     "path_image",
-     "is_mandatory",
-     "sort_order",
-     "create_at"
+     "title",
+     "content_html",
+     "start_date",
+     "end_date",
+     "campaign_id",
+     "created_by_id",
+     "create_at",
+     "update_at"
     ],
-    "title": "ImageRequirementOut"
+    "title": "HseCampaignResponse"
    },
-   "ImageRequirementUpdate": {
+   "HseCampaignUpdate": {
     "properties": {
-     "name": {
+     "title": {
       "anyOf": [
        {
         "type": "string",
-        "maxLength": 150,
-        "minLength": 2
+        "maxLength": 255
        },
        {
         "type": "null"
        }
       ],
-      "title": "Name"
+      "title": "Title"
      },
-     "description": {
+     "summary": {
       "anyOf": [
        {
-        "type": "string",
-        "maxLength": 2000
+        "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Description"
+      "title": "Summary"
      },
-     "path_image": {
+     "content_html": {
       "anyOf": [
        {
-        "type": "string",
-        "maxLength": 500
+        "type": "string"
        },
        {
         "type": "null"
        }
       ],
-      "title": "Path Image"
+      "title": "Content Html"
+     },
+     "media_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Path"
+     },
+     "target_audience": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Audience"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target User Ids"
      },
      "is_mandatory": {
       "anyOf": [
@@ -21103,20 +23495,147 @@
       ],
       "title": "Is Mandatory"
      },
-     "sort_order": {
+     "cooldown_seconds": {
       "anyOf": [
        {
-        "type": "integer"
+        "type": "integer",
+        "maximum": 300.0,
+        "minimum": 0.0
        },
        {
         "type": "null"
        }
       ],
-      "title": "Sort Order"
+      "title": "Cooldown Seconds"
+     },
+     "start_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Date"
+     },
+     "end_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Date"
+     },
+     "is_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Active"
      }
     },
     "type": "object",
-    "title": "ImageRequirementUpdate"
+    "title": "HseCampaignUpdate"
+   },
+   "HseReaderItem": {
+    "properties": {
+     "acknowledgment_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Acknowledgment Id"
+     },
+     "campaign_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Campaign Id"
+     },
+     "user_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "User Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "email": {
+      "type": "string",
+      "title": "Email"
+     },
+     "employee_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee No"
+     },
+     "platform": {
+      "type": "string",
+      "title": "Platform"
+     },
+     "device_info": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Device Info"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "scroll_completed": {
+      "type": "boolean",
+      "title": "Scroll Completed"
+     },
+     "read_duration_seconds": {
+      "type": "integer",
+      "title": "Read Duration Seconds"
+     },
+     "acknowledged_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Acknowledged At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "acknowledgment_id",
+     "campaign_id",
+     "user_id",
+     "full_name",
+     "email",
+     "platform",
+     "scroll_completed",
+     "read_duration_seconds",
+     "acknowledged_at"
+    ],
+    "title": "HseReaderItem"
    },
    "InspectionCreate": {
     "properties": {
@@ -21243,6 +23762,45 @@
     ],
     "title": "ItemPhoto",
     "description": "Foto realisasi: berkas /files + slot syarat foto (image_requirement) yang dipenuhinya."
+   },
+   "ItemProgressIn": {
+    "properties": {
+     "completed_qty": {
+      "anyOf": [
+       {
+        "type": "number",
+        "minimum": 0.0
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "title": "Completed Qty",
+      "default": "1.0"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "DONE"
+     },
+     "photo_slots_snapshot": {
+      "anyOf": [
+       {
+        "items": {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Photo Slots Snapshot"
+     }
+    },
+    "type": "object",
+    "title": "ItemProgressIn"
    },
    "JobPositionCreate": {
     "properties": {
@@ -22528,6 +25086,35 @@
     "title": "LoanReturnRequest",
     "description": "Pengajuan pengembalian oleh pemegang aset: kondisi, catatan, dan foto kondisi."
    },
+   "ManagedDivisionOut": {
+    "properties": {
+     "division_id": {
+      "type": "string",
+      "title": "Division Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "is_pm": {
+      "type": "boolean",
+      "title": "Is Pm",
+      "default": false
+     },
+     "is_om": {
+      "type": "boolean",
+      "title": "Is Om",
+      "default": false
+     }
+    },
+    "type": "object",
+    "required": [
+     "division_id",
+     "name"
+    ],
+    "title": "ManagedDivisionOut",
+    "description": "Ringkasan divisi yang dikelola atau dinaungi pengguna."
+   },
    "MealAllowanceRow": {
     "properties": {
      "employee_id": {
@@ -23247,6 +25834,207 @@
     ],
     "title": "MissingCheckInResponse",
     "description": "Schema for missing check-in alerts (moved from attendance cron endpoint)."
+   },
+   "MyExecutionTodayOut": {
+    "properties": {
+     "has_assignment": {
+      "type": "boolean",
+      "title": "Has Assignment",
+      "default": false
+     },
+     "daily_plan_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Daily Plan Id"
+     },
+     "work_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Date"
+     },
+     "team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "is_leader": {
+      "type": "boolean",
+      "title": "Is Leader",
+      "default": false
+     },
+     "work_order_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Order Id"
+     },
+     "wo_number": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Wo Number"
+     },
+     "wo_title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Wo Title"
+     },
+     "work_order_status": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Order Status"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Id"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Address"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "geofence_radius_meters": {
+      "type": "integer",
+      "title": "Geofence Radius Meters",
+      "default": 100
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/ExecutionItemOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "bom": {
+      "items": {
+       "$ref": "#/components/schemas/ExecutionBomOut"
+      },
+      "type": "array",
+      "title": "Bom"
+     },
+     "survey_points": {
+      "items": {
+       "$ref": "#/components/schemas/ExecutionSurveyPointOut"
+      },
+      "type": "array",
+      "title": "Survey Points"
+     }
+    },
+    "type": "object",
+    "title": "MyExecutionTodayOut"
    },
    "MyPhotoIn": {
     "properties": {
@@ -25389,12 +28177,14 @@
      "status": {
       "type": "string",
       "enum": [
+       "DRAFT",
+       "ONGOING",
+       "DONE",
+       "CANCELLED",
        "TODO",
        "IN_PROGRESS",
-       "DONE",
        "PENDING_ROLLOVER",
-       "SHIFTED_DAY",
-       "CANCELLED"
+       "SHIFTED_DAY"
       ],
       "title": "Status"
      },
@@ -27266,6 +30056,255 @@
     ],
     "title": "SurveyOut"
    },
+   "SurveyPointIn": {
+    "properties": {
+     "point_name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Point Name"
+     },
+     "location_detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Detail"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "recommended_work_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Recommended Work Type Id"
+     },
+     "recommended_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recommended Bom"
+     },
+     "remarks": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remarks"
+     },
+     "photos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photos"
+     }
+    },
+    "type": "object",
+    "required": [
+     "point_name",
+     "recommended_work_type_id"
+    ],
+    "title": "SurveyPointIn"
+   },
+   "SurveyPointOut": {
+    "properties": {
+     "point_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Point Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "survey_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Id"
+     },
+     "point_name": {
+      "type": "string",
+      "title": "Point Name"
+     },
+     "location_detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Detail"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "recommended_work_type_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recommended Work Type Id"
+     },
+     "recommended_work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Recommended Work Type Name"
+     },
+     "recommended_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Recommended Bom"
+     },
+     "remarks": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Remarks"
+     },
+     "photos": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photos"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "TODO"
+     }
+    },
+    "type": "object",
+    "required": [
+     "point_id",
+     "work_order_id",
+     "point_name"
+    ],
+    "title": "SurveyPointOut"
+   },
+   "SurveySubmitIn": {
+    "properties": {
+     "narrative": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Narrative"
+     },
+     "format": {
+      "type": "string",
+      "title": "Format",
+      "default": "CCTV"
+     },
+     "points": {
+      "items": {
+       "$ref": "#/components/schemas/SurveyPointIn"
+      },
+      "type": "array",
+      "title": "Points"
+     },
+     "general_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "General Bom"
+     }
+    },
+    "type": "object",
+    "title": "SurveySubmitIn"
+   },
    "SyncBomFromWorkTypesIn": {
     "properties": {
      "overwrite_existing": {
@@ -27317,6 +30356,86 @@
      "results"
     ],
     "title": "SyncResponse"
+   },
+   "TeamAvailabilityItem": {
+    "properties": {
+     "team_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Team Id"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "leader_employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Leader Employee Id"
+     },
+     "leader_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Name"
+     },
+     "member_count": {
+      "type": "integer",
+      "title": "Member Count",
+      "default": 0
+     },
+     "is_available": {
+      "type": "boolean",
+      "title": "Is Available",
+      "default": true
+     },
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "default": "AVAILABLE"
+     },
+     "active_items_count": {
+      "type": "integer",
+      "title": "Active Items Count",
+      "default": 0
+     },
+     "active_tasks": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Active Tasks"
+     }
+    },
+    "type": "object",
+    "required": [
+     "team_id",
+     "name",
+     "division_id",
+     "leader_employee_id"
+    ],
+    "title": "TeamAvailabilityItem"
    },
    "TeamCreate": {
     "properties": {
@@ -28324,6 +31443,264 @@
     ],
     "title": "VehicleFileOut"
    },
+   "VehicleInspectionCreate": {
+    "properties": {
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "inspector_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Id"
+     },
+     "period_type": {
+      "type": "string",
+      "title": "Period Type",
+      "description": "DAILY, WEEKLY, MONTHLY",
+      "default": "DAILY"
+     },
+     "inspection_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspection Date"
+     },
+     "odometer_km": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": 0.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Odometer Km"
+     },
+     "checklist_json": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Checklist Json",
+      "description": "Status checklist per item (rem, ban, oli, lampu, dll)"
+     },
+     "photos_json": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Photos Json",
+      "description": "Array URL/Path foto bukti inspeksi kendaraan"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_id"
+    ],
+    "title": "VehicleInspectionCreate"
+   },
+   "VehicleInspectionResponse": {
+    "properties": {
+     "inspection_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Inspection Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "vehicle_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Name"
+     },
+     "number_plate": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number Plate"
+     },
+     "inspector_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Inspector Id"
+     },
+     "inspector_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Name"
+     },
+     "period_type": {
+      "type": "string",
+      "title": "Period Type"
+     },
+     "inspection_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Inspection Date"
+     },
+     "odometer_km": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Odometer Km"
+     },
+     "checklist_json": {
+      "additionalProperties": true,
+      "type": "object",
+      "title": "Checklist Json"
+     },
+     "photos_json": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Photos Json"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "verified_by_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified By Id"
+     },
+     "verifier_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verifier Name"
+     },
+     "verified_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified At"
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "inspection_id",
+     "vehicle_id",
+     "inspector_id",
+     "period_type",
+     "inspection_date",
+     "checklist_json",
+     "photos_json",
+     "status",
+     "create_at"
+    ],
+    "title": "VehicleInspectionResponse"
+   },
+   "VehicleInspectionVerify": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status",
+      "description": "VERIFIED atau REJECTED"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status"
+    ],
+    "title": "VehicleInspectionVerify"
+   },
    "VehicleOut": {
     "properties": {
      "assignment_id": {
@@ -28620,9 +31997,11 @@
         "type": "string",
         "enum": [
          "DRAFT",
+         "ONGOING",
+         "DONE",
+         "CANCELLED",
          "SUBMITTED",
          "APPROVED",
-         "ONGOING",
          "COMPLETED"
         ]
        },
@@ -28646,6 +32025,11 @@
        }
       ],
       "title": "Kind"
+     },
+     "is_out_of_town": {
+      "type": "boolean",
+      "title": "Is Out Of Town",
+      "default": false
      },
      "item_count": {
       "type": "integer",
@@ -30333,6 +33717,831 @@
     "title": "WorkCompletionVerifyOut",
     "description": "Verifikasi publik dokumen resmi (QR): hanya data yang tercetak di dokumen."
    },
+   "WorkOrderAssignSurvey": {
+    "properties": {
+     "lead_team_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Lead Team Id"
+     },
+     "survey_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Date"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "lead_team_id"
+    ],
+    "title": "WorkOrderAssignSurvey"
+   },
+   "WorkOrderBomOut": {
+    "properties": {
+     "bom_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Bom Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "work_order_item_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Order Item Id"
+     },
+     "item_name": {
+      "type": "string",
+      "title": "Item Name"
+     },
+     "unit": {
+      "type": "string",
+      "title": "Unit",
+      "default": "pcs"
+     },
+     "estimated_qty": {
+      "type": "string",
+      "title": "Estimated Qty",
+      "default": "0.0"
+     },
+     "actual_qty": {
+      "type": "string",
+      "title": "Actual Qty",
+      "default": "0.0"
+     }
+    },
+    "type": "object",
+    "required": [
+     "bom_id",
+     "work_order_id",
+     "item_name"
+    ],
+    "title": "WorkOrderBomOut"
+   },
+   "WorkOrderCreate": {
+    "properties": {
+     "client_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Id"
+     },
+     "client_site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Site Id"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "pm_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Pm Id"
+     },
+     "title": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 3,
+      "title": "Title"
+     },
+     "initial_complaint": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 2000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Complaint"
+     },
+     "lead_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lead Team Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "client_id",
+     "division_id",
+     "pm_id",
+     "title"
+    ],
+    "title": "WorkOrderCreate"
+   },
+   "WorkOrderDetailOut": {
+    "properties": {
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "wo_number": {
+      "type": "string",
+      "title": "Wo Number"
+     },
+     "client_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Id"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "client_site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Site Id"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Address"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "pm_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Pm Id"
+     },
+     "pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Name"
+     },
+     "lead_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lead Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "initial_complaint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Complaint"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "WAITING_SURVEY",
+       "SURVEY_IN_PROGRESS",
+       "SURVEY_SUBMITTED",
+       "READY_TO_EXECUTE",
+       "IN_PROGRESS",
+       "COMPLETED",
+       "BAST_SIGNED",
+       "CANCELLED"
+      ],
+      "title": "Status"
+     },
+     "survey_assigned_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Assigned At"
+     },
+     "survey_submitted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Submitted At"
+     },
+     "survey_approved_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Approved At"
+     },
+     "bast_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast Signed At"
+     },
+     "bast_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast Signer Name"
+     },
+     "total_items": {
+      "type": "integer",
+      "title": "Total Items",
+      "default": 0
+     },
+     "completed_items": {
+      "type": "integer",
+      "title": "Completed Items",
+      "default": 0
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     },
+     "survey_points": {
+      "items": {
+       "$ref": "#/components/schemas/SurveyPointOut"
+      },
+      "type": "array",
+      "title": "Survey Points"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/WorkOrderItemOut"
+      },
+      "type": "array",
+      "title": "Items"
+     },
+     "bom": {
+      "items": {
+       "$ref": "#/components/schemas/WorkOrderBomOut"
+      },
+      "type": "array",
+      "title": "Bom"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_order_id",
+     "wo_number",
+     "client_id",
+     "division_id",
+     "pm_id",
+     "title",
+     "status",
+     "created_at"
+    ],
+    "title": "WorkOrderDetailOut"
+   },
+   "WorkOrderItemOut": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Item Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "survey_point_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Point Id"
+     },
+     "work_type_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Type Id"
+     },
+     "work_type_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Work Type Name"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "location_detail": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Detail"
+     },
+     "target_qty": {
+      "type": "string",
+      "title": "Target Qty",
+      "default": "1.0"
+     },
+     "completed_qty": {
+      "type": "string",
+      "title": "Completed Qty",
+      "default": "0.0"
+     },
+     "photo_slots_snapshot": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photo Slots Snapshot"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "PENDING",
+       "IN_PROGRESS",
+       "DONE"
+      ],
+      "title": "Status",
+      "default": "PENDING"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_id",
+     "work_order_id",
+     "work_type_id",
+     "title",
+     "created_at"
+    ],
+    "title": "WorkOrderItemOut"
+   },
+   "WorkOrderOut": {
+    "properties": {
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "wo_number": {
+      "type": "string",
+      "title": "Wo Number"
+     },
+     "client_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Client Id"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "client_site_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Site Id"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Address"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     },
+     "pm_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Pm Id"
+     },
+     "pm_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pm Name"
+     },
+     "lead_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Lead Team Id"
+     },
+     "team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Team Name"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "initial_complaint": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Initial Complaint"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "WAITING_SURVEY",
+       "SURVEY_IN_PROGRESS",
+       "SURVEY_SUBMITTED",
+       "READY_TO_EXECUTE",
+       "IN_PROGRESS",
+       "COMPLETED",
+       "BAST_SIGNED",
+       "CANCELLED"
+      ],
+      "title": "Status"
+     },
+     "survey_assigned_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Assigned At"
+     },
+     "survey_submitted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Submitted At"
+     },
+     "survey_approved_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Approved At"
+     },
+     "bast_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast Signed At"
+     },
+     "bast_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast Signer Name"
+     },
+     "total_items": {
+      "type": "integer",
+      "title": "Total Items",
+      "default": 0
+     },
+     "completed_items": {
+      "type": "integer",
+      "title": "Completed Items",
+      "default": 0
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "work_order_id",
+     "wo_number",
+     "client_id",
+     "division_id",
+     "pm_id",
+     "title",
+     "status",
+     "created_at"
+    ],
+    "title": "WorkOrderOut"
+   },
+   "WorkOrderSignBast": {
+    "properties": {
+     "signer_name": {
+      "type": "string",
+      "maxLength": 120,
+      "minLength": 2,
+      "title": "Signer Name"
+     },
+     "signature_data_uri": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Signature Data Uri"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "signer_name"
+    ],
+    "title": "WorkOrderSignBast"
+   },
    "WorkTypeIn": {
     "properties": {
      "name": {
@@ -30372,6 +34581,22 @@
       "type": "array",
       "title": "Photos",
       "default": []
+     },
+     "photo_requirements": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photo Requirements"
+     },
+     "default_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Default Bom"
      },
      "kind": {
       "type": "string",
@@ -30563,6 +34788,22 @@
       "type": "array",
       "title": "Default Materials",
       "default": []
+     },
+     "photo_requirements": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Photo Requirements"
+     },
+     "default_bom": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "type": "array",
+      "title": "Default Bom"
      }
     },
     "type": "object",

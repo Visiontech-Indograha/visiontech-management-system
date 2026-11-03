@@ -51,26 +51,32 @@ export function DailyPlansTemplate(props: {
         )
       }
     >
-      <DailyWeekToolbar start={start} end={end} options={options} divisionId={divisionId}
-                        onWeek={props.onWeek} onDivision={props.onDivision} />
-      {canPlan && options && (
-        <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-panel border border-line bg-surface p-3 shadow-card">
+        <div className="flex flex-wrap items-end gap-3">
+          <DailyWeekToolbar
+            start={start}
+            end={end}
+            options={options}
+            divisionId={divisionId}
+            onWeek={props.onWeek}
+            onDivision={props.onDivision}
+          />
+          {canPlan && options && (
+            <TeamWeekButton
+              teams={options.teams.filter((t) => !divisionId || t.division_id === divisionId)}
+              start={start}
+            />
+          )}
+        </div>
+        {canPlan && options && (
           <WeekRecapButtons
             divisionId={divisionId || (options.divisions.length === 1 ? options.divisions[0]!.division_id : "")}
             start={start}
             end={end}
             onOpenPresentation={() => setPresentationOpen(true)}
           />
-        </div>
-      )}
-      {canPlan && options && (
-        <div className="mb-4">
-          <TeamWeekButton
-            teams={options.teams.filter((t) => !divisionId || t.division_id === divisionId)}
-            start={start}
-          />
-        </div>
-      )}
+        )}
+      </div>
 
       <DailyWeekMatrix
         divisionId={divisionId}

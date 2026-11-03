@@ -6,6 +6,7 @@ punya proyek tidak bisa dihapus (nonaktifkan lewat `status`).
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +14,7 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.clients.repositories.client_repository import ClientRepository
-from app.modules.clients.schemas.client_schema import ClientCreate, ClientUpdate
+from app.modules.clients.schemas.client_schema import ClientCreate, ClientSiteCreate, ClientSiteUpdate, ClientUpdate
 from app.shared.access.access_service import is_admin
 
 CODE_TAKEN = "Kode klien sudah dipakai."
@@ -78,3 +79,35 @@ class ClientService:
             raise AppError("CLIENT_IN_USE", f"Klien masih punya {row.project_count} proyek. Nonaktifkan saja.",
                            status=409)
         await self.repo.archive(client_id)
+
+    # ── Client Sites ────────────────────────────────────────────────────────
+    async def list_sites(self, client_id: UUID) -> Sequence[Any]:
+        await self.get(client_id)
+        return await self.repo.list_sites(client_id)
+
+    async def get_site(self, site_id: UUID) -> Any:
+        site = await self.repo.get_site(site_id)
+        if site is None:
+            raise NotFoundError("Cabang / Lokasi Klien (Site)")
+        return site
+
+    async def create_site(self, client_id: UUID, data: ClientSiteCreate, user: CurrentUser) -> Any:
+        await self._check_manage(client_id, user)
+        return await self.repo.create_site(client_id, data.model_dump())
+
+    async def update_site(self, client_id: UUID, site_id: UUID, data: ClientSiteUpdate, user: CurrentUser) -> Any:
+        await self._check_manage(client_id, user)
+        await self.get_site(site_id)
+        fields = data.model_dump(exclude_unset=True)
+        return await self.repo.update_site(site_id, fields)
+
+    async def delete_site(self, client_id: UUID, site_id: UUID, user: CurrentUser) -> None:
+        await self._check_manage(client_id, user)
+        await self.get_site(site_id)
+        await self.repo.delete_site(site_id)
+
+    async def get_with_sites(self, client_id: UUID) -> dict[str, Any]:
+        client = await self.get(client_id)
+        sites = await self.repo.list_sites(client_id)
+        return {**dict(client._mapping), "sites": [dict(s._mapping) for s in sites]}
+

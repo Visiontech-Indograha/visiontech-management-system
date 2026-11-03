@@ -504,6 +504,67 @@ class VmsApi {
     );
   }
 
+  // --- Work Orders (Revamp V2) --------------------------------------------
+  /// Eksekusi hari ini untuk mobile: rencana hari ini + lokasi client_sites + item tugas terstruktur
+  Future<Map<String, dynamic>> myExecutionToday() async =>
+      _map((await _dio.get('$_p/daily-plans/my-execution-today')).data);
+
+  /// Submit survei Work Order dari mobile (status WAITING_SURVEY/SURVEY_IN_PROGRESS -> SURVEY_SUBMITTED)
+  Future<Map<String, dynamic>> submitWorkOrderSurvey(
+    String workOrderId,
+    Map<String, dynamic> payload,
+  ) async => _map(
+    (await _dio.post(
+      '$_p/work-orders/$workOrderId/submit-survey',
+      data: payload,
+    )).data,
+  );
+
+  /// Update progres item Work Order (target_qty vs completed_qty + slot foto)
+  Future<Map<String, dynamic>> updateWorkOrderItemProgress(
+    String itemId, {
+    required double completedQty,
+    String? status,
+    List<Map<String, dynamic>>? photoSlotsSnapshot,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/work-orders/items/$itemId/progress',
+      data: {
+        'completed_qty': completedQty,
+        'status': ?status,
+        'photo_slots_snapshot': ?photoSlotsSnapshot,
+      },
+    )).data,
+  );
+
+  /// Update realisasi aktual material BOM Work Order
+  Future<Map<String, dynamic>> updateWorkOrderBomActual(
+    String bomId,
+    double actualQty,
+  ) async => _map(
+    (await _dio.post(
+      '$_p/work-orders/bom/$bomId/actual',
+      data: {'actual_qty': actualQty},
+    )).data,
+  );
+
+  /// Tanda tangan BAST Work Order dari mobile
+  Future<Map<String, dynamic>> signWorkOrderBast(
+    String workOrderId, {
+    required String signerName,
+    String? signatureDataUri,
+    String? notes,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/work-orders/$workOrderId/sign-bast',
+      data: {
+        'signer_name': signerName,
+        'signature_data_uri': ?signatureDataUri,
+        'notes': ?notes,
+      },
+    )).data,
+  );
+
   // --- Lembur -------------------------------------------------------------
   Future<List<Map<String, dynamic>>> myOvertime() async =>
       _list((await _dio.get('$_p/overtime')).data);

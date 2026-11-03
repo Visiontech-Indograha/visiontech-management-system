@@ -31,7 +31,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                 <div className="flex items-center gap-3">
                   <UserAvatar name={a.employee_name} fileId={a.employee_photo_file_id} size="sm" />
                   <div>
-                    <TextBlock className="font-medium">{a.employee_name ?? "-"}</TextBlock>
+                    <TextBlock className="font-semibold text-ink">{a.employee_name ?? "-"}</TextBlock>
                     <TextBlock className="text-sm text-mist">
                       {formatDate(a.work_date)} · {a.site_label}
                     </TextBlock>
@@ -56,7 +56,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                 </div>
                 <div>
                   <TextBlock as="dt" className="inline text-mist">Uang Makan: </TextBlock>
-                  <TextBlock as="dd" className="inline font-medium text-emerald-400">
+                  <TextBlock as="dd" className="inline font-semibold text-success">
                     {a.meal_allowance_amount != null
                       ? `Rp ${Math.round(a.meal_allowance_amount).toLocaleString("id-ID")}`
                       : "-"}

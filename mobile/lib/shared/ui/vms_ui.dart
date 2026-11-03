@@ -799,3 +799,42 @@ Future<bool> confirmAction(
   );
   return ok == true;
 }
+
+
+/// Deteksi layar ponsel sempit (< 360 dp) agar tata letak kartu otomatis menyederhanakan jarak.
+bool isCompactPhone(BuildContext context) => MediaQuery.sizeOf(context).width < 360;
+
+/// Deteksi layar tablet / ponsel lipat terbuka (≥ 600 dp) untuk tata letak 2 kolom.
+bool isTablet(BuildContext context) => MediaQuery.sizeOf(context).width >= 600;
+
+/// Membuka modal bottom sheet dengan ruang lega, adaptif terhadap keyboard,
+/// dan mendukung pengguliran konten panjang hingga 90% tinggi layar.
+Future<T?> showVmsModalBottomSheet<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool isDismissible = true,
+  bool enableDrag = true,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    isDismissible: isDismissible,
+    enableDrag: enableDrag,
+    builder: (ctx) {
+      final mq = MediaQuery.of(ctx);
+      final maxHeight = mq.size.height * 0.90;
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: maxHeight,
+          maxWidth: 640,
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+          child: builder(ctx),
+        ),
+      );
+    },
+  );
+}
+

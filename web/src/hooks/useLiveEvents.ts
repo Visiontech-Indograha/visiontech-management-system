@@ -90,6 +90,9 @@ function handle(qc: QueryClient, ev: LiveEvent) {
   } else if (ev.topic === "client" || ev.topic === "project") {
     void qc.invalidateQueries({ queryKey: ["clients"] });
     void qc.invalidateQueries({ queryKey: ["projects"] });
+  } else if (ev.topic === "work-order" || ev.topic === "work-orders") {
+    void qc.invalidateQueries({ queryKey: ["work-orders"] });
+    void qc.invalidateQueries({ queryKey: ["work_orders"] });
   } else if (ev.topic === "leave" || ev.topic === "leaves") {
     void qc.invalidateQueries({ queryKey: ["leaves"] });
     void qc.invalidateQueries({ queryKey: ["leave-balance"] });

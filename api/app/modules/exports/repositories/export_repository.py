@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.attendance_sql import EFFECTIVE_CITY_ZONE_A, EFFECTIVE_MEAL_AMOUNT_A
 
 _EXPORT_COLS = """
     x.export_id, x.source_type, x.completion_id, x.daily_plan_id, x.period_start_date, x.period_end_date,
@@ -248,11 +249,11 @@ class ExportRepository(BaseRepository):
     async def periodic_meal(self, division_id: UUID | str, start: date, end: date) -> list[Any]:
         """Uang makan karyawan divisi: hanya absensi sah (sama dengan rekap absensi M7)."""
         return list(await self.fetchall(
-            """
+            f"""
             SELECT e.employee_no, e.full_name,
-                   COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'DALAM_KOTA')::int AS in_city_days,
-                   COUNT(*) FILTER (WHERE ok AND a.city_zone_status = 'LUAR_KOTA')::int AS out_city_days,
-                   COALESCE(SUM(a.meal_allowance_amount) FILTER (WHERE ok), 0)::float AS total_amount,
+                   COUNT(*) FILTER (WHERE ok AND {EFFECTIVE_CITY_ZONE_A} = 'DALAM_KOTA')::int AS in_city_days,
+                   COUNT(*) FILTER (WHERE ok AND {EFFECTIVE_CITY_ZONE_A} = 'LUAR_KOTA')::int AS out_city_days,
+                   COALESCE(SUM({EFFECTIVE_MEAL_AMOUNT_A}) FILTER (WHERE ok), 0)::float AS total_amount,
                    COUNT(*) FILTER (WHERE a.om_approval_status = 'PENDING_OM')::int AS pending_days
             FROM attendance a
             CROSS JOIN LATERAL (SELECT a.om_approval_status IN ('AUTO_VALID', 'APPROVED_BY_OM') AS ok) v

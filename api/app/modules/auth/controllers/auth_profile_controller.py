@@ -16,6 +16,7 @@ from app.modules.auth.schemas.auth_login_response_schema import AuthLoginRespons
 from app.modules.auth.schemas.auth_profile_schema import (
     AuthChangePasswordRequestSchema,
     AuthUserMeResponseSchema,
+    ManagedDivisionOut,
 )
 from app.modules.auth.services.auth_flow_service import AuthFlowService
 
@@ -44,6 +45,8 @@ class AuthProfileController:
             employee_id=res.employee_id,
             attendance_mode=res.attendance_mode,
             division_id=res.division_id,
+            managed_division_ids=res.managed_division_ids,
+            managed_divisions=[ManagedDivisionOut(**d) if isinstance(d, dict) else d for d in res.managed_divisions],
         )
 
     async def handle_change_password(

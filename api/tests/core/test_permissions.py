@@ -34,6 +34,12 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     SystemRole.FINANCE: {
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.REVIEW_OVERTIME, P.MANAGE_SITES,
     },
+    # HSE mengelola kampanye K3, melihat akseptasi/audit pembaca, verifikasi dokumen keselamatan, inspeksi kendaraan.
+    SystemRole.HSE: {
+        P.MANAGE_HSE_CAMPAIGNS, P.VIEW_HSE_CAMPAIGNS,
+        P.MANAGE_VEHICLE_INSPECTIONS, P.VIEW_VEHICLE_INSPECTIONS,
+        P.MANAGE_EMPLOYEE_DOCUMENTS, P.VERIFY_DOCUMENTS,
+    },
     # Ketua/anggota tim mendapat wewenangnya dari keanggotaan tim, bukan peran global.
     SystemRole.TEAM_LEADER: set(),
     SystemRole.EMPLOYEE: set(),
@@ -75,7 +81,7 @@ def test_finance_may_export_attendance_but_hr_may_not():
 def test_only_hr_and_admin_may_touch_other_peoples_documents():
     holders = {r for r in SystemRole if P.MANAGE_EMPLOYEE_DOCUMENTS.value in get_role_permissions(r)}
 
-    assert holders == {SystemRole.ADMIN_HR_GA, SystemRole.SUPER_ADMIN}
+    assert holders == {SystemRole.ADMIN_HR_GA, SystemRole.SUPER_ADMIN, SystemRole.HSE}
 
 
 @requires_db

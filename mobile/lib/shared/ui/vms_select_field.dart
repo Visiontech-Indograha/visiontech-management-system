@@ -11,7 +11,8 @@ class VmsOption<T> {
 }
 
 /// Kolom pilih simetris (R-14, pengganti dropdown bawaan): ikon bulat kiri, label kecil + nilai tebal
-/// di tengah, chevron bulat kanan — tinggi & jarak kiri/kanan sama. Ketuk → lembar bawah berisi opsi.
+/// di tengah, chevron bulat kanan — tinggi & jarak kiri/kanan sama.
+/// Ketuk → lembar bawah berisi opsi (dengan kolom pencarian instan otomatis bila opsi > 5).
 class VmsSelectField<T> extends StatelessWidget {
   const VmsSelectField({
     super.key,
@@ -40,40 +41,10 @@ class VmsSelectField<T> extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 0, 16, safeListPadding(ctx).bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-              child: Text(
-                label,
-                style: VmsTextStyles.heading.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: VmsColors.brand900,
-                ),
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final o in options)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _OptionRow(
-                        label: o.label,
-                        selected: o.value == value,
-                        onTap: () => Navigator.of(ctx).pop(o.value),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
+      builder: (ctx) => _SelectSheet<T>(
+        label: label,
+        options: options,
+        currentValue: value,
       ),
     );
     if (picked != null) onChanged(picked);
@@ -140,6 +111,111 @@ class VmsSelectField<T> extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectSheet<T> extends StatefulWidget {
+  const _SelectSheet({
+    required this.label,
+    required this.options,
+    required this.currentValue,
+  });
+  final String label;
+  final List<VmsOption<T>> options;
+  final T? currentValue;
+
+  @override
+  State<_SelectSheet<T>> createState() => _SelectSheetState<T>();
+}
+
+class _SelectSheetState<T> extends State<_SelectSheet<T>> {
+  String _q = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final searchable = widget.options.length > 5;
+    final needle = _q.trim().toLowerCase();
+    final filtered = needle.isEmpty
+        ? widget.options
+        : [
+            for (final o in widget.options)
+              if (o.label.toLowerCase().contains(needle)) o,
+          ];
+    final viewInsets = MediaQuery.viewInsetsOf(context).bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        0,
+        16,
+        viewInsets > 0 ? viewInsets + 12 : safeListPadding(context).bottom,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Text(
+                widget.label,
+                style: VmsTextStyles.heading.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: VmsColors.brand900,
+                ),
+              ),
+            ),
+            if (searchable) ...[
+              TextField(
+                onChanged: (v) => setState(() => _q = v),
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Cari ${widget.label.toLowerCase()}...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  isDense: true,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Flexible(
+              child: filtered.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        'Tidak ada pilihan yang cocok.',
+                        textAlign: TextAlign.center,
+                        style: VmsTextStyles.bodySm.copyWith(
+                          color: VmsColors.neutral500,
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final o in filtered)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: _OptionRow(
+                              label: o.label,
+                              selected: o.value == widget.currentValue,
+                              onTap: () => Navigator.of(context).pop(o.value),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
         ),
       ),
     );

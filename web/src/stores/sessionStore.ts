@@ -7,6 +7,8 @@ import { fetchMe, login as authLogin, logout as authLogout } from "@/services/au
 
 interface SessionState {
   me: Me | null;
+  activeDivisionId: string | null;
+  setActiveDivisionId: (id: string | null) => void;
   /** false selama sesi dipulihkan dari cookie refresh saat aplikasi dibuka. */
   ready: boolean;
   login: (email: string, password: string, admin?: boolean) => Promise<Me>;
@@ -48,7 +50,7 @@ export const useSession = create<SessionState>((set, get) => {
 
   const clear = () => {
     setAccessToken(null);
-    set({ me: null });
+    set({ me: null, activeDivisionId: null });
     queryClient.clear();
   };
 
@@ -71,6 +73,8 @@ export const useSession = create<SessionState>((set, get) => {
 
   return {
     me: preset,
+    activeDivisionId: preset?.division_id ?? null,
+    setActiveDivisionId: (id: string | null) => set({ activeDivisionId: id }),
     ready: skipRestore,
     login: async (email, password, admin = false) => {
       // Admin dan pengguna biasa memakai endpoint yang sama; `admin` hanya membedakan halaman login.
@@ -92,12 +96,20 @@ export const useSession = create<SessionState>((set, get) => {
       }
       setAccessToken(token.access_token);
       const profile = await fetchMe();
-      set({ me: profile, ready: true });
+      set((s) => ({
+        me: profile,
+        ready: true,
+        activeDivisionId: s.activeDivisionId || profile.division_id || profile.managed_division_ids?.[0] || null,
+      }));
       return profile;
     },
     refreshMe: async () => {
       if (!getAccessToken()) return;
-      set({ me: await fetchMe() });
+      const profile = await fetchMe();
+      set((s) => ({
+        me: profile,
+        activeDivisionId: s.activeDivisionId || profile.division_id || profile.managed_division_ids?.[0] || null,
+      }));
     },
     initSession: async () => {
       if (get().ready || getAccessToken()) return;

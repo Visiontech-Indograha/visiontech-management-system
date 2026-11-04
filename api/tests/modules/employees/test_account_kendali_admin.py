@@ -25,6 +25,11 @@ def _audit_count(action: str, entity_id: str) -> int:
         "SELECT count(*) FROM app_activity_logs WHERE entity_id = %s AND action = %s", (entity_id, action))[0][0])
 
 
+def _user_id(client, hr: dict, emp: str) -> str:
+    """Audit aksi akun memakai entity_type `users` dengan id akun (user_id), bukan id karyawan."""
+    return client.get(f"/employees/{emp}/account", headers=hr).json()["user_id"]
+
+
 def test_field_account_sessions_can_be_listed_revoked_and_reset_by_hr(client, world: World):
     hr = world.headers(client, "hr")
     emp = _new_employee(client, world, f"KA-{world.tag}-1")
@@ -37,18 +42,22 @@ def test_field_account_sessions_can_be_listed_revoked_and_reset_by_hr(client, wo
     rows = sessions.json()
     assert len(rows) >= 1 and all(row["current"] is False for row in rows)
 
+    uid = _user_id(client, hr, emp)
     one = client.post(f"/employees/{emp}/account/sessions/{rows[0]['id']}/revoke", headers=hr)
     assert one.status_code == 200 and one.json() == {"revoked": 1}
-    assert _audit_count("SESSION_REVOKE", emp) >= 1
+    assert _audit_count("SESSION_REVOKE", uid) == 1
 
     assert client.post(f"/employees/{emp}/account/device-slots/reset", headers=hr).status_code == 200
     assert client.get(f"/employees/{emp}/account/sessions", headers=hr).json() == []
-    assert _audit_count("DEVICE_SLOTS_RESET", emp) == 1
+    assert _audit_count("DEVICE_SLOTS_RESET", uid) == 1
 
 
-def test_revoke_all_and_session_of_other_account_is_404(client, world: World):
+def test_revoke_all_and_unknown_session_is_404(client, world: World):
     hr = world.headers(client, "hr")
     emp = _new_employee(client, world, f"KA-{world.tag}-2")
+    assert client.post(f"/employees/{emp}/account/sessions/revoke-all", headers=hr).status_code == 404  # tanpa akun
+
+    client.post(f"/employees/{emp}/account", headers=hr, json={"login": f"kosong.{world.tag}@contoh.id"})
     stray = str(uuid.uuid4())
     assert client.post(f"/employees/{emp}/account/sessions/{stray}/revoke", headers=hr).status_code == 404
     everyone = client.post(f"/employees/{emp}/account/sessions/revoke-all", headers=hr)
@@ -68,7 +77,7 @@ def test_hr_unlocks_locked_account(client, world: World):
     assert unlocked.status_code == 200, unlocked.text
     body = unlocked.json()
     assert body["locked_until"] is None and body["failed_logins"] == 0
-    assert _audit_count("ACCOUNT_UNLOCK", emp) == 1
+    assert _audit_count("ACCOUNT_UNLOCK", _user_id(client, hr, emp)) == 1
 
 
 def test_hr_changes_login_email_unique_and_revokes_old_sessions(client, world: World):
@@ -88,7 +97,7 @@ def test_hr_changes_login_email_unique_and_revokes_old_sessions(client, world: W
     assert changed.json()["login"] == new
     assert client.get(f"/employees/{emp}/account/sessions", headers=hr).json() == []
     assert client.post("/auth/login", json={"email": old, "password": temp, "platform": "mobile"}).status_code == 400
-    assert _audit_count("ACCOUNT_LOGIN_CHANGE", emp) == 1
+    assert _audit_count("ACCOUNT_LOGIN_CHANGE", _user_id(client, hr, emp)) == 1
 
 
 def test_face_status_and_reset_are_audited(client, world: World):

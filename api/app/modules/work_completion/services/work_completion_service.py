@@ -37,6 +37,15 @@ SIGNATURE_MAX_BYTES = 300_000
 ORDER_LOCKED = "Serah terima sudah disetujui PM; pekerjaan klien ini tidak bisa diubah lagi."
 
 
+def _status_changed() -> AppError:
+    """Status order berubah sejak dibaca (permintaan lain lebih dulu): jangan menimpanya diam-diam."""
+    return AppError(
+        "INVALID_STATE",
+        "Status order ini sudah diubah pihak lain. Muat ulang halaman, lalu coba lagi.",
+        status=409,
+    )
+
+
 def _iso(value: Any) -> str | None:
     return value.isoformat() if hasattr(value, "isoformat") else (str(value) if value else None)
 
@@ -282,7 +291,12 @@ class WorkCompletionService:
         if "client_id" in data:
             data["client_name"] = await self._client_name(data["client_id"], None)
 
-        await self.crud.update_completion(completion_id, data)
+        # Perubahan status hanya berlaku bila status masih seperti saat dibaca (compare-and-set).
+        cas = data.get("order_status") is not None
+        rows = await self.crud.update_completion(
+            completion_id, data, expected_status=existing.get("order_status") if cas else None)
+        if cas and rows == 0:
+            raise _status_changed()
         updated = await self.crud.get_completion(completion_id)
         return updated or existing
 
@@ -300,7 +314,10 @@ class WorkCompletionService:
 
         existing = await self._editable(current_user, completion_id)
 
-        await self.crud.update_status(completion_id, new_status, notes)
+        # PM override tanpa aturan transisi; yang dijaga hanya penimpaan diam-diam: UPDATE hanya bila status
+        # masih seperti saat dibaca.
+        if await self.crud.update_status(completion_id, new_status, notes, expected=existing["order_status"]) == 0:
+            raise _status_changed()
         updated = await self.crud.get_completion(completion_id)
         return updated or existing
 

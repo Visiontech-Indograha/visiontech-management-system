@@ -1,5 +1,5 @@
 """
-api/app/modules/hse/routes.py
+api/app/modules/hse/routes/hse_route.py
 
 Rute endpoint FastAPI untuk modul HSE (Health, Safety & Environment / HES).
 """
@@ -16,7 +16,7 @@ from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.hse.controllers.hse_controller import HseController
 from app.modules.hse.dependencies import get_hse_service
-from app.modules.hse.schemas import (
+from app.modules.hse.schemas.hse_schema import (
     HseAcknowledgeCreate,
     HseCampaignAuditStats,
     HseCampaignCreate,
@@ -167,7 +167,7 @@ async def get_campaign_readers(
     "/inspections",
     response_model=list[VehicleInspectionResponse],
     summary="Daftar riwayat inspeksi keselamatan kendaraan",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS))],
 )
 async def list_inspections(
     vehicle_id: UUID | None = Query(None),
@@ -208,7 +208,7 @@ async def create_inspection(
     "/inspections/{inspection_id}",
     response_model=VehicleInspectionResponse,
     summary="Detail inspeksi kendaraan",
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS))],
 )
 async def get_inspection(
     inspection_id: UUID,

@@ -153,6 +153,7 @@ class AttendanceOfflineService:
         payload: str,
         signature: str,
         selfie_file_id: UUID | None,
+        evidence_file_id: UUID | None = None,
     ) -> dict[str, Any]:
         """
         Memproses sinkronisasi data absensi (masuk/pulang) yang dikumpulkan saat perangkat offline.
@@ -194,7 +195,7 @@ class AttendanceOfflineService:
         # Swafoto absen offline dicocokkan server dengan wajah terdaftar saat disinkronkan (M7); tidak cocok tidak
         # ditolak (absen sudah terjadi) melainkan ditandai untuk OM.
         if kind == "CHECK_IN":
-            result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id)
+            result, attendance_id = await self._check_in(user, p, event, notes, selfie_file_id, evidence_file_id)
         else:
             result, attendance_id = await self._check_out(user, event, notes, selfie_file_id, p)
 
@@ -225,6 +226,7 @@ class AttendanceOfflineService:
         event: datetime,
         notes: list[str],
         selfie_file_id: UUID | None,
+        evidence_file_id: UUID | None = None,
     ) -> tuple[str, Any]:
         """
         Memproses data absensi masuk (check-in) yang tertunda saat offline.
@@ -247,6 +249,7 @@ class AttendanceOfflineService:
             origin="GPS",
             accuracy_m=p.get("accuracy_m"),
             selfie_file_id=selfie_file_id if expected_sha else None,
+            evidence_file_id=evidence_file_id,
             channel="MOBILE",
             explanation=p.get("explanation"),
             at=event,

@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
+from app.core.time import utcnow
 
 
 class WorkOrderRepository(BaseRepository):
@@ -25,7 +26,7 @@ class WorkOrderRepository(BaseRepository):
 
     async def generate_wo_number(self) -> str:
         """Menghasilkan nomor WO otomatis unik berbasis tahun-bulan: WO-YYYYMM-XXXX."""
-        now = datetime.now(UTC)
+        now = utcnow()
         prefix = f"WO-{now.strftime('%Y%m')}-"
         row = await self.fetchone(
             """

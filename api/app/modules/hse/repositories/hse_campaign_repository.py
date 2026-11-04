@@ -13,7 +13,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.repository import BaseRepository
-from app.modules.hse.schemas import HseAcknowledgeCreate, HseCampaignCreate, HseCampaignUpdate
+from app.modules.hse.schemas.hse_schema import HseAcknowledgeCreate, HseCampaignCreate, HseCampaignUpdate
 
 
 class HseCampaignRepository(BaseRepository):
@@ -80,7 +80,7 @@ class HseCampaignRepository(BaseRepository):
         target_audience: str | None = None,
     ) -> Sequence[dict[str, Any]]:
         conditions = ["c.delete_at IS NULL"]
-        params: dict[str, Any] = {"limit": limit, "offset": offset}
+        params: dict[str, Any] = {"limit": limit + offset}
 
         if is_active is not None:
             conditions.append("c.is_active = :is_active")
@@ -105,10 +105,10 @@ class HseCampaignRepository(BaseRepository):
             WHERE {where_clause}
             GROUP BY c.campaign_id, e.full_name, u.email
             ORDER BY c.create_at DESC
-            LIMIT :limit OFFSET :offset;
+            LIMIT :limit;
         """
         rows = await self.fetchall(query, params)
-        return [dict(r._mapping) for r in rows]
+        return [dict(r._mapping) for r in rows][offset:]
 
     async def update(self, campaign_id: UUID, data: HseCampaignUpdate) -> dict[str, Any] | None:
         fields: list[str] = []

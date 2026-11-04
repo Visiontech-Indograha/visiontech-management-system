@@ -37,6 +37,9 @@ class CheckInRequest(BaseModel):
     accuracy_m: float | None = Field(None, ge=0)
     # Swafoto absen (wajib): dicocokkan server dengan wajah terdaftar (M7); juga foto bukti di luar radius.
     selfie_file_id: UUID | None = None
+    # Foto BUKTI biasa (terlambat / di luar radius): TIDAK dicocokkan dengan wajah. Opsional; klien lama yang
+    # tidak mengirimnya memakai swafoto sebagai bukti.
+    evidence_file_id: UUID | None = None
     # DEPRECATED & DIABAIKAN: klien tidak lagi dipercaya soal hasil wajah. Dipertahankan agar APK lama tidak ditolak.
     face_result: Literal["MATCH", "NO_MATCH", "LOW_QUALITY", "NOT_ENROLLED", "SKIPPED"] | None = None
     face_similarity: float | None = None
@@ -53,8 +56,15 @@ class CheckOutRequest(BaseModel):
     location_origin: Literal["GPS", "SIMULASI"] = "GPS"
     # T7: di luar radius lokasi, swafoto + penjelasan wajib (jarak dihitung ulang oleh server).
     selfie_file_id: UUID | None = None
+    # Foto bukti biasa (tanpa pencocokan wajah), mis. pulang di luar radius.
+    evidence_file_id: UUID | None = None
     explanation: str | None = Field(None, max_length=1000)
     accuracy_m: float | None = Field(None, ge=0)
+
+
+class EvidenceRequest(BaseModel):
+    """Menempelkan foto bukti biasa (tanpa pencocokan wajah) ke absensi sendiri."""
+    evidence_file_id: UUID
 
 
 class ExplanationRequest(BaseModel):
@@ -99,6 +109,8 @@ class AttendanceResponse(BaseModel):
     explanation: str | None
     reviewed_at: datetime | None
     selfie_file_id: UUID | None = None
+    # Foto BUKTI biasa (terlambat / di luar radius); bukan swafoto, tanpa pencocokan wajah.
+    evidence_photo_file_id: UUID | None = None
     # Pengenalan wajah hasil hitung server (MATCH/NO_MATCH/LOW_QUALITY/NOT_ENROLLED/SKIPPED); None = tidak diperiksa.
     face_result: str | None = None
     face_similarity: float | None = None
@@ -183,6 +195,8 @@ class OfflineAttendanceEvent(BaseModel):
     payload: str = Field(..., max_length=10000)
     signature: str = Field(..., max_length=500)
     selfie_file_id: UUID | None = None
+    # Foto bukti biasa (terlambat / di luar radius), tanpa pencocokan wajah. Opsional.
+    evidence_file_id: UUID | None = None
 
 
 class OfflineAttendanceResult(BaseModel):

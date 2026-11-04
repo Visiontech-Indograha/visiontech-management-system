@@ -1,5 +1,5 @@
 """
-api/app/modules/hse/schemas.py
+api/app/modules/hse/schemas/hse_schema.py
 
 Skema Pydantic untuk modul HSE (Health, Safety & Environment / HES):
 - Campaign K3 (edukasi, pengumuman, momen K3 terjadwal)

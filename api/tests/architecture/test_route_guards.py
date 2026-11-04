@@ -24,6 +24,9 @@ from tests.conftest import World, requires_db, sync_query
 
 # Boleh dipanggil setiap pengguna yang login; data tetap dibatasi organisasi / milik sendiri.
 SELF_SERVICE = {
+    ("GET", "/hse/campaigns/active-popup"): "popup K3 wajib baca untuk pengguna yang login; hanya kampanye aktif yang menyasar akun itu",
+    ("POST", "/hse/campaigns/{campaign_id}/acknowledge"): "konfirmasi baca atas nama akun sendiri (user_id dari token)",
+    ("POST", "/hse/inspections"): "pengemudi/karyawan lapangan mengirim formulir inspeksi kendaraan (pelapor dari token)",
     ("GET", "/auth/me"): "profil sendiri",
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
     ("POST", "/auth/sessions/revoke-others"): "mencabut perangkat lain milik sendiri (P1-7, diuji)",
@@ -67,6 +70,7 @@ SELF_SERVICE = {
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/device-key"): "kunci perangkat milik sendiri (R-34, diuji)",
     ("POST", "/attendance/offline"): "absen offline milik sendiri, bertanda tangan perangkat (R-34, diuji)",
+    ("POST", "/attendance/{att_id}/evidence"): "hanya absensi & foto milik sendiri (diuji)",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
     ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
     ("POST", "/sync/operations"): "antrean offline milik sendiri; tiap operasi dijaga seperti jalur online (M12)",

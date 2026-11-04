@@ -13,7 +13,6 @@ import hashlib
 import json
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -24,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import storage
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.security import CurrentUser
+from app.core.time import utcnow
 from app.modules.exports.services.builders.docx_builders import (
     bast_docx,
     order_sheet_docx,
@@ -291,7 +291,7 @@ class WorkOrderService:
             roster=[],
             bom=detail.get("bom", []),
             generated_by="PM",
-            generated_at=datetime.now(UTC),
+            generated_at=utcnow(),
             verify_url=f"/verify/work-completion/{detail['work_order_id']}",
             logos=default_kop_logos(),
         )

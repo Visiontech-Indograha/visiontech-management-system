@@ -81,9 +81,20 @@ class VmsApi {
   /// Syarat foto (slot) jenis pekerjaan item.
   Future<List<Map<String, dynamic>>> imageRequirements(
     String workTypeId,
-  ) async => _list(
-    (await _dio.get('$_p/image-requirements/by-work-type/$workTypeId')).data,
-  );
+  ) async {
+    final types = _list((await _dio.get('$_p/work-types')).data);
+    final type = types.firstWhere(
+      (t) => '${t['id']}' == workTypeId,
+      orElse: () => const <String, dynamic>{},
+    );
+    return _list(type['photos'] ?? const []).map((s) => <String, dynamic>{
+          'image_requirement_id': s['id'],
+          'name': s['label'],
+          'description': s['hint'],
+          'is_mandatory': s['required'] == true,
+          'path_image': s['example_file_id'],
+        }).toList();
+  }
 
   /// Aset yang dialokasikan ke jadwal tim (Milestone 4).
   Future<List<Map<String, dynamic>>> dayAssets(String dayId) async =>
@@ -247,6 +258,7 @@ class VmsApi {
     required double lng,
     double? accuracyM,
     String? selfieFileId,
+    String? evidenceFileId,
     String? explanation,
   }) async {
     final res = await _dio.post(
@@ -258,6 +270,7 @@ class VmsApi {
         'location_origin': 'GPS',
         'accuracy_m': ?accuracyM,
         'selfie_file_id': ?selfieFileId,
+        'evidence_file_id': ?evidenceFileId,
         'explanation': ?explanation,
       },
     );
@@ -269,6 +282,7 @@ class VmsApi {
     required double lng,
     double? accuracyM,
     String? selfieFileId,
+    String? evidenceFileId,
     String? explanation,
   }) async {
     final res = await _dio.post(
@@ -279,6 +293,7 @@ class VmsApi {
         'location_origin': 'GPS',
         'accuracy_m': ?accuracyM,
         'selfie_file_id': ?selfieFileId,
+        'evidence_file_id': ?evidenceFileId,
         'explanation': ?explanation,
       },
     );
@@ -340,6 +355,7 @@ class VmsApi {
     required String payload,
     required String signature,
     String? selfieFileId,
+    String? evidenceFileId,
   }) async {
     final res = await _dio.post(
       '$_p/attendance/offline',
@@ -350,10 +366,18 @@ class VmsApi {
         'payload': payload,
         'signature': signature,
         'selfie_file_id': ?selfieFileId,
+        'evidence_file_id': ?evidenceFileId,
       },
     );
     return Map<String, dynamic>.from(res.data as Map);
   }
+
+  /// Foto bukti biasa (mis. terlambat) untuk absensi sendiri; server tidak mencocokkan wajah.
+  Future<void> attachAttendanceEvidence(String attendanceId, String evidenceFileId) =>
+      _dio.post(
+        '$_p/attendance/$attendanceId/evidence',
+        data: {'evidence_file_id': evidenceFileId},
+      );
 
   Future<void> explainAttendance(String attendanceId, String explanation) =>
       _dio.post(
@@ -764,6 +788,18 @@ class VmsApi {
 
   Future<void> deleteTeamLogo(String teamId) async {
     await _dio.delete('$_p/teams/$teamId/logo');
+  }
+
+  /// Daftar perangkat/sesi login akun ini (`current` = perangkat ini).
+  Future<List<Map<String, dynamic>>> authSessions() async =>
+      _list((await _dio.get('$_p/auth/sessions')).data);
+
+  Future<void> revokeAuthSession(String id) async {
+    await _dio.post('$_p/auth/sessions/$id/revoke');
+  }
+
+  Future<void> revokeOtherAuthSessions() async {
+    await _dio.post('$_p/auth/sessions/revoke-others');
   }
 
   /// Mengganti (atau menghapus bila null) foto profil sendiri dengan berkas hasil unggah.

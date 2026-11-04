@@ -314,6 +314,31 @@ void main() {
       );
       expect(find.text('Absen masuk'), findsNothing);
     });
+
+    testWidgets('terlambat tanpa foto bukti: kartu hari ini menawarkan "Tambah foto bukti"', (tester) async {
+      online();
+      Map<String, dynamic> late({Object? ev}) => {
+        ...record('2099-01-01', out: '2099-01-01T10:00:00Z'),
+        'is_late': true,
+        'evidence_photo_file_id': ev,
+      };
+      backend.routes['/attendance'] = (_) => {'items': [late()], 'total': 1, 'today': '2099-01-01'};
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Tambah foto bukti'), findsOneWidget);
+    });
+
+    testWidgets('terlambat dengan foto bukti: tombol tidak tampil', (tester) async {
+      online();
+      backend.routes['/attendance'] = (_) => {
+        'items': [
+          {...record('2099-01-01', out: '2099-01-01T10:00:00Z'), 'is_late': true, 'evidence_photo_file_id': 'f1'},
+        ],
+        'total': 1,
+        'today': '2099-01-01',
+      };
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Tambah foto bukti'), findsNothing);
+    });
   });
 
   group('Antrian sinkronisasi', () {
@@ -559,7 +584,7 @@ void main() {
 
     Future<void> openItem(WidgetTester tester, {num saved = 4}) async {
       backend.routes['/work-plans/items/i1'] = (_) => itemRow(saved: saved);
-      backend.routes['/by-work-type/wt1'] = (_) => <Object>[];
+      backend.routes['/work-types'] = (_) => <Object>[];
       await show(
         tester,
         Scaffold(
@@ -680,14 +705,20 @@ void main() {
       expect(backend.sentOps.single['op_type'], 'PLAN_ROLLOVER_REQUEST');
     });
 
-    // Slot foto wajib = aturan server (image_requirement jenis pekerjaan item); harus tampil juga tanpa sinyal.
-    final mandatorySlot = <Map<String, dynamic>>[
-      {'image_requirement_id': 'r1', 'work_type_id': 'wt1', 'name': 'Foto sesudah pemasangan', 'is_mandatory': true, 'sort_order': 1},
+    // Slot foto wajib = aturan server (foto jenis pekerjaan item); harus tampil juga tanpa sinyal.
+    // Server mengirim slot sebagai `photos` pada jenis pekerjaan; klien memetakannya ke bentuk slot.
+    final workTypesWithSlot = <Map<String, dynamic>>[
+      {
+        'id': 'wt1',
+        'photos': [
+          {'id': 'r1', 'label': 'Foto sesudah pemasangan', 'required': true, 'sort_order': 1},
+        ],
+      },
     ];
 
     testWidgets('slot foto wajib tetap tampil tanpa sinyal dari salinan yang sudah pernah dimuat', (tester) async {
       backend.routes['/work-plans/items/i1'] = (_) => itemRow();
-      backend.routes['/by-work-type/wt1'] = (_) => mandatorySlot;
+      backend.routes['/work-types'] = (_) => workTypesWithSlot;
       await show(tester, const ItemProgressScreen(itemId: 'i1', dayStatus: 'ONGOING', isLeader: true));
       expect(find.text('Foto sesudah pemasangan'), findsWidgets);
 

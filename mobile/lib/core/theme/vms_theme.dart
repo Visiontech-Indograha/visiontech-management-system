@@ -294,6 +294,7 @@ abstract final class VmsTheme {
         surfaceTintColor: Colors.transparent,
         elevation: VmsSizes.elevation3,
         insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        constraints: const BoxConstraints(maxWidth: 880),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(VmsSizes.radiusXl),
         ),
@@ -312,6 +313,7 @@ abstract final class VmsTheme {
         surfaceTintColor: Colors.transparent,
         elevation: VmsSizes.elevation2,
         modalBarrierColor: Color(0x66000000),
+        constraints: BoxConstraints(maxWidth: 960),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(VmsSizes.radiusXl),

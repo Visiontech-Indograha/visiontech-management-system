@@ -5,7 +5,7 @@ mode wajah palsu belum aktif (FACE_FAKE_MODE=true dan APP_ENV=development). Idem
 embedding (nyata maupun palsu) tidak ditimpa.
 
     cd api
-    FACE_FAKE_MODE=true .venv/Scripts/python.exe ../scripts/seed-wajah-dev.py
+    FACE_FAKE_MODE=true .venv/Scripts/python.exe ../scripts/seed_wajah_dev.py
 """
 from __future__ import annotations
 

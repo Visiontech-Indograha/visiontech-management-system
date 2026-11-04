@@ -25,7 +25,7 @@ from pathlib import Path
 from uuid import UUID, uuid4
 
 # Pastikan import app.* dapat ditemukan
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "api"))
 
 from sqlalchemy import text
 from app.database.session import AsyncSessionLocal

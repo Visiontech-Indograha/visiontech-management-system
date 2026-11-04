@@ -96,7 +96,7 @@ Future<bool> confirmProceedIfOutsideGeofence(
       content: Text(
         'Anda sekitar ${formatJarakId(proximity.distanceMeters)} dari ${proximity.label}. '
         'Batas absen: ${formatJarakId(proximity.radiusMeters)} dari lokasi kerja.\n\n'
-        'Jika dikirim, absen Anda tetap tersimpan dan menunggu pemeriksaan atasan (Project Manager). '
+        'Jika dikirim, absen Anda tetap tersimpan dan menunggu pemeriksaan atasan. '
         'Atasan yang memutuskan apakah absen ini diterima.',
       ),
       actions: [

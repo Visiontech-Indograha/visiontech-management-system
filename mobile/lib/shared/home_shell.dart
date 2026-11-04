@@ -217,7 +217,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
           FloatingNavItem(
             icon: Icons.assignment_outlined,
             activeIcon: Icons.assignment_rounded,
-            label: 'Rencana',
+            label: 'Jadwal kerja',
           ),
           FloatingNavItem(
             icon: Icons.photo_library_outlined,

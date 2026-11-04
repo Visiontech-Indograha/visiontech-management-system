@@ -79,6 +79,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
         content_body: contentBody,
         target_audience: targetAudience,
         media_ids: mediaIds,
+        media_captions: photos.map((p) => p.caption.trim()),
         start_date: startDate,
         end_date: endDate,
         is_mandatory: isMandatory,
@@ -348,6 +349,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
           onClose={() => setIsCreateOpen(false)}
           title="Terbitkan Kampanye Keselamatan Kerja (HSE)"
           size="xl"
+          className="sm:w-[min(960px,94vw)] sm:max-w-[960px]"
           footer={
             <div className="flex justify-end gap-2 w-full">
               <ActionButton
@@ -369,7 +371,8 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
             </div>
           }
         >
-          <div className="space-y-4 pt-2">
+          <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-2">
+          <div className="min-w-0 space-y-4">
             <div>
               <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
                 Judul Kampanye Keselamatan *
@@ -462,12 +465,6 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
               </ControlLabel>
             </div>
 
-            <HseCampaignPhotosField
-              photos={photos}
-              onChange={setPhotos}
-              durationSeconds={Number(cooldownSeconds)}
-            />
-
             <div>
               <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
                 Isi Panduan Keselamatan *
@@ -480,6 +477,14 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                 className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
               />
             </div>
+          </div>
+          <div className="min-w-0 space-y-4">
+            <HseCampaignPhotosField
+              photos={photos}
+              onChange={setPhotos}
+              durationSeconds={Number(cooldownSeconds)}
+            />
+          </div>
           </div>
         </VmsDialog>
       )}

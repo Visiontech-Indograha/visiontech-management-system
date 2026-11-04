@@ -9553,58 +9553,6 @@
     }
    }
   },
-  "/api/v1/hse/campaigns/{campaign_id}/seen": {
-   "post": {
-    "tags": [
-     "HSE & Keselamatan Kerja"
-    ],
-    "summary": "Catat popup K3 sudah tampil hari ini (paling banyak sekali sehari per pengguna)",
-    "operationId": "mark_campaign_seen_api_v1_hse_campaigns__campaign_id__seen_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "campaign_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Campaign Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "object",
-         "additionalProperties": {
-          "type": "boolean"
-         },
-         "title": "Response Mark Campaign Seen Api V1 Hse Campaigns  Campaign Id  Seen Post"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
   "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
    "post": {
     "tags": [
@@ -23805,6 +23753,15 @@
       "title": "Media Paths",
       "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
      },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23916,6 +23873,15 @@
       "maxItems": 8,
       "title": "Media Paths",
       "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
      },
      "target_audience": {
       "type": "string",
@@ -24083,6 +24049,21 @@
        }
       ],
       "title": "Media Paths"
+     },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
      },
      "target_audience": {
       "anyOf": [

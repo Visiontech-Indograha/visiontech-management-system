@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   nextSlideIndex,
   prevSlideIndex,
@@ -8,6 +8,8 @@ import {
 } from "@/lib/hseCarousel";
 
 const TICK_MS = 250;
+/** Jeda geser otomatis setelah zoom/geser terakhir (ms). */
+const HOLD_MS = 5000;
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -51,14 +53,35 @@ export function useTimedCarousel({
   }, [totalSeconds]);
 
   // Geser otomatis. Efek ini dijalankan ulang tiap indeks berubah, jadi interval selalu dihitung dari
-  // perpindahan terakhir (otomatis maupun manual).
+  // perpindahan terakhir (otomatis maupun manual). Bila pengguna sedang zoom/geser (holdAutoAdvance),
+  // geser ditunda sampai HOLD_MS sejak interaksi terakhir; tidak ditunda bila sisa waktu < HOLD_MS.
   const autoAdvance = count > 1 && !reduceMotion;
+  const lastInteractRef = useRef(0);
+  const mountedAtRef = useRef(0);
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+  }, []);
+  const holdAutoAdvance = useCallback(() => {
+    lastInteractRef.current = Date.now();
+  }, []);
+
   useEffect(() => {
     if (!autoAdvance) return;
-    const id = window.setTimeout(
-      () => setIndex((i) => nextSlideIndex(Math.min(i, count - 1), count)),
-      slideIntervalMs(totalSeconds, count),
-    );
+    let id = 0;
+    const schedule = (delay: number) => {
+      id = window.setTimeout(() => {
+        const now = Date.now();
+        const endsAt = mountedAtRef.current + totalSeconds * 1000;
+        const holdLeft = lastInteractRef.current + HOLD_MS - now;
+        const secondsLeft = endsAt - now;
+        if (holdLeft > 0 && secondsLeft > HOLD_MS) {
+          schedule(holdLeft);
+          return;
+        }
+        setIndex((i) => nextSlideIndex(Math.min(i, count - 1), count));
+      }, delay);
+    };
+    schedule(slideIntervalMs(totalSeconds, count));
     return () => window.clearTimeout(id);
   }, [safeIndex, autoAdvance, count, totalSeconds]);
 
@@ -81,6 +104,7 @@ export function useTimedCarousel({
     goNext,
     goPrev,
     goTo,
+    holdAutoAdvance,
     remaining,
     done,
     progress: readProgressPercent(totalSeconds, elapsedMs),

@@ -9,16 +9,15 @@ import {
   carouselConfigError,
 } from "@/lib/hseCarousel";
 import { useTimedCarousel } from "@/hooks/useTimedCarousel";
-import { CampaignMediaCarousel } from "@/components/molecules/CampaignMediaCarousel";
+import { CampaignMediaCarousel } from "@/components/organisms/hse/CampaignMediaCarousel";
 import { HseMandatoryPopupGate } from "@/components/organisms/hse/HseMandatoryPopupGate";
-import { fetchActiveHsePopup, markHseCampaignSeen, type HseCampaign } from "@/services/hseService";
+import { fetchActiveHsePopup, type HseCampaign } from "@/services/hseService";
 
 vi.mock("@/services/hseService", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/services/hseService")>();
   return {
     ...actual,
     fetchActiveHsePopup: vi.fn(),
-    markHseCampaignSeen: vi.fn(() => Promise.resolve()),
     acknowledgeHseCampaign: vi.fn(() => Promise.resolve()),
   };
 });
@@ -208,6 +207,7 @@ describe("HseMandatoryPopupGate: tombol konfirmasi terkunci sampai waktu habis",
     content_body: "Materi keselamatan.",
     target_audience: "ALL",
     media_ids: [],
+    media_captions: [],
     media_url: null,
     start_date: "2026-11-01",
     end_date: "2026-11-30",
@@ -236,16 +236,15 @@ describe("HseMandatoryPopupGate: tombol konfirmasi terkunci sampai waktu habis",
       </QueryClientProvider>,
     );
 
-    const button = await screen.findByRole("button", { name: /Baca dulu, tombol aktif dalam 50 detik/ });
+    const button = (await screen.findByText(/Baca dulu, tombol aktif dalam \d+ detik/)).closest("button");
     expect(button).toBeDisabled();
     expect(screen.queryByRole("button", { name: /close/i })).not.toBeInTheDocument();
-    expect(markHseCampaignSeen).toHaveBeenCalledWith("campaign-uji");
 
     advance(49_000);
-    expect(screen.getByRole("button", { name: /tombol aktif dalam 1 detik/ })).toBeDisabled();
+    expect(screen.getByText(/tombol aktif dalam 1 detik/).closest("button")).toBeDisabled();
 
     advance(1_500);
-    const confirm = await screen.findByRole("button", { name: "Saya Telah Membaca dan Memahami Panduan Ini" });
+    const confirm = (await screen.findByText("Saya Telah Membaca dan Memahami Panduan Ini")).closest("button");
     expect(confirm).toBeEnabled();
   });
 });

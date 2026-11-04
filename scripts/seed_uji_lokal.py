@@ -202,7 +202,7 @@ async def seed(dry_run: bool = False) -> None:
     await engine.dispose()
     print(f"Selesai: {counts[0]} akun, {counts[1]} motor, {counts[2]} mobil, {counts[3]} alat, "
           f"{counts[4]} jenis pekerjaan.")
-    print(f"Semua akun bersandi '{PASSWORD}'. Daftar: scripts/akun-uji-lokal.txt")
+    print("Semua akun memakai satu sandi uji (konstanta PASSWORD di skrip ini). Daftar: scripts/akun-uji-lokal.txt")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
-"""Popup K3 tampil paling banyak sekali sehari per pengguna: catat tanggal kampanye sudah ditampilkan.
+"""Tabel penanda popup K3 per hari (`hse_campaign_views`).
 
-Expand-only: tabel baru `hse_campaign_views` (campaign_id, user_id, view_date). Satu baris per pengguna,
-kampanye, dan hari (Asia/Jakarta). Pembacaan (acknowledgment) tetap satu baris per pengguna dan kampanye.
+Expand-only. CATATAN (utang teknis): fitur "sekali sehari" dibatalkan karena memungkinkan melewati baca wajib
+dengan memuat ulang halaman. Tabel ini sudah diterapkan di dev DB dan TIDAK dipakai lagi; sengaja tidak di-drop
+(aman dibiarkan). Hapus lewat migrasi terpisah bila sudah tidak diperlukan.
 
 Revision ID: v2_0022
 Revises: v2_0021

@@ -68,11 +68,6 @@ class HseController:
     async def get_active_popup(self, current_user: CurrentUser) -> dict[str, Any]:
         campaign = await self.service.get_active_popup(current_user)
         return {"campaign": campaign}
-
-    async def mark_popup_seen(self, campaign_id: UUID, current_user: CurrentUser) -> dict[str, bool]:
-        await self.service.mark_popup_seen(campaign_id, current_user)
-        return {"ok": True}
-
     async def acknowledge_campaign(
         self,
         campaign_id: UUID,

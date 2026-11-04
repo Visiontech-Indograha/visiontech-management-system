@@ -938,8 +938,9 @@ CREATE TABLE IF NOT EXISTS hse_campaigns (
     delete_at TIMESTAMPTZ
 );
 ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_paths JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_captions JSONB NOT NULL DEFAULT '[]'::jsonb;  -- v2_0023
 CREATE INDEX IF NOT EXISTS idx_hse_campaigns_dates ON hse_campaigns (is_active, start_date, end_date) WHERE delete_at IS NULL;
--- Penanda popup sudah tampil hari ini per pengguna (v2_0022): paling banyak sekali sehari
+-- Penanda popup per hari (v2_0022). UTANG: tidak dipakai lagi, sengaja tidak di-drop
 CREATE TABLE IF NOT EXISTS hse_campaign_views (
     campaign_id UUID NOT NULL REFERENCES hse_campaigns(campaign_id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

@@ -130,18 +130,6 @@ async def delete_campaign(
 # ================= 2. Gerbang Akseptasi & Audit Pembaca =================
 
 @router.post(
-    "/campaigns/{campaign_id}/seen",
-    summary="Catat popup K3 sudah tampil hari ini (paling banyak sekali sehari per pengguna)",
-)
-async def mark_campaign_seen(
-    campaign_id: UUID,
-    current_user: CurrentUser = Depends(get_current_user),
-    controller: HseController = Depends(get_controller),
-) -> dict[str, bool]:
-    return await controller.mark_popup_seen(campaign_id, current_user)
-
-
-@router.post(
     "/campaigns/{campaign_id}/acknowledge",
     summary="Konfirmasi telah membaca materi K3 (melewati cooldown & scroll)",
 )

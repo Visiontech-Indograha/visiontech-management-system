@@ -131,21 +131,17 @@ def test_carousel_update_keeps_rules_and_allows_reorder(client, hse_world: World
     assert short.status_code == 422
 
 
-def test_popup_shown_at_most_once_per_day_and_read_recorded_once(client, hse_world: World, photos: list[str]):
+def test_popup_stays_until_acknowledged_and_read_recorded_once(client, hse_world: World, photos: list[str]):
     hse = hse_world.headers(client, "hse")
     member = hse_world.headers(client, "member")
     created = client.post("/hse/campaigns", headers=hse, json=_campaign_payload([], cooldown=5))
     assert created.status_code == 201, created.text
     campaign_id = created.json()["campaign_id"]
 
-    first = client.get("/hse/campaigns/active-popup", headers=member)
-    assert first.json()["campaign"]["campaign_id"] == campaign_id
-    assert client.post(f"/hse/campaigns/{campaign_id}/seen", headers=member).status_code == 200
-    # Sudah tampil hari ini: tidak dimunculkan lagi sampai besok.
-    again = client.get("/hse/campaigns/active-popup", headers=member)
-    assert again.json()["campaign"] is None
-    # Catat tampil dua kali tetap satu baris.
-    assert client.post(f"/hse/campaigns/{campaign_id}/seen", headers=member).status_code == 200
+    # Memuat ulang sebelum konfirmasi tetap memunculkan popup (baca wajib tidak bisa dilewati).
+    for _ in range(2):
+        shown = client.get("/hse/campaigns/active-popup", headers=member)
+        assert shown.json()["campaign"]["campaign_id"] == campaign_id
 
     ack_url = f"/hse/campaigns/{campaign_id}/acknowledge"
     first_read = client.post(ack_url, headers=member, json={"read_duration_seconds": 12})
@@ -155,3 +151,23 @@ def test_popup_shown_at_most_once_per_day_and_read_recorded_once(client, hse_wor
     readers = client.get(f"/hse/campaigns/{campaign_id}/readers", headers=hse).json()["readers"]
     assert len(readers) == 1
     assert readers[0]["read_duration_seconds"] == 12
+
+
+def test_captions_round_trip_and_rules(client, hse_world: World, photos: list[str]):
+    headers = hse_world.headers(client, "hse")
+    captions = ["Pakai helm.", "Pakai harness", "Jaga jarak"]
+    payload = _campaign_payload(photos, cooldown=12)
+    payload["media_captions"] = captions
+    created = client.post("/hse/campaigns", headers=headers, json=payload)
+    assert created.status_code == 201, created.text
+    assert created.json()["media_captions"] == captions
+
+    popup = client.get("/hse/campaigns/active-popup", headers=hse_world.headers(client, "member"))
+    assert popup.json()["campaign"]["media_captions"] == captions
+
+    # Jumlah keterangan harus sama dengan jumlah foto.
+    mismatch = dict(payload, media_captions=["satu"])
+    assert client.post("/hse/campaigns", headers=headers, json=mismatch).status_code == 422
+    # Maks 300 karakter per keterangan.
+    long_text = dict(payload, media_captions=["x" * 301, "y", "z"])
+    assert client.post("/hse/campaigns", headers=headers, json=long_text).status_code == 422

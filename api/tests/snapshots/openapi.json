@@ -6567,6 +6567,15 @@
       "title": "Is Mandatory",
       "type": "boolean"
      },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6704,6 +6713,15 @@
       "description": "Apakah wajib dibaca saat popup muncul",
       "title": "Is Mandatory",
       "type": "boolean"
+     },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
      },
      "media_path": {
       "anyOf": [
@@ -6857,6 +6875,21 @@
        }
       ],
       "title": "Is Mandatory"
+     },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "maxItems": 8,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
      },
      "media_path": {
       "anyOf": [
@@ -25572,58 +25605,6 @@
      }
     ],
     "summary": "Audit jejak pengguna yang telah membaca kampanye K3",
-    "tags": [
-     "HSE & Keselamatan Kerja"
-    ]
-   }
-  },
-  "/api/v1/hse/campaigns/{campaign_id}/seen": {
-   "post": {
-    "operationId": "mark_campaign_seen_api_v1_hse_campaigns__campaign_id__seen_post",
-    "parameters": [
-     {
-      "in": "path",
-      "name": "campaign_id",
-      "required": true,
-      "schema": {
-       "format": "uuid",
-       "title": "Campaign Id",
-       "type": "string"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": {
-          "type": "boolean"
-         },
-         "title": "Response Mark Campaign Seen Api V1 Hse Campaigns  Campaign Id  Seen Post",
-         "type": "object"
-        }
-       }
-      },
-      "description": "Successful Response"
-     },
-     "422": {
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      },
-      "description": "Validation Error"
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "summary": "Catat popup K3 sudah tampil hari ini (paling banyak sekali sehari per pengguna)",
     "tags": [
      "HSE & Keselamatan Kerja"
     ]

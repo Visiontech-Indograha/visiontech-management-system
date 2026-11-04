@@ -21,6 +21,7 @@ HSE_MEDIA_MIMES = frozenset({"image/jpeg", "image/png", "image/webp"})
 HSE_SECONDS_PER_MEDIA = 3
 HSE_CAROUSEL_MIN_SECONDS = 10
 HSE_CAROUSEL_MAX_SECONDS = 300
+HSE_CAPTION_MAX_CHARS = 300
 
 
 class HseCampaignBase(BaseModel):
@@ -32,6 +33,11 @@ class HseCampaignBase(BaseModel):
         default_factory=list,
         max_length=HSE_MAX_MEDIA,
         description="Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+    )
+    media_captions: list[str] = Field(
+        default_factory=list,
+        max_length=HSE_MAX_MEDIA,
+        description="Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
     )
     target_audience: str = Field(default="ALL", description="Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL")
     target_user_ids: list[UUID] | None = Field(
@@ -62,6 +68,7 @@ class HseCampaignUpdate(BaseModel):
     content_html: str | None = None
     media_path: str | None = None
     media_paths: list[UUID] | None = Field(None, max_length=HSE_MAX_MEDIA)
+    media_captions: list[str] | None = Field(None, max_length=HSE_MAX_MEDIA)
     target_audience: str | None = None
     target_user_ids: list[UUID] | None = None
     is_mandatory: bool | None = None

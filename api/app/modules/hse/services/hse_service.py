@@ -17,10 +17,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ValidationError
 from app.core.security import CurrentUser
-from app.core.time import jakarta_now
 from app.modules.hse.repositories.hse_campaign_repository import HseCampaignRepository
 from app.modules.hse.repositories.vehicle_inspection_repository import VehicleInspectionRepository
 from app.modules.hse.schemas.hse_schema import (
+    HSE_CAPTION_MAX_CHARS,
     HSE_CAROUSEL_MAX_SECONDS,
     HSE_CAROUSEL_MIN_SECONDS,
     HSE_MEDIA_MAX_BYTES,
@@ -53,6 +53,7 @@ class HseService:
         if data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir kampanye tidak boleh sebelum tanggal awal.", status=400)
         await self._validate_media(data.media_paths, data.cooldown_seconds, current_user, existing_ids=set())
+        self._validate_captions(data.media_paths, data.media_captions)
         if data.media_paths:
             # Kolom media_path lama tetap terisi (foto pertama) agar klien lama masih menampilkan gambar.
             data = data.model_copy(update={"media_path": str(data.media_paths[0])})
@@ -97,6 +98,14 @@ class HseService:
         if data.start_date and data.end_date and data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir tidak boleh sebelum tanggal awal.", status=400)
 
+        if data.media_paths is not None or data.media_captions is not None:
+            effective_media = (
+                data.media_paths if data.media_paths is not None else list(existing.get("media_paths") or [])
+            )
+            effective_captions = (
+                data.media_captions if data.media_captions is not None else list(existing.get("media_captions") or [])
+            )
+            self._validate_captions(effective_media, effective_captions)
         if data.media_paths is not None or data.cooldown_seconds is not None:
             media = data.media_paths if data.media_paths is not None else list(existing.get("media_paths") or [])
             cooldown = data.cooldown_seconds if data.cooldown_seconds is not None else existing["cooldown_seconds"]
@@ -115,6 +124,16 @@ class HseService:
         if not existing:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
         return await self.campaign_repo.delete(campaign_id)
+
+    @staticmethod
+    def _validate_captions(media_ids: list[UUID], captions: list[str]) -> None:
+        """Keterangan kosong atau sejajar dengan foto; tiap keterangan maks 300 karakter."""
+        if not captions:
+            return
+        if len(captions) != len(media_ids):
+            raise ValidationError("Jumlah keterangan harus sama dengan jumlah foto.")
+        if any(len(text) > HSE_CAPTION_MAX_CHARS for text in captions):
+            raise ValidationError(f"Keterangan foto maksimal {HSE_CAPTION_MAX_CHARS} karakter.")
 
     async def _validate_media(
         self,
@@ -159,14 +178,7 @@ class HseService:
         """
         user_uuid = UUID(str(current_user.user_id))
         system_role = str(current_user.role)
-        return await self.campaign_repo.get_active_popup_for_user(user_uuid, system_role, jakarta_now().date())
-
-    async def mark_popup_seen(self, campaign_id: UUID, current_user: CurrentUser) -> None:
-        """Dipanggil klien saat popup benar-benar tampil. Satu catatan per pengguna, kampanye, dan hari (WIB)."""
-        campaign = await self.campaign_repo.get_by_id(campaign_id)
-        if not campaign:
-            raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
-        await self.campaign_repo.mark_seen(campaign_id, UUID(str(current_user.user_id)), jakarta_now().date())
+        return await self.campaign_repo.get_active_popup_for_user(user_uuid, system_role)
 
     async def acknowledge_campaign(
         self,

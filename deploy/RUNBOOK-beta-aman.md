@@ -124,6 +124,33 @@ d. Hapus dump beta lama di `~/deploy/vms-beta/backups/` dan bucket `vms-backups`
   itu keputusan tertulis baru.
 - Pembersihan langkah 5 tidak bisa dibatalkan kecuali ada cadangan dari langkah 5a.
 
+## Rapikan struktur server (opsional; pemilik; kerjakan SETELAH langkah 1-3)
+
+Tujuan: nama folder dan cadangan yang rapi, dibuat ulang dari nol, dengan Funnel, Cloudflare, dan kredensial tetap bisa dipakai.
+Ini bukan skrip. Setiap langkah dijalankan pemilik dan dicek sebelum lanjut.
+
+Aturan yang tidak boleh dilanggar:
+- Kredensial TIDAK diganti. `POSTGRES_PASSWORD` hanya dipakai saat volume DB dibuat; mengganti nilainya di `.env` membuat API tidak bisa login ke DB yang sudah ada. Salin berkas apa adanya (`api.env`, `infra.env`, `face.env`, `notify.env`, `offsite.env`, deploy key, kunci SSH offsite) lalu pakai lagi di folder baru dengan izin 600.
+- Nama project compose (`name: vms-beta`, `vms-beta-infra`) dan nama volume TIDAK diubah. Mengubahnya membuat volume baru yang kosong, dan data DB terlihat hilang.
+- Cadangan lama baru dihapus setelah cadangan baru lolos uji pulih (`deploy/uji-pulih-cadangan.sh`) dan salinan MinIO-nya sudah ada.
+
+Urutan:
+1. Catat dan salin konfigurasi jalur publik (sebelum apa pun berubah):
+   - Cloudflare: cari lokasi config tunnel (`systemctl cat cloudflared` atau `ps -ef | grep cloudflared`), lalu salin folder config dan berkas kredensial tunnel-nya ke `~/simpan-jalur-publik/` (chmod 600). Jangan ubah isinya.
+   - Tailscale: `tailscale serve status > ~/simpan-jalur-publik/serve.txt` dan `tailscale funnel status > ~/simpan-jalur-publik/funnel.txt`.
+   - Tailscale identitas perangkat ada di `/var/lib/tailscale`. Jangan hapus.
+2. Salin semua berkas rahasia ke `~/simpan-kredensial/` (chmod 600, dir 700). Verifikasi dengan `cmp` terhadap aslinya. Jangan cetak isinya.
+3. Jeda cron: simpan `crontab -l > ~/simpan-kredensial/crontab.txt`, lalu kosongkan crontab sementara. Autodeploy tidak boleh jalan saat folder dipindah.
+4. Buat cadangan DB baru (`backup.sh` label `pra-rapi`). Uji pulih lewat `uji-pulih-cadangan.sh` dan pastikan lolos.
+5. Pindah folder (mis. `~/deploy/vms-mvp` ke `~/vms/prod`, `~/deploy/vms-beta` ke `~/vms/beta`). Di repo, path default ada di sekitar 25 tempat (`VMS_DEPLOY_DIR`, `BASE=`, cron di komentar `healthcheck.sh` dan `backup-offsite.sh`, `pasang-*.sh`). Perubahan path di repo harus dibuat dulu (PR terpisah), baru server dipindah.
+6. Pasang ulang cron dengan path baru. Cek `crontab -l`.
+7. Hapus cadangan lama (`backups/*.dump` lama dan `vms-backups` di MinIO) hanya setelah langkah 4 lolos dan pemilik setuju.
+8. Verifikasi: `serve status` dan `funnel status` sama dengan `serve.txt` dan `funnel.txt` (kecuali 10000 yang dimatikan); `/ready` 200; cron berjalan (`logs/cron.log`).
+
+Rollback: kembalikan folder ke nama lama, pasang ulang crontab dari `crontab.txt`, dan jalankan `docker compose up -d` di folder lama.
+
+Catatan: langkah ini mengubah path, bukan data. Tidak ada perintah `volume prune`, `volume rm`, atau `compose down -v`.
+
 ## Pertanyaan untuk pemilik
 
 1. Apakah HP beta (penguji) bisa memakai Tailscale? Bila tidak, perlu jalur lain. Jalur publik untuk beta tidak dibuat di PR ini.

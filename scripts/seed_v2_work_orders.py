@@ -126,7 +126,6 @@ async def seed() -> None:
                 "SELECT work_type_id, name FROM work_type WHERE delete_at IS NULL"
             ))).fetchall()
             cctv_wt_id = None
-            acs_wt_id = None
             for wt_id, wt_name in wt_rows:
                 if "cctv" in wt_name.lower():
                     cctv_wt_id = wt_id
@@ -135,7 +134,6 @@ async def seed() -> None:
                         "WHERE work_type_id = :id"
                     ), {"id": wt_id, "pr": json.dumps(PHOTO_REQ_CCTV), "db": json.dumps(DEFAULT_BOM_CCTV)})
                 elif "acs" in wt_name.lower() or "access" in wt_name.lower():
-                    acs_wt_id = wt_id
                     await conn.execute(text(
                         "UPDATE work_type SET photo_requirements = CAST(:pr AS jsonb), default_bom = CAST(:db AS jsonb) "
                         "WHERE work_type_id = :id"
@@ -147,9 +145,6 @@ async def seed() -> None:
                     "UPDATE work_type SET photo_requirements = CAST(:pr AS jsonb), default_bom = CAST(:db AS jsonb) "
                     "WHERE work_type_id = :id"
                 ), {"id": cctv_wt_id, "pr": json.dumps(PHOTO_REQ_CCTV), "db": json.dumps(DEFAULT_BOM_CCTV)})
-            if not acs_wt_id and wt_rows:
-                acs_wt_id = wt_rows[0][0]
-
             print("+ Diperbarui Work Type photo_requirements & default_bom (JSONB)")
 
             now = datetime.now(timezone.utc)

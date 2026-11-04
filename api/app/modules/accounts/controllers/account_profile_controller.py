@@ -16,11 +16,14 @@ from app.core.security import CurrentUser
 from app.modules.accounts.dependencies import get_account_service
 from app.modules.accounts.schemas.account_schema import (
     AccountCreate,
+    AccountLoginUpdate,
     AccountOut,
     AccountRoleUpdate,
+    AccountSessionsRevoked,
     AccountWithPassword,
 )
 from app.modules.accounts.services.account_service import AccountService
+from app.modules.auth.schemas.auth_session_schema import AuthSessionResponseSchema
 
 
 class AccountProfileController:
@@ -90,4 +93,40 @@ class AccountProfileController:
     async def handle_activate(self, emp_id: UUID, organization_id: str) -> AccountOut:
         """Mengaktifkan kembali akun karyawan."""
         row = await self.account_service.set_active(emp_id, organization_id, True)
+        return self.map_row_to_out(row)
+
+    async def handle_list_sessions(self, emp_id: UUID, organization_id: str) -> list[AuthSessionResponseSchema]:
+        """Perangkat yang sedang masuk dengan akun karyawan ini."""
+        rows = await self.account_service.sessions_of(emp_id, organization_id)
+        return [
+            AuthSessionResponseSchema(
+                id=str(r.id),
+                device_label=r.device_label,
+                ip_address=r.ip_address,
+                user_agent=r.user_agent,
+                issued_at=r.issued_at,
+                last_used_at=r.last_used_at,
+                current=False,  # HR/admin tidak punya sesi di perangkat akun ini
+            )
+            for r in rows
+        ]
+
+    async def handle_revoke_session(self, emp_id: UUID, session_id: UUID, actor: CurrentUser) -> AccountSessionsRevoked:
+        await self.account_service.revoke_session(emp_id, actor, session_id)
+        return AccountSessionsRevoked(revoked=1)
+
+    async def handle_revoke_all_sessions(self, emp_id: UUID, actor: CurrentUser) -> AccountSessionsRevoked:
+        revoked = await self.account_service.revoke_all_sessions(emp_id, actor, "SESSIONS_REVOKE_ALL")
+        return AccountSessionsRevoked(revoked=revoked)
+
+    async def handle_reset_device_slots(self, emp_id: UUID, actor: CurrentUser) -> AccountSessionsRevoked:
+        revoked = await self.account_service.revoke_all_sessions(emp_id, actor, "DEVICE_SLOTS_RESET")
+        return AccountSessionsRevoked(revoked=revoked)
+
+    async def handle_unlock(self, emp_id: UUID, actor: CurrentUser) -> AccountOut:
+        row = await self.account_service.unlock(emp_id, actor)
+        return self.map_row_to_out(row)
+
+    async def handle_change_login(self, emp_id: UUID, actor: CurrentUser, data: AccountLoginUpdate) -> AccountOut:
+        row = await self.account_service.change_login(emp_id, actor, data.login.strip().lower())
         return self.map_row_to_out(row)

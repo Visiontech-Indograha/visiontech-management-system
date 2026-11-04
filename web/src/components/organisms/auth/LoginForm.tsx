@@ -1,8 +1,10 @@
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import logo from "@/assets/brand/logo-visiontech.png";
 import type { LoginValues } from "@/schemas/loginSchema";
 import { Notice, NoticeDescription } from "@/components/molecules/Notice";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { DeviceLimitHelpDialog } from "@/components/organisms/auth/DeviceLimitHelpDialog";
 import { Panel, PanelContent, PanelDescription, PanelHeader, PanelTitle } from "@/components/molecules/Panel";
 import { StyledInput, StyledLabel } from "@/components/molecules/InputControls";
 import { AlertCircle, Timer } from "@/components/molecules/Glyphs";
@@ -18,15 +20,19 @@ function mmss(total: number): string {
  * Kartu login: judul, galat/kunci sementara, email + password, tombol masuk.
  * State form & pengiriman dipegang Page; `lockSeconds` > 0 = login dikunci server (R-21).
  */
-export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
+export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds }: {
   admin: boolean;
   form: UseFormReturn<LoginValues>;
   onSubmit: () => void;
   formError: string | null;
+  /** Kode galat API (mis. NOT_OFFICE_ACCOUNT, MAX_DEVICES_REACHED) untuk petunjuk tambahan di bawah pesan. */
+  formErrorCode?: string | null;
   lockSeconds: number;
 }) {
   const { register, formState: { errors, isSubmitting } } = form;
+  const [helpOpen, setHelpOpen] = useState(false);
   return (
+    <>
         <Panel className="w-full max-w-sm gap-5">
           <PanelHeader>
             <ImageView src={logo} alt="Visiontech Indograha" className="mb-3 h-10 w-auto self-start lg:hidden" />
@@ -46,9 +52,26 @@ export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
                   </NoticeDescription>
                 </Notice>
               ) : formError && (
-                <Notice variant="destructive">
+                <Notice variant="destructive" data-testid="login-error">
                   <AlertCircle aria-hidden />
-                  <NoticeDescription>{formError}</NoticeDescription>
+                  <NoticeDescription>
+                    {formError}
+                    {formErrorCode === "NOT_OFFICE_ACCOUNT" && (
+                      <TextBlock as="span" className="mt-1 block text-xs">
+                        Akun karyawan lapangan masuk lewat aplikasi Visiontech di HP. Unduh aplikasinya di bawah form ini.
+                      </TextBlock>
+                    )}
+                    {formErrorCode === "MAX_DEVICES_REACHED" && (
+                      <ActionButton
+                        type="button"
+                        variant="link"
+                        className="mt-1 h-auto p-0 text-xs"
+                        onClick={() => setHelpOpen(true)}
+                      >
+                        Lihat cara mengeluarkan perangkat lama
+                      </ActionButton>
+                    )}
+                  </NoticeDescription>
                 </Notice>
               )}
               <div className="space-y-1.5">
@@ -68,5 +91,7 @@ export function LoginForm({ admin, form, onSubmit, formError, lockSeconds }: {
           </PanelContent>
           <TextBlock className="text-center text-xs text-muted-foreground">Versi {__APP_VERSION__}</TextBlock>
         </Panel>
+        <DeviceLimitHelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </>
   );
 }

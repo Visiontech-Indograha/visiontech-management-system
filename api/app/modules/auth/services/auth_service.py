@@ -189,7 +189,8 @@ class AuthService:
             raise AppError(
                 "MAX_DEVICES_REACHED",
                 f"Akun ini sudah aktif di {MAX_DEVICES} perangkat. Keluarkan salah satu perangkat lewat menu "
-                "Sesi Aktif, lalu coba lagi.",
+                "Akun & keamanan (bagian Perangkat yang masuk), lalu coba lagi. "
+                "Tidak punya akses? Minta HR atau admin.",
                 status=403,
             )
 

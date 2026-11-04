@@ -26,6 +26,22 @@
     "title": "AccountCreate",
     "type": "object"
    },
+   "AccountLoginUpdate": {
+    "description": "Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem).",
+    "properties": {
+     "login": {
+      "maxLength": 254,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Login",
+      "type": "string"
+     }
+    },
+    "required": [
+     "login"
+    ],
+    "title": "AccountLoginUpdate",
+    "type": "object"
+   },
    "AccountOut": {
     "description": "Schema for account output data, detailing user authentication and status.",
     "properties": {
@@ -130,6 +146,20 @@
      "system_role"
     ],
     "title": "AccountRoleUpdate",
+    "type": "object"
+   },
+   "AccountSessionsRevoked": {
+    "description": "Jumlah sesi perangkat yang dicabut oleh HR/admin.",
+    "properties": {
+     "revoked": {
+      "title": "Revoked",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "revoked"
+    ],
+    "title": "AccountSessionsRevoked",
     "type": "object"
    },
    "AccountWithPassword": {
@@ -22768,6 +22798,114 @@
     ]
    }
   },
+  "/api/v1/employees/{emp_id}/account/device-slots/reset": {
+   "post": {
+    "description": "Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit.",
+    "operationId": "reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reset Device Slots",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/login": {
+   "post": {
+    "description": "Ganti email login akun (unik); sesi lama dicabut; tercatat di audit.",
+    "operationId": "change_login_api_v1_employees__emp_id__account_login_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountLoginUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Change Login",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
   "/api/v1/employees/{emp_id}/account/reset-password": {
    "post": {
     "description": "Mereset password akun karyawan ke password sementara baru.",
@@ -22871,6 +23009,216 @@
      }
     ],
     "summary": "Set Field Role",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions": {
+   "get": {
+    "description": "Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin).",
+    "operationId": "list_sessions_api_v1_employees__emp_id__account_sessions_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AuthSessionResponseSchema"
+         },
+         "title": "Response List Sessions Api V1 Employees  Emp Id  Account Sessions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Sessions",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/revoke-all": {
+   "post": {
+    "description": "Paksa keluar semua perangkat akun karyawan; tercatat di audit.",
+    "operationId": "revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke All Sessions",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/{session_id}/revoke": {
+   "post": {
+    "description": "Cabut satu perangkat akun karyawan; sesi milik akun lain → 404.",
+    "operationId": "revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "session_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Session Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke Session",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/unlock": {
+   "post": {
+    "description": "Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit.",
+    "operationId": "unlock_api_v1_employees__emp_id__account_unlock_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Unlock",
     "tags": [
      "Employee Account"
     ]
@@ -24304,7 +24652,7 @@
   },
   "/api/v1/face/enrollments/{employee_id}": {
    "delete": {
-    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).",
+    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.",
     "operationId": "reset_face_enrollment_api_v1_face_enrollments__employee_id__delete",
     "parameters": [
      {
@@ -24346,6 +24694,55 @@
      }
     ],
     "summary": "Reset Face Enrollment",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/enrollments/{employee_id}/status": {
+   "get": {
+    "description": "Apakah wajah karyawan sudah terdaftar (HR/admin).",
+    "operationId": "get_employee_face_status_api_v1_face_enrollments__employee_id__status_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceStatus"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Employee Face Status",
     "tags": [
      "Face"
     ]

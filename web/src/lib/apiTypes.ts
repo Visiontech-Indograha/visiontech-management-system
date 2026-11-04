@@ -3443,6 +3443,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/employees/{emp_id}/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin).
+         */
+        get: operations["list_sessions_api_v1_employees__emp_id__account_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke All Sessions
+         * @description Paksa keluar semua perangkat akun karyawan; tercatat di audit.
+         */
+        post: operations["revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/sessions/{session_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Session
+         * @description Cabut satu perangkat akun karyawan; sesi milik akun lain → 404.
+         */
+        post: operations["revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/device-slots/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Device Slots
+         * @description Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit.
+         */
+        post: operations["reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unlock
+         * @description Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit.
+         */
+        post: operations["unlock_api_v1_employees__emp_id__account_unlock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Login
+         * @description Ganti email login akun (unik); sesi lama dicabut; tercatat di audit.
+         */
+        post: operations["change_login_api_v1_employees__emp_id__account_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sync/operations": {
         parameters: {
             query?: never;
@@ -3810,6 +3930,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/face/enrollments/{employee_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Employee Face Status
+         * @description Apakah wajah karyawan sudah terdaftar (HR/admin).
+         */
+        get: operations["get_employee_face_status_api_v1_face_enrollments__employee_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/face/enrollments/{employee_id}": {
         parameters: {
             query?: never;
@@ -3822,7 +3962,7 @@ export interface paths {
         post?: never;
         /**
          * Reset Face Enrollment
-         * @description Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).
+         * @description Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.
          */
         delete: operations["reset_face_enrollment_api_v1_face_enrollments__employee_id__delete"];
         options?: never;
@@ -4664,6 +4804,14 @@ export interface components {
             system_role: "EMPLOYEE" | "TEAM_LEADER";
         };
         /**
+         * AccountLoginUpdate
+         * @description Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem).
+         */
+        AccountLoginUpdate: {
+            /** Login */
+            login: string;
+        };
+        /**
          * AccountOut
          * @description Schema for account output data, detailing user authentication and status.
          */
@@ -4698,6 +4846,14 @@ export interface components {
              * @enum {string}
              */
             system_role: "EMPLOYEE" | "TEAM_LEADER";
+        };
+        /**
+         * AccountSessionsRevoked
+         * @description Jumlah sesi perangkat yang dicabut oleh HR/admin.
+         */
+        AccountSessionsRevoked: {
+            /** Revoked */
+            revoked: number;
         };
         /**
          * AccountWithPassword
@@ -18549,6 +18705,197 @@ export interface operations {
             };
         };
     };
+    list_sessions_api_v1_employees__emp_id__account_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponseSchema"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlock_api_v1_employees__emp_id__account_unlock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_login_api_v1_employees__emp_id__account_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountLoginUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_operations_api_v1_sync_operations_post: {
         parameters: {
             query?: never;
@@ -19155,6 +19502,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnrollResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_employee_face_status_api_v1_face_enrollments__employee_id__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaceStatus"];
                 };
             };
             /** @description Validation Error */

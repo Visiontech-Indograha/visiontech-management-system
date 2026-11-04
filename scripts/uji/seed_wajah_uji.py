@@ -3,7 +3,7 @@
 Hanya untuk DB uji — supaya akun uji bisa langsung membuka aplikasi tanpa pendaftaran wajah.
 
     cd api
-    .venv/Scripts/python.exe ../scripts/seed_wajah_uji.py
+    .venv/Scripts/python.exe ../scripts/uji/seed_wajah_uji.py
 """
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import text  # noqa: E402
 

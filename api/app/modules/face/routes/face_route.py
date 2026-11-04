@@ -12,11 +12,12 @@ from fastapi import APIRouter, Depends, File, UploadFile
 
 from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
+from app.core.rate_limit import GROUP_FACE, rate_limit
 from app.core.security import CurrentUser
 from app.modules.face.controllers.face_controller import FaceController
 from app.modules.face.schemas.face_schema import EnrollResponse, FacePolicy, FaceResetResponse, FaceStatus
 
-router = APIRouter(prefix="/face", tags=["Face"])
+router = APIRouter(prefix="/face", tags=["Face"], dependencies=[Depends(rate_limit(GROUP_FACE))])
 
 
 @router.get("/policy", response_model=FacePolicy)

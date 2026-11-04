@@ -14,6 +14,7 @@ from fastapi.responses import Response
 
 from app.api.deps import get_current_user, require_permission
 from app.core.permissions import Permission
+from app.core.rate_limit import GROUP_UPLOAD, rate_limit
 from app.core.security import CurrentUser
 from app.modules.exports.controllers.export_controller import ExportController
 from app.modules.exports.schemas.export_schema import (
@@ -69,7 +70,11 @@ def survey_logo_image(role: LogoRole, current_user: CurrentUser = _PM,
     return controller.survey_logo_image(current_user, role)
 
 
-@router.put("/survey-logos/{role}", response_model=list[SurveyLogoOut])
+@router.put(
+    "/survey-logos/{role}",
+    response_model=list[SurveyLogoOut],
+    dependencies=[Depends(rate_limit(GROUP_UPLOAD))],
+)
 async def set_survey_logo(role: LogoRole, file: UploadFile = File(...), current_user: CurrentUser = _PM,
                           controller: ExportController = Depends()) -> list[SurveyLogoOut]:
     """Ganti logo kop: gambar dipasang utuh (rasio dijaga) ke kotak ukuran baku di setiap template."""

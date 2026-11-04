@@ -14,18 +14,39 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# Aturan carousel kampanye K3 (foto + durasi baca). Ukuran per foto mengikuti batas unggah berkas (10 MB).
+HSE_MAX_MEDIA = 8
+HSE_MEDIA_MAX_BYTES = 10 * 1024 * 1024
+HSE_MEDIA_MIMES = frozenset({"image/jpeg", "image/png", "image/webp"})
+HSE_SECONDS_PER_MEDIA = 3
+HSE_CAROUSEL_MIN_SECONDS = 10
+HSE_CAROUSEL_MAX_SECONDS = 300
+
 
 class HseCampaignBase(BaseModel):
     title: str = Field(..., max_length=255, description="Judul kampanye atau briefing K3")
     summary: str | None = Field(None, description="Ringkasan singkat kampanye")
     content_html: str = Field(..., description="Isi materi keselamatan (HTML/Markdown)")
     media_path: str | None = Field(None, max_length=255, description="Path foto banner atau infografis K3")
+    media_paths: list[UUID] = Field(
+        default_factory=list,
+        max_length=HSE_MAX_MEDIA,
+        description="Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+    )
     target_audience: str = Field(default="ALL", description="Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL")
     target_user_ids: list[UUID] | None = Field(
         default=None, description="Daftar user_id jika target_audience=INDIVIDUAL"
     )
     is_mandatory: bool = Field(default=True, description="Apakah wajib dibaca saat popup muncul")
-    cooldown_seconds: int = Field(default=5, ge=0, le=300, description="Durasi cooldown tombol konfirmasi baca (detik)")
+    cooldown_seconds: int = Field(
+        default=5,
+        ge=0,
+        le=300,
+        description=(
+            "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). "
+            "Dengan foto: 10-300 dan minimal 3 dtk per foto"
+        ),
+    )
     start_date: date = Field(..., description="Tanggal awal penayangan kampanye")
     end_date: date = Field(..., description="Tanggal akhir penayangan kampanye")
     is_active: bool = Field(default=True, description="Status keaktifan kampanye")
@@ -40,6 +61,7 @@ class HseCampaignUpdate(BaseModel):
     summary: str | None = None
     content_html: str | None = None
     media_path: str | None = None
+    media_paths: list[UUID] | None = Field(None, max_length=HSE_MAX_MEDIA)
     target_audience: str | None = None
     target_user_ids: list[UUID] | None = None
     is_mandatory: bool | None = None

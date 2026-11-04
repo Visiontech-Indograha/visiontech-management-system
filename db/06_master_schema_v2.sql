@@ -916,3 +916,34 @@ CREATE TABLE IF NOT EXISTS work_order_bom (
 );
 CREATE INDEX IF NOT EXISTS idx_wo_bom_wo ON work_order_bom(work_order_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wo_bom_item ON work_order_bom(work_order_item_id) WHERE delete_at IS NULL;
+
+-- 41. Tabel hse_campaigns (v2_0019) + daftar foto carousel media_paths (v2_0021)
+CREATE TABLE IF NOT EXISTS hse_campaigns (
+    campaign_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    summary TEXT,
+    content_html TEXT NOT NULL,
+    media_path VARCHAR(255),
+    media_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'ALL',
+    target_user_ids JSONB,
+    is_mandatory BOOLEAN NOT NULL DEFAULT TRUE,
+    cooldown_seconds INT NOT NULL DEFAULT 5,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_id UUID NOT NULL REFERENCES users(user_id),
+    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    delete_at TIMESTAMPTZ
+);
+ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_paths JSONB NOT NULL DEFAULT '[]'::jsonb;
+CREATE INDEX IF NOT EXISTS idx_hse_campaigns_dates ON hse_campaigns (is_active, start_date, end_date) WHERE delete_at IS NULL;
+-- Penanda popup sudah tampil hari ini per pengguna (v2_0022): paling banyak sekali sehari
+CREATE TABLE IF NOT EXISTS hse_campaign_views (
+    campaign_id UUID NOT NULL REFERENCES hse_campaigns(campaign_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    view_date DATE NOT NULL,
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (campaign_id, user_id, view_date)
+);

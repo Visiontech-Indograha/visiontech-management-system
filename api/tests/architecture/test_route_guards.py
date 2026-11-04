@@ -26,6 +26,7 @@ from tests.conftest import World, requires_db, sync_query
 SELF_SERVICE = {
     ("GET", "/hse/campaigns/active-popup"): "popup K3 wajib baca untuk pengguna yang login; hanya kampanye aktif yang menyasar akun itu",
     ("POST", "/hse/campaigns/{campaign_id}/acknowledge"): "konfirmasi baca atas nama akun sendiri (user_id dari token)",
+    ("POST", "/hse/campaigns/{campaign_id}/seen"): "catat popup tampil untuk akun sendiri hari ini (user_id dari token)",
     ("POST", "/hse/inspections"): "pengemudi/karyawan lapangan mengirim formulir inspeksi kendaraan (pelapor dari token)",
     ("GET", "/auth/me"): "profil sendiri",
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",

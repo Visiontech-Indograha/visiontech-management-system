@@ -4,11 +4,11 @@ HTML (Jinja2) → PDF (WeasyPrint) untuk dokumen resmi. PDF hanya tampilan; sumb
 SHA-256-nya. WeasyPrint butuh pustaka sistem (Pango) — tersedia di image Linux/Docker; bila tidak ada, galat 503
 yang jelas (bukan 500).
 """
-
 from __future__ import annotations
 
 import base64
 import io
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -73,7 +73,7 @@ def html_to_pdf(html: str) -> bytes:
                     story.append(Image(str(VISIONTECH_LOGO), width=target_w, height=target_h))
                     story.append(Spacer(1, 10))
             except (OSError, ValueError):
-                pass
+                logging.getLogger(__name__).warning("Logo Visiontech gagal dibaca; dokumen dibuat tanpa logo")
         story.append(Paragraph('<b>Dokumen Resmi PT Visiontech Indograha</b>', styles['Heading1']))
         story.append(Spacer(1, 10))
         for pline in clean_text.splitlines()[:50]:

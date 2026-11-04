@@ -11293,6 +11293,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0
@@ -11429,6 +11433,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0

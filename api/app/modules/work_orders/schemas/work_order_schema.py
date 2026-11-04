@@ -135,6 +135,8 @@ class WorkOrderOut(BaseModel):
     survey_approved_at: datetime | None = None
     bast_signed_at: datetime | None = None
     bast_signer_name: str | None = None
+    leader_signed_at: datetime | None = None
+    leader_signer_name: str | None = None
     total_items: int = 0
     completed_items: int = 0
     created_at: datetime

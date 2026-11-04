@@ -98,61 +98,129 @@ def test_apply_survey_pm_or_om_in_scope(client, world: World):
     assert other_pm.status_code == 404, other_pm.text
 
 
-def test_item_progress_only_assigned_team_members(client, world: World):
+def _put(client, world: World, who: str, path: str, body: dict):
+    return client.put(path, headers=world.headers(client, who), json=body)
+
+
+def test_item_progress_team_or_manager_in_scope(client, world: World):
     _setup_scope(world)
-    for who in ("member", "leader"):
+    for who in ("member", "leader", "pm", "ops", "admin"):
         wo = _work_order(world)
-        ok = client.put(f"/work-orders/items/{wo['item_id']}/progress", headers=world.headers(client, who),
-                        json={"completed_qty": 1, "status": "DONE"})
+        ok = _put(client, world, who, f"/work-orders/items/{wo['item_id']}/progress",
+                  {"completed_qty": 1, "status": "DONE"})
         assert ok.status_code == 200, (who, ok.text)
     wo = _work_order(world)
-    for who in ("pm", "admin"):
-        denied = client.put(f"/work-orders/items/{wo['item_id']}/progress", headers=world.headers(client, who),
-                            json={"completed_qty": 1, "status": "DONE"})
-        assert denied.status_code == 403, (who, denied.text)
-    for who in ("pm2", "outsider"):
-        hidden = client.put(f"/work-orders/items/{wo['item_id']}/progress", headers=world.headers(client, who),
-                            json={"completed_qty": 1, "status": "DONE"})
+    for who in ("pm2", "outsider", "hr"):
+        hidden = _put(client, world, who, f"/work-orders/items/{wo['item_id']}/progress",
+                      {"completed_qty": 1, "status": "DONE"})
         assert hidden.status_code == 404, (who, hidden.text)
-    random_item = client.put(f"/work-orders/items/{uuid.uuid4()}/progress", headers=world.headers(client, "member"),
-                             json={"completed_qty": 1, "status": "DONE"})
+    random_item = _put(client, world, "member", f"/work-orders/items/{uuid.uuid4()}/progress",
+                       {"completed_qty": 1, "status": "DONE"})
     assert random_item.status_code == 404, random_item.text
 
 
-def test_bom_actual_only_assigned_team_members(client, world: World):
+def test_bom_actual_team_or_manager_in_scope(client, world: World):
     _setup_scope(world)
-    for who in ("member", "leader"):
+    for who in ("member", "leader", "pm", "ops", "admin"):
         wo = _work_order(world)
-        ok = client.put(f"/work-orders/bom/{wo['bom_id']}/actual", headers=world.headers(client, who),
-                        json={"actual_qty": 2})
+        ok = _put(client, world, who, f"/work-orders/bom/{wo['bom_id']}/actual", {"actual_qty": 2})
         assert ok.status_code == 200, (who, ok.text)
     wo = _work_order(world)
-    for who in ("pm", "admin"):
-        denied = client.put(f"/work-orders/bom/{wo['bom_id']}/actual", headers=world.headers(client, who),
-                            json={"actual_qty": 2})
-        assert denied.status_code == 403, (who, denied.text)
     for who in ("pm2", "outsider", "hr"):
-        hidden = client.put(f"/work-orders/bom/{wo['bom_id']}/actual", headers=world.headers(client, who),
-                            json={"actual_qty": 2})
+        hidden = _put(client, world, who, f"/work-orders/bom/{wo['bom_id']}/actual", {"actual_qty": 2})
         assert hidden.status_code == 404, (who, hidden.text)
-    random_bom = client.put(f"/work-orders/bom/{uuid.uuid4()}/actual", headers=world.headers(client, "member"),
-                            json={"actual_qty": 2})
+    random_bom = _put(client, world, "member", f"/work-orders/bom/{uuid.uuid4()}/actual", {"actual_qty": 2})
     assert random_bom.status_code == 404, random_bom.text
 
 
-def test_sign_bast_leader_or_manager_in_scope(client, world: World):
+def _code(resp) -> str:
+    return resp.json()["error"]["code"]
+
+
+def _sign(client, world: World, who: str, wo_id: str, name: str = "Budi Uji"):
+    return _post(client, world, who, f"/work-orders/{wo_id}/sign-bast", {"signer_name": name})
+
+
+def test_bast_leader_signs_first_then_manager_approves(client, world: World):
     _setup_scope(world)
-    body = {"signer_name": "Budi Uji"}
-    for who in ("leader", "pm"):
-        wo = _work_order(world, status="IN_PROGRESS", items_done=True)
-        ok = _post(client, world, who, f"/work-orders/{wo['work_order_id']}/sign-bast", body)
+    wo_id = _work_order(world, status="IN_PROGRESS", items_done=True)["work_order_id"]
+
+    # Sebelum ketua tim: PM/OM tidak bisa mengesahkan; anggota 403; di luar cakupan 404.
+    early = _sign(client, world, "pm", wo_id)
+    assert early.status_code == 409 and _code(early) == "LEADER_SIGNATURE_REQUIRED", early.text
+    assert _sign(client, world, "admin", wo_id).status_code == 409
+    assert _sign(client, world, "member", wo_id).status_code == 403
+    assert _sign(client, world, "pm2", wo_id).status_code == 404
+    assert _sign(client, world, "outsider", wo_id).status_code == 404
+
+    # Ketua tim menandatangani lebih dulu: status menjadi COMPLETED (menunggu persetujuan).
+    led = _sign(client, world, "leader", wo_id, "Ketua Uji")
+    assert led.status_code == 200, led.text
+    assert led.json()["status"] == "COMPLETED"
+    assert led.json()["leader_signed_at"] is not None
+    assert led.json()["leader_signer_name"] == "Ketua Uji"
+    assert led.json()["bast_signed_at"] is None
+
+    # Ketua tim tidak bisa menandatangani dua kali.
+    again = _sign(client, world, "leader", wo_id)
+    assert again.status_code == 409 and _code(again) == "BAST_ALREADY_SIGNED", again.text
+
+    # Persetujuan final PM dalam cakupan: status 'selesai' (BAST_SIGNED).
+    final = _sign(client, world, "pm", wo_id, "PM Uji")
+    assert final.status_code == 200, final.text
+    assert final.json()["status"] == "BAST_SIGNED"
+    assert final.json()["bast_signed_at"] is not None
+    assert final.json()["bast_signer_name"] == "PM Uji"
+
+    # Sudah disahkan: tidak bisa diulang.
+    twice = _sign(client, world, "pm", wo_id)
+    assert twice.status_code == 409, twice.text
+
+
+def test_bast_final_by_om_or_sa_after_leader(client, world: World):
+    _setup_scope(world)
+    for who in ("ops", "admin"):
+        wo_id = _work_order(world, status="READY_TO_EXECUTE", items_done=True)["work_order_id"]
+        assert _sign(client, world, "leader", wo_id).status_code == 200
+        ok = _sign(client, world, who, wo_id)
         assert ok.status_code == 200, (who, ok.text)
-    wo = _work_order(world, status="IN_PROGRESS", items_done=True)
-    denied = _post(client, world, "member", f"/work-orders/{wo['work_order_id']}/sign-bast", body)
-    assert denied.status_code == 403, denied.text
-    for who in ("pm2", "outsider"):
-        hidden = _post(client, world, who, f"/work-orders/{wo['work_order_id']}/sign-bast", body)
-        assert hidden.status_code == 404, (who, hidden.text)
+        assert ok.json()["status"] == "BAST_SIGNED", who
+
+
+def test_bast_leader_step_rules(client, world: World):
+    _setup_scope(world)
+    # Anggota biasa (bukan ketua) 403, walau sudah di dalam cakupan.
+    wo_id = _work_order(world, status="IN_PROGRESS", items_done=True)["work_order_id"]
+    assert _sign(client, world, "member", wo_id).status_code == 403
+    # Item belum semua DONE: ketua tim tidak bisa menandatangani.
+    pending = _work_order(world, status="IN_PROGRESS", items_done=False)["work_order_id"]
+    blocked = _sign(client, world, "leader", pending)
+    assert blocked.status_code == 422 and "belum selesai" in blocked.text, blocked.text
+    # Status sebelum persetujuan survei: ditolak dengan status 409.
+    early = _work_order(world, status="WAITING_SURVEY", items_done=True)["work_order_id"]
+    not_ready = _sign(client, world, "leader", early)
+    assert not_ready.status_code == 409 and _code(not_ready) == "INVALID_STATE", not_ready.text
+
+
+def test_bast_same_person_cannot_sign_both_steps(client, world: World):
+    _setup_scope(world)
+    # PM yang juga ketua tim WO tidak boleh menandatangani kedua langkah sendiri.
+    sync_query("UPDATE team SET leader_employee_id = %s WHERE team_id = %s",
+               (world.employees["pm"], world.team_id))
+    wo_id = _work_order(world, status="IN_PROGRESS", items_done=True)["work_order_id"]
+    assert _sign(client, world, "pm", wo_id).status_code == 200
+    self_final = _sign(client, world, "pm", wo_id)
+    assert self_final.status_code == 409 and _code(self_final) == "SAME_SIGNER", self_final.text
+
+
+def test_bast_out_of_scope_is_not_found(client, world: World):
+    _setup_scope(world)
+    wo_id = _work_order(world, status="IN_PROGRESS", items_done=True)["work_order_id"]
+    for who in ("pm2", "outsider", "hr"):
+        assert _sign(client, world, who, wo_id).status_code == 404, who
+    assert _sign(client, world, "leader", wo_id).status_code == 200
+    for who in ("pm2", "outsider", "hr"):
+        assert _sign(client, world, who, wo_id).status_code == 404, who
 
 
 def test_export_document_managers_in_scope_only(client, world: World):

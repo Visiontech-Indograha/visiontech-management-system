@@ -831,6 +831,10 @@ CREATE TABLE IF NOT EXISTS client_work_orders (
     bast_signer_name VARCHAR(120),
     bast_signature_file_id UUID REFERENCES file_object(id) ON DELETE SET NULL,
     verify_hash VARCHAR(128),
+    leader_signed_at TIMESTAMPTZ,  -- tanda tangan ketua tim, langkah pertama BAST (v2_0020)
+    leader_signed_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
+    leader_signer_name VARCHAR(120),
+    leader_signature_file_id UUID REFERENCES file_object(id) ON DELETE SET NULL,
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL

@@ -17370,6 +17370,29 @@
       ],
       "title": "Lead Team Id"
      },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
+     },
      "pm_id": {
       "format": "uuid",
       "title": "Pm Id",
@@ -17730,6 +17753,29 @@
        }
       ],
       "title": "Lead Team Id"
+     },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
      },
      "pm_id": {
       "format": "uuid",

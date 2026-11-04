@@ -89,6 +89,10 @@ class WorkOrderRepository(BaseRepository):
                 wo.survey_approved_at,
                 wo.bast_signed_at,
                 wo.bast_signer_name,
+                wo.leader_signed_at,
+                wo.leader_signed_by,
+                wo.leader_signer_name,
+                wo.leader_signature_file_id,
                 (SELECT COUNT(*)::int FROM work_order_items woi
                  WHERE woi.work_order_id = wo.work_order_id AND woi.delete_at IS NULL) AS total_items,
                 (SELECT COUNT(*)::int FROM work_order_items woi
@@ -160,6 +164,10 @@ class WorkOrderRepository(BaseRepository):
                 wo.survey_approved_at,
                 wo.bast_signed_at,
                 wo.bast_signer_name,
+                wo.leader_signed_at,
+                wo.leader_signed_by,
+                wo.leader_signer_name,
+                wo.leader_signature_file_id,
                 (SELECT COUNT(*)::int FROM work_order_items woi
                  WHERE woi.work_order_id = wo.work_order_id AND woi.delete_at IS NULL) AS total_items,
                 (SELECT COUNT(*)::int FROM work_order_items woi
@@ -603,14 +611,48 @@ class WorkOrderRepository(BaseRepository):
             {"bom_id": str(bom_id), "actual_qty": actual_qty},
         )
 
+    async def sign_bast_leader(
+        self,
+        work_order_id: UUID | str,
+        signer_user_id: UUID | str,
+        signer_name: str,
+        signature_file_id: UUID | str | None,
+    ) -> bool:
+        """Tanda tangan ketua tim (langkah 1). Hanya sekali: `leader_signed_at` harus masih kosong.
+        Status menjadi COMPLETED (selesai dikerjakan, menunggu persetujuan PM/OM). False bila syarat tak terpenuhi."""
+        found = await self.scalar(
+            """
+            UPDATE client_work_orders
+            SET leader_signed_at = NOW(),
+                leader_signed_by = CAST(:uid AS uuid),
+                leader_signer_name = :sname,
+                leader_signature_file_id = CAST(:fid AS uuid),
+                status = 'COMPLETED',
+                update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+              AND leader_signed_at IS NULL
+              AND status IN ('READY_TO_EXECUTE', 'IN_PROGRESS', 'COMPLETED')
+            RETURNING 1
+            """,
+            {
+                "wo_id": str(work_order_id),
+                "uid": str(signer_user_id),
+                "sname": signer_name,
+                "fid": str(signature_file_id) if signature_file_id else None,
+            },
+        )
+        return bool(found)
+
     async def sign_bast(
         self,
         work_order_id: UUID | str,
         signer_name: str,
         signature_file_id: UUID | str | None,
         verify_hash: str,
-    ) -> None:
-        await self.execute(
+    ) -> bool:
+        """Persetujuan final PM/OM (langkah 2). Hanya setelah ketua tim menandatangani dan status COMPLETED.
+        Mengesahkan BAST (status BAST_SIGNED). False bila syarat tak terpenuhi (diperiksa ulang di SQL)."""
+        found = await self.scalar(
             """
             UPDATE client_work_orders
             SET status = 'BAST_SIGNED',
@@ -619,7 +661,9 @@ class WorkOrderRepository(BaseRepository):
                 bast_signature_file_id = CAST(:fid AS uuid),
                 verify_hash = :vhash,
                 update_at = NOW()
-            WHERE work_order_id = CAST(:wo_id AS uuid)
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+              AND leader_signed_at IS NOT NULL AND status = 'COMPLETED'
+            RETURNING 1
             """,
             {
                 "wo_id": str(work_order_id),
@@ -628,6 +672,7 @@ class WorkOrderRepository(BaseRepository):
                 "vhash": verify_hash,
             },
         )
+        return bool(found)
 
     async def insert_signature_file(
         self,

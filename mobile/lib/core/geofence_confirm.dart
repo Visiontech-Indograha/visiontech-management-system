@@ -35,6 +35,18 @@ double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
 
 double _deg2rad(double deg) => deg * (math.pi / 180);
 
+/// Jarak yang mudah dibaca orang awam: "84 km", "3,5 km", "850 m", "50 m".
+String formatJarakId(double meters) {
+  if (meters >= 1000) {
+    final km = meters / 1000;
+    final text = km >= 10
+        ? km.round().toString()
+        : km.toStringAsFixed(1).replaceAll('.', ',');
+    return '$text km';
+  }
+  return '${(meters / 10).round() * 10} m';
+}
+
 /// Cek jarak posisi HP ke SATU target spesifik (mis. site_latitude/longitude
 /// milik penugasan yang sedang aktif) -- dipakai saat konteksnya sudah tahu
 /// pasti lokasi mana yang jadi acuan (bukan "situs manapun").
@@ -80,16 +92,17 @@ Future<bool> confirmProceedIfOutsideGeofence(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
-      title: const Text('Di Luar Lokasi yang Ditentukan'),
+      title: const Text('Di luar lokasi kerja'),
       content: Text(
-        'Anda terdeteksi sekitar ${proximity.distanceMeters.round()} meter dari ${proximity.label} '
-        '(radius diizinkan ${proximity.radiusMeters.round()} m).\n\n'
-        'Data tetap akan tersimpan & ditinjau HR/PM bila dilanjutkan. Tetap lanjutkan?',
+        'Anda sekitar ${formatJarakId(proximity.distanceMeters)} dari ${proximity.label}. '
+        'Batas absen: ${formatJarakId(proximity.radiusMeters)} dari lokasi kerja.\n\n'
+        'Jika dikirim, absen Anda tetap tersimpan dan menunggu pemeriksaan atasan (Project Manager). '
+        'Atasan yang memutuskan apakah absen ini diterima.',
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Batal'),
+          child: const Text('Batal, tidak dikirim'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(true),

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
+import '../../core/geofence_confirm.dart';
 import '../../core/local_storage.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
@@ -332,8 +333,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         explanation = await _askExplanation(
           title: outside ? 'Absen di luar zona' : 'Ajukan absen ulang',
           info: outside
-              ? 'Anda ${distance.round()} m dari ${site['name']} (radius ${radius.round()} m). '
-                    'Jelaskan mengapa absen di luar zona.'
+              ? 'Anda sekitar ${formatJarakId(distance)} dari ${site['name']} '
+                    '(batas absen ${formatJarakId(radius.toDouble())}). '
+                    'Jelaskan mengapa Anda absen di luar lokasi. Setelah dikirim, absen menunggu pemeriksaan atasan.'
               : 'Jelaskan alasan pengajuan ulang absensi yang ditolak.',
         );
         if (explanation == null) return;
@@ -345,7 +347,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         label: 'Swafoto absen masuk',
         kind: LocalFileKind.selfie,
         hint: outside
-            ? 'Anda ${distance.round()} m dari ${site['name']}. Pastikan wajah terlihat jelas.'
+            ? 'Anda sekitar ${formatJarakId(distance)} dari ${site['name']}. Pastikan wajah terlihat jelas.'
             : 'Pastikan wajah terlihat jelas dan tidak tertutup.',
         preferFrontCamera: true,
       );

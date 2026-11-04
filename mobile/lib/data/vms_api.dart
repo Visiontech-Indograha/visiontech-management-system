@@ -300,7 +300,7 @@ class VmsApi {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
-  // --- Biometrik Wajah (Face API) ------------------------------------------
+  // --- Pengenalan wajah ------------------------------------------
   /// Pemeriksaan pembaruan aplikasi (docs/32) — rute publik, juga dipanggil sebelum login.
   Future<Map<String, dynamic>> appUpdate({
     required int build,
@@ -320,6 +320,12 @@ class VmsApi {
 
   Future<Map<String, dynamic>> facePolicy() async {
     final res = await _dio.get('$_p/face/policy');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
+  /// Hapus pendaftaran wajah sendiri (DELETE /face/enrollment/me); server mencatat di log aktivitas.
+  Future<Map<String, dynamic>> deleteOwnFaceEnrollment() async {
+    final res = await _dio.delete('$_p/face/enrollment/me');
     return Map<String, dynamic>.from(res.data as Map);
   }
 

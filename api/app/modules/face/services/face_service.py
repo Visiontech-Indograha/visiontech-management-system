@@ -26,6 +26,7 @@ import filetype
 from app.core import storage
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.hard_delete import write_delete_audit
 from app.core.time import jakarta_now
 from app.modules.face.repositories.face_repository import FaceRepository, parse_embedding
 from app.modules.face.schemas.face_schema import EnrollResponse, FacePolicy, FaceStatus
@@ -163,6 +164,23 @@ class FaceService:
     async def reset(self, employee_id: UUID) -> None:
         if not await self.repo.clear_embedding(employee_id):
             raise NotFoundError("Karyawan")
+
+    async def reset_own(self, user_id: str, actor_role: str, actor_email: str) -> UUID:
+        """Hapus pendaftaran wajah milik sendiri (idempoten); dicatat di log aktivitas."""
+        employee = await self._employee(user_id)
+        if parse_embedding(employee.face_embedding)[0] is not None:
+            await self.repo.clear_embedding(employee.employee_id)
+            await write_delete_audit(
+                self.repo.db,
+                actor_user_id=user_id,
+                actor_role=actor_role,
+                actor_email=actor_email,
+                entity_type="employee",
+                entity_id=employee.employee_id,
+                detail={"reason": "SELF_RESET_FACE"},
+                action="FACE_SELF_RESET",
+            )
+        return employee.employee_id
 
     # ── Dipakai modul absensi ─────────────────────────────────────────────────
     async def is_enrolled(self, employee_id: UUID | str) -> bool:

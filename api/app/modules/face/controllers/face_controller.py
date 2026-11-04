@@ -45,3 +45,7 @@ class FaceController:
     async def handle_reset(self, employee_id: UUID) -> FaceResetResponse:
         await self.service.reset(employee_id)
         return FaceResetResponse(employee_id=employee_id, enrolled=False)
+
+    async def handle_reset_own(self, current_user: CurrentUser) -> FaceResetResponse:
+        employee_id = await self.service.reset_own(current_user.user_id, current_user.role, current_user.email)
+        return FaceResetResponse(employee_id=employee_id, enrolled=False)

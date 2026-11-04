@@ -22,12 +22,18 @@ function leaveStatusLabel(l: Pick<LeaveRequest, 'status' | 'reviewed_by_name'>):
 }
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  PENDING: { label: "Menunggu Persetujuan", className: "bg-amber-500/15 text-amber-600 font-medium" },
-  APPROVED_BY_PM: { label: "Disetujui PM", className: "bg-leaf/15 text-leaf font-medium" },
+  PENDING: { label: "Menunggu atasan", className: "bg-amber-500/15 text-amber-600 font-medium" },
+  APPROVED_BY_PM: { label: "Menunggu HR", className: "bg-sky-500/15 text-sky-700 font-medium" },
   APPROVED_BY_HR: { label: "Disetujui", className: "bg-leaf/15 text-leaf font-medium" },
   APPROVED_BY_FINANCE: { label: "Disetujui Finance", className: "bg-leaf/15 text-leaf font-medium" },
   REJECTED: { label: "Ditolak", className: "bg-danger/15 text-danger font-medium" },
   CANCELLED: { label: "Dibatalkan", className: "bg-hover text-mist font-medium" },
+};
+
+/** Alur persetujuan: atasan (PM) dulu, lalu HR untuk keputusan akhir. */
+const APPROVAL_STEP_TEXT: Record<string, string> = {
+  PENDING: "Alur: atasan memeriksa dulu, lalu HR memberi persetujuan akhir.",
+  APPROVED_BY_PM: "Sudah disetujui atasan. Menunggu HR untuk persetujuan akhir.",
 };
 
 export function LeaveList({
@@ -79,8 +85,8 @@ export function LeaveList({
             onChange={(e) => onStatusFilterChange(e.target.value)}
           >
             <ControlOption value="">-- Semua Status --</ControlOption>
-            <ControlOption value="PENDING">Menunggu Persetujuan</ControlOption>
-            <ControlOption value="APPROVED_BY_PM">Disetujui PM</ControlOption>
+            <ControlOption value="PENDING">Menunggu atasan</ControlOption>
+            <ControlOption value="APPROVED_BY_PM">Menunggu HR (sudah disetujui atasan)</ControlOption>
             <ControlOption value="APPROVED_BY_HR">Disetujui (final)</ControlOption>
             <ControlOption value="REJECTED">Ditolak</ControlOption>
             <ControlOption value="CANCELLED">Dibatalkan</ControlOption>
@@ -158,6 +164,9 @@ export function LeaveList({
                         <TextBlock as="strong" className="text-foreground">{l.total_days} hari</TextBlock>)
                       </TextBlock>
                     </div>
+                    {APPROVAL_STEP_TEXT[l.status] && (
+                      <TextBlock as="p" className="text-xs text-foreground">{APPROVAL_STEP_TEXT[l.status]}</TextBlock>
+                    )}
                     <div className="p-2 rounded-control bg-hover text-xs text-foreground mt-2">
                       <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Alasan:</TextBlock>
                       <TextBlock as="span">{l.reason}</TextBlock>

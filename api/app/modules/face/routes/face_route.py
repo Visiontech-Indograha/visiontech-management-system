@@ -47,6 +47,15 @@ async def enroll_face(
     return await controller.handle_enroll(current_user, files)
 
 
+@router.delete("/enrollment/me", response_model=FaceResetResponse)
+async def reset_own_face_enrollment(
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: FaceController = Depends(),
+) -> FaceResetResponse:
+    """Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas."""
+    return await controller.handle_reset_own(current_user)
+
+
 @router.delete("/enrollments/{employee_id}", response_model=FaceResetResponse)
 async def reset_face_enrollment(
     employee_id: UUID,

@@ -182,7 +182,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
             : _obstacles.text.trim(),
         photoFileIds: ids,
       );
-      _snack('Serah terima ditandatangani. Menunggu persetujuan PM.');
+      _snack('Serah terima ditandatangani. Menunggu persetujuan atasan (Project Manager).');
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       _snack(apiErrorMessage(e), error: true);
@@ -238,7 +238,7 @@ class _BastSignScreenState extends ConsumerState<BastSignScreen> {
                           icon: Icons.verified_rounded,
                           accent: locked ? Accent.emerald : Accent.amber,
                           text: locked
-                              ? 'Sudah disetujui PM — tidak bisa diubah lagi.'
+                              ? 'Sudah disetujui atasan (Project Manager) — tidak bisa diubah lagi.'
                               : 'Sudah Anda tandatangani; menandatangani ulang menggantikan yang lama.',
                         ),
                       ],

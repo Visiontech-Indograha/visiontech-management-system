@@ -6,7 +6,7 @@ export function WorkOrderCreateAction({ onClick }: { onClick: () => void }) {
   return (
     <ActionButton type="button" variant="default" onClick={onClick}>
       <Plus className="h-4 w-4 mr-1.5" />
-      <TextBlock as="span">Buat Work Order Baru</TextBlock>
+      <TextBlock as="span">Buat Tugas Klien Baru</TextBlock>
     </ActionButton>
   );
 }

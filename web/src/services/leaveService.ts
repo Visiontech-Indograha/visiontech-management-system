@@ -92,11 +92,12 @@ export async function getLeaveBalance(employeeId: string, year = new Date().getF
   return (await api.get<LeaveBalance>(`/leaves/balances/${employeeId}`, { params: { year } })).data;
 }
 
-export const useLeaves = (params?: LeaveListParams) =>
+export const useLeaves = (params?: LeaveListParams, opts?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ["leaves", params],
     queryFn: () => listLeaves(params),
     placeholderData: (prev) => prev,
+    enabled: opts?.enabled ?? true,
   });
 
 export const useLeaveBalance = (employeeId: string, year = new Date().getFullYear()) =>

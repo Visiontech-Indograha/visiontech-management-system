@@ -38,6 +38,7 @@ from app.modules.work_orders.schemas.work_order_schema import (
     WorkOrderCreate,
     WorkOrderSignBast,
 )
+from app.shared.access.scope_rules import sees_all_work_orders, viewer_params
 from app.shared.documents.branding import default_kop_logos
 from app.shared.documents.reportlab_service import build_completion_pdf_reportlab
 
@@ -77,6 +78,7 @@ class WorkOrderService:
         q: str | None = None,
         limit: int = 50,
     ) -> Sequence[Any]:
+        # Cakupan: SA/OM semua; PM divisinya; ketua/anggota tim yang ditugaskan; lainnya daftar kosong.
         return await self.repo.list_work_orders(
             division_id=division_id,
             status=status,
@@ -85,10 +87,13 @@ class WorkOrderService:
             lead_team_id=lead_team_id,
             q=q,
             limit=limit,
+            viewer=None if sees_all_work_orders(current_user) else viewer_params(current_user),
         )
 
-    async def get_work_order(self, work_order_id: UUID | str) -> Any:
-        wo = await self.repo.get_work_order(work_order_id)
+    async def get_work_order(self, work_order_id: UUID | str, current_user: CurrentUser | None = None) -> Any:
+        # Di luar cakupan → 404. `current_user` None = pemanggil internal yang sudah berwenang.
+        viewer = None if current_user is None or sees_all_work_orders(current_user) else viewer_params(current_user)
+        wo = await self.repo.get_work_order(work_order_id, viewer=viewer)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
 

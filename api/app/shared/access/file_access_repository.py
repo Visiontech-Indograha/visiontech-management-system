@@ -21,14 +21,19 @@ class FileAccessRepository(BaseRepository):
         return await self.fetchone(
             f"""
             SELECT f.id, f.storage_key, f.mime_type, f.file_name, f.uploaded_by,
-                   (EXISTS (SELECT 1 FROM image_requirement ir
-                           WHERE ir.path_image IN (f.storage_key, f.id::text) AND ir.delete_at IS NULL)
-                    OR EXISTS (SELECT 1 FROM tool t WHERE t.photo_path = f.storage_key AND t.delete_at IS NULL)
+                   -- contoh/petunjuk kerja (image_requirement): semua pengguna yang login
+                   EXISTS (SELECT 1 FROM image_requirement ir
+                           WHERE ir.path_image IN (f.storage_key, f.id::text)
+                             AND ir.delete_at IS NULL) AS public_in_org,
+                   -- foto/berkas aset: dibatasi cakupan aset (asset_file_visible di access_service)
+                   (EXISTS (SELECT 1 FROM tool t WHERE t.photo_path = f.storage_key AND t.delete_at IS NULL)
                     OR EXISTS (SELECT 1 FROM vehicle v WHERE v.photo_path = f.storage_key AND v.delete_at IS NULL)
                     OR EXISTS (SELECT 1 FROM vehicle_file vf WHERE vf.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM vehicle_inspection vi WHERE vi.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM asset_assignment aa WHERE aa.handover_photo_path = f.storage_key)
-                   ) AS public_in_org,
+                   ) AS asset_file,
+                   (SELECT pe.employee_id FROM employee pe WHERE pe.profile_photo_path = f.storage_key LIMIT 1)
+                       AS profile_owner,
                    EXISTS (SELECT 1 FROM employee e WHERE e.profile_photo_path = f.storage_key) AS profile_photo,
                    EXISTS (SELECT 1 FROM employee e WHERE e.profile_photo_path = f.storage_key
                            AND e.employee_id = CAST(:emp AS uuid)) AS own_profile,

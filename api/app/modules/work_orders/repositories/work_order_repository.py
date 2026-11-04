@@ -19,6 +19,7 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
 from app.core.time import utcnow
+from app.shared.access.scope_rules import work_order_visible_sql
 
 
 class WorkOrderRepository(BaseRepository):
@@ -54,7 +55,9 @@ class WorkOrderRepository(BaseRepository):
         lead_team_id: UUID | None = None,
         q: str | None = None,
         limit: int = 50,
+        viewer: dict[str, Any] | None = None,
     ) -> Sequence[Any]:
+        """`viewer` = parameter cakupan (scope_rules.viewer_params); None = tanpa pembatasan (pengguna berwenang)."""
         sql = """
             SELECT
                 wo.work_order_id,
@@ -96,6 +99,9 @@ class WorkOrderRepository(BaseRepository):
             WHERE wo.delete_at IS NULL
         """
         params: dict[str, Any] = {"limit": limit}
+        if viewer is not None:
+            sql += f" AND {work_order_visible_sql('wo')}"
+            params.update(viewer)
         if division_id:
             sql += " AND wo.division_id = CAST(:div_id AS uuid)"
             params["div_id"] = str(division_id)
@@ -122,7 +128,7 @@ class WorkOrderRepository(BaseRepository):
         sql += " ORDER BY wo.create_at DESC LIMIT :limit"
         return await self.fetchall(sql, params)
 
-    async def get_work_order(self, work_order_id: UUID | str) -> Any:
+    async def get_work_order(self, work_order_id: UUID | str, viewer: dict[str, Any] | None = None) -> Any:
         sql = """
             SELECT
                 wo.work_order_id,
@@ -163,7 +169,11 @@ class WorkOrderRepository(BaseRepository):
             LEFT JOIN team t ON t.team_id = wo.lead_team_id AND t.delete_at IS NULL
             WHERE wo.work_order_id = CAST(:id AS uuid) AND wo.delete_at IS NULL
         """
-        return await self.fetchone(sql, {"id": str(work_order_id)})
+        params: dict[str, Any] = {"id": str(work_order_id)}
+        if viewer is not None:
+            sql += f" AND {work_order_visible_sql('wo')}"
+            params.update(viewer)
+        return await self.fetchone(sql, params)
 
     async def create_work_order(self, data: dict[str, Any]) -> str:
         sql = """

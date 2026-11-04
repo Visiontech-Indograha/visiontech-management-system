@@ -5,7 +5,8 @@ Kedudukan pada jadwal harian dibaca dari relasi setiap permintaan:
 - MANAGE: PM/OM divisi jadwal (division.pm_id / om_id) atau SUPER_ADMIN;
 - LEADER: ketua tim jadwal (team.leader_employee_id);
 - TEAM:   ketua atau anggota aktif tim jadwal;
-- VIEW:   salah satu di atas, atau ADMIN_HR_GA (logistik mess/aset).
+- VIEW:   salah satu di atas (detail rencana, item, BOM, revisi, survei: HR TIDAK termasuk);
+- LOGISTICS: sama dengan VIEW, ditambah ADMIN_HR_GA (hanya untuk logistik aset & lembur pada jadwal).
 Pekerja lapangan hanya melihat jadwal yang sudah disetujui.
 
 Tidak terlihat → 404 (keberadaannya tidak dibocorkan); terlihat tetapi tidak berwenang → 403.
@@ -26,6 +27,7 @@ from app.core.security import CurrentUser
 from app.shared.access.daily_access_repository import DailyAccessRepository
 from app.shared.access.file_access_repository import FileAccessRepository
 from app.shared.access.org_ref_repository import CRUDOrgRef
+from app.shared.access.scope_rules import asset_file_visible, employee_directory_visible
 
 # Jadwal yang sudah boleh dilihat & dikerjakan tim lapangan.
 RELEASED = ("APPROVED", "ONGOING", "COMPLETED")
@@ -33,6 +35,7 @@ RELEASED = ("APPROVED", "ONGOING", "COMPLETED")
 
 class DailyNeed(StrEnum):
     VIEW = "VIEW"
+    LOGISTICS = "LOGISTICS"
     TEAM = "TEAM"
     LEADER = "LEADER"
     MANAGE = "MANAGE"
@@ -76,12 +79,14 @@ async def check_daily_access(
         raise NotFoundError("Jadwal harian")
     manages = is_admin(user) or bool(row.manages)
     is_leader, is_member = bool(row.is_leader), bool(row.is_member) or bool(row.is_leader)
-    office_logistics = user.has_role(SystemRole.ADMIN_HR_GA)
+    # HR/GA hanya melihat jadwal untuk logistik (aset & lembur), bukan detail rencana kerja.
+    office_logistics = need == DailyNeed.LOGISTICS and user.has_role(SystemRole.ADMIN_HR_GA)
     visible = manages or office_logistics or ((is_leader or is_member) and row.status in RELEASED)
     if not visible:
         raise NotFoundError("Jadwal harian")
     allowed = {
         DailyNeed.VIEW: True,
+        DailyNeed.LOGISTICS: True,
         DailyNeed.TEAM: is_member,
         DailyNeed.LEADER: is_leader,
         DailyNeed.MANAGE: manages,
@@ -104,8 +109,9 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     """Siapa boleh membuka berkas (dok 08). Tidak boleh → 404, bukan 403. Tautan berkas dibaca dari tabel
     pemakainya (kolom *_path = file_object.storage_key):
     - pengunggahnya sendiri;
-    - contoh foto template & foto/berkas aset: semua pengguna yang login (petunjuk kerja / inventaris);
-    - foto profil: pemiliknya & yang boleh melihat karyawan (view:users);
+    - contoh foto template (petunjuk kerja): semua pengguna yang login;
+    - foto/berkas aset (alat, kendaraan, inspeksi, serah terima): cakupan aset (`asset_file_visible`);
+    - foto profil: pemiliknya & karyawan yang terlihat di direktori pengguna (`employee_directory_visible`);
     - dokumen karyawan: pemilik & pengelola dokumen (manage:employee_documents);
     - swafoto absensi: pemilik & peninjau absensi (review/view all attendance);
     - lampiran jadwal harian / bukti item: siapa pun yang boleh melihat jadwal itu."""
@@ -115,7 +121,9 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     perms = set(user.permissions)
     if is_admin(user) or str(row.uploaded_by) == user.user_id or row.public_in_org:
         return row
-    if row.profile_photo and (row.own_profile or Permission.VIEW_USERS.value in perms):
+    if row.profile_photo and (row.own_profile or await employee_directory_visible(db, user, row.profile_owner)):
+        return row
+    if row.asset_file and await asset_file_visible(db, row.storage_key, user):
         return row
     if row.personal_document and (row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in perms):
         return row

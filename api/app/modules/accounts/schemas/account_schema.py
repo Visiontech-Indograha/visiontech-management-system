@@ -44,6 +44,16 @@ class AccountRoleUpdate(BaseModel):
     system_role: FieldRole
 
 
+class AccountLoginUpdate(BaseModel):
+    """Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem)."""
+    login: str = Field(pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$", max_length=254)
+
+
+class AccountSessionsRevoked(BaseModel):
+    """Jumlah sesi perangkat yang dicabut oleh HR/admin."""
+    revoked: int
+
+
 class AccountWithPassword(AccountOut):
     """
     Schema for account creation response, including the generated temporary password.

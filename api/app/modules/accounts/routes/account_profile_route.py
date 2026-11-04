@@ -15,10 +15,13 @@ from app.core.security import CurrentUser
 from app.modules.accounts.controllers.account_profile_controller import AccountProfileController
 from app.modules.accounts.schemas.account_schema import (
     AccountCreate,
+    AccountLoginUpdate,
     AccountOut,
     AccountRoleUpdate,
+    AccountSessionsRevoked,
     AccountWithPassword,
 )
+from app.modules.auth.schemas.auth_session_schema import AuthSessionResponseSchema
 
 router = APIRouter(prefix="/employees/{emp_id}/account", tags=["Employee Account"])
 
@@ -109,3 +112,65 @@ async def activate(
     Mengaktifkan kembali akun karyawan.
     """
     return await controller.handle_activate(emp_id, current_user.organization_id)
+
+
+@router.get("/sessions", response_model=list[AuthSessionResponseSchema])
+async def list_sessions(
+    emp_id: UUID,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> list[AuthSessionResponseSchema]:
+    """Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin)."""
+    return await controller.handle_list_sessions(emp_id, current_user.organization_id)
+
+
+@router.post("/sessions/revoke-all", response_model=AccountSessionsRevoked)
+async def revoke_all_sessions(
+    emp_id: UUID,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountSessionsRevoked:
+    """Paksa keluar semua perangkat akun karyawan; tercatat di audit."""
+    return await controller.handle_revoke_all_sessions(emp_id, current_user)
+
+
+@router.post("/sessions/{session_id}/revoke", response_model=AccountSessionsRevoked)
+async def revoke_session(
+    emp_id: UUID,
+    session_id: UUID,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountSessionsRevoked:
+    """Cabut satu perangkat akun karyawan; sesi milik akun lain → 404."""
+    return await controller.handle_revoke_session(emp_id, session_id, current_user)
+
+
+@router.post("/device-slots/reset", response_model=AccountSessionsRevoked)
+async def reset_device_slots(
+    emp_id: UUID,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountSessionsRevoked:
+    """Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit."""
+    return await controller.handle_reset_device_slots(emp_id, current_user)
+
+
+@router.post("/unlock", response_model=AccountOut)
+async def unlock(
+    emp_id: UUID,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountOut:
+    """Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit."""
+    return await controller.handle_unlock(emp_id, current_user)
+
+
+@router.post("/login", response_model=AccountOut)
+async def change_login(
+    emp_id: UUID,
+    data: AccountLoginUpdate,
+    current_user: CurrentUser = _manager,
+    controller: AccountProfileController = Depends(),
+) -> AccountOut:
+    """Ganti email login akun (unik); sesi lama dicabut; tercatat di audit."""
+    return await controller.handle_change_login(emp_id, current_user, data)

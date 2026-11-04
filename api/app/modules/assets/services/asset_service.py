@@ -41,6 +41,7 @@ from app.modules.assets.schemas.asset_schema import (
 )
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.access_service import DailyNeed, check_daily_access
+from app.shared.access.scope_rules import asset_viewer, vehicle_visible
 
 LICENCES = {
     "Motorcycle": ({"SIM_C"}, "SIM C"),
@@ -84,8 +85,10 @@ class AssetService:
             raise ValidationError("Divisi tidak ditemukan atau sudah nonaktif.")
 
     # ── Alat ───────────────────────────────────────────────────────────────────
-    async def list_tools(self, office_id: UUID | None, status: str | None) -> list[Any]:
-        return await self.repo.list_tools(office_id, status)
+    async def list_tools(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser | None = None
+    ) -> list[Any]:
+        return await self.repo.list_tools(office_id, status, viewer=asset_viewer(user) if user else None)
 
     async def _tool(self, tool_id: UUID) -> Any:
         tool = await self.repo.get_tool(tool_id)
@@ -131,8 +134,10 @@ class AssetService:
         return await self.repo.get_tool(tool_id)
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
-    async def list_vehicles(self, office_id: UUID | None, status: str | None) -> list[Any]:
-        return await self.repo.list_vehicles(office_id, status)
+    async def list_vehicles(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser | None = None
+    ) -> list[Any]:
+        return await self.repo.list_vehicles(office_id, status, viewer=asset_viewer(user) if user else None)
 
     async def _vehicle(self, vehicle_id: UUID) -> Any:
         vehicle = await self.repo.get_vehicle(vehicle_id)
@@ -183,7 +188,13 @@ class AssetService:
         await self.repo.archive(asset_type, asset_id)
 
     # ── Berkas & inspeksi kendaraan ───────────────────────────────────────────
-    async def vehicle_files(self, vehicle_id: UUID) -> list[Any]:
+    async def _vehicle_in_scope(self, vehicle_id: UUID, user: CurrentUser | None) -> None:
+        """Kendaraan di luar cakupan pengguna → 404 (seperti tidak ada)."""
+        if user is not None and not await vehicle_visible(self.repo.db, user, vehicle_id):
+            raise NotFoundError("Kendaraan")
+
+    async def vehicle_files(self, vehicle_id: UUID, user: CurrentUser | None = None) -> list[Any]:
+        await self._vehicle_in_scope(vehicle_id, user)
         await self._vehicle(vehicle_id)
         return await self.repo.vehicle_files(vehicle_id)
 
@@ -194,7 +205,8 @@ class AssetService:
         await self.repo.insert_vehicle_file(vehicle_id, data.type, path, data.active_at, data.expired_at)
         return await self.repo.vehicle_files(vehicle_id)
 
-    async def inspections(self, vehicle_id: UUID) -> list[Any]:
+    async def inspections(self, vehicle_id: UUID, user: CurrentUser | None = None) -> list[Any]:
+        await self._vehicle_in_scope(vehicle_id, user)
         await self._vehicle(vehicle_id)
         return await self.repo.inspections(vehicle_id)
 
@@ -210,9 +222,10 @@ class AssetService:
         return await self.repo.inspections(vehicle_id)
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
-    async def availability(self, work_date: date, team_id: UUID | None) -> list[dict[str, Any]]:
-        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana."""
-        rows = await self.repo.availability(work_date)
+    async def availability(self, work_date: date, team_id: UUID | None,
+                           user: CurrentUser | None = None) -> list[dict[str, Any]]:
+        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana (sesuai cakupan)."""
+        rows = await self.repo.availability(work_date, viewer=asset_viewer(user) if user else None)
         names = await self.repo.team_names([r.team_id for r in rows])
         out: list[dict[str, Any]] = []
         for r in rows:
@@ -245,7 +258,7 @@ class AssetService:
         if own is None:
             return []
         if daily_plan_id:
-            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)
+            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.LOGISTICS)
             plan = await self.repo.plan_for_loan(daily_plan_id, own)
             if plan is not None and (plan.on_team or (Permission.VIEW_TEAMS.value in perms and plan.manages)):
                 return await self.repo.loans(open_only=open_only, employee_id=employee_id,

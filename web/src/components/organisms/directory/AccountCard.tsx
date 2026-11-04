@@ -19,9 +19,12 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { SectionTitle } from "@/components/molecules/SectionTitle";
+import { AccountDevicesAdmin } from "@/components/organisms/directory/AccountDevicesAdmin";
+import { AccountLoginEditForm } from "@/components/organisms/directory/AccountLoginEditForm";
 
 /**
- * M1-01 · HR/admin mengelola akun login karyawan: buat akun, reset password, nonaktifkan/aktifkan.
+ * M1-01 · HR/admin mengelola akun login karyawan: buat akun, reset password, buka kunci, ganti email,
+ * kelola perangkat yang masuk, nonaktifkan/aktifkan, dan hapus akun (SUPER_ADMIN, di zona berbahaya).
  * Password sementara ditampilkan SEKALI di sini — sampaikan ke karyawan, lalu minta diganti di
  * "Akun & keamanan" setelah masuk.
  */
@@ -35,7 +38,10 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Peran lapangan hanya bisa dipilih HR/SUPER_ADMIN (keduanya memegang manage:users); API tetap memeriksa.
-  const canSetRole = !!useSession().me?.permissions.includes("manage:users");
+  const permissions = useSession().me?.permissions ?? [];
+  const canSetRole = permissions.includes("manage:users");
+  // Hapus akun hanya untuk SUPER_ADMIN (delete:any); API tetap memeriksa.
+  const canDelete = permissions.includes("delete:any");
 
   const run = async (
     a: Parameters<typeof action.mutateAsync>[0],
@@ -55,6 +61,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const roleAkun: FieldRole | null =
     a?.system_role === "EMPLOYEE" || a?.system_role === "TEAM_LEADER" ? a.system_role : null;
   const peranDipilih = peranAkun;
+  const terkunci = !!a?.locked_until && new Date(a.locked_until) > new Date();
   return (
     <section aria-label="Akun login" className="mb-8 max-w-xl">
       <SectionTitle>Akun login</SectionTitle>
@@ -134,7 +141,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 ? formatDateTime(a.last_login_at)
                 : "belum pernah"}
             </TextBlock>
-            {a.locked_until && new Date(a.locked_until) > new Date() ? (
+            {terkunci && a.locked_until ? (
               <TextBlock className="text-danger" data-testid="account-locked">
                 <Pill tone="danger">Terkunci</Pill> {a.failed_logins} kali gagal login dalam 15 menit — bisa
                 masuk lagi pukul {formatDateTime(a.locked_until)}.
@@ -144,7 +151,21 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 <Pill tone="warning">Gagal login</Pill> {a.failed_logins} kali dalam 15 menit terakhir (terkunci
                 setelah 5 kali).
               </TextBlock>
-            ) : null}
+            ) : (
+              <TextBlock className="text-mist">
+                <Pill tone="success">Tidak terkunci</Pill>
+              </TextBlock>
+            )}
+            {(terkunci || (a.failed_logins ?? 0) > 0) && (
+              <ActionButton
+                variant="outline"
+                className="self-start"
+                disabled={action.isPending}
+                onClick={() => run({ kind: "unlock" }, "Kunci akun dibuka. Karyawan bisa mencoba masuk lagi.")}
+              >
+                Buka kunci akun
+              </ActionButton>
+            )}
             {canSetRole && roleAkun && (
               <div className="flex flex-wrap items-end gap-2">
                 <div className="min-w-48">
@@ -210,14 +231,29 @@ export function AccountCard({ employee }: { employee: Employee }) {
                   </ActionButton>
                 )
               )}
-              <DeleteConfirmButton
-                label="Hapus akun"
-                title="Hapus akun login?"
-                description={`Akun login ${a.login} dihapus permanen; data karyawannya tetap ada.`}
-                successText="Akun login dihapus."
-                onDelete={() => deleteAccount.mutateAsync()}
-              />
             </div>
+            <div className="border-t border-line pt-4">
+              <AccountLoginEditForm employeeId={employee.employee_id} login={a.login ?? ""} />
+            </div>
+            <div className="border-t border-line pt-4">
+              <AccountDevicesAdmin employeeId={employee.employee_id} />
+            </div>
+            {canDelete && (
+              <div className="mt-2 flex flex-col gap-2 rounded-control border border-danger bg-danger-soft p-3">
+                <TextBlock className="font-semibold text-danger">Zona berbahaya</TextBlock>
+                <TextBlock className="text-xs">
+                  Hapus akun hanya bila karyawan tidak boleh masuk lagi. Ini tidak bisa dibatalkan; data karyawan
+                  (profil, absensi, dokumen) tetap ada dan karyawan bisa dibuatkan akun baru nanti.
+                </TextBlock>
+                <DeleteConfirmButton
+                  label="Hapus akun login"
+                  title="Hapus akun login?"
+                  description={`Akun login ${a.login} dihapus permanen dan semua perangkatnya dikeluarkan. Karyawan tidak bisa masuk sampai dibuatkan akun baru. Profil dan data karyawan tetap ada.`}
+                  successText="Akun login dihapus."
+                  onDelete={() => deleteAccount.mutateAsync()}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

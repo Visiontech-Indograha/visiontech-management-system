@@ -42,8 +42,11 @@ class FaceController:
         images = [await _read_image(f) for f in files]
         return await self.service.enroll(current_user.user_id, images)
 
-    async def handle_reset(self, employee_id: UUID) -> FaceResetResponse:
-        await self.service.reset(employee_id)
+    async def handle_admin_status(self, employee_id: UUID) -> FaceStatus:
+        return await self.service.status_of_employee(employee_id)
+
+    async def handle_reset(self, current_user: CurrentUser, employee_id: UUID) -> FaceResetResponse:
+        await self.service.reset(employee_id, current_user)
         return FaceResetResponse(employee_id=employee_id, enrolled=False)
 
     async def handle_reset_own(self, current_user: CurrentUser) -> FaceResetResponse:

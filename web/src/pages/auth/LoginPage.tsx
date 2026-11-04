@@ -12,6 +12,7 @@ import { useLockCountdown } from "@/hooks/useLockCountdown";
 export function LoginPage({ admin = false }: { admin?: boolean }) {
   const { me, login } = useSession();
   const [formError, setFormError] = useState<string | null>(null);
+  const [formErrorCode, setFormErrorCode] = useState<string | null>(null);
   const lockLeft = useLockCountdown();
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
   const { handleSubmit } = form;
@@ -20,14 +21,25 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setFormError(null);
+    setFormErrorCode(null);
     try {
       await login(email, password, admin);
     } catch (e) {
       setFormError(e instanceof ApiError ? e.message : "Tidak dapat masuk. Coba lagi.");
+      setFormErrorCode(e instanceof ApiError ? e.code : null);
       const retry = e instanceof ApiError && e.code === "LOCKED" ? Number(e.details.retry_after_seconds) : 0;
       if (retry > 0) lockLeft.start(retry);
     }
   });
 
-  return <LoginTemplate admin={admin} form={form} onSubmit={onSubmit} formError={formError} lockSeconds={lockLeft.seconds} />;
+  return (
+    <LoginTemplate
+      admin={admin}
+      form={form}
+      onSubmit={onSubmit}
+      formError={formError}
+      formErrorCode={formErrorCode}
+      lockSeconds={lockLeft.seconds}
+    />
+  );;
 }

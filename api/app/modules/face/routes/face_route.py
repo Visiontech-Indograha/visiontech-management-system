@@ -56,11 +56,21 @@ async def reset_own_face_enrollment(
     return await controller.handle_reset_own(current_user)
 
 
+@router.get("/enrollments/{employee_id}/status", response_model=FaceStatus)
+async def get_employee_face_status(
+    employee_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
+    controller: FaceController = Depends(),
+) -> FaceStatus:
+    """Apakah wajah karyawan sudah terdaftar (HR/admin)."""
+    return await controller.handle_admin_status(employee_id)
+
+
 @router.delete("/enrollments/{employee_id}", response_model=FaceResetResponse)
 async def reset_face_enrollment(
     employee_id: UUID,
     current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
     controller: FaceController = Depends(),
 ) -> FaceResetResponse:
-    """Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin)."""
-    return await controller.handle_reset(employee_id)
+    """Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit."""
+    return await controller.handle_reset(current_user, employee_id)

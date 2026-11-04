@@ -43,8 +43,10 @@ class AssetController:
         self.service = asset_service
 
     # Alat
-    async def handle_list_tools(self, office_id: UUID | None, status: str | None) -> list[ToolOut]:
-        return [ToolOut(**r._mapping) for r in await self.service.list_tools(office_id, status)]
+    async def handle_list_tools(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser
+    ) -> list[ToolOut]:
+        return [ToolOut(**r._mapping) for r in await self.service.list_tools(office_id, status, user)]
 
     async def handle_create_tool(self, data: ToolCreate) -> ToolOut:
         return ToolOut(**(await self.service.create_tool(data))._mapping)
@@ -56,8 +58,10 @@ class AssetController:
         return ToolOut(**(await self.service.set_status("TOOL", tool_id, status))._mapping)
 
     # Kendaraan
-    async def handle_list_vehicles(self, office_id: UUID | None, status: str | None) -> list[VehicleOut]:
-        return [VehicleOut(**r._mapping) for r in await self.service.list_vehicles(office_id, status)]
+    async def handle_list_vehicles(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser
+    ) -> list[VehicleOut]:
+        return [VehicleOut(**r._mapping) for r in await self.service.list_vehicles(office_id, status, user)]
 
     async def handle_create_vehicle(self, data: VehicleCreate) -> VehicleOut:
         return VehicleOut(**(await self.service.create_vehicle(data))._mapping)
@@ -73,22 +77,24 @@ class AssetController:
         return {"message": "Aset dihapus."}
 
     # Berkas & inspeksi kendaraan
-    async def handle_vehicle_files(self, vehicle_id: UUID) -> list[VehicleFileOut]:
-        return [VehicleFileOut(**r._mapping) for r in await self.service.vehicle_files(vehicle_id)]
+    async def handle_vehicle_files(self, user: CurrentUser, vehicle_id: UUID) -> list[VehicleFileOut]:
+        return [VehicleFileOut(**r._mapping) for r in await self.service.vehicle_files(vehicle_id, user)]
 
     async def handle_add_vehicle_file(self, vehicle_id: UUID, data: VehicleFileCreate) -> list[VehicleFileOut]:
         return [VehicleFileOut(**r._mapping) for r in await self.service.add_vehicle_file(vehicle_id, data)]
 
-    async def handle_inspections(self, vehicle_id: UUID) -> list[InspectionOut]:
-        return [InspectionOut(**r._mapping) for r in await self.service.inspections(vehicle_id)]
+    async def handle_inspections(self, user: CurrentUser, vehicle_id: UUID) -> list[InspectionOut]:
+        return [InspectionOut(**r._mapping) for r in await self.service.inspections(vehicle_id, user)]
 
     async def handle_add_inspection(
         self, user: CurrentUser, vehicle_id: UUID, data: InspectionCreate
     ) -> list[InspectionOut]:
         return [InspectionOut(**r._mapping) for r in await self.service.add_inspection(user, vehicle_id, data)]
 
-    async def handle_availability(self, work_date: _date, team_id: UUID | None) -> list[AssetAvailabilityOut]:
-        return [AssetAvailabilityOut(**r) for r in await self.service.availability(work_date, team_id)]
+    async def handle_availability(
+        self, work_date: _date, team_id: UUID | None, user: CurrentUser
+    ) -> list[AssetAvailabilityOut]:
+        return [AssetAvailabilityOut(**r) for r in await self.service.availability(work_date, team_id, user)]
 
     # Peminjaman
     async def handle_loans(

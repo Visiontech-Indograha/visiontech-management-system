@@ -33,7 +33,7 @@ Catatan:
 |---|---|---|---|
 | Cloudflare Tunnel | web prod ke `localhost:8080`; domain `portal.visiontechindo.com` | `deploy/tutup-port-layanan.sh:3`; `deploy/README.md:98` | Publik. TIDAK YAKIN konfigurasi tunnel (tidak ada di repo). |
 | Tailscale Serve | web beta khusus tailnet `:8444` -> `127.0.0.1:8081` | `deploy/beta/pasang-beta.sh:89-91` | Hanya tailnet (ACL berlaku). |
-| Tailscale Funnel | API beta publik `:10000` -> `127.0.0.1:8001` | `deploy/beta/pasang-beta.sh:92-93` (komentar: "API beta publik untuk HP") | PUBLIK, disengaja untuk HP beta. Perlu dicatat di ADR. |
+| Tailscale Serve (API beta) | API beta `:10000` -> `127.0.0.1:8001`, HANYA tailnet | `deploy/beta/pasang-beta.sh:92-95` (Funnel 10000 dimatikan dulu, lalu Serve). Sebelumnya Funnel (publik). | Diubah di `fix/beta-aman`. Pemilik: cek `tailscale funnel status` di server. |
 | Tailscale Serve TCP | DB dan MinIO ke tailnet (5433, 5435, 9000, 9002, 9003) | `docs/08` baris 36 | Hanya tailnet menurut dokumen. Perintah `--tcp` TIDAK ada di repo; TIDAK YAKIN. |
 | Docker publish | `docker-compose.yml:33` memublikasikan `5433:5432` tanpa `127.0.0.1` | file itu (dev) | Lihat anti-pola A-3. |
 
@@ -45,7 +45,7 @@ Dokumen Tailscale: Serve hanya tailnet, Funnel publik, dan satu port tidak bisa 
 
 Daftar yang perlu diperiksa pemilik di konsol Tailscale (tidak bisa dilihat dari repo):
 1. ACL: siapa boleh menjangkau port DB (5433, 5435), MinIO (9000, 9002, 9003), dan Uptime Kuma (3001). Perangkat mana saja yang ada di tailnet.
-2. Funnel: daftar layanan publik yang aktif (`tailscale funnel status`). Pastikan hanya 10000 (beta API) yang publik.
+2. Funnel: daftar layanan publik yang aktif (`tailscale funnel status`). Setelah perubahan `fix/beta-aman`, targetnya KOSONG (tidak ada layanan yang publik).
 3. Tag perangkat server, dan kunci perangkat yang tidak dipakai dihapus.
 4. `hardening-server.sh:69` mengizinkan SEMUA lalu lintas dari `tailscale0`. Itu berarti ACL tailnet adalah satu-satunya pagar untuk layanan tailnet.
 

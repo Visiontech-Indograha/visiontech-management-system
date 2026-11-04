@@ -24,7 +24,7 @@ jobs:
     name: API · ruff · mypy · pytest (PostgreSQL nyata)
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.api == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
@@ -91,7 +91,7 @@ jobs:
     name: Web · lint · typecheck · test · build
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.web == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     defaults:
       run:
@@ -113,7 +113,7 @@ jobs:
     # Juga menentukan bagian yang berubah (sudah mengambil seluruh riwayat) — tanpa job tambahan
     # yang memakan minimal 1 menit tertagih.
     name: Pemindaian rahasia (gitleaks)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       api: ${{ steps.changes.outputs.api }}
@@ -174,7 +174,7 @@ jobs:
     name: Mobile (Flutter analyze + test)
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.mobile == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
@@ -184,7 +184,12 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          cache: true   # runner hosted tak punya SDK lokal; cache SDK + pub
+          cache: false   # SDK 1,7 GB tidak di-cache; hanya ~/.pub-cache di bawah
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -193,7 +198,7 @@ jobs:
     name: Laporan ke #vms-ci
     needs: [api, web, mobile, secrets]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Kirim ke Discord (berhasil & gagal; tanpa data pribadi — dok 17 §2)

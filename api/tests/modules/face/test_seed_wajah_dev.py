@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPT = Path(__file__).resolve().parents[4] / "scripts" / "seed-wajah-dev.py"
+SCRIPT = Path(__file__).resolve().parents[4] / "scripts" / "seed_wajah_dev.py"
 
 
 def _load():

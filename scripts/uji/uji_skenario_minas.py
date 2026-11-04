@@ -5,7 +5,7 @@ CCTV (prasyarat lintas divisi), scaffolding dipasang di 5 titik CCTV, galian 69 
 Tanggal bisnis digeser dengan PUT /system/dev-clock (hanya APP_ENV bukan production) — server harus berjalan.
 
     cd api
-    .venv/Scripts/python.exe ../scripts/uji_skenario_minas.py [YYYY-MM-DD senin minggu survei]
+    .venv/Scripts/python.exe ../scripts/uji/uji_skenario_minas.py [YYYY-MM-DD senin minggu survei]
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ TL = {"CCTV": "zulkifli@visiontech.id", "ACS": "yudisetiawan@visiontech.id",
       "Electrical": "ekoprasetyo@visiontech.id", "Wall Display": "hendragunawan@visiontech.id"}
 DIVISION = {"CCTV": "Divisi CCTV & Keamanan Elektronik", "ACS": "Divisi Access Control System (ACS)",
             "Electrical": "Divisi Electrical & Arus Kuat", "Wall Display": "Divisi Wall Display & LED Screen"}
-OUT = Path(__file__).resolve().parent.parent / "docs" / "bukti-e2e"
+OUT = Path(__file__).resolve().parents[2] / "docs" / "bukti-e2e"
 PASSWORD = "secret"
 MOBILE_UA = "VisiontechVMS/9.9 (build 9; Android SDK 34; uji-skenario)"
 SITE = {"name": "MGT Minas", "lat": 0.79015, "lng": 101.4466}

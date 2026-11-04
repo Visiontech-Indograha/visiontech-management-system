@@ -4,8 +4,8 @@ Sasaran: order uji (WO-CCTV-*, WO-ACS-*, WO-SURVEI-UJI, order survei uji tanpa n
 itu, dan semua jadwal tim uji survei ("Tim Uji Survei CCTV/ACS"). Tidak menyentuh order/jadwal lain.
 
     cd api
-    .venv/Scripts/python.exe ../scripts/bersihkan_uji_skenario.py --uji-kering   # hitung saja
-    .venv/Scripts/python.exe ../scripts/bersihkan_uji_skenario.py                # terapkan
+    .venv/Scripts/python.exe ../scripts/uji/bersihkan_uji_skenario.py --uji-kering   # hitung saja
+    .venv/Scripts/python.exe ../scripts/uji/bersihkan_uji_skenario.py                # terapkan
 """
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "api"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "api"))
 
 from sqlalchemy import text  # noqa: E402
 

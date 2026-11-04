@@ -56,8 +56,8 @@ class WorkOrderController:
             for r in rows
         ]
 
-    async def get_work_order(self, work_order_id: UUID) -> WorkOrderDetailOut:
-        data = await self.service.get_work_order(work_order_id)
+    async def get_work_order(self, current_user: CurrentUser, work_order_id: UUID) -> WorkOrderDetailOut:
+        data = await self.service.get_work_order(work_order_id, current_user)
         return WorkOrderDetailOut(**data)
 
     async def create_work_order(

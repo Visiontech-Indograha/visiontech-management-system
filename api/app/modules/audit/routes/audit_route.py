@@ -22,7 +22,8 @@ router = APIRouter(prefix="/audit-events", tags=["Audit"])
 
 @router.get("/backups")
 async def get_system_backups(
-    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_AUDIT)),
+    # Sama dengan /backup-registry: lokasi berkas (bucket) & checksum hanya untuk pengelola backup (SA).
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_BACKUPS)),
     controller: AuditController = Depends(),
 ) -> list[dict[str, Any]]:
     """Mendapatkan daftar berkas arsip backup sistem dari public.system_backup_registry."""

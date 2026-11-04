@@ -29,6 +29,20 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     return round(r * c)
 
 
+def _face_visible(att_emp: str) -> str:
+    """Hasil & status pengenalan wajah hanya untuk: pemilik absensi, pemegang VIEW_ALL (OM/Finance/OPS),
+    HR/Finance/OM/SA, dan PM untuk karyawan di DIVISI yang ia pimpin (bawahan), bukan jangkauan proyek."""
+    return f"""(
+        CAST(:view_all AS boolean)
+        OR {att_emp} IS NOT DISTINCT FROM (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
+        OR EXISTS (SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE'))
+        OR EXISTS (SELECT 1 FROM employee x JOIN division dv ON dv.division_id = x.division_id AND dv.delete_at IS NULL
+                   WHERE x.employee_id = {att_emp}
+                     AND dv.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)))
+    )"""
+
+
 def _pm_reach(emp_expr: str) -> str:
     """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
     dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
@@ -892,10 +906,13 @@ class AttendanceSessionRepository(BaseRepository):
                    e.full_name AS employee_name,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
                        AS employee_photo_file_id,
-                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
-                           ELSE 'MISMATCH' END AS face_result,
-                   a.face_status AS face_status,
-                   (a.face_match_score / 100.0)::float AS face_similarity,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN
+                       CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END
+                   END AS face_result,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN a.face_status END AS face_status,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN (a.face_match_score / 100.0)::float END
+                       AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,
                    FALSE AS offline,

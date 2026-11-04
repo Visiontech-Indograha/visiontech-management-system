@@ -1,0 +1,39 @@
+# Konteks build image api (docker-compose.yml: context ./api). Berkas di sini TIDAK ikut ke dalam image.
+# Rahasia: .env, .env.* (termasuk contoh) — kredensial hanya lewat environment saat kontainer dijalankan.
+.env
+.env.*
+
+# VCS / editor / cache lokal
+.git/
+.gitignore
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coveragerc
+htmlcov/
+.venv/
+venv/
+venv.bak/
+.env_python/
+node_modules/
+
+# Tes dan konfigurasi lint/tipe (tidak dipakai runtime)
+tests/
+pytest.ini
+mypy.ini
+ruff.toml
+requirements-dev.txt
+
+# Data pribadi: foto dan dokumen pengguna tidak boleh masuk image. Folder uploads/ dibuat kosong di Dockerfile.
+# Rute /media hanya membaca sop/tools/vehicles; berkas itu tidak ada di repo (uploads/ hanya berisi .gitkeep).
+uploads/
+backups/
+# Cadangan DB hasil pg_dump/gzip (bukan aset). Aset template (app/shared/documents/templates/assets/*.png) TETAP ikut.
+*.dump
+*.sql.gz

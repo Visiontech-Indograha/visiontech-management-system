@@ -266,5 +266,13 @@ class AuthUserRepository(BaseRepository):
             {"a": active, "id": user_id},
         )
 
+    async def set_login(self, user_id: UUID | str, login: str) -> None:
+        """Ganti email login akun. Username tidak diubah: login dicari lewat email atau username."""
+        await self.execute(
+            "UPDATE users SET email = :login, update_at = now() "
+            "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"login": login, "id": str(user_id)},
+        )
+
 
 CRUDUser = AuthUserRepository

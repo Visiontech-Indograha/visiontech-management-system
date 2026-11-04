@@ -9,6 +9,20 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Ditambahkan
+- **Kendali admin akun karyawan** (HR/admin dengan izin kelola pengguna; hapus permanen khusus SUPER_ADMIN), di kartu akun dan detail karyawan:
+  - Daftar perangkat yang masuk per akun, cabut satu perangkat, keluarkan semua perangkat, dan kosongkan slot perangkat (API `GET /employees/{id}/account/sessions`, `POST …/sessions/{session_id}/revoke`, `POST …/sessions/revoke-all`, `POST …/device-slots/reset`).
+  - Buka kunci akun yang terkunci karena gagal masuk berulang (`POST …/account/unlock`).
+  - Ganti email login akun dengan validasi unik; perangkat yang masuk dikeluarkan (`POST …/account/login`).
+  - Status pengenalan wajah karyawan dan tombol atur ulang wajah (`GET /face/enrollments/{id}/status`; reset memakai `DELETE /face/enrollments/{id}` yang kini tercatat di audit).
+  - Setiap aksi di atas tercatat di riwayat aktivitas (audit).
+- Layar login web: petunjuk untuk akun lapangan yang mencoba masuk lewat web, dan dialog langkah-langkah bila akun sudah mencapai batas 4 perangkat.
+
+### Diubah
+- Zona berbahaya di kartu akun dan arsip karyawan: hapus akun login dan hapus permanen karyawan dipisah dari tombol aman, dengan dialog yang menyebut dampaknya. Tombol hapus hanya tampil untuk SUPER_ADMIN.
+- Teks "Pengenalan Wajah" di halaman Akun dibuat lebih sederhana (nama model teknis tidak lagi ditampilkan; akun kantor tidak lagi dianggap "belum terdaftar").
+- Pesan batas perangkat (`MAX_DEVICES_REACHED`) menyebut menu "Akun & keamanan" sesuai nama di aplikasi.
+
 ## [1.5.0] - 2026-10-30
 
 Rilis gabungan dari `development` sejak 1.4.0 (PR #209–#254). Tidak ada perubahan skema API yang merusak; klien lama (APK lapangan) tetap berjalan.

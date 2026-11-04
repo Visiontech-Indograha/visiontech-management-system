@@ -7,7 +7,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { formatDateTime } from "@/lib/format";
 
 /**
- * Wajah di halaman Akun (wajah V2): status pendaftaran; pekerja lapangan yang belum terdaftar mendaftar lewat webcam.
+ * Pengenalan wajah di halaman Akun: status pendaftaran; karyawan lapangan yang belum terdaftar mendaftar lewat kamera.
  * Daftar ulang hanya setelah HR mengatur ulang pendaftaran (server menolak pendaftaran kedua).
  */
 export function FaceBiometricSection() {
@@ -15,7 +15,7 @@ export function FaceBiometricSection() {
 
   if (faceStatus.isPending) {
     return (
-      <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
+      <section aria-label="Pengenalan wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
         <LoadingBar className="mb-2 h-6 w-48" />
         <LoadingBar className="h-16 w-full" />
       </section>
@@ -25,20 +25,25 @@ export function FaceBiometricSection() {
   const data = faceStatus.data;
 
   return (
-    <section aria-label="Biometrik Wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
+    <section aria-label="Pengenalan wajah" className="rounded-panel border border-line bg-surface px-5 py-4 shadow-card">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <TextBlock as="h2" className="text-base font-semibold">Biometrik Wajah</TextBlock>
-          <TextBlock className="text-xs text-mist">Swafoto absen dicocokkan server dengan wajah terdaftar.</TextBlock>
+          <TextBlock as="h2" className="text-base font-semibold">Pengenalan Wajah</TextBlock>
+          <TextBlock className="text-xs text-mist">Wajah Anda dipakai untuk memastikan yang absen lewat aplikasi HP adalah Anda.</TextBlock>
         </div>
-        {data.enrolled ? <Pill tone="success">Wajah Terdaftar</Pill> : <Pill tone="warning">Belum Terdaftar</Pill>}
+        {data.enrolled ? (
+          <Pill tone="success">Wajah terdaftar</Pill>
+        ) : data.required ? (
+          <Pill tone="warning">Belum terdaftar</Pill>
+        ) : (
+          <Pill tone="neutral">Tidak diwajibkan</Pill>
+        )}
       </div>
 
       {data.enrolled ? (
         <div className="space-y-1 rounded-lg border border-line bg-surface p-3 text-xs text-mist" data-testid="face-enroll-info">
-          {data.enrolled_at && <TextBlock>{`Terdaftar: ${formatDateTime(data.enrolled_at)}`}</TextBlock>}
-          {data.model_name && <TextBlock>{`Model: ${data.model_name}`}</TextBlock>}
-          <TextBlock>Perlu mendaftar ulang (ganti wajah/HP)? Minta HR mengatur ulang pendaftaran wajah Anda.</TextBlock>
+          {data.enrolled_at && <TextBlock>{`Didaftarkan pada ${formatDateTime(data.enrolled_at)}`}</TextBlock>}
+          <TextBlock>Ingin mendaftar ulang (misalnya ganti HP)? Minta HR mengatur ulang pendaftaran wajah Anda.</TextBlock>
         </div>
       ) : data.required ? (
         <div className="rounded-lg border border-line bg-surface p-3.5">
@@ -50,7 +55,7 @@ export function FaceBiometricSection() {
           />
         </div>
       ) : (
-        <TextBlock className="text-sm text-mist">Pendaftaran wajah hanya untuk pekerja lapangan (absen lewat aplikasi HP).</TextBlock>
+        <TextBlock className="text-sm text-mist">Pengenalan wajah hanya diwajibkan untuk karyawan lapangan yang absen lewat aplikasi HP.</TextBlock>
       )}
     </section>
   );

@@ -25,3 +25,5 @@ export const ProjectsPage = lazy(() => import("@/pages/projects/ProjectsPage").t
 export const LeavesPage = lazy(() => import("@/pages/leaves/LeavesPage").then((m) => ({ default: m.LeavesPage })));
 export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then((m) => ({ default: m.SurveysPage })));
 export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));
+export const WorkOrdersPage = lazy(() => import("@/pages/work-orders/WorkOrderBoardPage").then((m) => ({ default: m.WorkOrderBoardPage })));
+export const HseCampaignsPage = lazy(() => import("@/pages/hse/HseCampaignsPage").then((m) => ({ default: m.HseCampaignsPage })));

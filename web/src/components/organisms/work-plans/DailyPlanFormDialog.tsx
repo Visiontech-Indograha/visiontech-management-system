@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { ChoiceChips } from "@/components/molecules/ChoiceChips";
+import { CheckControl } from "@/components/molecules/CheckControl";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { SelectField, TextField } from "@/components/molecules/Field";
-import { ControlOption, FormBlock } from "@/components/molecules/FormBlock";
+import { ControlLabel, ControlOption, FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
+import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { useDirtyForm } from "@/hooks/useDirtyForm";
 import { ApiError } from "@/lib/apiClient";
@@ -23,6 +25,19 @@ import {
 
 type Errors = Record<string, string>;
 
+const RADIUS_PRESETS = [
+  { key: "100", label: "100 m" },
+  { key: "150", label: "150 m (Standar)" },
+  { key: "250", label: "250 m" },
+  { key: "500", label: "500 m (Area luas)" },
+];
+
+const SHIFT_PRESETS = [
+  { key: "07:00|16:00", label: "07:00 – 16:00" },
+  { key: "08:00|17:00", label: "08:00 – 17:00" },
+  { key: "08:30|17:30", label: "08:30 – 17:30" },
+];
+
 /** Buat/ubah jadwal harian: tim & tanggal, lokasi site (cari di peta), radius absen, jam kerja. */
 export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   options: DailyFormOptions;
@@ -39,7 +54,10 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
   const [lat, setLat] = useState(plan ? String(plan.site_lat ?? "") : "");
   const [lng, setLng] = useState(plan ? String(plan.site_lng ?? "") : "");
   const [radius, setRadius] = useState(String(plan?.attendance_radius_m ?? 150));
+  const [clockIn, setClockIn] = useState((plan?.clock_in_time ?? "07:00").slice(0, 5));
+  const [clockOut, setClockOut] = useState((plan?.clock_out_time ?? "16:00").slice(0, 5));
   const [workDate, setWorkDate] = useState(plan?.work_date ?? initial?.work_date ?? "");
+  const [isOutOfTown, setIsOutOfTown] = useState(Boolean(plan?.is_out_of_town));
   // F10: jadwal tanggal lampau (<= BACKDATE_DAYS hari, hanya saat membuat) wajib beralasan; tercatat audit.
   const [backdateReason, setBackdateReason] = useState("");
   const today = wibDate();
@@ -83,8 +101,9 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
       site_lat: latitude ? Number(latitude) : null,
       site_lng: longitude ? Number(longitude) : null,
       attendance_radius_m: Number(value("attendance_radius_m") || 150),
-      clock_in_time: value("clock_in_time") || "07:00",
-      clock_out_time: value("clock_out_time") || "16:00",
+      clock_in_time: clockIn || value("clock_in_time") || "07:00",
+      clock_out_time: clockOut || value("clock_out_time") || "16:00",
+      is_out_of_town: isOutOfTown,
     };
     if (backdated && !backdateReason.trim()) return setErrors({ backdate_reason: "Isi alasan untuk tanggal lampau." });
     try {
@@ -111,7 +130,7 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
 
   const dirtyForm = useDirtyForm();
   return (
-    <VmsDialog dirty={dirtyForm.dirty} open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
+    <VmsDialog size="xl" dirty={dirtyForm.dirty} open title={plan ? "Ubah jadwal harian" : "Buat jadwal harian"} onClose={onClose} footer={<DialogActions onCancel={onClose} busy={busy} formId="daily-plan-form" />}>
       <FormBlock {...dirtyForm.formProps} id="daily-plan-form" onSubmit={submit} noValidate>
         <FormErrorText message={formError} />
         <SelectField label="Tim" value={teamId} onChange={(e) => setTeamId(e.target.value)} error={errors.team_id}>
@@ -171,11 +190,33 @@ export function DailyPlanFormDialog({ options, initial, plan, onClose }: {
           <TextField label="Bujur (lng)" inputMode="decimal" value={lng} onChange={(e) => setLng(e.target.value)} error={errors.site_lng} />
         </div>
         <DailyPlanAssetsPanel teamId={teamId} workDate={workDate} />
+        <ChoiceChips
+          label="Preset radius:"
+          items={RADIUS_PRESETS}
+          activeKey={radius}
+          onPick={(val) => setRadius(val)}
+        />
+        <ChoiceChips
+          label="Preset jam kerja:"
+          items={SHIFT_PRESETS}
+          activeKey={`${clockIn}|${clockOut}`}
+          onPick={(val) => {
+            const [inTime, outTime] = val.split("|");
+            if (inTime && outTime) {
+              setClockIn(inTime);
+              setClockOut(outTime);
+            }
+          }}
+        />
         <div className="grid gap-x-3 md:grid-cols-3">
           <TextField name="attendance_radius_m" label="Radius absen (m)" inputMode="numeric" value={radius} onChange={(e) => setRadius(e.target.value)} error={errors.attendance_radius_m} />
-          <TextField name="clock_in_time" label="Jam masuk" type="time" defaultValue={(plan?.clock_in_time ?? "07:00").slice(0, 5)} />
-          <TextField name="clock_out_time" label="Jam pulang" type="time" defaultValue={(plan?.clock_out_time ?? "16:00").slice(0, 5)} error={errors.clock_out_time} />
+          <TextField name="clock_in_time" label="Jam masuk" type="time" value={clockIn} onChange={(e) => setClockIn(e.target.value)} />
+          <TextField name="clock_out_time" label="Jam pulang" type="time" value={clockOut} onChange={(e) => setClockOut(e.target.value)} error={errors.clock_out_time} />
         </div>
+        <ControlLabel className="flex cursor-pointer items-center gap-2.5 rounded-control border border-line bg-surface p-3 text-sm">
+          <CheckControl checked={isOutOfTown} onCheckedChange={(v) => setIsOutOfTown(v === true)} />
+          <TextBlock as="span" className="font-medium text-ink">Tugas luar kota (tarif uang makan luar kota)</TextBlock>
+        </ControlLabel>
       </FormBlock>
     </VmsDialog>
   );

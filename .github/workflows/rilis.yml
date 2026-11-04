@@ -19,6 +19,7 @@ jobs:
   rilis:
     name: Tag & GitHub Release dari VERSION
     runs-on: [self-hosted, linux, vms]
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:

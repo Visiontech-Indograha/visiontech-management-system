@@ -4,9 +4,10 @@ import { mockMe } from "@/app/mockSession";
 import { mockApi, renderRoute } from "./utils";
 
 /** F6: persetujuan cuti yang bertabrakan dengan jadwal tim wajib dikonfirmasi. F7: pembatalan cuti yang disetujui. */
+const FUTURE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 const leave = (over: Record<string, unknown> = {}) => ({
   leave_id: "l1", employee_id: "e1", employee_name: "Uji Ketua", employee_no: "N1", division_name: "Sipil",
-  leave_type: "SICK", start_date: "2026-11-02", end_date: "2026-11-02", total_days: 1, reason: "Keperluan keluarga",
+  leave_type: "SICK", start_date: FUTURE_DATE, end_date: FUTURE_DATE, total_days: 1, reason: "Keperluan keluarga",
   status: "PENDING", attachment_path: null, reviewed_by_name: null, rejection_note: null, cancel_note: null,
   conflicts: [], create_at: "2026-10-27T10:00:00Z", ...over,
 });

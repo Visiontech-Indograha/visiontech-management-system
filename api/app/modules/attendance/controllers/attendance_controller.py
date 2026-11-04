@@ -23,6 +23,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckInRequest,
     CheckOutRequest,
     DeviceKeyRequest,
+    EvidenceRequest,
     ExplanationRequest,
     MealAllowanceRow,
     MyRecapItem,
@@ -119,6 +120,7 @@ class AttendanceController:
             payload=data.payload,
             signature=data.signature,
             selfie_file_id=data.selfie_file_id,
+            evidence_file_id=data.evidence_file_id,
         )
         return OfflineAttendanceResult(**result)
 
@@ -129,7 +131,8 @@ class AttendanceController:
     ) -> AttendanceResponse:
         """Memproses absensi masuk (check-in) pengguna."""
         await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, data.site_id, data.selfie_file_id, user_id=current_user.user_id
+            current_user.organization_id, data.site_id, data.selfie_file_id, user_id=current_user.user_id,
+            evidence_file_id=data.evidence_file_id
         )
         row = await self.session_service.check_in(
             current_user.organization_id,
@@ -140,6 +143,7 @@ class AttendanceController:
             origin=data.location_origin,
             accuracy_m=data.accuracy_m,
             selfie_file_id=data.selfie_file_id,
+            evidence_file_id=data.evidence_file_id,
             channel=data.channel,
             explanation=data.explanation,
         )
@@ -152,7 +156,8 @@ class AttendanceController:
     ) -> AttendanceResponse:
         """Memproses absensi pulang (check-out) pengguna."""
         await self.session_service.ensure_check_in_refs(
-            current_user.organization_id, None, data.selfie_file_id, user_id=current_user.user_id
+            current_user.organization_id, None, data.selfie_file_id, user_id=current_user.user_id,
+            evidence_file_id=data.evidence_file_id
         )
         row = await self.session_service.check_out(
             current_user.user_id,
@@ -161,6 +166,7 @@ class AttendanceController:
             lat=data.location.lat,
             lng=data.location.lng,
             selfie_file_id=data.selfie_file_id,
+            evidence_file_id=data.evidence_file_id,
             explanation=data.explanation,
             accuracy_m=data.accuracy_m,
         )
@@ -177,6 +183,14 @@ class AttendanceController:
             current_user.organization_id, current_user.user_id, att_id, data.explanation
         )
         return {"message": "Penjelasan ditambahkan."}
+
+    async def handle_evidence(
+        self, current_user: CurrentUser, att_id: UUID, data: EvidenceRequest
+    ) -> dict[str, str]:
+        await self.session_service.attach_evidence(
+            current_user.organization_id, current_user.user_id, att_id, data.evidence_file_id
+        )
+        return {"message": "Foto bukti ditambahkan."}
 
     async def handle_admin_patch(
         self, current_user: CurrentUser, att_id: UUID, data: AttendanceAdminPatch

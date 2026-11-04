@@ -15,6 +15,7 @@ export function ClientList({
   onAdd,
   onEdit,
   onDeactivate,
+  onManageSites,
   search,
   onSearchChange,
 }: {
@@ -23,6 +24,7 @@ export function ClientList({
   onAdd: () => void;
   onEdit: (client: Client) => void;
   onDeactivate: (client: Client) => void;
+  onManageSites?: (client: Client) => void;
   search: string;
   onSearchChange: (value: string) => void;
 }) {
@@ -120,6 +122,16 @@ export function ClientList({
                 </TextBlock>
                 {canManage && (
                   <div className="flex items-center gap-2">
+                    {onManageSites && (
+                      <ActionButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onManageSites(c)}
+                        title="Kelola lokasi cabang & geofence absensi"
+                      >
+                        <MapPin size={13} className="mr-1 text-primary" /> Lokasi Site
+                      </ActionButton>
+                    )}
                     <ActionButton
                       variant="ghost"
                       size="sm"

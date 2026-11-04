@@ -276,7 +276,7 @@ class DailyPlanService:
             await self._check_project(source.project_id, source.division_id, work_date)
             fields = {k: getattr(source, k) for k in ("work_date", "site_name", "site_lat", "site_lng",
                                                       "attendance_radius_m", "clock_in_time", "clock_out_time",
-                                                      "kind")}
+                                                      "kind", "is_out_of_town")}
             fields.update(work_date=work_date, division_id=str(source.division_id), team_id=str(source.team_id),
                           created_by_id=user.employee_id,
                           project_id=str(source.project_id) if source.project_id else None)
@@ -334,7 +334,8 @@ class DailyPlanService:
                     "work_date": work_date, "site_name": data.site_name.strip() if data.site_name else None,
                     "site_lat": data.site_lat, "site_lng": data.site_lng,
                     "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
-                    "clock_out_time": time(16, 0), "kind": data.kind, "created_by_id": user.employee_id,
+                    "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
+                    "created_by_id": user.employee_id,
                 })
                 if data.target == "APPROVED":
                     await self.repo.set_status(new_id, "APPROVED", approver=user.employee_id)
@@ -403,6 +404,7 @@ class DailyPlanService:
                             "unscheduled_qty": max(total - (order["scheduled_qty"] or 0), 0),
                         })
                     cell.update(daily_plan_id=plan.daily_plan_id, status=plan.status, kind=plan.kind,
+                                is_out_of_town=bool(plan.is_out_of_town),
                                 item_count=plan.item_count, items=items[:20], orders=cell_orders)
                 cells.append(cell)
             rows.append({"team_id": team.team_id, "team_name": team.name, "division_id": team.division_id,
@@ -535,6 +537,15 @@ class DailyPlanService:
                 "Laporan harian ketua tim wajib diisi sebelum jadwal dapat diselesaikan.",
                 status=422,
             )
+        if await self.repo.has_unfinished_items(daily_plan_id):
+            if not access.manages:
+                raise AppError(
+                    "ITEMS_INCOMPLETE",
+                    "Masih ada pekerjaan yang belum selesai. Selesaikan atau ajukan pindah hari dulu, "
+                    "atau minta PM menutup hari kerja.",
+                    status=409,
+                )
+            await self.repo.cancel_unfinished_items(daily_plan_id)
         await self.repo.set_status(daily_plan_id, "COMPLETED")
         await self.repo.release_plan_assets(daily_plan_id)
         return await self.repo.get(daily_plan_id)
@@ -594,4 +605,14 @@ class DailyPlanService:
             "presentation_notes": f"Meeting evaluasi mingguan tim {team_name} periode {start_date} s/d {meeting_date}.",
             "pm_feedback": "Seluruh laporan harian telah ditinjau dan dievaluasi bersama PM & Team Leader.",
         }
+
+    async def get_my_execution_today(self, user: CurrentUser) -> dict[str, Any]:
+        """Tugas eksekusi hari ini untuk ketua/anggota tim di aplikasi mobile."""
+        if not user.employee_id:
+            return {"has_assignment": False}
+        res = await self.repo.get_my_execution_today(user.employee_id)
+        if not res:
+            return {"has_assignment": False}
+        return res
+
 

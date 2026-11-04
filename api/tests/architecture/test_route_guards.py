@@ -24,6 +24,9 @@ from tests.conftest import World, requires_db, sync_query
 
 # Boleh dipanggil setiap pengguna yang login; data tetap dibatasi organisasi / milik sendiri.
 SELF_SERVICE = {
+    ("GET", "/hse/campaigns/active-popup"): "popup K3 wajib baca untuk pengguna yang login; hanya kampanye aktif yang menyasar akun itu",
+    ("POST", "/hse/campaigns/{campaign_id}/acknowledge"): "konfirmasi baca atas nama akun sendiri (user_id dari token)",
+    ("POST", "/hse/inspections"): "pengemudi/karyawan lapangan mengirim formulir inspeksi kendaraan (pelapor dari token)",
     ("GET", "/auth/me"): "profil sendiri",
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
     ("POST", "/auth/sessions/revoke-others"): "mencabut perangkat lain milik sendiri (P1-7, diuji)",
@@ -40,8 +43,9 @@ SELF_SERVICE = {
     ("GET", "/work-plans/daily"): "jadwal harian: PM/OM divisinya, lapangan timnya yang dirilis (M5, diuji)",
     ("GET", "/work-plans/orders/{completion_id}/schedule"): "hanya jadwal yang terlihat pengguna (M5)",
     ("GET", "/work-completions"): "order: pengelola divisinya; lapangan order tim jadwalnya (M5)",
-    ("GET", "/image-requirements/by-work-type/{work_type_id}"): "template foto SOP (baca saja) untuk lapangan",
-    ("GET", "/image-requirements/{requirement_id}"): "detail template foto SOP (baca saja)",
+    ("GET", "/daily-plans/my-execution-today"): "tugas eksekusi hari ini aplikasi mobile",
+    ("GET", "/work-plans/my-execution-today"): "tugas eksekusi hari ini aplikasi mobile",
+    ("GET", "/clients/{client_id}/sites"): "daftar lokasi site klien (pengelola tugas / PM)",
     ("GET", "/work-types/{type_id}/materials"): "BoM bawaan jenis pekerjaan (baca saja)",
     ("GET", "/divisions"): "daftar divisi organisasi sendiri (pilihan form karyawan)",
     ("GET", "/assets/tools"): "inventaris alat (baca saja) untuk perencanaan & HP tim (M4)",
@@ -66,6 +70,7 @@ SELF_SERVICE = {
     ("POST", "/attendance/check-out"): "absensi sendiri",
     ("POST", "/attendance/device-key"): "kunci perangkat milik sendiri (R-34, diuji)",
     ("POST", "/attendance/offline"): "absen offline milik sendiri, bertanda tangan perangkat (R-34, diuji)",
+    ("POST", "/attendance/{att_id}/evidence"): "hanya absensi & foto milik sendiri (diuji)",
     ("POST", "/attendance/{att_id}/explain"): "hanya absensi milik sendiri — diuji di bawah",
     ("GET", "/recaps/attendance"): "rekap sendiri; FINANCE/HR/OPS/ADMIN seluruh organisasi (V-30, diuji)",
     ("POST", "/sync/operations"): "antrean offline milik sendiri; tiap operasi dijaga seperti jalur online (M12)",
@@ -118,6 +123,17 @@ GUARDED_IN_HANDLER = {
     ("GET", "/work-completions/{completion_id}/signatures/{role}"): "WorkCompletionService._access (tim/PM order)",
     ("DELETE", "/work-completions/{completion_id}/photos/{file_id}"):
         "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",
+    # Work Orders V2
+    ("GET", "/work-orders"): "WorkOrderService: filter peran dan divisi pengguna",
+    ("POST", "/work-orders"): "WorkOrderService: hanya PM/OM/Super Admin",
+    ("GET", "/work-orders/{work_order_id}"): "WorkOrderService: detail lengkap WO, titik survei & items",
+    ("POST", "/work-orders/{work_order_id}/assign-survey"): "WorkOrderService: hanya PM menunjuk ketua tim survei",
+    ("POST", "/work-orders/{work_order_id}/submit-survey"): "WorkOrderService: ketua tim mengirim survei lapangan",
+    ("POST", "/work-orders/{work_order_id}/apply-survey"): "WorkOrderService: hanya PM menyetujui survei & mengunci tugas",
+    ("POST", "/work-orders/{work_order_id}/sign-bast"): "WorkOrderService: PM menandatangani BAST setelah semua item DONE",
+    ("PUT", "/work-orders/items/{item_id}/progress"): "WorkOrderService: progres item dan foto syarat",
+    ("PUT", "/work-orders/bom/{bom_id}/actual"): "WorkOrderService: realisasi penggunaan material",
+    ("GET", "/work-orders/{work_order_id}/export/{template}"): "WorkOrderService.build_export: hanya PM/OM/Super Admin",
     # Daftar klien: create:plan atau PM/OM/HR (ClientService.can_read_clients); lapangan & ketua tidak.
     ("GET", "/clients"): "ClientService.can_read_clients: create:plan atau PM/OM/HR (diuji)",
     ("GET", "/projects"): "master hanya-baca untuk formulir (organisasi pengguna)",

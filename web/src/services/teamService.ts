@@ -66,6 +66,43 @@ export function useAddTeamMember(teamId: string) {
   });
 }
 
+export interface TeamAvailabilityItem {
+  team_id: string;
+  name: string;
+  division_id: string;
+  division_name?: string | null;
+  leader_employee_id: string;
+  leader_name?: string | null;
+  member_count: number;
+  is_available: boolean;
+  status: "AVAILABLE" | "BUSY" | "LEAVE";
+  active_items_count: number;
+  active_tasks: string[];
+}
+
+export const useTeamsAvailability = (workDate?: string, divisionId?: string | null) =>
+  useQuery({
+    queryKey: [...KEY, "availability", workDate, divisionId],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (workDate) params.append("work_date", workDate);
+      if (divisionId) params.append("division_id", divisionId);
+      const qs = params.toString();
+      const url = `/teams/availability${qs ? `?${qs}` : ""}`;
+      return (await api.get<TeamAvailabilityItem[]>(url)).data;
+    },
+  });
+
+export const useAvailableTeamMembers = (divisionId?: string | null) =>
+  useQuery({
+    queryKey: [...KEY, "available-members", divisionId],
+    enabled: Boolean(divisionId),
+    queryFn: async () =>
+      (await api.get<Array<{ employee_id: string; full_name: string; employee_no?: string; system_role?: string }>>(
+        `/teams/available-members?division_id=${divisionId}`,
+      )).data,
+  });
+
 export function useRemoveTeamMember(teamId: string) {
   const qc = useQueryClient();
   return useMutation({

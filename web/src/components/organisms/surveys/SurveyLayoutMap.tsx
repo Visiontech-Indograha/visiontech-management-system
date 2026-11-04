@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -30,26 +30,55 @@ const pin = (n: number, status: keyof typeof STATUS_COLOR = "PROPOSED") =>
 const coord = (p: Point): LatLng | null =>
   p.site_lat != null && p.site_lng != null ? [Number(p.site_lat), Number(p.site_lng)] : null;
 
-/** Zoom maksimal yang memuat semua titik (sekali saat dibuka). */
+/** Zoom maksimal yang memuat semua titik, dengan auto-resize container saat modal/tab dibuka. */
 function FitPoints({ coords }: { coords: LatLng[] }) {
   const map = useMap();
+  // Fit hanya saat jumlah titik berubah, bukan tiap marker digeser (pan/zoom pengguna dipertahankan).
+  const coordsRef = useRef(coords);
   useEffect(() => {
-    const t = setTimeout(() => map.invalidateSize(), 150);
-    if (coords.length === 1) map.setView(coords[0], 18);
-    else if (coords.length > 1) map.fitBounds(L.latLngBounds(coords), { padding: [120, 120], maxZoom: 18 });
-    return () => clearTimeout(t);
-    // hanya saat dibuka
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map]);
+    coordsRef.current = coords;
+  });
+  const count = coords.length;
+  useEffect(() => {
+    const trigger = () => {
+      const pts = coordsRef.current;
+      map.invalidateSize();
+      if (pts.length === 1) map.setView(pts[0], 18);
+      else if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [80, 80], maxZoom: 18 });
+    };
+
+    const t1 = setTimeout(trigger, 100);
+    const t2 = setTimeout(trigger, 300);
+    const t3 = setTimeout(trigger, 600);
+
+    const container = map.getContainer();
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && container) {
+      ro = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      ro.observe(container);
+    }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      ro?.disconnect();
+    };
+  }, [map, count]);
   return null;
 }
 
 function Callout({ point, n }: { point: Point; n: number }) {
   const { data: url } = useFileUrl(point.photos[0]?.file_id, "view");
   return (
-    <div className="w-44">
+    <div className="w-48">
       <TextBlock className="text-xs font-semibold">{`${n}. ${point.name}`}</TextBlock>
-      {url && <ImageView src={url} alt={point.name} className="mt-1 h-28 w-full rounded object-cover" />}
+      {point.site_lat && point.site_lng && (
+        <TextBlock className="text-[10px] text-mist">{`${Number(point.site_lat).toFixed(5)}, ${Number(point.site_lng).toFixed(5)}`}</TextBlock>
+      )}
+      {url && <ImageView src={url} alt={point.name} className="mt-1 h-32 w-full rounded object-cover shadow-sm" />}
     </div>
   );
 }
@@ -73,7 +102,7 @@ export function SurveyLayoutMap({ survey }: { survey: Survey }) {
     <section aria-label="Peta layout" className="space-y-3">
       <TextBlock className="text-sm text-mist">
         {editable
-          ? "Geser penanda merah ke lokasi pemasangan yang tepat (zoom pakai tombol + / −). Layout di laporan dibuat otomatis dari peta ini."
+          ? "Geser penanda ke lokasi pemasangan yang tepat (zoom pakai tombol + / −). Layout di laporan dibuat otomatis dari peta ini."
           : "Layout titik pada laporan (hanya lihat)."}
       </TextBlock>
       {missing.length > 0 && (
@@ -89,7 +118,7 @@ export function SurveyLayoutMap({ survey }: { survey: Survey }) {
           ))}
         </div>
       )}
-      <div className="h-[60vh] overflow-hidden rounded-panel border border-line">
+      <div className="h-[65vh] min-h-[400px] overflow-hidden rounded-panel border border-line shadow-card">
         <MapContainer center={coords[0] ?? [0.79, 101.45]} zoom={coords.length ? 18 : 12} maxZoom={19} scrollWheelZoom={false}
           className="h-full w-full">
           <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} />

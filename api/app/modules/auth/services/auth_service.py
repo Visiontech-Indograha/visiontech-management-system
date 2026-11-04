@@ -6,7 +6,7 @@ Tidak menulis SQL (lewat crud) dan tidak tahu HTTP (cookie diurus router).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 
@@ -57,6 +57,8 @@ class Profile:
     employee_id: str | None = None  # karyawan milik akun ("Berkas saya"); None = akun tanpa karyawan
     attendance_mode: str | None = None  # FIELD = absen di HP, OFFICE = absen di web; None = tanpa karyawan
     division_id: str | None = None
+    managed_division_ids: list[str] = field(default_factory=list)
+    managed_divisions: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _inactive() -> AppError:
@@ -288,6 +290,7 @@ class AuthService:
         Mengambil data profil pengguna (ME endpoint).
         """
         user = await self._user(user_id)
+        managed_divs = await self.users.get_managed_divisions(user_id)
         return Profile(
             user_id=user_id,
             email=user.login,
@@ -296,6 +299,8 @@ class AuthService:
             employee_id=(str(emp) if (emp := await self.users.get_employee_id(user_id)) else None),
             attendance_mode=await self.users.get_attendance_mode(user_id),
             division_id=await self.users.get_division_id(user_id),
+            managed_division_ids=[d["division_id"] for d in managed_divs],
+            managed_divisions=managed_divs,
         )
 
     async def change_password(

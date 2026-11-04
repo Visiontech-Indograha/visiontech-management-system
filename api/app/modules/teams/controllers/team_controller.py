@@ -4,6 +4,7 @@ Controller orkestrasi use case tim operasional dan keanggotaan.
 """
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import Depends
@@ -12,7 +13,9 @@ from app.core.security import CurrentUser
 from app.modules.teams.dependencies import get_team_logo_service, get_team_service
 from app.modules.teams.schemas.team_schema import (
     TEAM_LOGO_PATH,
+    AvailableMemberOut,
     MemberAdd,
+    TeamAvailabilityItem,
     TeamCreate,
     TeamDetail,
     TeamListItem,
@@ -103,3 +106,20 @@ class TeamController:
 
     async def handle_get_logo(self, current_user: CurrentUser, team_id: UUID) -> tuple[bytes, str]:
         return await self.logo_service.get_logo(current_user, team_id)
+
+    async def handle_list_available_members(
+        self,
+        current_user: CurrentUser,
+        division_id: UUID,
+    ) -> list[AvailableMemberOut]:
+        rows = await self.service.list_available_members(current_user, division_id)
+        return [AvailableMemberOut(**dict(r._mapping)) for r in rows]
+
+    async def handle_get_teams_availability(
+        self,
+        current_user: CurrentUser,
+        target_date: date,
+        division_id: UUID | None = None,
+    ) -> list[TeamAvailabilityItem]:
+        rows = await self.service.get_teams_availability(current_user, target_date, division_id)
+        return [TeamAvailabilityItem(**r) for r in rows]

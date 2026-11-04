@@ -28,6 +28,10 @@ export const PERMISSIONS = [
   "manage:backups",
   "run:system_jobs",
   "delete:any",
+  "view:hse_campaigns",
+  "manage:hse_campaigns",
+  "view:vehicle_inspections",
+  "manage:vehicle_inspections",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

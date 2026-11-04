@@ -26,6 +26,7 @@ from app.modules.work_plans.schemas.daily_plan_schema import (
     DailyPlanOut,
     DailyPlanUpdate,
     GeoResult,
+    MyExecutionTodayOut,
     OrderScheduleOut,
     RecentSiteOut,
 )
@@ -169,4 +170,9 @@ class DailyPlanController:
             presentation_notes=data["presentation_notes"],
             pm_feedback=data["pm_feedback"],
         )
+
+    async def handle_my_execution_today(self, user: CurrentUser) -> MyExecutionTodayOut:
+        data = await self.service.get_my_execution_today(user)
+        return MyExecutionTodayOut(**data)
+
 

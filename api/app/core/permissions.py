@@ -30,6 +30,7 @@ class SystemRole(StrEnum):
     ADMIN_HR_GA = "ADMIN_HR_GA"
     EMPLOYEE = "EMPLOYEE"
     FINANCE = "FINANCE"
+    HSE = "HSE"
 
 
 # Label di token untuk akun tanpa baris user_role — karyawan biasa.
@@ -88,6 +89,12 @@ class Permission(StrEnum):
 
     # Registry backup sistem (Master V2)
     MANAGE_BACKUPS = "manage:backups"
+
+    # HSE & K3 (Master V2)
+    MANAGE_HSE_CAMPAIGNS = "manage:hse_campaigns"
+    VIEW_HSE_CAMPAIGNS = "view:hse_campaigns"
+    MANAGE_VEHICLE_INSPECTIONS = "manage:vehicle_inspections"
+    VIEW_VEHICLE_INSPECTIONS = "view:vehicle_inspections"
 
     # Linimasa
     VIEW_TIMELINE = "view:timeline"
@@ -149,6 +156,12 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     # Finance melihat & mengekspor absensi seluruh karyawan dan meninjau lembur (sama seperti FINANCE V1).
     SystemRole.FINANCE: frozenset({
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.EXPORT_ATTENDANCE, P.REVIEW_OVERTIME, P.MANAGE_SITES,
+    }),
+    # HSE mengelola kampanye K3, melihat akseptasi/audit pembaca, verifikasi dokumen keselamatan, inspeksi kendaraan
+    SystemRole.HSE: frozenset({
+        P.MANAGE_HSE_CAMPAIGNS, P.VIEW_HSE_CAMPAIGNS,
+        P.MANAGE_VEHICLE_INSPECTIONS, P.VIEW_VEHICLE_INSPECTIONS,
+        P.MANAGE_EMPLOYEE_DOCUMENTS, P.VERIFY_DOCUMENTS,
     }),
     SystemRole.TEAM_LEADER: frozenset(),
     SystemRole.EMPLOYEE: frozenset(),

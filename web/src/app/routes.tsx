@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
@@ -10,7 +10,7 @@ import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
 import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
 import { NotFoundPage } from "@/pages/system/NotFoundPage";
 import { UuidParamGuard } from "@/app/UuidParamGuard";
-import { NAV_ITEMS } from "./navigation";
+import { NAV_ITEMS, type NavItem } from "./navigation";
 import {
   AccountPage,
   AssetsPage,
@@ -25,15 +25,14 @@ import {
   MyDocumentsPage,
   OffboardingPage,
   OvertimeRecapPage,
-  ProjectsPage,
   SitesPage,
   TeamsPage,
   DailyPlansPage,
   AllocationPage,
   WorkTypesPage,
-  WorkCompletionsPage,
   SurveyDetailPage,
-  SurveysPage,
+  WorkOrdersPage,
+  HseCampaignsPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
@@ -45,12 +44,10 @@ const PAGES: Record<string, ReactNode> = {
   "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
   "/work-types": <WorkTypesPage />,
+  "/work-orders": <WorkOrdersPage />,
   "/work-plans": <DailyPlansPage />,
   "/alokasi-mingguan": <AllocationPage />,
-  "/work-completions": <WorkCompletionsPage />,
   "/clients": <ClientsPage />,
-  "/projects": <ProjectsPage />,
-  "/surveys": <SurveysPage />,
   "/teams": <TeamsPage />,
   "/mess": <MessPage />,
   "/offboarding": <OffboardingPage />,
@@ -59,6 +56,7 @@ const PAGES: Record<string, ReactNode> = {
   "/leaves": <LeavesPage />,
   "/attendance-recap": <AttendanceRecapPage />,
   "/overtime-recap": <OvertimeRecapPage />,
+  "/safety-campaigns": <HseCampaignsPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */
@@ -100,33 +98,40 @@ export const routes: RouteObject[] = [
                   <RequireAccess item={item}>{PAGES[item.path] ?? <ComingSoonPage title={item.label} />}</RequireAccess>
                 ),
               })),
-              {
-                path: "/surveys/:id",
+              { path: "/surveys/:surveyId",
                 element: (
-                  <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/surveys")!}>
-                    <UuidParamGuard>
+                  <UuidParamGuard param="surveyId">
+                    <RequireAccess item={{ path: "/surveys", label: "Survei", requires: ["create:plan"] } as NavItem}>
                       <SurveyDetailPage />
-                    </UuidParamGuard>
-                  </RequireAccess>
+                    </RequireAccess>
+                  </UuidParamGuard>
                 ),
               },
+              // Redireksi URL lama ke alur terpadu Work Orders
+              { path: "/surveys", element: <Navigate to="/work-orders" replace /> },
+              { path: "/projects", element: <Navigate to="/work-orders" replace /> },
+              { path: "/work-completions", element: <Navigate to="/work-orders" replace /> },
+              // Alias bahasa Indonesia
+              { path: "/inventory", element: <Navigate to="/assets" replace /> },
+              { path: "/presensi", element: <Navigate to="/attendance" replace /> },
+              { path: "/finances", element: <Navigate to="/alokasi-mingguan" replace /> },
               {
                 path: "/directory/:id",
                 element: (
-                  <RequireAccess item={NAV_ITEMS.find((i) => i.path === "/directory")!}>
-                    <UuidParamGuard>
+                  <UuidParamGuard>
+                    <RequireAccess item={{ path: "/directory", label: "Direktori", requires: ["view:users"] } as NavItem}>
                       <EmployeeDetailPage />
-                    </UuidParamGuard>
-                  </RequireAccess>
+                    </RequireAccess>
+                  </UuidParamGuard>
                 ),
               },
               { path: "/account", element: <AccountPage /> },
-              { path: "/forbidden", element: <ForbiddenPage /> },
-              { path: "*", element: <NotFoundPage /> },
             ],
           },
         ],
       },
+      { path: "/403", element: <ForbiddenPage /> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ];

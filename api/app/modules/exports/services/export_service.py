@@ -163,7 +163,12 @@ class ExportService:
         if not survey["points"]:
             raise AppError("NO_SURVEY_POINTS", "Belum ada titik survei untuk dipratinjau.", status=422)
         docx = build_survey_docx(await self._survey_doc(survey, user))
-        pdf = await docx_to_pdf(docx)
+        pdf: bytes | None = None
+        try:
+            from app.shared.documents.reportlab_service import build_survey_pdf_reportlab
+            pdf = build_survey_pdf_reportlab(await self._survey_doc(survey, user))
+        except (ImportError, OSError, RuntimeError, ValueError):
+            pdf = await docx_to_pdf(docx)
         return ("PDF", pdf) if pdf else ("WORD_DOCX", docx)
 
     async def _survey_doc(self, s: dict[str, Any], user: CurrentUser) -> SurveyDoc:
@@ -232,7 +237,8 @@ class ExportService:
         """Logo kop survei: logo perusahaan diganti logo tim bila tim punya logo; sisanya logo organisasi."""
         logos = await asyncio.to_thread(branding.custom_logos, user.organization_id)
         team_logo = (await self._kop_logos([str(s["team_id"])]))[1] if s.get("team_id") else None
-        return {**logos, "company": team_logo} if team_logo else logos
+        company_logo = team_logo or logos.get("company") or branding.visiontech_logo()
+        return {**logos, "company": company_logo}
 
     # ── Logo kop laporan survei ───────────────────────────────────────────────
     def survey_logos(self, user: CurrentUser) -> list[dict[str, Any]]:

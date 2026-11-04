@@ -108,8 +108,6 @@ ehthumbs_vista.db
 # AI agent config & scratch
 .agents/
 .claude/
-.gemini/
-.geminiignore
 .hermes/
 .cursor/
 .windsurf/
@@ -120,7 +118,6 @@ skills-lock.json
 MEMORY.md
 memory.md
 CLAUDE.md
-GEMINI.md
 CHANGELOG.md
 *.agent.md
 
@@ -139,3 +136,35 @@ postman/skills/
 *.log
 api-*.err
 ANTIGRAVITY_MEMORY.md
+
+# ---- Repo publik: jangan pernah commit data pribadi / rahasia ----
+# Kunci, sertifikat, keystore, kredensial layanan
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+key.properties
+local.properties
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+credentials*.json
+.npmrc.local
+# Cadangan & dump database, berkas data lokal
+*.dump
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+db/backup*/
+# Hasil uji lokal: tangkapan layar, foto wajah, akun uji, laporan E2E
+e2e-reports/
+scripts/akun-uji-lokal.txt
+*.local.txt
+# Berkas rilis hasil build
+*.apk
+*.aab
+*.ipa

@@ -84,8 +84,8 @@ class DailyPlanService:
 
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:
-        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN/HR (semua)."""
-        if is_admin(user) or user.has_role("ADMIN_HR_GA"):
+        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN (semua). HR/GA tidak melihat rencana."""
+        if is_admin(user):
             return None
         return user.employee_id or "00000000-0000-0000-0000-000000000000"
 

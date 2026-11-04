@@ -84,6 +84,16 @@ class FaceRepository(BaseRepository):
         )
         return cleared is not None
 
+    async def self_reset_within_day(self, employee_id: UUID | str) -> bool:
+        """Apakah karyawan ini sudah menghapus wajahnya sendiri dalam 24 jam terakhir."""
+        found = await self.scalar(
+            "SELECT 1 FROM public.app_activity_logs "
+            "WHERE action = 'FACE_SELF_RESET' AND entity_id = CAST(:emp AS uuid) "
+            "AND created_at >= now() - interval '1 day' LIMIT 1",
+            {"emp": str(employee_id)},
+        )
+        return found is not None
+
     async def file_key(self, file_id: UUID | str) -> str | None:
         key: str | None = await self.scalar(
             "SELECT storage_key FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}

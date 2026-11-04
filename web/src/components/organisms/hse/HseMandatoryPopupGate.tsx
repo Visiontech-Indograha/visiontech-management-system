@@ -14,6 +14,28 @@ import { ShieldAlert, Clock, CheckCircle2 } from "@/components/molecules/Glyphs"
 import { htmlToText } from "@/lib/htmlToText";
 import { toast } from "sonner";
 
+// Penanda "sudah dibaca" per kampanye untuk sesi login ini (tab). Popup tidak muncul lagi
+// saat pindah halaman; kampanye baru tetap ditampilkan karena id-nya berbeda.
+function ackStorageKey(userId: string | undefined, campaignId: string) {
+  return `vms-hse-ack:${userId ?? "anon"}:${campaignId}`;
+}
+
+function isAckedThisSession(userId: string | undefined, campaignId: string): boolean {
+  try {
+    return window.sessionStorage.getItem(ackStorageKey(userId, campaignId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markAckedThisSession(userId: string | undefined, campaignId: string) {
+  try {
+    window.sessionStorage.setItem(ackStorageKey(userId, campaignId), "1");
+  } catch {
+    /* penyimpanan tidak tersedia: popup mungkin muncul lagi, tidak fatal */
+  }
+}
+
 export function HseMandatoryPopupGate() {
   const { me } = useSession();
   const queryClient = useQueryClient();
@@ -67,6 +89,7 @@ export function HseMandatoryPopupGate() {
     },
     onSuccess: () => {
       toast.success("Terima kasih telah membaca panduan keselamatan kerja (K3/HSE).");
+      if (campaign) markAckedThisSession(me?.user_id, campaign.id);
       queryClient.setQueryData(["hse", "active-popup", me?.user_id], null);
     },
     onError: () => {
@@ -75,6 +98,7 @@ export function HseMandatoryPopupGate() {
   });
 
   if (isLoading || !campaign) return null;
+  if (isAckedThisSession(me?.user_id, campaign.id)) return null;
 
   const isButtonDisabled = remainingCooldown > 0 || ackMutation.isPending;
 
@@ -116,7 +140,7 @@ export function HseMandatoryPopupGate() {
               {ackMutation.isPending
                 ? "Menyimpan konfirmasi..."
                 : remainingCooldown > 0
-                ? `Tunggu (${remainingCooldown}s)`
+                ? `Baca dulu, tombol aktif dalam ${remainingCooldown} detik`
                 : "Saya Telah Membaca dan Memahami Panduan Ini"}
             </TextBlock>
           </ActionButton>

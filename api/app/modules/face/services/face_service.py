@@ -180,6 +180,29 @@ class FaceService:
             entity_type="employee", entity_id=employee_id, action="FACE_RESET",
         )
 
+    async def reset_own(self, user_id: str, actor_role: str, actor_email: str) -> UUID:
+        """Hapus pendaftaran wajah milik sendiri (idempoten); dicatat di log aktivitas."""
+        employee = await self._employee(user_id)
+        if parse_embedding(employee.face_embedding)[0] is not None:
+            if await self.repo.self_reset_within_day(employee.employee_id):
+                raise AppError(
+                    "FACE_RESET_LIMIT",
+                    "Pendaftaran wajah hanya bisa dihapus sendiri sekali sehari. Coba lagi besok atau hubungi HR.",
+                    status=429,
+                )
+            await self.repo.clear_embedding(employee.employee_id)
+            await write_delete_audit(
+                self.repo.db,
+                actor_user_id=user_id,
+                actor_role=actor_role,
+                actor_email=actor_email,
+                entity_type="employee",
+                entity_id=employee.employee_id,
+                detail={"reason": "SELF_RESET_FACE"},
+                action="FACE_SELF_RESET",
+            )
+        return employee.employee_id
+
     # ── Dipakai modul absensi ─────────────────────────────────────────────────
     async def is_enrolled(self, employee_id: UUID | str) -> bool:
         return parse_embedding(await self.repo.embedding_of(employee_id))[0] is not None

@@ -16,8 +16,8 @@ final _iso = DateFormat('yyyy-MM-dd');
 
 /// Label status cuti untuk karyawan (alur: PM lalu HR).
 String leaveStatusLabel(String status) => switch (status) {
-  'PENDING' => 'Menunggu PM',
-  'APPROVED_BY_PM' => 'Disetujui PM, menunggu HR',
+  'PENDING' => 'Menunggu atasan',
+  'APPROVED_BY_PM' => 'Sudah disetujui atasan, menunggu HR',
   'APPROVED_BY_HR' || 'APPROVED_BY_FINANCE' => 'Disetujui',
   'REJECTED' => 'Ditolak',
   'CANCELLED' => 'Dibatalkan',
@@ -97,7 +97,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Batalkan pengajuan?'),
+        title: const Text('Batalkan pengajuan cuti?'),
         content: const Text('Pengajuan cuti ini akan dibatalkan.'),
         actions: [
           TextButton(
@@ -106,7 +106,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Batalkan'),
+            child: const Text('Ya, batalkan'),
           ),
         ],
       ),

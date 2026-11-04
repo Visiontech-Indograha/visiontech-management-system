@@ -55,13 +55,13 @@ String dayActionErrorMessage(Object error) => switch (apiErrorCode(error)) {
   'CHECKIN_REQUIRED' =>
     'Absen masuk hari ini belum tercatat. Lakukan absen masuk dulu di menu Absensi, lalu mulai hari kerja.',
   'ROLLOVER_PENDING' =>
-    'Ada pekerjaan yang masih menunggu keputusan PM untuk pindah hari. Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
+    'Ada pekerjaan yang masih menunggu keputusan atasan untuk pindah hari. Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
   'ITEMS_INCOMPLETE' =>
-    'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.',
+    'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta atasan menutup hari kerja.',
   _ => apiErrorMessage(error),
 };
 
-/// Jumlah item hari ini yang masih menunggu keputusan PM untuk pindah hari (menahan penutupan hari).
+/// Jumlah item hari ini yang masih menunggu keputusan atasan untuk pindah hari (menahan penutupan hari).
 int pendingRolloverCount(Map<String, dynamic> plan) =>
     (plan['items'] as List? ?? const []).where((i) => i is Map && i['status'] == 'PENDING_ROLLOVER').length;
 
@@ -76,9 +76,9 @@ int unfinishedItemCount(Map<String, dynamic> plan) => (plan['items'] as List? ??
     .length;
 
 String correctionStateTitle(String status) => switch (status) {
-  'REQUESTED' => 'Koreksi menunggu keputusan PM',
-  'REVISING' => 'PM meminta revisi laporan',
-  'IN_REVIEW' => 'Revisi menunggu pemeriksaan PM',
+  'REQUESTED' => 'Koreksi menunggu keputusan atasan',
+  'REVISING' => 'Atasan meminta revisi laporan',
+  'IN_REVIEW' => 'Revisi menunggu pemeriksaan atasan',
   _ => status,
 };
 
@@ -87,9 +87,9 @@ String correctionStateSubtitle(Map<String, dynamic> correction) {
   return switch (correction['status']) {
     'REVISING' => note == null || note.isEmpty
         ? 'Perbarui laporan dan hasil kerja, lalu kirim revisi'
-        : 'Catatan PM: $note',
+        : 'Catatan atasan: $note',
     'REQUESTED' => 'Alasan: ${correction['reason']}',
-    _ => 'Anda akan diberi tahu setelah PM memutuskan',
+    _ => 'Anda akan diberi tahu setelah atasan memutuskan',
   };
 }
 
@@ -229,7 +229,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke PM')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim ke atasan')),
         ],
       ),
     );
@@ -239,7 +239,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     if (text.length < 5) return _snack('Tulis alasan koreksi minimal 5 karakter.', error: true);
     await _run(
       () => ref.read(syncEngineProvider).api.requestCorrection(widget.dailyPlanId, text),
-      'Permintaan koreksi dikirim ke PM.',
+      'Permintaan koreksi dikirim ke atasan.',
     );
   }
 
@@ -389,7 +389,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         {'daily_plan_id': widget.dailyPlanId, 'hours': h, 'reason': reason.text.trim()},
       );
       _snack(applied
-          ? 'Pengajuan lembur terkirim ke PM.'
+          ? 'Pengajuan lembur terkirim ke atasan.'
           : 'Pengajuan lembur disimpan dan menunggu koneksi untuk dikirim.');
       if (applied) await _load();
     } catch (e) {
@@ -489,7 +489,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         ),
                         if (plan['pm_name'] != null) ...[
                           const SizedBox(height: 4),
-                          ContactRow(label: 'PM', name: '${plan['pm_name']}', phone: plan['pm_phone'] as String?),
+                          ContactRow(label: 'Atasan (Project Manager)', name: '${plan['pm_name']}', phone: plan['pm_phone'] as String?),
                         ],
                       ],
                     ),
@@ -503,7 +503,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                           const Icon(Icons.hourglass_top_rounded),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Text('Siaga — menunggu perintah PM', style: theme.textTheme.titleSmall),
+                            child: Text('Siaga — menunggu perintah atasan', style: theme.textTheme.titleSmall),
                           ),
                         ],
                       ),
@@ -546,7 +546,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                     _Tile(
                       icon: Icons.edit_note_rounded,
                       title: 'Ajukan koreksi laporan',
-                      subtitle: 'Perbaikan laporan harus disetujui PM',
+                      subtitle: 'Perbaikan laporan harus disetujui atasan',
                       onTap: _busy ? null : _requestCorrection,
                     ),
                   ],
@@ -561,7 +561,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                     if (_openCorrection!['status'] == 'REVISING') ...[
                       const SizedBox(height: 12),
                       PrimaryAction(
-                        label: 'Kirim revisi ke PM',
+                        label: 'Kirim revisi ke atasan',
                         icon: Icons.send_rounded,
                         busy: _busy,
                         onTap: _dailyReport == null
@@ -569,8 +569,8 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                             : () async {
                                 if (!await confirmAction(
                                   context,
-                                  title: 'Kirim revisi ke PM?',
-                                  message: 'PM akan memeriksa laporan dan hasil kerja yang sudah Anda perbarui.',
+                                  title: 'Kirim revisi ke atasan?',
+                                  message: 'Atasan akan memeriksa laporan dan hasil kerja yang sudah Anda perbarui.',
                                   confirmLabel: 'Kirim revisi',
                                 )) {
                                   return;
@@ -579,7 +579,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                                   () => ref.read(syncEngineProvider).api.submitCorrection(
                                     _openCorrection!['correction_id'] as String,
                                   ),
-                                  'Revisi dikirim ke PM.',
+                                  'Revisi dikirim ke atasan.',
                                 );
                               },
                       ),
@@ -603,7 +603,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         padding: const EdgeInsets.only(bottom: 8),
                         child: NoticeBanner(
                           icon: Icons.update_rounded,
-                          text: '${pendingRolloverCount(plan)} pekerjaan masih menunggu keputusan PM untuk pindah hari. '
+                          text: '${pendingRolloverCount(plan)} pekerjaan masih menunggu keputusan atasan untuk pindah hari. '
                               'Hari kerja belum bisa ditutup sebelum keputusan itu keluar.',
                         ),
                       ),
@@ -621,7 +621,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         if (!await confirmAction(
                           context,
                           title: 'Selesaikan hari kerja?',
-                          message: 'Hasil kerja dikunci. Perubahan setelahnya perlu persetujuan PM lewat koreksi laporan.',
+                          message: 'Hasil kerja dikunci. Perubahan setelahnya perlu persetujuan atasan lewat koreksi laporan.',
                           confirmLabel: 'Selesaikan',
                         )) {
                           return;
@@ -664,7 +664,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                     _Tile(
                       icon: Icons.more_time_rounded,
                       title: 'Ajukan lembur',
-                      subtitle: 'Diputus PM/OM divisi',
+                      subtitle: 'Diputuskan atasan (PM/OM divisi)',
                       onTap: _busy ? null : _overtime,
                     ),
                   ] else if (plan['status'] == 'APPROVED' || plan['status'] == 'COMPLETED' || plan['status'] == 'DONE') ...[
@@ -703,9 +703,9 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
               final (title, subtitle) = o == null
                   ? ('Serah terima pekerjaan', 'Memuat status…')
                   : o['pm_signed_at'] != null
-                  ? ('Sudah disetujui PM', '$proyek · pekerjaan selesai')
+                  ? ('Sudah disetujui atasan', '$proyek · pekerjaan selesai')
                   : o['leader_signed_at'] != null
-                  ? ('Menunggu persetujuan PM', '$proyek · bisa tanda tangan ulang')
+                  ? ('Menunggu persetujuan atasan', '$proyek · bisa tanda tangan ulang')
                   : ('Tanda tangan serah terima', '$proyek · ringkasan, foto hasil kerja, tanda tangan');
               return _Tile(
                 icon: o?['pm_signed_at'] != null ? Icons.verified_rounded : Icons.draw_rounded,

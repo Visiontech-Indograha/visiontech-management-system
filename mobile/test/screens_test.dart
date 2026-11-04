@@ -390,7 +390,7 @@ void main() {
       backend.routes['/start'] = (_) => standbyDetail('ONGOING');
       await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
 
-      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsOneWidget);
       expect(find.text('Mulai hari kerja'), findsNothing);
       expect(backend.requests.any((r) => r.path.endsWith('/start')), isFalse);
     });
@@ -406,7 +406,7 @@ void main() {
       };
       await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
 
-      expect(find.text('Siaga — menunggu perintah PM'), findsNothing);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsNothing);
       expect(find.text('Mulai hari kerja'), findsOneWidget);
     });
 
@@ -444,7 +444,7 @@ void main() {
       await tester.tap(find.text('Tim Anda mendapat tugas'));
       await settle(tester);
       expect(backend.requests.any((r) => r.path.endsWith('/work-plans/daily/s')), isTrue);
-      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsOneWidget);
     });
   });
 
@@ -535,7 +535,7 @@ void main() {
       backend.routes['/complete'] = (_) => planDetail('COMPLETED');
       await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
 
-      expect(find.textContaining('menunggu keputusan PM untuk pindah hari'), findsOneWidget);
+      expect(find.textContaining('menunggu keputusan atasan untuk pindah hari'), findsOneWidget);
       await tester.tap(find.text('Selesaikan hari kerja'));
       await settle(tester);
       expect(find.text('Selesaikan hari kerja?'), findsNothing);
@@ -673,7 +673,7 @@ void main() {
         find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
         'Hujan deras sejak siang',
       );
-      await tester.tap(find.text('Kirim ke PM'));
+      await tester.tap(find.text('Kirim ke atasan'));
       await settle(tester);
 
       expect(find.textContaining('disimpan di HP'), findsOneWidget);
@@ -697,7 +697,7 @@ void main() {
         find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
         'Material belum datang',
       );
-      await tester.tap(find.text('Kirim ke PM'));
+      await tester.tap(find.text('Kirim ke atasan'));
       await settle(tester);
 
       expect(find.textContaining('Permintaan pindah hari terkirim'), findsOneWidget);

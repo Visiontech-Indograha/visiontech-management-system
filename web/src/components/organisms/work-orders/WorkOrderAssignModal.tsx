@@ -70,7 +70,7 @@ export function WorkOrderAssignModal({
 
         <div className="space-y-3">
           <SelectField
-            label="Pilih Tim Pelaksana Survei *"
+            label="Pilih tim survei *"
             value={leadTeamId}
             onChange={(e) => setLeadTeamId(e.target.value)}
             required
@@ -84,7 +84,7 @@ export function WorkOrderAssignModal({
           </SelectField>
 
           <TextField
-            label="Rencana Tanggal Survei Lapangan *"
+            label="Tanggal survei di lapangan *"
             type="date"
             value={surveyDate}
             onChange={(e) => setSurveyDate(e.target.value)}

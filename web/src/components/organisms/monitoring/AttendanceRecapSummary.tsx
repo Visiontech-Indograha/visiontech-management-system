@@ -26,7 +26,7 @@ export function AttendanceRecapSummary({ recap }: { recap: UseQueryResult<Attend
         query={recap}
         errorText="Rekap absensi tidak dapat dimuat."
         empty={rows.length === 0}
-        emptyText="Belum ada catatan kehadiran pada bulan ini."
+        emptyText="Belum ada data kehadiran untuk bulan ini. Pilih bulan lain di kolom Bulan."
       >
         <ListToolbar value={view.input} onChange={view.setInput} placeholder="Cari nama karyawan..." active={view.active} onReset={view.reset} />
         {view.total === 0 && <TextBlock className="mb-3 text-mist">Tidak ada yang cocok dengan pencarian.</TextBlock>}

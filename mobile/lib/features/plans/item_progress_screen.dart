@@ -255,7 +255,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
               }
               Navigator.pop(ctx, true);
             },
-            child: const Text('Kirim ke PM'),
+            child: const Text('Kirim ke atasan'),
           ),
         ],
       ),
@@ -275,7 +275,7 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
       if (!mounted) return;
       if (applied) {
         setState(() => _rolloverPending = false);
-        _snack('Permintaan pindah hari terkirim; menunggu keputusan PM.');
+        _snack('Permintaan pindah hari terkirim; menunggu keputusan atasan.');
         await _load();
       } else {
         setState(() => _rolloverPending = true);

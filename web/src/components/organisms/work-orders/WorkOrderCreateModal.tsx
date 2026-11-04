@@ -10,6 +10,8 @@ import { useClients, useClientSites } from "@/services/clientService";
 import { useDivisions, useEmployees } from "@/services/employeeService";
 import { useTeams } from "@/services/teamService";
 import { useCreateWorkOrder } from "@/services/workOrderService";
+import { useSession } from "@/stores/sessionStore";
+import { divisionScopeIds } from "@/lib/divisionScope";
 
 interface WorkOrderCreateModalProps {
   isOpen: boolean;
@@ -30,10 +32,23 @@ export function WorkOrderCreateModal({
   const [initialComplaint, setInitialComplaint] = useState("");
   const [leadTeamId, setLeadTeamId] = useState("");
 
+  const { me } = useSession();
+  // PM hanya boleh memilih divisinya sendiri; OM/SA tetap bebas memilih.
+  const scopeIds = divisionScopeIds(me);
+  const scopedDivisionId = scopeIds
+    ? (scopeIds.includes(divisionId) ? divisionId : (scopeIds[0] ?? ""))
+    : divisionId;
+
   const { data: clients = [] } = useClients();
   const { data: sites = [] } = useClientSites(clientId);
-  const { data: divisions = [] } = useDivisions();
-  const { data: employeesData } = useEmployees({ status: "active", page: 1, size: 100 });
+  const { data: allDivisions = [] } = useDivisions();
+  const divisions = scopeIds ? allDivisions.filter((d) => scopeIds.includes(d.id)) : allDivisions;
+  const { data: employeesData } = useEmployees({
+    status: "active",
+    page: 1,
+    size: 100,
+    ...(scopeIds && scopedDivisionId ? { division_id: scopedDivisionId } : {}),
+  });
   const { data: teams = [] } = useTeams();
 
   const createMutation = useCreateWorkOrder();
@@ -44,7 +59,7 @@ export function WorkOrderCreateModal({
       toast.error("Pilih klien terlebih dahulu");
       return;
     }
-    const finalDivisionId = divisionId || (divisions.length > 0 ? divisions[0].id : "");
+    const finalDivisionId = scopedDivisionId || (divisions.length > 0 ? divisions[0].id : "");
     if (!finalDivisionId) {
       toast.error("Pilih divisi terlebih dahulu");
       return;
@@ -69,10 +84,10 @@ export function WorkOrderCreateModal({
         initial_complaint: initialComplaint.trim() || undefined,
         lead_team_id: leadTeamId || undefined,
       });
-      toast.success("Work Order baru berhasil dibuat");
+      toast.success("Tugas klien baru berhasil dibuat");
       onClose();
     } catch {
-      toast.error("Gagal membuat Work Order");
+      toast.error("Gagal membuat tugas klien");
     }
   };
 
@@ -82,7 +97,7 @@ export function WorkOrderCreateModal({
     <VmsDialog
       open={isOpen}
       onClose={onClose}
-      title="Buat Tugas Baru Klien (Work Order)"
+      title="Buat Tugas Klien Baru"
       size="xl"
       footer={
         <div className="flex justify-end gap-2 w-full">
@@ -105,7 +120,7 @@ export function WorkOrderCreateModal({
             ) : (
               <div className="flex items-center gap-1.5">
                 <Plus className="h-4 w-4" />
-                <TextBlock as="span">Buat Work Order</TextBlock>
+                <TextBlock as="span">Simpan tugas klien</TextBlock>
               </div>
             )}
           </ActionButton>
@@ -157,8 +172,8 @@ export function WorkOrderCreateModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <SelectField
-              label="Divisi Kerja *"
-              value={divisionId}
+              label="Divisi kerja *"
+              value={scopedDivisionId}
               onChange={(e) => setDivisionId(e.target.value)}
               required
             >
@@ -186,7 +201,7 @@ export function WorkOrderCreateModal({
           </div>
 
           <SelectField
-            label="Tim Penanggung Jawab / Survei (Opsional)"
+            label="Tim survei (opsional)"
             value={leadTeamId}
             onChange={(e) => setLeadTeamId(e.target.value)}
             hint="Bisa ditentukan sekarang atau saat status WAITING_SURVEY"

@@ -24650,6 +24650,33 @@
     ]
    }
   },
+  "/api/v1/face/enrollment/me": {
+   "delete": {
+    "description": "Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas.",
+    "operationId": "reset_own_face_enrollment_api_v1_face_enrollment_me_delete",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceResetResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reset Own Face Enrollment",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
   "/api/v1/face/enrollments/{employee_id}": {
    "delete": {
     "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.",

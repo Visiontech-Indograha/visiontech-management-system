@@ -27,7 +27,7 @@ String? closeDayBlockReason({
   // Pindah hari yang menunggu PM sudah dijelaskan spanduk di atas tombol; tidak diulang di sini.
   if (pendingRollovers > 0) return null;
   if (unfinishedItems > 0) {
-    return 'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.';
+    return 'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta atasan menutup hari kerja.';
   }
   if (!hasReport) return 'Kirim laporan harian di atas dulu. Setelah terkirim, hari kerja bisa ditutup.';
   if (reportPending) return 'Menunggu koneksi untuk mengirim laporan.';

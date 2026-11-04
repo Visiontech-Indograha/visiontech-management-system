@@ -37,7 +37,7 @@ void main() {
     test('masih ada item belum selesai menahan penutupan hari', () {
       expect(
         closeDayBlockReason(hasReport: true, reportPending: false, pendingRollovers: 0, unfinishedItems: 1),
-        'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta PM menutup hari kerja.',
+        'Masih ada pekerjaan belum selesai. Selesaikan atau ajukan pindah hari dulu, atau minta atasan menutup hari kerja.',
       );
     });
     test('pindah hari yang menunggu PM dijelaskan spanduk, tidak diulang sebagai alasan', () {

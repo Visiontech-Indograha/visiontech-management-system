@@ -99,19 +99,6 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                       : `Ditinjau ${a.reviewed_at ? formatDateTime(a.reviewed_at) : ""}`}
                 </div>
               </ListBlock>
-              <div className="mt-auto">
-                <DeleteConfirmButton
-                  label="Hapus absensi"
-                  title="Hapus absensi?"
-                  description={`Absensi ${a.employee_name ?? ""} tanggal ${formatDate(a.work_date)} dihapus permanen.`}
-                  successText="Absensi dihapus."
-                  onDelete={async () => {
-                    await deleteAttendance(a.id);
-                    await qc.invalidateQueries({ queryKey: ["attendance"] });
-                    await qc.invalidateQueries({ queryKey: ["attendance-recap"] });
-                  }}
-                />
-              </div>
               {a.selfie_file_id && (a.can_review || a.employee_id === meEmployeeId) && (
                 <PhotoStrip photos={[{ file_id: a.selfie_file_id }]} alt="Swafoto absen" />
               )}
@@ -126,6 +113,20 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
                   ) : null}
                 </div>
               )}
+              {/* Hapus dipisah dari tombol Tinjau: baris sendiri, dengan dialog konfirmasi */}
+              <div className="mt-2 flex justify-end border-t border-line pt-2">
+                <DeleteConfirmButton
+                  label="Hapus absensi"
+                  title="Hapus absensi?"
+                  description={`Absensi ${a.employee_name ?? ""} tanggal ${formatDate(a.work_date)} akan dihapus permanen dan tidak bisa dikembalikan.`}
+                  successText="Absensi dihapus."
+                  onDelete={async () => {
+                    await deleteAttendance(a.id);
+                    await qc.invalidateQueries({ queryKey: ["attendance"] });
+                    await qc.invalidateQueries({ queryKey: ["attendance-recap"] });
+                  }}
+                />
+              </div>
             </ListEntry>
           ))}
         </ListBlock>

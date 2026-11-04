@@ -149,7 +149,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
         title: const Text('Aktifkan Login Sidik Jari?'),
         content: const Text(
           'Buka aplikasi berikutnya cukup dengan sidik jari, tanpa perlu mengetik email & password lagi. '
-          'Bisa diubah kapan saja lewat menu Profil.',
+          'Bisa diubah kapan saja lewat menu Profil. Pilih "Nanti Saja" bila belum mau; Anda tetap bisa masuk dengan email dan password.',
         ),
         actions: [
           TextButton(

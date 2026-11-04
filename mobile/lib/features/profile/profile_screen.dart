@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +22,7 @@ import 'sessions_screen.dart';
 const _roleLabel = {
   'ADMIN': 'Admin',
   'HR': 'HR',
-  'PM': 'Project Manager',
+  'PM': 'Atasan',
   'FINANCE': 'Finance',
   'ASSET': 'Petugas aset',
   'OPS': 'Operasional',
@@ -158,6 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final yakin = await _konfirmasi(
       judul: 'Hapus pendaftaran wajah Anda?',
       isi:
+          'Hapus wajah hanya bisa dilakukan sekali sehari. '
           'Setelah dihapus, absensi memakai pengenalan wajah tidak aktif sampai Anda mendaftarkan wajah lagi. '
           'Tindakan ini dicatat di log aktivitas.',
       tombol: 'Ya, hapus',
@@ -173,8 +175,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await _loadFaceState();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
+        // Server membalas 429 bila wajah sudah dihapus hari ini.
+        final batasHarian = e is DioException && e.response?.statusCode == 429;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Text(
+              batasHarian
+                  ? 'Wajah hanya bisa dihapus sekali sehari. Coba lagi besok, atau minta bantuan HR.'
+                  : apiErrorMessage(e),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isEnrolling = false);

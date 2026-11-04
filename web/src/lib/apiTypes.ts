@@ -3625,6 +3625,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance/{att_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach Evidence
+         * @description Foto bukti biasa (terlambat / di luar radius) untuk absensi sendiri, tanpa pencocokan wajah.
+         */
+        post: operations["attach_evidence_api_v1_attendance__att_id__evidence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance/{att_id}/review": {
         parameters: {
             query?: never;
@@ -4961,6 +4981,8 @@ export interface components {
             reviewed_at: string | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Evidence Photo File Id */
+            evidence_photo_file_id?: string | null;
             /** Face Result */
             face_result?: string | null;
             /** Face Similarity */
@@ -5375,6 +5397,8 @@ export interface components {
             accuracy_m?: number | null;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Evidence File Id */
+            evidence_file_id?: string | null;
             /** Face Result */
             face_result?: ("MATCH" | "NO_MATCH" | "LOW_QUALITY" | "NOT_ENROLLED" | "SKIPPED") | null;
             /** Face Similarity */
@@ -5402,6 +5426,8 @@ export interface components {
             location_origin: "GPS" | "SIMULASI";
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Evidence File Id */
+            evidence_file_id?: string | null;
             /** Explanation */
             explanation?: string | null;
             /** Accuracy M */
@@ -6711,6 +6737,17 @@ export interface components {
             images_used: number;
             /** Quality */
             quality?: number | null;
+        };
+        /**
+         * EvidenceRequest
+         * @description Menempelkan foto bukti biasa (tanpa pencocokan wajah) ke absensi sendiri.
+         */
+        EvidenceRequest: {
+            /**
+             * Evidence File Id
+             * Format: uuid
+             */
+            evidence_file_id: string;
         };
         /** ExecutionBomOut */
         ExecutionBomOut: {
@@ -8576,6 +8613,8 @@ export interface components {
             signature: string;
             /** Selfie File Id */
             selfie_file_id?: string | null;
+            /** Evidence File Id */
+            evidence_file_id?: string | null;
         };
         /**
          * OfflineAttendanceResult
@@ -18790,6 +18829,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ExplanationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attach_evidence_api_v1_attendance__att_id__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                att_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceRequest"];
             };
         };
         responses: {

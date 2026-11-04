@@ -101,7 +101,7 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
           />
         </PlainButton>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl border-none bg-transparent p-0 shadow-none">
+      <DialogContent className="w-[94vw] sm:max-w-5xl border-none bg-transparent p-0 shadow-none">
         {viewQuery.isLoading || viewQuery.isFetching ? (
           <Skeleton className="h-[60vh] w-full rounded-md bg-surface/20" />
         ) : viewQuery.isError ? (

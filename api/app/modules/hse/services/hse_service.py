@@ -19,7 +19,7 @@ from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_campaign_repository import HseCampaignRepository
 from app.modules.hse.repositories.vehicle_inspection_repository import VehicleInspectionRepository
-from app.modules.hse.schemas import (
+from app.modules.hse.schemas.hse_schema import (
     HseAcknowledgeCreate,
     HseCampaignAuditStats,
     HseCampaignCreate,

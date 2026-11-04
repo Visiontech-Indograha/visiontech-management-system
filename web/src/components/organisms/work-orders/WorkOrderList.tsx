@@ -266,7 +266,7 @@ export function WorkOrderList({
         <div className="py-12 text-center border border-dashed rounded-xl border-danger-border bg-danger-bg/20">
           <AlertCircle className="h-10 w-10 text-danger mx-auto mb-2" />
           <TextBlock className="font-semibold text-danger text-base">Gagal memuat daftar Work Orders</TextBlock>
-          <div className="text-xs text-muted-foreground mt-1 mb-3">Terjadi gangguan koneksi ke server.</div>
+          <div className="text-xs text-muted-foreground mt-1 mb-3"><TextBlock as="span">Terjadi gangguan koneksi ke server.</TextBlock></div>
           {onRetry && (
             <ActionButton type="button" variant="outline" size="sm" onClick={onRetry}>
               Coba Lagi

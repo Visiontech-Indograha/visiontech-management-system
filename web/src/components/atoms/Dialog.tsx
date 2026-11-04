@@ -59,7 +59,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed bottom-0 left-0 right-0 top-auto z-50 flex max-h-[92dvh] w-full flex-col rounded-t-2xl border-t border-line bg-background p-5 pb-safe shadow-2xl duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:max-h-[88vh] sm:w-[92vw] sm:max-w-3xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:border-line sm:p-6 sm:shadow-2xl",
+          "fixed bottom-0 left-0 right-0 top-auto z-50 flex max-h-[92dvh] w-full flex-col rounded-t-2xl border-t border-line bg-background p-5 pb-safe shadow-2xl duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:bottom-auto sm:left-[50%] sm:right-auto sm:top-[50%] sm:max-h-[90vh] sm:w-[94vw] sm:max-w-5xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border sm:border-line sm:p-6 sm:shadow-2xl",
           className
         )}
         {...props}

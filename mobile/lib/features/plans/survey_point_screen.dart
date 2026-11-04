@@ -517,6 +517,24 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
             runSpacing: 8,
             children: [
               for (final p in mine) _photoTile(p),
+              if (mine.isEmpty && !_edit)
+                Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.black12.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.black26),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.image_not_supported_outlined, size: 20, color: Colors.black45),
+                      const SizedBox(width: 8),
+                      Text('Tidak ada foto', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
               if (_edit) ...[
                 _AddTile(
                   icon: Icons.photo_camera_rounded,

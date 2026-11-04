@@ -24,6 +24,14 @@ from app.modules.attendance.services.attendance_session_service import Attendanc
 MONITOR = "app.modules.attendance.services.attendance_monitor_service"
 
 
+@pytest.fixture(autouse=True)
+def _jam_dicek(monkeypatch):
+    """Paksa cek jam aktif walau .env lokal mengisi SKIP_ATTENDANCE_HOURS_CHECK=true."""
+    from app.core.config import settings
+
+    monkeypatch.setattr(settings, "SKIP_ATTENDANCE_HOURS_CHECK", False)
+
+
 def test_check_in_before_0645_is_rejected():
     """Percobaan check-in sebelum pukul 06:45 ditolak dengan 422 CHECKIN_TOO_EARLY."""
     async def run():
@@ -37,6 +45,8 @@ def test_check_in_before_0645_is_rejected():
 
         worker_mock = MagicMock(employee_id=uuid4(), attendance_mode="OFFICE", unit_id=None, is_admin=False)
         repo.attendance_mode_of.return_value = worker_mock
+        repo.active_on.return_value = None
+        repo.rejected_on.return_value = 0
 
         early_dt = datetime(2026, 10, 14, 6, 44, tzinfo=UTC)
         clock_mock = MagicMock()

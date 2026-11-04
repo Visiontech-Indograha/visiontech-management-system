@@ -424,6 +424,10 @@ class SyncEngine {
       if (path is String) {
         await File(path).delete().catchError((_) => File(path));
       }
+      final ev = (jsonDecode(row.payloadJson) as Map)['evidence_path'];
+      if (ev is String) {
+        await File(ev).delete().catchError((_) => File(ev));
+      }
     }
   }
 
@@ -449,6 +453,10 @@ class SyncEngine {
       if (row.entityType == OfflineAttendance.entityType) {
         // Absen offline: payload-nya string bertanda tangan; swafotonya di selfie_path.
         if (record['selfie_path'] != null && record['selfie_file_id'] == null) {
+          n++;
+        }
+        if (record['evidence_path'] != null &&
+            record['evidence_file_id'] == null) {
           n++;
         }
         continue;

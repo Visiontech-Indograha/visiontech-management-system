@@ -13203,6 +13203,69 @@
     }
    }
   },
+  "/api/v1/attendance/{att_id}/evidence": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Attach Evidence",
+    "description": "Foto bukti biasa (terlambat / di luar radius) untuk absensi sendiri, tanpa pencocokan wajah.",
+    "operationId": "attach_evidence_api_v1_attendance__att_id__evidence_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "att_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Att Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvidenceRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Attach Evidence Api V1 Attendance  Att Id  Evidence Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/attendance/{att_id}/review": {
    "post": {
     "tags": [
@@ -17610,6 +17673,18 @@
       ],
       "title": "Selfie File Id"
      },
+     "evidence_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence Photo File Id"
+     },
      "face_result": {
       "anyOf": [
        {
@@ -18732,6 +18807,18 @@
       ],
       "title": "Selfie File Id"
      },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
+     },
      "face_result": {
       "anyOf": [
        {
@@ -18816,6 +18903,18 @@
        }
       ],
       "title": "Selfie File Id"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      },
      "explanation": {
       "anyOf": [
@@ -22474,6 +22573,21 @@
      "images_used"
     ],
     "title": "EnrollResponse"
+   },
+   "EvidenceRequest": {
+    "properties": {
+     "evidence_file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Evidence File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "evidence_file_id"
+    ],
+    "title": "EvidenceRequest",
+    "description": "Menempelkan foto bukti biasa (tanpa pencocokan wajah) ke absensi sendiri."
    },
    "ExecutionBomOut": {
     "properties": {
@@ -27112,6 +27226,18 @@
        }
       ],
       "title": "Selfie File Id"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      }
     },
     "type": "object",

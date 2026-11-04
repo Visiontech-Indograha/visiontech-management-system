@@ -14,7 +14,7 @@ describe("Lokasi kerja (/sites)", () => {
   it("tanpa manage:sites ditolak", () => {
     mockApi(() => undefined);
     const { router } = renderRoute("/sites", { role: "HR" });
-    expect(router.state.location.pathname).toBe("/forbidden");
+    expect(router.state.location.pathname).toBe("/403");
   });
 
   it("menampilkan daftar dan keadaan kosong", async () => {

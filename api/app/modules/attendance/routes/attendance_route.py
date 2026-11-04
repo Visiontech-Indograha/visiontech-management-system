@@ -23,6 +23,7 @@ from app.modules.attendance.schemas.attendance_schema import (
     CheckInRequest,
     CheckOutRequest,
     DeviceKeyRequest,
+    EvidenceRequest,
     ExplanationRequest,
     MealAllowanceRow,
     MyRecapResponse,
@@ -125,6 +126,17 @@ async def explain_attendance(
     P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.
     """
     return await controller.handle_explain(current_user, att_id, data)
+
+
+@router.post("/{att_id}/evidence")
+async def attach_evidence(
+    att_id: UUID,
+    data: EvidenceRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: AttendanceController = Depends(),
+) -> dict[str, str]:
+    """Foto bukti biasa (terlambat / di luar radius) untuk absensi sendiri, tanpa pencocokan wajah."""
+    return await controller.handle_evidence(current_user, att_id, data)
 
 
 @router.post("/{att_id}/review")

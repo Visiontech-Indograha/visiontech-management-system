@@ -109,4 +109,4 @@ async def write_delete_audit(
                 },
             )
     except Exception:
-        logger.exception("Gagal menulis audit %s %s %s", action, entity_type, entity_id)
+        logger.exception("Gagal menulis audit %s %s", action, entity_type)

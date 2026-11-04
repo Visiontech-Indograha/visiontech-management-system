@@ -828,6 +828,7 @@ export interface paths {
         /**
          * Bulk Create Daily
          * @description Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_create_daily_api_v1_work_plans_daily_bulk_post"];
         delete?: never;
@@ -848,6 +849,7 @@ export interface paths {
         /**
          * Bulk Standby Daily
          * @description Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post"];
         delete?: never;
@@ -2086,6 +2088,7 @@ export interface paths {
         /**
          * Request Stay
          * @description Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["request_stay_api_v1_mess_requests_post"];
         delete?: never;
@@ -2197,7 +2200,7 @@ export interface paths {
         put?: never;
         /**
          * Apply Leave
-         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).
+         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key.
          */
         post: operations["apply_leave_api_v1_leaves_post"];
         delete?: never;
@@ -4315,7 +4318,7 @@ export interface paths {
         put?: never;
         /**
          * Request Loan
-         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.
+         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key.
          */
         post: operations["request_loan_api_v1_assets_loan_requests_post"];
         delete?: never;
@@ -4419,7 +4422,7 @@ export interface paths {
         put?: never;
         /**
          * Report Overtime
-         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim).
+         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key.
          */
         post: operations["report_overtime_api_v1_overtime_post"];
         delete?: never;
@@ -13256,7 +13259,10 @@ export interface operations {
     bulk_create_daily_api_v1_work_plans_daily_bulk_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13289,7 +13295,10 @@ export interface operations {
     bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16048,7 +16057,10 @@ export interface operations {
     request_stay_api_v1_mess_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16325,7 +16337,10 @@ export interface operations {
     apply_leave_api_v1_leaves_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20366,7 +20381,10 @@ export interface operations {
     request_loan_api_v1_assets_loan_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20573,7 +20591,10 @@ export interface operations {
     report_overtime_api_v1_overtime_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

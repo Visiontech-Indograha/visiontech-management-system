@@ -172,3 +172,4 @@ scripts/akun-uji-lokal.txt
 postman/fixtures/*.pdf
 postman/fixtures/*.jpg
 postman/fixtures/*.jpeg
+.playwright-mcp

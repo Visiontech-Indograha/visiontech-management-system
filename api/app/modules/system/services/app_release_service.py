@@ -86,12 +86,14 @@ class AppReleaseService:
         return file.name
 
     def resolve_file(self, name: str) -> Path:
-        """Jalur APK di disk — hanya nama yang tercantum di manifest dan berada di dalam folder rilis."""
+        """Jalur APK di disk — nama dari manifest tepercaya (bukan masukan), harus di dalam folder rilis."""
         manifest = self.manifest()
-        if self.base is None or manifest is None or name not in {f.name for f in manifest.files}:
+        entry = next((f for f in manifest.files if f.name == name), None) if manifest else None
+        if self.base is None or entry is None:
             raise NotFoundError("Berkas aplikasi")
-        path = (self.base / name).resolve()
-        if path.parent != self.base.resolve() or not path.is_file():
+        base = self.base.resolve()
+        path = (base / Path(entry.name).name).resolve()
+        if not path.is_relative_to(base) or not path.is_file():
             raise NotFoundError("Berkas aplikasi")
         return path
 

@@ -752,6 +752,7 @@ CREATE INDEX IF NOT EXISTS idx_work_plan_attachment_daily ON work_plan_attachmen
 CREATE INDEX IF NOT EXISTS idx_employee_office ON employee (office_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_employee_division ON employee (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_user_sessions_refresh_token_hash ON user_sessions (refresh_token_hash);
 CREATE INDEX IF NOT EXISTS idx_division_om ON division (om_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_division_pm ON division (pm_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_team_office ON team (office_id) WHERE delete_at IS NULL;

@@ -26,6 +26,6 @@ function RequireFace() {
 /** Route guard berbasis permissions[] dari /me. */
 export function RequireAccess({ item, children }: { item: NavItem; children: React.ReactNode }) {
   const { me } = useSession();
-  if (!me || !isAllowed(item, me.permissions)) return <Navigate to="/forbidden" replace />;
+  if (!me || !isAllowed(item, me.permissions)) return <Navigate to="/403" replace />;
   return <>{children}</>;
 }

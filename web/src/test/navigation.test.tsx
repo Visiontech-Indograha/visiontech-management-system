@@ -56,6 +56,6 @@ describe("route guard", () => {
     const { router } = renderRoute("/audit-logs", {
       me: { user_id: "u1", email: "pm@example.com", role: "PM", permissions: ["view:users"] },
     });
-    expect(router.state.location.pathname).toBe("/forbidden");
+    expect(router.state.location.pathname).toBe("/403");
   });
 });

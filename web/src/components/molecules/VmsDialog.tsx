@@ -5,13 +5,15 @@ import { Text } from "../atoms/Text";
 import { cn } from "@/lib/utils";
 import { DialogGuardContext, type DialogGuard } from "@/lib/dialogGuard";
 
-export type VmsDialogSize = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+export type VmsDialogSize = "auto" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 const SIZE_CLASSES: Record<VmsDialogSize, string> = {
+  // Lebar mengikuti isi (tabel/peta/form), minimal lega, maksimal 96% layar.
+  auto: "sm:w-fit sm:min-w-[min(36rem,96vw)] sm:max-w-[min(80rem,96vw)]",
   sm: "sm:max-w-md",
   md: "sm:max-w-xl",
-  lg: "sm:max-w-3xl",
-  xl: "sm:max-w-5xl",
+  lg: "sm:max-w-5xl",
+  xl: "sm:max-w-6xl",
   "2xl": "sm:max-w-7xl sm:w-[94vw]",
   full: "sm:w-[96vw] sm:max-w-[1500px] sm:h-[92vh]",
 };
@@ -24,7 +26,7 @@ export function VmsDialog({
   children,
   footer,
   className,
-  size = "lg",
+  size = "auto",
   dirty = false,
 }: {
   open: boolean;
@@ -49,7 +51,7 @@ export function VmsDialog({
     [dirty],
   );
 
-  const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.lg;
+  const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.auto;
 
   return (
     <ShadcnDialog

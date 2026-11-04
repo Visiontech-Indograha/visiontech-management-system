@@ -19,6 +19,6 @@ describe("Lembur", () => {
   it("rekap lembur ditolak untuk karyawan biasa", () => {
     mockApi(() => undefined);
     const { router } = renderRoute("/overtime-recap", { role: "field" });
-    expect(router.state.location.pathname).toBe("/forbidden");
+    expect(router.state.location.pathname).toBe("/403");
   });
 });

@@ -39,6 +39,8 @@ export {
   Lock,
   LogOut,
   MapPin,
+  Map,
+  List,
   Menu,
   Package,
   PanelLeftClose,
@@ -58,6 +60,7 @@ export {
   Sparkles,
   Timer,
   Trash2,
+  Truck,
   Upload,
   User,
   UserCheck,
@@ -76,5 +79,9 @@ export {
   RotateCw,
   ZoomIn,
   ZoomOut,
+  Search,
+  Filter,
+  Eye,
+  Compass,
 } from "lucide-react";
 export type { LucideIcon } from "lucide-react";

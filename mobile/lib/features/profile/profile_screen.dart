@@ -16,6 +16,7 @@ import '../face/face_flow.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../sync/sync_queue_screen.dart';
 import '../update/update_ui.dart';
+import 'sessions_screen.dart';
 
 const _roleLabel = {
   'ADMIN': 'Admin',
@@ -303,7 +304,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     // menyebutkan itu secara eksplisit supaya teknisi tidak kehilangan pekerjaan tanpa sadar.
     final tertunda =
         await ref.read(syncEngineProvider).pendingOperationCount() +
-        await ref.read(syncEngineProvider).pendingPhotoCount();
+        await ref.read(syncEngineProvider).pendingPhotoCount() +
+        await ref.read(syncEngineProvider).deadLetterCount();
     if (!mounted) return;
     final yakin = await _konfirmasi(
       judul: 'Keluar dari akun?',
@@ -317,6 +319,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (!yakin) return;
     await ref.read(authControllerProvider.notifier).logout();
   }
+
+  static const _services = <(String, IconData, String, Accent)>[
+    ('/recap', Icons.event_available_rounded, 'Rekap Absen & Uang Makan', Accent.teal),
+    ('/leaves', Icons.beach_access_rounded, 'Cuti & Izin', Accent.blue),
+    ('/assets', Icons.directions_car_rounded, 'Kendaraan & Alat', Accent.amber),
+    ('/overtime', Icons.more_time_rounded, 'Riwayat Lembur', Accent.indigo),
+    ('/mess', Icons.home_work_rounded, 'Mess Karyawan', Accent.violet),
+    ('/documents', Icons.badge_rounded, 'Dokumen Saya', Accent.emerald),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -359,6 +370,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SectionTitle('Layanan Karyawan'),
+                // Grid 2 kolom ringkas agar pengguna tidak perlu menggulir panjang.
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 1.55,
+                  children: [
+                    for (final (route, icon, label, accent) in _services)
+                      SurfaceCard(
+                        onTap: () => context.push(route),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Row(
+                              children: [
+                                IconTile(icon: icon, accent: accent, size: 36),
+                                const Spacer(),
+                                const Icon(Icons.chevron_right_rounded, size: 18, color: VmsColors.neutral400),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              label,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: VmsTextStyles.bodySm.copyWith(
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
                 const SectionTitle('Sinkronisasi data'),
                 FadeSlideIn(
                   child: SurfaceCard(
@@ -434,43 +485,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ),
-                const SectionTitle('Layanan Karyawan'),
-                for (final (route, icon, label) in const [
-                  (
-                    '/recap',
-                    Icons.event_available_rounded,
-                    'Rekap Absen & Uang Makan',
-                  ),
-                  ('/leaves', Icons.beach_access_rounded, 'Cuti & Izin'),
-                  ('/assets', Icons.directions_car_rounded, 'Kendaraan & Alat'),
-                  ('/overtime', Icons.more_time_rounded, 'Riwayat Lembur'),
-                  ('/mess', Icons.home_work_rounded, 'Mess'),
-                  ('/documents', Icons.badge_rounded, 'Dokumen Saya'),
-                ])
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: FadeSlideIn(
-                      index: 1,
-                      child: SurfaceCard(
-                        onTap: () => context.push(route),
-                        child: Row(
-                          children: [
-                            IconTile(icon: icon, accent: Accent.teal, size: 40),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                label,
-                                style: VmsTextStyles.bodySm.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.chevron_right_rounded),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 const SectionTitle('Biometrik Wajah (Face API)'),
                 FadeSlideIn(
                   index: 1,
@@ -596,6 +610,28 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ],
+                SurfaceCard(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SessionsScreen()),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.devices_rounded, accent: Accent.blue, size: 40),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Perangkat yang masuk', style: VmsTextStyles.subheading),
+                            Text('Lihat dan keluarkan perangkat lain', style: VmsTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: VmsColors.neutral400),
+                    ],
+                  ),
+                ),
                 const SectionTitle('Tentang aplikasi'),
                 const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),

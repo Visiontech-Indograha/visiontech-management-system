@@ -13,6 +13,28 @@ from pydantic import BaseModel, Field, model_validator
 TEAM_LOGO_PATH = "/api/v1/teams/{team_id}/logo"
 
 
+class AvailableMemberOut(BaseModel):
+    employee_id: UUID
+    full_name: str | None = None
+    employee_no: str | None = None
+    phone_number: str | None = None
+    system_role: str | None = None
+
+
+class TeamAvailabilityItem(BaseModel):
+    team_id: UUID
+    name: str
+    division_id: UUID
+    division_name: str | None = None
+    leader_employee_id: UUID
+    leader_name: str | None = None
+    member_count: int = 0
+    is_available: bool = True
+    status: str = "AVAILABLE"  # AVAILABLE, BUSY, LEAVE
+    active_items_count: int = 0
+    active_tasks: list[str] = Field(default_factory=list)
+
+
 class MemberAdd(BaseModel):
     employee_id: UUID
 

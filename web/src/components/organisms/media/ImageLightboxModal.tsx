@@ -72,7 +72,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
         }
       }}
     >
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 overflow-hidden bg-slate-950 border-slate-800 text-white">
+      <DialogContent className="w-[96vw] sm:max-w-7xl h-[90dvh] flex flex-col p-0 overflow-hidden bg-slate-950 border-slate-800 text-white">
         <DialogHeader className="p-4 bg-slate-900 border-b border-slate-800 flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-5 h-5 text-sky-400" />

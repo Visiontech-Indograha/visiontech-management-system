@@ -434,13 +434,13 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
           ],
 
           if (!_slotsKnown)
-      const _Banner(
-        accent: Accent.slate,
-        icon: Icons.cloud_off_rounded,
-        text: 'Daftar foto wajib belum termuat. Sambungkan internet lalu buka ulang pekerjaan ini.',
-      ),
+            const _Banner(
+              accent: Accent.slate,
+              icon: Icons.cloud_off_rounded,
+              text: 'Daftar foto wajib belum termuat. Sambungkan internet lalu buka ulang pekerjaan ini.',
+            ),
 
-    // Langkah 1 — foto
+          // Langkah 1 — foto
           _Step(
             number: 1,
             title: 'Ambil foto',
@@ -491,6 +491,22 @@ class _ItemProgressScreenState extends ConsumerState<ItemProgressScreen> {
                     ),
                   ],
                 ),
+                if (_editable && target > 0 && qty < target) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ActionChip(
+                      avatar: Icon(Icons.done_all_rounded, size: 16, color: Accent.emerald.strong),
+                      label: Text(
+                        'Selesai penuh (${qtyText(target)})',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: Accent.emerald.strong),
+                      ),
+                      backgroundColor: Accent.emerald.soft,
+                      side: BorderSide.none,
+                      onPressed: () => setState(() => _qty.text = qtyText(target)),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: pct),

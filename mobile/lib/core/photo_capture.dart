@@ -123,35 +123,71 @@ Future<Uint8List> _watermarkLogo(BuildContext context) async {
   return compute(composeKopLogos, <Uint8List>[visiontech, teamLogo]);
 }
 
+/// Pangkas margin transparan dan latar seragam (warna sudut, mis. putih) di sekeliling logo, supaya logo
+/// memenuhi selnya. Bila tidak ada isi yang ditemukan, gambar dikembalikan apa adanya.
+@visibleForTesting
+img.Image trimLogoMargins(img.Image src) {
+  final w = src.width, h = src.height;
+  if (w < 3 || h < 3) return src;
+  final c = src.getPixel(0, 0);
+  final bgOpaque = c.a > 200 &&
+      [src.getPixel(w - 1, 0), src.getPixel(0, h - 1), src.getPixel(w - 1, h - 1)]
+          .every((p) => (p.r - c.r).abs() < 16 && (p.g - c.g).abs() < 16 && (p.b - c.b).abs() < 16);
+  var minX = w, minY = h, maxX = -1, maxY = -1;
+  for (var y = 0; y < h; y++) {
+    for (var x = 0; x < w; x++) {
+      final p = src.getPixel(x, y);
+      final isContent = bgOpaque
+          ? (p.a > 8 &&
+              ((p.r - c.r).abs() > 24 || (p.g - c.g).abs() > 24 || (p.b - c.b).abs() > 24))
+          : p.a > 8;
+      if (!isContent) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < 0) return src;
+  final cw = maxX - minX + 1, ch = maxY - minY + 1;
+  if (cw == w && ch == h) return src;
+  return img.copyCrop(src, x: minX, y: minY, width: cw, height: ch);
+}
+
 /// Gabung logo Visiontech dan logo tim berdampingan dalam kotak watermark standar (PNG transparan).
 /// Tiap logo 'contain' di sel kotanya sendiri (sama lebar), tanpa distorsi atau pangkas.
 @visibleForTesting
 Uint8List composeKopLogos(List<Uint8List> logos) {
-  const gap = 6;
-  final boxW = watermarkLogoBoxWidth.toInt();
-  final boxH = watermarkLogoBoxHeight.toInt();
-  final cellW = (boxW - gap) ~/ 2;
+  const k = watermarkLogoRenderScale;
+  final gap = (watermarkLogoGap * k).toInt();
+  final boxW = (watermarkLogoBoxWidth * k).toInt();
+  final boxH = (watermarkLogoBoxHeight * k).toInt();
   final canvas = img.Image(width: boxW, height: boxH, numChannels: 4);
-  for (var i = 0; i < logos.length; i++) {
-    final src = img.decodeImage(logos[i]);
-    if (src == null) continue;
-    final scale = [cellW / src.width, boxH / src.height].reduce(
-      (a, b) => a < b ? a : b,
-    );
-    final w = (src.width * scale).round().clamp(1, cellW).toInt();
-    final h = (src.height * scale).round().clamp(1, boxH).toInt();
-    final sized = img.copyResize(
-      src,
-      width: w,
-      height: h,
-      interpolation: img.Interpolation.average,
-    );
-    img.compositeImage(
-      canvas,
-      sized,
-      dstX: i * (cellW + gap) + (cellW - w) ~/ 2,
-      dstY: (boxH - h) ~/ 2,
-    );
+  var x = 0;
+  for (var i = 0; i < logos.length && i < watermarkLogoCellWidths.length; i++) {
+    final cellW = (watermarkLogoCellWidths[i] * k).toInt();
+    final decoded = img.decodeImage(logos[i]);
+    final src = decoded == null ? null : trimLogoMargins(decoded);
+    if (src != null) {
+      final scale = [cellW / src.width, boxH / src.height].reduce(
+        (a, b) => a < b ? a : b,
+      );
+      final w = (src.width * scale).round().clamp(1, cellW).toInt();
+      final h = (src.height * scale).round().clamp(1, boxH).toInt();
+      final sized = img.copyResize(
+        src,
+        width: w,
+        height: h,
+        interpolation: img.Interpolation.average,
+      );
+      img.compositeImage(
+        canvas,
+        sized,
+        dstX: x + (cellW - w) ~/ 2,
+        dstY: (boxH - h) ~/ 2,
+      );
+    }
+    x += cellW + gap;
   }
   return img.encodePng(canvas);
 }
@@ -223,8 +259,12 @@ Uint8List _drawWatermark(_WatermarkArgs args) {
   // Foto kamera asli bisa 12MP+ -- proses gambar murni-Dart (tanpa akselerasi
   // native) pada resolusi sebesar itu bisa sangat lambat, terutama di build
   // debug. Resize eksplisit di sini supaya waktu proses selalu terkendali.
-  if (image.width > 1280) {
-    image = img.copyResize(image, width: 1280);
+  if (image.width > 1280 || image.height > 1280) {
+    if (image.width >= image.height) {
+      image = img.copyResize(image, width: 1280);
+    } else {
+      image = img.copyResize(image, height: 1280);
+    }
   }
 
   // Utama: bakar panel yang PERSIS terlihat di layar kamera (teks, huruf, warna, logo) dengan

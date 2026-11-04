@@ -18,18 +18,15 @@ export function DailyWeekToolbar({ options, divisionId, onDivision }: {
   onWeek: (delta: number | null) => void;
   onDivision: (id: string) => void;
 }) {
+  if (!options || options.divisions.length <= 1) return null;
   return (
-    <div className="mb-4 flex flex-wrap items-end gap-3">
-      {options && options.divisions.length > 1 && (
-        <div className="w-64">
-          <SelectField label="Divisi" value={divisionId} onChange={(e) => onDivision(e.target.value)}>
-            <ControlOption value="">Semua divisi</ControlOption>
-            {options.divisions.map((d) => (
-              <ControlOption key={d.division_id} value={d.division_id}>{d.name}</ControlOption>
-            ))}
-          </SelectField>
-        </div>
-      )}
+    <div className="w-full sm:w-56 [&>div]:mb-0">
+      <SelectField label="Divisi" value={divisionId} onChange={(e) => onDivision(e.target.value)}>
+        <ControlOption value="">Semua divisi</ControlOption>
+        {options.divisions.map((d) => (
+          <ControlOption key={d.division_id} value={d.division_id}>{d.name}</ControlOption>
+        ))}
+      </SelectField>
     </div>
   );
 }
@@ -56,7 +53,7 @@ export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["team
   return (
     <div className="flex flex-wrap items-end gap-2">
       {teams.length > 1 && (
-        <div className="w-56">
+        <div className="w-full sm:w-52 [&>div]:mb-0">
           <SelectField label="Tim" value={teamId} onChange={(e) => setPicked(e.target.value)}>
             <ControlOption value="">Pilih tim</ControlOption>
             {teams.map((t) => (
@@ -65,7 +62,7 @@ export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["team
           </SelectField>
         </div>
       )}
-      <ActionButton variant="outline" size="sm" disabled={!teamId || exporter.isPending} onClick={run}>
+      <ActionButton variant="outline" size="sm" className="h-11" disabled={!teamId || exporter.isPending} onClick={run}>
         Laporan mingguan tim (.pptx)
       </ActionButton>
     </div>
@@ -94,10 +91,10 @@ export function WeekRecapButtons({
     <div className="flex flex-wrap items-center gap-2">
       {divisionId ? (
         <>
-          <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
+          <ActionButton variant="outline" size="sm" className="h-10" disabled={exporter.isPending} onClick={() => run("EXCEL_XLSX")}>
             Rekap minggu ini (.xlsx)
           </ActionButton>
-          <ActionButton variant="outline" size="sm" disabled={exporter.isPending} onClick={() => run("PPTX")}>
+          <ActionButton variant="outline" size="sm" className="h-10" disabled={exporter.isPending} onClick={() => run("PPTX")}>
             Laporan slide minggu ini (.pptx)
           </ActionButton>
         </>
@@ -105,7 +102,7 @@ export function WeekRecapButtons({
         <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh rekap minggu ini.</TextBlock>
       )}
       {onOpenPresentation && (
-        <ActionButton variant="secondary" size="sm" onClick={onOpenPresentation}>
+        <ActionButton variant="secondary" size="sm" className="h-10" onClick={onOpenPresentation}>
           Presentasi Evaluasi Sabtu
         </ActionButton>
       )}

@@ -9,7 +9,7 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/admin-login$/, "Masuk administrator"],
   [/^\/change-password$/, "Ganti password"],
   [/^\/account$/, "Akun & keamanan"],
-  [/^\/forbidden$/, "Tidak berwenang"],
+  [/^\/403$/, "Tidak berwenang"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
   [/^\/surveys\/[^/]+$/, "Detail survei"],
   [/^\/clients$/, "Master Klien"],

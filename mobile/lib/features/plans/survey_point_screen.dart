@@ -7,6 +7,7 @@ import '../../core/error_message.dart';
 import '../../core/location_helper.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_network_image.dart';
+import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
@@ -301,18 +302,17 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final t in _types)
-                      ChoiceChip(
-                        label: Text('${t['name']}'),
-                        selected: _typeId == '${t['work_type_id']}',
-                        onSelected: _edit ? (_) => _setType('${t['work_type_id']}') : null,
-                      ),
-                  ],
-                ),
+                if (_types.isNotEmpty)
+                  VmsSelectField<String>(
+                    label: 'Jenis Pekerjaan Titik',
+                    icon: Icons.work_outline,
+                    value: _typeId,
+                    options: [
+                      for (final t in _types)
+                        VmsOption('${t['work_type_id']}', '${t['name']}'),
+                    ],
+                    onChanged: _setType,
+                  ),
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: const [
@@ -517,6 +517,24 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
             runSpacing: 8,
             children: [
               for (final p in mine) _photoTile(p),
+              if (mine.isEmpty && !_edit)
+                Container(
+                  height: 56,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.black12.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.black26),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.image_not_supported_outlined, size: 20, color: Colors.black45),
+                      const SizedBox(width: 8),
+                      Text('Tidak ada foto', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
               if (_edit) ...[
                 _AddTile(
                   icon: Icons.photo_camera_rounded,

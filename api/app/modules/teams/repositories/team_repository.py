@@ -7,6 +7,7 @@ team 1─N member, member N─1 employee. Hapus = soft delete (`delete_at`).
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -81,6 +82,86 @@ class TeamRepository(BaseRepository):
             {"emp": str(employee_id)},
         )
         return role
+
+    async def employee_division(self, employee_id: UUID | str) -> str | None:
+        """division_id milik karyawan (None jika belum diset)."""
+        div = await self.scalar(
+            "SELECT CAST(division_id AS text) FROM employee "
+            "WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL",
+            {"emp": str(employee_id)},
+        )
+        return str(div) if div else None
+
+    async def list_available_members(self, division_id: UUID | str) -> list[Any]:
+        """Karyawan lapangan di divisi ini yang belum tergabung dalam tim aktif."""
+        return list(
+            await self.fetchall(
+                """
+                SELECT e.employee_id, e.full_name, e.employee_no, e.phone_number,
+                       u.system_role::text AS system_role
+                FROM employee e
+                JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL AND u.is_active
+                WHERE e.division_id = CAST(:div AS uuid)
+                  AND e.delete_at IS NULL
+                  AND e.offboarding_status = 'active'
+                  AND u.system_role::text IN ('TEAM_LEADER', 'EMPLOYEE')
+                  AND NOT EXISTS (
+                      SELECT 1 FROM member m
+                      JOIN team t ON t.team_id = m.team_id AND t.delete_at IS NULL AND t.status
+                      WHERE m.employee_id = e.employee_id AND m.delete_at IS NULL AND m.is_active
+                  )
+                ORDER BY e.full_name
+                """,
+                {"div": str(division_id)},
+            )
+        )
+
+    async def list_teams_availability(
+        self,
+        target_date: date,
+        division_id: UUID | None = None,
+        pm_employee_id: UUID | str | None = None,
+    ) -> list[Any]:
+        """Ketersediaan seluruh tim pada tanggal tertentu beserta beban tugas aktifnya."""
+        sql = """
+            SELECT t.team_id, t.name, t.division_id, d.name AS division_name,
+                   t.leader_employee_id, e.full_name AS leader_name,
+                   (SELECT COUNT(*) FROM member m
+                    WHERE m.team_id = t.team_id AND m.delete_at IS NULL AND m.is_active)::int AS member_count,
+                   COALESCE(wpd.items_count, 0)::int AS active_items_count,
+                   COALESCE(wpd.plan_titles, '[]'::jsonb) AS active_tasks,
+                   EXISTS(
+                       SELECT 1 FROM leave_request lr
+                       WHERE lr.employee_id = t.leader_employee_id
+                         AND lr.status::text IN ('APPROVED_BY_HR', 'APPROVED_BY_PM')
+                         AND CAST(:dt AS date) BETWEEN lr.start_date AND lr.end_date
+                   ) AS is_leader_on_leave
+            FROM team t
+            JOIN division d ON d.division_id = t.division_id
+            JOIN employee e ON e.employee_id = t.leader_employee_id
+            LEFT JOIN (
+                SELECT w.team_id,
+                       COUNT(i.item_id) AS items_count,
+                       jsonb_agg(DISTINCT COALESCE(i.title, wt.name, 'Tugas Lapangan'))
+                           FILTER (WHERE i.item_id IS NOT NULL) AS plan_titles
+                FROM work_plan_daily w
+                LEFT JOIN work_plan_item i ON i.daily_plan_id = w.daily_plan_id
+                     AND i.delete_at IS NULL AND i.status != 'CANCELLED'
+                LEFT JOIN work_type wt ON wt.work_type_id = i.work_type_id
+                WHERE w.work_date = CAST(:dt AS date) AND w.delete_at IS NULL AND w.status != 'CANCELLED'
+                GROUP BY w.team_id
+            ) wpd ON wpd.team_id = t.team_id
+            WHERE t.delete_at IS NULL AND t.status = TRUE
+        """
+        params: dict[str, Any] = {"dt": target_date}
+        if division_id is not None:
+            sql += " AND t.division_id = CAST(:div AS uuid)"
+            params["div"] = str(division_id)
+        if pm_employee_id is not None:
+            sql += " AND d.pm_id = CAST(:pm AS uuid)"
+            params["pm"] = str(pm_employee_id)
+        sql += " ORDER BY active_items_count ASC, t.name ASC"
+        return list(await self.fetchall(sql, params))
 
     async def division(self, division_id: UUID | str) -> Any:
         """Divisi aktif (status TRUE, belum dihapus) beserta PM-nya, atau None."""

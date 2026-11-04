@@ -21,6 +21,7 @@ _SELECT = """
            (SELECT pm.phone_number FROM employee pm WHERE pm.employee_id = d.pm_id) AS pm_phone,
            wpd.work_date, wpd.site_name, wpd.site_lat,
            wpd.site_lng, wpd.attendance_radius_m, wpd.clock_in_time, wpd.clock_out_time, wpd.status, wpd.kind,
+           wpd.is_out_of_town,
            wpd.created_by_id, wpd.approved_by_pm_id, wpd.approved_at, wpd.rejection_reason,
            (SELECT COUNT(*)::int FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id
               AND i.delete_at IS NULL AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL))
@@ -29,7 +30,7 @@ _SELECT = """
               AND i.delete_at IS NULL AND i.status = 'DONE'
               AND NOT (i.task_phase = 'SURVEY' AND i.depends_on_item_id IS NOT NULL)) AS done_count,
            -- Persen progres (satu aturan dengan web workPhase.displayPct & mobile workPercent):
-           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) = 0% (dikerjakan di hari baru),
+           -- rata-rata per item aktif; DONE = 100%, item 'Pindah hari' (SHIFTED_DAY) / 'Dibatalkan' (CANCELLED) = 0%,
            -- item lain = dikerjakan/target. Dibulatkan ke bawah. 100 hanya bila SEMUA item DONE; selainnya maks 99.
            -- Contoh: A 2/2 + B pindah hari 0/1 = 50; A 1/2 = 50; semua DONE = 100.
            (SELECT CASE WHEN EXISTS (SELECT 1 FROM work_plan_item a WHERE a.daily_plan_id = wpd.daily_plan_id
@@ -40,7 +41,7 @@ _SELECT = """
                           AND NOT (a.task_phase = 'SURVEY' AND a.depends_on_item_id IS NOT NULL))
                   THEN 100
                   ELSE LEAST(99, COALESCE(FLOOR(AVG(CASE WHEN i.status = 'DONE' THEN 1
-                        WHEN i.status = 'SHIFTED_DAY' THEN 0
+                        WHEN i.status IN ('SHIFTED_DAY', 'CANCELLED') THEN 0
                         ELSE LEAST(COALESCE(i.completed_qty, 0) / NULLIF(i.target_qty, 0), 1) END) * 100), 0)::int)
              END
               FROM work_plan_item i WHERE i.daily_plan_id = wpd.daily_plan_id AND i.delete_at IS NULL
@@ -248,13 +249,13 @@ class DailyPlanRepository(BaseRepository):
             """
             INSERT INTO work_plan_daily (division_id, team_id, project_id, work_date, site_name, site_lat, site_lng,
                                          attendance_radius_m, clock_in_time, clock_out_time, status, kind,
-                                         created_by_id)
+                                         is_out_of_town, created_by_id)
             VALUES (CAST(:division_id AS uuid), CAST(:team_id AS uuid), CAST(:project_id AS uuid), :work_date,
                     :site_name, :site_lat, :site_lng, :attendance_radius_m, :clock_in_time, :clock_out_time, 'DRAFT',
-                    :kind, CAST(:created_by_id AS uuid))
+                    :kind, COALESCE(CAST(:is_out_of_town AS boolean), FALSE), CAST(:created_by_id AS uuid))
             RETURNING daily_plan_id
             """,
-            {"project_id": None, **fields},
+            {"project_id": None, "is_out_of_town": False, **fields},
         )
         return daily_plan_id
 
@@ -273,10 +274,11 @@ class DailyPlanRepository(BaseRepository):
                                             ELSE attendance_radius_m END,
                 clock_in_time = COALESCE(CAST(:clock_in_time AS time), clock_in_time),
                 clock_out_time = COALESCE(CAST(:clock_out_time AS time), clock_out_time),
+                is_out_of_town = COALESCE(CAST(:is_out_of_town AS boolean), is_out_of_town),
                 update_at = now()
             WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL
             """,
-            {**fields, "id": str(daily_plan_id)},
+            {"is_out_of_town": None, **fields, "id": str(daily_plan_id)},
         )
 
     async def release_plan_assets(self, daily_plan_id: UUID | str) -> None:
@@ -475,6 +477,26 @@ class DailyPlanRepository(BaseRepository):
             {"id": str(daily_plan_id)},
         ))
 
+    async def has_unfinished_items(self, daily_plan_id: UUID | str) -> bool:
+        """Ada item aktif (TODO/IN_PROGRESS, bukan titik survei anak) yang belum selesai dan belum pindah hari."""
+        return bool(await self.scalar(
+            "SELECT 1 FROM work_plan_item WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status IN ('TODO', 'IN_PROGRESS') "
+            "AND NOT (task_phase = 'SURVEY' AND depends_on_item_id IS NOT NULL) LIMIT 1",
+            {"id": str(daily_plan_id)},
+        ))
+
+    async def cancel_unfinished_items(self, daily_plan_id: UUID | str) -> int:
+        """PM menutup hari kerja parsial: item TODO/IN_PROGRESS yang belum selesai ditandai CANCELLED."""
+        result = await self.execute(
+            "UPDATE work_plan_item SET status = 'CANCELLED', update_at = now() "
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status IN ('TODO', 'IN_PROGRESS') "
+            "AND NOT (task_phase = 'SURVEY' AND depends_on_item_id IS NOT NULL)",
+            {"id": str(daily_plan_id)},
+        )
+        return int(result.rowcount or 0)
+
     async def leader_checked_in(self, daily_plan_id: UUID | str, today: date) -> bool:
         """Ketua tim sudah absen masuk pada tanggal jadwal ATAU pada hari ini (WIB), absensi yang belum dihapus.
 
@@ -627,4 +649,102 @@ class DailyPlanRepository(BaseRepository):
             """,
             {"team": str(team_id), "start": start_date, "end": end_date},
         ))
+
+    async def get_my_execution_today(self, employee_id: UUID | str) -> dict[str, Any] | None:
+        """Mengambil tugas lapangan aktif hari ini (jadwal harian + work order + client sites)."""
+        row = await self.fetchone(
+            """
+            SELECT
+                wpd.daily_plan_id,
+                wpd.work_date,
+                t.team_id,
+                t.name AS team_name,
+                (t.leader_employee_id = CAST(:emp_id AS uuid)) AS is_leader,
+                cwo.work_order_id,
+                cwo.wo_number,
+                cwo.title AS wo_title,
+                cwo.status AS work_order_status,
+                c.name AS client_name,
+                cs.site_id,
+                COALESCE(cs.site_name, wpd.site_name) AS site_name,
+                cs.address AS site_address,
+                COALESCE(cs.latitude, wpd.site_lat) AS site_lat,
+                COALESCE(cs.longitude, wpd.site_lng) AS site_lng,
+                COALESCE(cs.geofence_radius_meters, wpd.attendance_radius_m, 100) AS geofence_radius_meters
+            FROM team t
+            JOIN employee e ON (e.employee_id = t.leader_employee_id OR EXISTS (
+                SELECT 1 FROM member m
+                WHERE m.team_id = t.team_id AND m.employee_id = e.employee_id AND m.is_active AND m.delete_at IS NULL
+            ))
+            LEFT JOIN work_plan_daily wpd ON wpd.team_id = t.team_id
+                AND wpd.work_date = CURRENT_DATE AND wpd.delete_at IS NULL
+            LEFT JOIN client_work_orders cwo ON (
+                cwo.work_order_id = (
+                    SELECT wpi.work_order_id FROM work_plan_item wpi
+                    WHERE wpi.daily_plan_id = wpd.daily_plan_id AND wpi.work_order_id IS NOT NULL LIMIT 1
+                )
+                OR (cwo.lead_team_id = t.team_id AND cwo.status NOT IN ('CANCELLED', 'BAST_SIGNED'))
+            )
+            LEFT JOIN client c ON c.client_id = cwo.client_id
+            LEFT JOIN client_sites cs ON cs.site_id = cwo.client_site_id AND cs.delete_at IS NULL
+            WHERE e.employee_id = CAST(:emp_id AS uuid)
+            ORDER BY cwo.create_at DESC NULLS LAST
+            LIMIT 1
+            """,
+            {"emp_id": str(employee_id)},
+        )
+        if not row:
+            return None
+
+        data = dict(row._mapping)
+        wo_id = data.get("work_order_id")
+        items: list[Any] = []
+        bom: list[Any] = []
+        survey_points: list[Any] = []
+
+        if wo_id:
+            items_rows = await self.fetchall(
+                """
+                SELECT
+                    i.item_id, i.work_order_id, i.title, i.work_type_id,
+                    wt.name AS work_type_name, i.target_qty::float, i.completed_qty::float,
+                    i.photo_slots_snapshot, i.status, i.location_detail
+                FROM work_order_items i
+                LEFT JOIN work_type wt ON wt.work_type_id = i.work_type_id
+                WHERE i.work_order_id = CAST(:wo_id AS uuid) AND i.delete_at IS NULL
+                ORDER BY i.create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            items = [dict(r._mapping) for r in items_rows]
+
+            bom_rows = await self.fetchall(
+                """
+                SELECT bom_id, item_name, unit, estimated_qty::float, actual_qty::float
+                FROM work_order_bom
+                WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+                ORDER BY create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            bom = [dict(r._mapping) for r in bom_rows]
+
+            points_rows = await self.fetchall(
+                """
+                SELECT point_id, point_name, location_detail, site_lat::float, site_lng::float,
+                       recommended_work_type_id, recommended_bom, remarks, photos_json AS photos, status
+                FROM work_order_survey_points
+                WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+                ORDER BY create_at ASC
+                """,
+                {"wo_id": str(wo_id)},
+            )
+            survey_points = [dict(r._mapping) for r in points_rows]
+
+        data["items"] = items
+        data["bom"] = bom
+        data["survey_points"] = survey_points
+        data["has_assignment"] = True
+        return data
+
 

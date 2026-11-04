@@ -86,6 +86,7 @@ class OfflineAttendance {
     required DateTime? gpsTime,
     String? explanation,
     File? selfie,
+    File? evidence,
   }) async {
     final anchorRaw = await _storage.read(key: _anchorKey);
     final anchor = anchorRaw == null
@@ -106,6 +107,17 @@ class OfflineAttendance {
       selfieSha = await _channel.invokeMethod<String>('sha256', {
         'path': internal.path,
       });
+    }
+    // Foto bukti biasa (di luar radius): disimpan terpisah, TIDAK ikut tanda tangan wajah dan tidak dicocokkan.
+    String? evidencePath;
+    if (evidence != null) {
+      final dir = Directory(
+        '${(await getApplicationSupportDirectory()).path}/offline_attendance',
+      );
+      await dir.create(recursive: true);
+      final internal = await evidence.copy('${dir.path}/$opId-bukti.jpg');
+      await evidence.delete().catchError((_) => evidence);
+      evidencePath = internal.path;
     }
     final payload = jsonEncode({
       'client_op_id': opId,
@@ -145,6 +157,8 @@ class OfflineAttendance {
               'signature': signature,
               'selfie_path': selfiePath,
               'selfie_file_id': null,
+              'evidence_path': evidencePath,
+              'evidence_file_id': null,
             }),
           ),
         );
@@ -201,6 +215,15 @@ class OfflineAttendance {
             PendingSyncOperationsCompanion(payloadJson: Value(jsonEncode(rec))),
           );
         }
+        final evPath = rec['evidence_path'] as String?;
+        if (evPath != null && rec['evidence_file_id'] == null) {
+          rec['evidence_file_id'] = await _api.uploadFile(File(evPath));
+          await (_db.update(
+            _db.pendingSyncOperations,
+          )..where((t) => t.id.equals(row.id))).write(
+            PendingSyncOperationsCompanion(payloadJson: Value(jsonEncode(rec))),
+          );
+        }
         await _api.submitOfflineAttendance(
           deviceId: deviceId,
           clientOpId: rec['client_op_id'] as String,
@@ -208,12 +231,16 @@ class OfflineAttendance {
           payload: rec['payload'] as String,
           signature: rec['signature'] as String,
           selfieFileId: rec['selfie_file_id'] as String?,
+          evidenceFileId: rec['evidence_file_id'] as String?,
         );
         await (_db.delete(
           _db.pendingSyncOperations,
         )..where((t) => t.id.equals(row.id))).go();
         if (path != null) {
           await File(path).delete().catchError((_) => File(path));
+        }
+        if (evPath != null) {
+          await File(evPath).delete().catchError((_) => File(evPath));
         }
       } on DioException catch (e) {
         // Gangguan sementara (tanpa sinyal, sesi sedang diperbarui, server bermasalah): berhenti dan

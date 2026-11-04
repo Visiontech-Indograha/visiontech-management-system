@@ -17,8 +17,15 @@ import 'system_ui.dart';
 const watermarkLogoAsset = 'assets/branding/logo_visiontech_white.png';
 
 /// Kotak logo standar di panel watermark: logo dimuat 'contain', jadi logo persegi tampil lebih kecil.
-const watermarkLogoBoxWidth = 96.0;
-const watermarkLogoBoxHeight = 30.0;
+const watermarkLogoBoxWidth = 156.0;
+const watermarkLogoBoxHeight = 56.0;
+
+/// Lebar sel logo Visiontech (lebar/landscape) dan logo tim (umumnya persegi) di dalam kotak.
+const watermarkLogoCellWidths = [94.0, 56.0];
+const watermarkLogoGap = 6.0;
+
+/// Faktor resolusi internal PNG gabungan logo agar tajam saat dibakar ke foto.
+const watermarkLogoRenderScale = 3;
 
 /// Flash hanya tersedia di kamera belakang; kamera depan (swafoto) tidak punya lampu flash.
 @visibleForTesting

@@ -6,14 +6,16 @@ import { useSession } from "@/stores/sessionStore";
 import { useLiveEvents } from "@/hooks/useLiveEvents";
 import { useHomeSummary } from "@/services/homeService";
 import { ROLE_LABEL } from "@/lib/types";
+import { MobileBottomNav } from "../organisms/MobileBottomNav";
 import { MobileTopBar } from "../organisms/MobileTopBar";
 import { NotificationBell } from "../organisms/NotificationBell";
 import { PageLoadingFallback } from "../organisms/PageLoadingFallback";
 import { SidebarBrand } from "../organisms/SidebarBrand";
 import { SidebarNav } from "../organisms/SidebarNav";
 import { SidebarProfile } from "../organisms/SidebarProfile";
+import { HseMandatoryPopupGate } from "../organisms/hse/HseMandatoryPopupGate";
 
-/** Kerangka aplikasi: rail kiri 232 px (ciut 64 px; di < 768 px menjadi laci) + isi halaman. */
+/** Kerangka aplikasi: rail kiri 248 px (ciut 76 px; di < 768 px menjadi laci + bilah bawah). */
 export function AppShell() {
   const { me, logout } = useSession();
   useLiveEvents(!!me);
@@ -62,14 +64,16 @@ export function AppShell() {
         <div className="sticky top-0 z-20 hidden justify-end px-8 pt-3 md:flex lg:px-10">
           <NotificationBell className="bg-surface shadow-card ring-1 ring-line" />
         </div>
-        <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-8 md:pb-8 md:pt-2 lg:px-10">
+        <main className="mx-auto w-full max-w-[1320px] px-4 pt-2 pb-24 md:px-8 md:pb-8 lg:px-10">
           <div key={pathname} className="page-enter">
             <Suspense fallback={<PageLoadingFallback />}>
               <Outlet />
             </Suspense>
           </div>
         </main>
+        <MobileBottomNav items={items} badges={badges} onOpenDrawer={() => setDrawerOpen(true)} />
       </div>
+      <HseMandatoryPopupGate />
     </div>
   );
 }

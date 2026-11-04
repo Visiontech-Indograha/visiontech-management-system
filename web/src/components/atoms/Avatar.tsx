@@ -26,8 +26,12 @@ function AvatarImage({
   className,
   src,
   alt,
+  onError,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
+  // Gambar gagal dimuat → tidak dirender, sehingga AvatarFallback (inisial) tampil, bukan teks alt yang meluber.
+  const [failed, setFailed] = React.useState<string | undefined>()
+  if (failed !== undefined && failed === src) return null
   return (
     <img
       role="img"
@@ -36,6 +40,10 @@ function AvatarImage({
       data-slot="avatar-image"
       className={cn("aspect-square size-full object-cover", className)}
       {...props}
+      onError={(e) => {
+        setFailed(src)
+        onError?.(e)
+      }}
     />
   )
 }

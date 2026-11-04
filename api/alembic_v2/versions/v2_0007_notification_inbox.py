@@ -30,12 +30,8 @@ def upgrade() -> None:
         )
         """
     )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, create_at DESC)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_notification_user_unread ON notification (user_id) WHERE read_at IS NULL"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS ix_notification_user_created ON notification (user_id, create_at DESC)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_notification_user_unread ON notification (user_id) WHERE read_at IS NULL")
 
 
 def downgrade() -> None:

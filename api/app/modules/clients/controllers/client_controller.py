@@ -10,7 +10,14 @@ from fastapi import Depends
 from app.core.errors import ForbiddenError
 from app.core.security import CurrentUser
 from app.modules.clients.dependencies import get_client_service
-from app.modules.clients.schemas.client_schema import ClientCreate, ClientOut, ClientUpdate
+from app.modules.clients.schemas.client_schema import (
+    ClientCreate,
+    ClientOut,
+    ClientSiteCreate,
+    ClientSiteOut,
+    ClientSiteUpdate,
+    ClientUpdate,
+)
 from app.modules.clients.services.client_service import ClientService, can_read_clients
 
 
@@ -32,3 +39,23 @@ class ClientController:
     async def delete(self, user: CurrentUser, item_id: UUID) -> dict[str, str]:
         await self.service.delete(item_id, user)
         return {"message": "Klien dihapus."}
+    async def list_sites(self, user: CurrentUser, client_id: UUID) -> list[ClientSiteOut]:
+        if not can_read_clients(user):
+            raise ForbiddenError("Daftar lokasi klien hanya untuk pengelola tugas dan PM.")
+        rows = await self.service.list_sites(client_id)
+        return [ClientSiteOut(**dict(r._mapping)) for r in rows]
+
+    async def create_site(self, user: CurrentUser, client_id: UUID, data: ClientSiteCreate) -> ClientSiteOut:
+        row = await self.service.create_site(client_id, data, user)
+        return ClientSiteOut(**dict(row._mapping))
+
+    async def update_site(
+        self, user: CurrentUser, client_id: UUID, site_id: UUID, data: ClientSiteUpdate
+    ) -> ClientSiteOut:
+        row = await self.service.update_site(client_id, site_id, data, user)
+        return ClientSiteOut(**dict(row._mapping))
+
+    async def delete_site(self, user: CurrentUser, client_id: UUID, site_id: UUID) -> dict[str, str]:
+        await self.service.delete_site(client_id, site_id, user)
+        return {"message": "Lokasi klien berhasil dihapus."}
+

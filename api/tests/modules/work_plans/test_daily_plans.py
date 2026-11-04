@@ -30,7 +30,7 @@ def test_pm_creates_draft_and_runs_full_cycle(client, world: World, fake_storage
     assert plan["status"] == "DRAFT" and plan["team_name"]
     pid = plan["daily_plan_id"]
     pm, leader = world.headers(client, "pm"), world.headers(client, "leader")
-    add_item(pid, world, "Titik CCTV uji")  # jadwal kosong tidak boleh diajukan (PLAN_EMPTY)
+    item_id = add_item(pid, world, "Titik CCTV uji")  # jadwal kosong tidak boleh diajukan (PLAN_EMPTY)
     check_in(client, world, "leader")  # ketua harus absen masuk sebelum mulai (CHECKIN_REQUIRED)
 
     assert client.post(f"/work-plans/daily/{pid}/submit", headers=pm).json()["status"] == "SUBMITTED"
@@ -42,6 +42,11 @@ def test_pm_creates_draft_and_runs_full_cycle(client, world: World, fake_storage
     report = client.post(f"/work-plans/daily/{pid}/report", headers=leader,
                          json={"summary": "Pekerjaan selesai", "photos_json": []})
     assert report.status_code == 201, report.text
+    # Ketua tim belum boleh menutup hari bila item belum selesai/pindah hari; selesaikan item dulu.
+    incomplete = client.post(f"/work-plans/daily/{pid}/complete", headers=leader)
+    assert incomplete.status_code == 409 and incomplete.json()["error"]["code"] == "ITEMS_INCOMPLETE"
+    assert client.patch(f"/work-plans/items/{item_id}/progress", headers=leader,
+                        json={"completed_qty": "100"}).json()["status"] == "DONE"
     assert client.post(f"/work-plans/daily/{pid}/complete", headers=leader).json()["status"] == "COMPLETED"
 
 

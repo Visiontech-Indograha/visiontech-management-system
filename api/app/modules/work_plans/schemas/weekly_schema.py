@@ -42,6 +42,7 @@ class WeeklyCell(BaseModel):
     daily_plan_id: UUID | None = None
     status: DailyStatus | None = None
     kind: DailyKind | None = None
+    is_out_of_town: bool = False
     item_count: int = 0
     items: list[WeeklyItemBrief] = Field(default_factory=list, max_length=20)
     orders: list[WeeklyOrderRef] = Field(default_factory=list)

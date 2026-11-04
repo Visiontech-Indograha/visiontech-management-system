@@ -23,6 +23,8 @@ STATUS_LABEL = {
     "DONE": "Selesai",
     "PENDING_ROLLOVER": "Minta pindah hari",
     "SHIFTED_DAY": "Pindah hari",
+    "CANCELLED": "Dibatalkan",
+    "CANCELED": "Dibatalkan",
 }
 PLAN_STATUS_LABEL = {
     "DRAFT": "Draf",

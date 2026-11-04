@@ -70,9 +70,7 @@ def upgrade() -> None:
         """
     )
     op.execute("CREATE INDEX IF NOT EXISTS ix_mess_stay_mess ON company_mess_stay (mess_id) WHERE delete_at IS NULL")
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_mess_stay_status ON company_mess_stay (status) WHERE delete_at IS NULL"
-    )
+    op.execute("CREATE INDEX IF NOT EXISTS ix_mess_stay_status ON company_mess_stay (status) WHERE delete_at IS NULL")
 
 
 def downgrade() -> None:

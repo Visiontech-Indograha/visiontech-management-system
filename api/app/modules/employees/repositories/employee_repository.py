@@ -15,7 +15,7 @@ from app.shared.access.scope_rules import employee_sensitive_sql, employee_visib
 # Cakupan default = tanpa pembatasan (pemanggil internal). Pengguna biasa memakai `employee_params(user)`.
 UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "viewer_emp": None, "pm": False}
 
-_SELECT = """
+_SELECT = f"""
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
            e.division_id, d.name AS division_name, e.position_id, jp.code AS position_code, jp.name AS position_name,
            (e.join_date AT TIME ZONE 'Asia/Jakarta')::date AS join_date,
@@ -27,7 +27,7 @@ _SELECT = """
            (SELECT a.city FROM address a WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
             ORDER BY a.create_at LIMIT 1) AS city,
            e.create_at, e.update_at,
-           """ + employee_sensitive_sql("e.employee_id") + """ AS sensitive_ok
+           {employee_sensitive_sql("e.employee_id")} AS sensitive_ok
     FROM employee e
     JOIN office o ON o.office_id = e.office_id
     LEFT JOIN division d ON d.division_id = e.division_id

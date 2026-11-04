@@ -185,6 +185,12 @@ class FaceService:
         employee = await self._employee(user_id)
         employee_id = UUID(str(employee.employee_id))
         if parse_embedding(employee.face_embedding)[0] is not None:
+            if await self.repo.self_reset_within_day(employee_id):
+                raise AppError(
+                    "FACE_RESET_LIMIT",
+                    "Pendaftaran wajah hanya bisa dihapus sendiri sekali sehari. Coba lagi besok atau hubungi HR.",
+                    status=429,
+                )
             await self.repo.clear_embedding(employee_id)
             await write_delete_audit(
                 self.repo.db,

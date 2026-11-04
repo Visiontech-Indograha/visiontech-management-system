@@ -219,6 +219,24 @@ void main() {
       await settle(tester);
     }
 
+    // Sebelum kamera swafoto ada layar konfirmasi singkat. Selama dialog tampil, tombol absen masih
+    // memegang indikator proses, jadi cukup tunggu dialognya muncul (tanpa pumpAndSettle).
+    const swafotoWajib = 'Swafoto wajib. Pastikan hanya wajah Anda di depan kamera.';
+    Future<void> tapCheckInSampaiSwafoto(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Absen masuk'));
+      await tester.tap(find.text('Absen masuk'));
+      for (var i = 0; i < 40 && find.text(swafotoWajib).evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text(swafotoWajib), findsOneWidget);
+    }
+
+    Future<void> lanjutSwafoto(WidgetTester tester) async {
+      await tester.tap(find.widgetWithText(FilledButton, 'Lanjut'));
+      await settle(tester);
+    }
+
     testWidgets(
       'K-12: akurasi GPS > 100 m ditolak sebelum swafoto/pengiriman',
       (tester) async {
@@ -248,7 +266,8 @@ void main() {
         );
         await show(tester, const AttendanceScreen());
 
-        await tapCheckIn(tester);
+        await tapCheckInSampaiSwafoto(tester);
+        await lanjutSwafoto(tester);
 
         final sent = backend.requests
             .where((r) => r.path.endsWith('/check-in'))
@@ -269,9 +288,23 @@ void main() {
       await show(tester, const AttendanceScreen());
       expect(find.text('Lokasi tugas: Lokasi d1'), findsWidgets);
 
-      await tapCheckIn(tester);
+      await tapCheckInSampaiSwafoto(tester);
+      await lanjutSwafoto(tester);
       final sent = backend.requests.where((r) => r.path.endsWith('/check-in')).single;
       expect((sent.data as Map)['site_id'], 'd1');
+    });
+
+    testWidgets('layar swafoto: Batal tidak mengirim absen masuk', (tester) async {
+      online();
+      GeolocatorPlatform.instance = _FakeGps(_at(1.6650, 101.4478, accuracy: 8));
+      await show(tester, const AttendanceScreen());
+
+      await tapCheckInSampaiSwafoto(tester);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Batal'));
+      await settle(tester);
+
+      expect(find.text(swafotoWajib), findsNothing);
+      expect(backend.requests.where((r) => r.path.endsWith('/check-in')), isEmpty);
     });
 
     Map<String, Object?> record(String workDate, {String? out}) => {

@@ -306,6 +306,16 @@ class DailyPlanRepository(BaseRepository):
                     {"id": str(row.vehicle_id)},
                 )
 
+    async def lock_status(self, daily_plan_id: UUID | str) -> str | None:
+        """Kunci baris jadwal (FOR UPDATE) lalu kembalikan status terkininya. Dua aksi status bersamaan
+        pada jadwal yang sama berurutan: yang kedua membaca status hasil yang pertama."""
+        status = await self.scalar(
+            "SELECT status FROM work_plan_daily WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "FOR UPDATE",
+            {"id": str(daily_plan_id)},
+        )
+        return None if status is None else str(status)
+
     async def set_status(
         self,
         daily_plan_id: UUID | str,
@@ -313,10 +323,17 @@ class DailyPlanRepository(BaseRepository):
         *,
         approver: str | None = None,
         rejection_reason: str | None = None,
-    ) -> None:
+        allowed: tuple[str, ...] | None = None,
+    ) -> int:
         """Perpindahan status. APPROVED mencatat penyetuju; DRAFT dari penolakan mencatat alasannya;
-        pengajuan ulang menghapus alasan lama."""
-        await self.execute(
+        pengajuan ulang menghapus alasan lama. Bila `allowed` diisi, UPDATE hanya berlaku jika status
+        saat itu termasuk `allowed` (compare-and-set). Kembalian = jumlah baris yang berubah."""
+        guard = " AND status = ANY(CAST(:allowed AS varchar[]))" if allowed is not None else ""
+        params: dict[str, Any] = {"id": str(daily_plan_id), "status": status, "approver": approver,
+                                  "reason": rejection_reason}
+        if allowed is not None:
+            params["allowed"] = list(allowed)
+        result = await self.execute(
             """
             UPDATE work_plan_daily SET
                 status = CAST(:status AS varchar),
@@ -328,10 +345,10 @@ class DailyPlanRepository(BaseRepository):
                                         WHEN CAST(:status AS varchar) = 'SUBMITTED' THEN NULL
                                         ELSE rejection_reason END,
                 update_at = now()
-            WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL
-            """,
-            {"id": str(daily_plan_id), "status": status, "approver": approver, "reason": rejection_reason},
+            WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL""" + guard,
+            params,
         )
+        return int(result.rowcount or 0)
 
     async def has_activity(self, daily_plan_id: UUID | str) -> bool:
         """Jadwal yang sudah dipakai absensi atau peminjaman aset tidak boleh dihapus."""

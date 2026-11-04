@@ -107,6 +107,27 @@ class WorkOrderService:
         data["bom"] = [dict(b._mapping) if hasattr(b, "_mapping") else dict(b) for b in bom]
         return data
 
+    async def _authorize(self, user: CurrentUser, work_order_id: UUID | str, need: str, message: str) -> Any:
+        """Cakupan dulu: WO di luar cakupan pengguna → 404 (keberadaannya tidak dibocorkan). Lalu hak aksi → 403:
+        - `manage`: SA/OM, atau PM yang mengelola WO itu / memimpin divisinya;
+        - `team`: ketua atau anggota aktif tim yang ditugaskan ke WO (kirim survei);
+        - `correct`: koreksi progres item & realisasi BoM: `team` atau `manage`;
+        - `signer`: ketua tim WO itu (BAST langkah 1) atau `manage` (BAST langkah 2).
+        Mengembalikan baris hak akses (`on_team`, `on_leader`, `manages`)."""
+        access = await self.repo.work_order_access(work_order_id, viewer_params(user))
+        manages = sees_all_work_orders(user) or bool(access is not None and access.manages)
+        if access is None or not (manages or access.on_team):
+            raise NotFoundError("Work Order tidak ditemukan.")
+        allowed = {
+            "manage": manages,
+            "team": bool(access.on_team),
+            "correct": manages or bool(access.on_team),
+            "signer": manages or bool(access.on_leader),
+        }[need]
+        if not allowed:
+            raise ForbiddenError(message)
+        return access
+
     async def create_work_order(self, data: WorkOrderCreate, current_user: CurrentUser) -> Any:
         # Cek kewenangan
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
@@ -129,6 +150,10 @@ class WorkOrderService:
     async def assign_survey(
         self, work_order_id: UUID | str, data: WorkOrderAssignSurvey, current_user: CurrentUser
     ) -> Any:
+        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+            raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat menugaskan survei.")
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat menugaskan survei.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
@@ -146,6 +171,8 @@ class WorkOrderService:
     async def submit_survey(
         self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
     ) -> Any:
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengirim laporan survei.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
@@ -169,6 +196,8 @@ class WorkOrderService:
         """
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
             raise ForbiddenError("Hanya PM atau OM yang dapat menyetujui survei dan mengunci daftar tugas.")
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat menyetujui survei.")
 
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
@@ -188,8 +217,15 @@ class WorkOrderService:
         item_id: UUID | str,
         completed_qty: Decimal,
         status: str,
-        photo_slots_snapshot: list[dict[str, Any]] | None = None,
+        photo_slots_snapshot: list[dict[str, Any]] | None,
+        current_user: CurrentUser,
     ) -> None:
+        work_order_id = await self.repo.work_order_of_item(item_id)
+        if work_order_id is None:
+            raise NotFoundError("Item pekerjaan tidak ditemukan.")
+        await self._authorize(current_user, work_order_id, "correct",
+                              "Hanya anggota/ketua tim yang ditugaskan ke WO ini atau PM/OM dalam cakupan yang dapat "
+                              "mengubah progres.")
         await self.repo.update_item_progress(
             item_id=item_id,
             completed_qty=completed_qty,
@@ -197,21 +233,43 @@ class WorkOrderService:
             photo_slots_snapshot=photo_slots_snapshot,
         )
 
-    async def update_bom_actual(self, bom_id: UUID | str, actual_qty: Decimal) -> None:
+    async def update_bom_actual(self, bom_id: UUID | str, actual_qty: Decimal, current_user: CurrentUser) -> None:
+        work_order_id = await self.repo.work_order_of_bom(bom_id)
+        if work_order_id is None:
+            raise NotFoundError("Item BoM tidak ditemukan.")
+        await self._authorize(current_user, work_order_id, "correct",
+                              "Hanya anggota/ketua tim yang ditugaskan ke WO ini atau PM/OM dalam cakupan yang dapat "
+                              "mencatat realisasi BoM.")
         await self.repo.update_bom_actual(bom_id=bom_id, actual_qty=actual_qty)
 
     async def sign_bast(
         self, work_order_id: UUID | str, data: WorkOrderSignBast, current_user: CurrentUser
     ) -> Any:
+        """BAST berurutan: (1) ketua tim WO menandatangani → status COMPLETED; (2) PM/OM dalam cakupan
+        menandatangani sebagai persetujuan final → BAST_SIGNED (status 'selesai'). Pemanggil yang sama tidak boleh
+        menandatangani kedua langkah."""
+        access = await self._authorize(current_user, work_order_id, "signer",
+                                       "Hanya ketua tim yang ditugaskan ke WO ini atau PM/OM divisinya yang dapat "
+                                       "menandatangani BAST.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
+        is_manager = sees_all_work_orders(current_user) or bool(access.manages)
 
+        if access.on_leader and not wo.leader_signed_at:
+            await self._sign_bast_leader(work_order_id, wo, data, current_user)
+        elif not is_manager:
+            raise AppError("BAST_ALREADY_SIGNED",
+                           "Ketua tim sudah menandatangani BAST. Menunggu persetujuan final PM/OM divisi.",
+                           status=409)
+        else:
+            await self._sign_bast_final(work_order_id, wo, data, current_user)
+        return await self.get_work_order(work_order_id)
+
+    async def _ensure_items_done(self, work_order_id: UUID | str) -> None:
         items = await self.repo.list_items(work_order_id)
         if not items:
             raise ValidationError("Work order belum memiliki daftar tugas pekerjaan.")
-
-        # Cek apakah seluruh item sudah DONE
         unfinished = [i for i in items if i.status != "DONE"]
         if unfinished:
             raise ValidationError(
@@ -219,30 +277,69 @@ class WorkOrderService:
                 "Selesaikan seluruh item sebelum menandatangani BAST."
             )
 
+    async def _store_signature(self, wo: Any, work_order_id: UUID | str, png: bytes, current_user: CurrentUser) -> str:
+        sig_id = str(uuid.uuid4())
+        storage_key = f"{wo.division_id}/bast_{work_order_id}_{sig_id[:8]}.png"
+        storage.upload_file(storage_key, png, "image/png")
+        target_office_id: str | UUID = (
+            getattr(wo, "pm_office_id", None)
+            or getattr(current_user, "organization_id", None)
+            or str(wo.division_id)
+        )
+        return await self.repo.insert_signature_file(
+            file_id=sig_id,
+            org_id=target_office_id,
+            storage_key=storage_key,
+            file_name=f"bast_signature_{wo.wo_number}.png",
+            mime_type="image/png",
+            byte_size=len(png),
+            sha256=hashlib.sha256(png).digest(),
+            user_id=current_user.user_id,
+        )
+
+    async def _sign_bast_leader(
+        self, work_order_id: UUID | str, wo: Any, data: WorkOrderSignBast, current_user: CurrentUser
+    ) -> None:
+        """Langkah 1: tanda tangan ketua tim. Semua item harus DONE; status menjadi COMPLETED."""
+        if wo.status not in ("READY_TO_EXECUTE", "IN_PROGRESS", "COMPLETED"):
+            raise AppError("INVALID_STATE", f"BAST tidak dapat ditandatangani untuk status {wo.status}.", status=409)
+        await self._ensure_items_done(work_order_id)
+        signature_file_id = None
+        if data.signature_data_uri:
+            signature_file_id = await self._store_signature(
+                wo, work_order_id, _decode_png(data.signature_data_uri), current_user)
+        ok = await self.repo.sign_bast_leader(
+            work_order_id=work_order_id,
+            signer_user_id=current_user.user_id,
+            signer_name=data.signer_name.strip(),
+            signature_file_id=signature_file_id,
+        )
+        if not ok:
+            raise AppError("INVALID_STATE", "BAST tidak dapat ditandatangani ketua tim pada kondisi saat ini.",
+                           status=409)
+
+    async def _sign_bast_final(
+        self, work_order_id: UUID | str, wo: Any, data: WorkOrderSignBast, current_user: CurrentUser
+    ) -> None:
+        """Langkah 2: persetujuan final PM/OM. Hanya setelah ketua tim; penandatangan harus orang lain."""
+        if wo.leader_signed_at is None:
+            raise AppError("LEADER_SIGNATURE_REQUIRED",
+                           "Ketua tim harus menandatangani berita acara lebih dulu.", status=409)
+        if wo.leader_signed_by is not None and str(wo.leader_signed_by) == str(current_user.user_id):
+            raise AppError("SAME_SIGNER",
+                           "Persetujuan final harus dilakukan PM/OM, bukan oleh penandatangan ketua tim.", status=409)
+        if wo.status != "COMPLETED":
+            raise AppError("INVALID_STATE", f"Persetujuan final BAST tidak dapat dilakukan untuk status {wo.status}.",
+                           status=409)
+        await self._ensure_items_done(work_order_id)
+
         signature_file_id: str | None = None
         sig_png: bytes | None = None
         if data.signature_data_uri:
             sig_png = _decode_png(data.signature_data_uri)
-            sig_id = str(uuid.uuid4())
-            storage_key = f"{wo.division_id}/bast_{work_order_id}_{sig_id[:8]}.png"
-            storage.upload_file(storage_key, sig_png, "image/png")
-            target_office_id: str | UUID = (
-                getattr(wo, "pm_office_id", None)
-                or getattr(current_user, "organization_id", None)
-                or str(wo.division_id)
-            )
-            signature_file_id = await self.repo.insert_signature_file(
-                file_id=sig_id,
-                org_id=target_office_id,
-                storage_key=storage_key,
-                file_name=f"bast_signature_{wo.wo_number}.png",
-                mime_type="image/png",
-                byte_size=len(sig_png),
-                sha256=hashlib.sha256(sig_png).digest(),
-                user_id=current_user.user_id,
-            )
+            signature_file_id = await self._store_signature(wo, work_order_id, sig_png, current_user)
 
-        # Hitung sidik verifikasi digital dokumen BAST
+        # Hitung sidik verifikasi digital dokumen BAST (memuat tanda tangan ketua tim bila ada)
         bom = await self.repo.list_bom(work_order_id)
         bom_serialized = [
             (b.item_name, str(b.unit), float(b.estimated_qty), float(b.actual_qty))
@@ -258,17 +355,25 @@ class WorkOrderService:
             "bom": bom_serialized,
             "sig_hash": hashlib.sha256(sig_png or b"").hexdigest(),
         }
+        if wo.leader_signed_at is not None:
+            fingerprint_content["leader"] = [
+                str(wo.leader_signed_by),
+                wo.leader_signed_at.isoformat(),
+                str(wo.leader_signature_file_id),
+                wo.leader_signer_name,
+            ]
         verify_hash = hashlib.sha256(
             json.dumps(fingerprint_content, sort_keys=True).encode()
         ).hexdigest()
 
-        await self.repo.sign_bast(
+        ok = await self.repo.sign_bast(
             work_order_id=work_order_id,
             signer_name=data.signer_name.strip(),
             signature_file_id=signature_file_id,
             verify_hash=verify_hash,
         )
-        return await self.get_work_order(work_order_id)
+        if not ok:
+            raise AppError("INVALID_STATE", "BAST tidak dapat disahkan pada kondisi saat ini.", status=409)
 
     async def build_export(
         self, work_order_id: UUID | str, template: str, current_user: CurrentUser
@@ -278,7 +383,9 @@ class WorkOrderService:
         """
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat mengunduh dokumen resmi.")
-        detail = await self.get_work_order(work_order_id)
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat mengunduh dokumen resmi.")
+        detail = await self.get_work_order(work_order_id, current_user)
         order_dict = {
             "completion_id": str(detail["work_order_id"]),
             "project_title": detail["title"],

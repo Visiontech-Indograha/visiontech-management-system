@@ -7294,6 +7294,16 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
+             * Media Captions
+             * @description Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto
+             */
+            media_captions?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7312,7 +7322,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7358,6 +7368,16 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
+             * Media Captions
+             * @description Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto
+             */
+            media_captions?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7376,7 +7396,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7436,6 +7456,10 @@ export interface components {
             content_html?: string | null;
             /** Media Path */
             media_path?: string | null;
+            /** Media Paths */
+            media_paths?: string[] | null;
+            /** Media Captions */
+            media_captions?: string[] | null;
             /** Target Audience */
             target_audience?: string | null;
             /** Target User Ids */
@@ -11293,6 +11317,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0
@@ -11429,6 +11457,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0

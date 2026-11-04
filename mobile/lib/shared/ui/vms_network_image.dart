@@ -36,6 +36,7 @@ class VmsNetworkImage extends ConsumerWidget {
     this.variant = 'thumb',
     this.fit = BoxFit.cover,
     this.fallback,
+    this.onSize,
   });
 
   final String fileId;
@@ -43,18 +44,64 @@ class VmsNetworkImage extends ConsumerWidget {
   final BoxFit fit;
   final Widget? fallback;
 
+  /// Dipanggil sekali dengan ukuran piksel asli gambar setelah berkas siap (mis. untuk tata letak potret/lanskap).
+  final ValueChanged<Size>? onSize;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final broken = fallback ?? const Center(child: Icon(Icons.broken_image_outlined, color: Colors.black38));
     return FutureBuilder<File>(
       future: _cachedFile(ref, fileId, variant),
       builder: (_, s) => s.hasData
-          ? Image.file(s.data!, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => broken)
+          ? _withSize(
+              s.data!,
+              onSize,
+              Image.file(s.data!, fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => broken),
+            )
           : s.hasError
           ? broken
           : const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
     );
   }
+}
+
+/// Melaporkan ukuran asli berkas gambar (tanpa mengecilkan: resolusi penuh tetap dimuat).
+Widget _withSize(File file, ValueChanged<Size>? onSize, Widget child) {
+  if (onSize == null) return child;
+  return _SizeReport(file: file, onSize: onSize, child: child);
+}
+
+class _SizeReport extends StatefulWidget {
+  const _SizeReport({required this.file, required this.onSize, required this.child});
+
+  final File file;
+  final ValueChanged<Size> onSize;
+  final Widget child;
+
+  @override
+  State<_SizeReport> createState() => _SizeReportState();
+}
+
+class _SizeReportState extends State<_SizeReport> {
+  ImageStream? _stream;
+  late final ImageStreamListener _listener = ImageStreamListener((info, _) {
+    widget.onSize(Size(info.image.width.toDouble(), info.image.height.toDouble()));
+  });
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = FileImage(widget.file).resolve(ImageConfiguration.empty)..addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Avatar bulat: foto profil bila ada, selain itu inisial nama.

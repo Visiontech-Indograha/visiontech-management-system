@@ -22,9 +22,14 @@ class FileAccessRepository(BaseRepository):
             f"""
             SELECT f.id, f.storage_key, f.mime_type, f.file_name, f.uploaded_by,
                    -- contoh/petunjuk kerja (image_requirement): semua pengguna yang login
-                   EXISTS (SELECT 1 FROM image_requirement ir
+                   (EXISTS (SELECT 1 FROM image_requirement ir
                            WHERE ir.path_image IN (f.storage_key, f.id::text)
-                             AND ir.delete_at IS NULL) AS public_in_org,
+                             AND ir.delete_at IS NULL)
+                    -- foto carousel kampanye K3 yang sedang aktif: dilihat semua pengguna yang login
+                    OR EXISTS (SELECT 1 FROM hse_campaigns hc
+                           WHERE hc.media_paths ? f.id::text
+                             AND hc.is_active = TRUE AND hc.delete_at IS NULL)
+                   ) AS public_in_org,
                    -- foto/berkas aset: dibatasi cakupan aset (asset_file_visible di access_service)
                    (EXISTS (SELECT 1 FROM tool t WHERE t.photo_path = f.storage_key AND t.delete_at IS NULL)
                     OR EXISTS (SELECT 1 FROM vehicle v WHERE v.photo_path = f.storage_key AND v.delete_at IS NULL)

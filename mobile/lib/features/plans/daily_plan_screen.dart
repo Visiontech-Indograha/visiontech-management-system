@@ -345,35 +345,50 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
             clockOutTime: '${_plan!['clock_out_time']}',
             nowUtc: DateTime.now().toUtc(),
           );
-    final hours = TextEditingController(text: suggested == null ? '' : '$suggested');
+    final initialHours = suggested == null ? '' : '$suggested';
+    final hours = TextEditingController(text: initialHours);
     final reason = TextEditingController();
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ajukan lembur'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            VmsTextField(
-              maxLength: 5,
-              controller: hours,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: 'Jam lembur (maks. 12)',
-                helperText: suggested == null ? null : 'Dari jam pulang jadwal; bisa diubah',
+      builder: (ctx) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) async {
+          if (didPop) return;
+          // Back saat keyboard terbuka cukup menutup keyboard.
+          if (MediaQuery.viewInsetsOf(ctx).bottom > 0) {
+            FocusManager.instance.primaryFocus?.unfocus();
+            return;
+          }
+          final adaIsian = reason.text.trim().isNotEmpty || hours.text != initialHours;
+          if (adaIsian && !await confirmBuangIsian(ctx)) return;
+          if (ctx.mounted) Navigator.pop(ctx, false);
+        },
+        child: AlertDialog(
+          title: const Text('Ajukan lembur'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              VmsTextField(
+                maxLength: 5,
+                controller: hours,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: 'Jam lembur (maks. 12)',
+                  helperText: suggested == null ? null : 'Dari jam pulang jadwal; bisa diubah',
+                ),
               ),
-            ),
-            VmsTextField(
-              maxLength: 500,
-              controller: reason,
-              decoration: const InputDecoration(labelText: 'Alasan'),
-            ),
+              VmsTextField(
+                maxLength: 500,
+                controller: reason,
+                decoration: const InputDecoration(labelText: 'Alasan'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim')),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim')),
-        ],
       ),
     );
     if (ok != true) return;
@@ -489,7 +504,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                         ),
                         if (plan['pm_name'] != null) ...[
                           const SizedBox(height: 4),
-                          ContactRow(label: 'Atasan (Project Manager)', name: '${plan['pm_name']}', phone: plan['pm_phone'] as String?),
+                          ContactRow(label: 'Atasan', name: '${plan['pm_name']}', phone: plan['pm_phone'] as String?),
                         ],
                       ],
                     ),

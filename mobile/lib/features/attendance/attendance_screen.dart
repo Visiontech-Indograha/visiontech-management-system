@@ -342,6 +342,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
       String? selfieId;
       if (!mounted) return;
+      if (!await konfirmasiSwafoto(context)) return;
+      if (!mounted) return;
       final (selfieFile, err) = await captureWatermarkedPhoto(
         context: context,
         label: 'Swafoto absen masuk',
@@ -485,6 +487,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       // Wajah terdaftar → swafoto pulang dicocokkan server (wajah V2).
       File? outSelfie;
       if (_faceEnrolled) {
+        if (!mounted) return;
+        if (!await konfirmasiSwafoto(context)) return;
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
@@ -843,7 +847,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: Icons.location_off_rounded,
                                 text:
                                     'Belum ada lokasi kerja untuk akun Anda (lokasi rencana kerja maupun kantor). '
-                                    'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
+                                    'Hubungi atasan atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
                             ] else ...[
@@ -1065,6 +1069,31 @@ Future<void> tampilkanJamBukaAbsen(BuildContext context) {
       ],
     ),
   );
+}
+
+/// Layar singkat sebelum kamera swafoto absen. true bila pengguna menekan Lanjut.
+Future<bool> konfirmasiSwafoto(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Swafoto'),
+      content: const Text('Swafoto wajib. Pastikan hanya wajah Anda di depan kamera.'),
+      actions: [
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(110, 48)),
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(110, 48)),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Lanjut'),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
 }
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.

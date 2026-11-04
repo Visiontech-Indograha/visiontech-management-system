@@ -319,7 +319,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               EmptyState(
                 icon: Icons.event_busy_rounded,
                 title: _only == null ? 'Tidak ada jadwal minggu ini' : 'Tidak ada ${phaseLabel[_only]} minggu ini',
-                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui atasan (Project Manager).',
+                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui atasan.',
               )
             else
               for (final (n, p) in shown.indexed)

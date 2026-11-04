@@ -329,6 +329,19 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
     });
   }
 
+  bool get _adaIsian => _start != null || _end != null || _reason.text.trim().isNotEmpty;
+
+  /// Back: saat keyboard terbuka cukup menutup keyboard; bila ada isian, minta konfirmasi dulu.
+  Future<void> _onBack(bool didPop) async {
+    if (didPop) return;
+    if (MediaQuery.viewInsetsOf(context).bottom > 0) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+    if (_adaIsian && !await confirmBuangIsian(context)) return;
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (_start == null || _end == null || _reason.text.trim().length < 3) {
@@ -370,68 +383,72 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
             {'code': 'SICK', 'label': 'Sakit'},
           ]
         : _types;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: _type,
-            decoration: const InputDecoration(labelText: 'Jenis'),
-            items: [
-              for (final t in types)
-                DropdownMenuItem(
-                  value: t['code'] as String,
-                  child: Text(t['label'] as String),
-                ),
-            ],
-            onChanged: (v) => setState(() => _type = v ?? _type),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _pick(true),
-                  child: Text(_start == null ? 'Mulai' : _tgl.format(_start!)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _pick(false),
-                  child: Text(_end == null ? 'Selesai' : _tgl.format(_end!)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            maxLength: 1000,
-            controller: _reason,
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Alasan'),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) => _onBack(didPop),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _type,
+              decoration: const InputDecoration(labelText: 'Jenis'),
+              items: [
+                for (final t in types)
+                  DropdownMenuItem(
+                    value: t['code'] as String,
+                    child: Text(t['label'] as String),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _type = v ?? _type),
             ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            child: Text(_busy ? 'Mengirim...' : 'Kirim pengajuan'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pick(true),
+                    child: Text(_start == null ? 'Mulai' : _tgl.format(_start!)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pick(false),
+                    child: Text(_end == null ? 'Selesai' : _tgl.format(_end!)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              maxLength: 1000,
+              controller: _reason,
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Alasan'),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _busy ? null : _submit,
+              child: Text(_busy ? 'Mengirim...' : 'Kirim pengajuan'),
+            ),
+          ],
+        ),
       ),
     );
   }

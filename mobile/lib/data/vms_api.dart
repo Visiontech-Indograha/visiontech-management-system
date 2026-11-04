@@ -174,6 +174,23 @@ class VmsApi {
     return res.data ?? const <int>[];
   }
 
+  /// Popup K3 wajib baca yang belum dikonfirmasi pengguna: `{campaign: {...} | null}`.
+  Future<Map<String, dynamic>> activeK3Popup() async =>
+      _map((await _dio.get('$_p/hse/campaigns/active-popup')).data);
+
+  /// Konfirmasi telah membaca dan memahami kampanye K3 (`read_duration_seconds` = waktu baca sebenarnya).
+  Future<void> acknowledgeK3(String campaignId, int readSeconds, String deviceInfo) async {
+    await _dio.post(
+      '$_p/hse/campaigns/$campaignId/acknowledge',
+      data: {
+        'platform': 'mobile',
+        'device_info': deviceInfo,
+        'scroll_completed': true,
+        'read_duration_seconds': readSeconds,
+      },
+    );
+  }
+
   /// Aliran peristiwa waktu nyata (SSE, T8). Tanpa batas waktu baca: sambungan sengaja berumur panjang.
   Future<ResponseBody> openEvents(CancelToken cancel) async {
     final res = await _dio.get<ResponseBody>(

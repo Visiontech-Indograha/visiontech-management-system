@@ -54,7 +54,8 @@ def test_report_validation(client, world: World, hours: float, reason: str):
 
 def test_only_team_reports_and_foreign_plan_is_hidden(client, world: World, other_world: World):
     plan_id = run_daily_to_ongoing(world)
-    assert _report(client, world, plan_id, "hr").status_code == 403
+    # HR bukan anggota tim dan tak lagi melihat rencana kerja → 404 (dulu 403); keduanya menolak.
+    assert _report(client, world, plan_id, "hr").status_code in (403, 404)
     assert client.post("/overtime", headers=other_world.headers(client, "member"),
                        json={"daily_plan_id": plan_id, "hours": 1, "reason": "x alasan"}).status_code == 404
 

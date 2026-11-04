@@ -99,7 +99,7 @@ class WorkOrderController:
         photo_slots_snapshot: list[dict[str, Any]] | None = None,
     ) -> dict[str, str]:
         await self.service.update_item_progress(
-            item_id, completed_qty, status, photo_slots_snapshot
+            item_id, completed_qty, status, photo_slots_snapshot, current_user
         )
         return {"message": "Progres item berhasil diperbarui."}
 
@@ -109,7 +109,7 @@ class WorkOrderController:
         bom_id: UUID,
         actual_qty: Decimal,
     ) -> dict[str, str]:
-        await self.service.update_bom_actual(bom_id, actual_qty)
+        await self.service.update_bom_actual(bom_id, actual_qty, current_user)
         return {"message": "Realisasi BOM berhasil diperbarui."}
 
     async def export_document(

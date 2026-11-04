@@ -78,7 +78,7 @@ SELF_SERVICE = {
     ("GET", "/face/policy"): "ambang & syarat pendaftaran wajah (sama untuk semua)",
     ("GET", "/face/status"): "status pendaftaran wajah milik sendiri",
     ("POST", "/face/enroll"): "pendaftaran wajah milik sendiri (pekerja lapangan)",
-    ("DELETE", "/face/enrollment/me"): "penghapusan pendaftaran wajah milik sendiri; identitas berasal dari token",
+    ("DELETE", "/face/enrollment/me"): "hapus pendaftaran wajah milik sendiri; maks sekali sehari, tercatat audit",
 }
 # Kewenangan bergantung pada isi permintaan (SK di badan) atau tautan berkas → dijaga di handler.
 GUARDED_IN_HANDLER = {

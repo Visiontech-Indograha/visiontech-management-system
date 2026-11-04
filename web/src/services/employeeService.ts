@@ -233,21 +233,74 @@ export const FIELD_ROLE_LABEL: Record<FieldRole, string> = {
 export function useAccountAction(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (
-      a:
-        | { kind: "create"; login: string; systemRole: FieldRole }
-        | { kind: "role"; systemRole: FieldRole }
-        | { kind: "reset" | "deactivate" | "activate" },
-    ) => {
+    mutationFn: async (a: AccountAction) => {
       const base = `/employees/${employeeId}/account`;
-      if (a.kind === "create")
-        return (await api.post<AccountWithPassword>(base, { login: a.login, system_role: a.systemRole })).data;
-      if (a.kind === "role")
-        return (await api.post<Account>(`${base}/role`, { system_role: a.systemRole })).data;
-      const path = a.kind === "reset" ? "reset-password" : a.kind;
-      return (await api.post<Account | AccountWithPassword>(`${base}/${path}`)).data;
+      switch (a.kind) {
+        case "create":
+          return (await api.post<AccountWithPassword>(base, { login: a.login, system_role: a.systemRole })).data;
+        case "role":
+          return (await api.post<Account>(`${base}/role`, { system_role: a.systemRole })).data;
+        case "login":
+          return (await api.post<Account>(`${base}/login`, { login: a.login })).data;
+        case "revoke-session":
+          return (await api.post<AccountSessionsRevoked>(`${base}/sessions/${a.sessionId}/revoke`)).data;
+        case "revoke-all-sessions":
+          return (await api.post<AccountSessionsRevoked>(`${base}/sessions/revoke-all`)).data;
+        case "reset-device-slots":
+          return (await api.post<AccountSessionsRevoked>(`${base}/device-slots/reset`)).data;
+        case "unlock":
+          return (await api.post<Account>(`${base}/unlock`)).data;
+        case "reset":
+          return (await api.post<AccountWithPassword>(`${base}/reset-password`)).data;
+        case "deactivate":
+        case "activate":
+          return (await api.post<Account>(`${base}/${a.kind}`)).data;
+      }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["employee-account", employeeId] });
+      qc.invalidateQueries({ queryKey: ["employee-account-sessions", employeeId] });
+    },
+  });
+}
+
+/** Aksi HR/admin atas akun karyawan; password sementara hanya ada di respons `create` & `reset`. */
+export type AccountAction =
+  | { kind: "create"; login: string; systemRole: FieldRole }
+  | { kind: "role"; systemRole: FieldRole }
+  | { kind: "login"; login: string }
+  | { kind: "revoke-session"; sessionId: string }
+  | { kind: "revoke-all-sessions" | "reset-device-slots" | "unlock" | "reset" | "deactivate" | "activate" };
+
+export type AccountSession = S["AuthSessionResponseSchema"];
+export type AccountSessionsRevoked = S["AccountSessionsRevoked"];
+
+/** Batas perangkat aktif per akun di server (MAX_DEVICES di auth_service). */
+export const DEVICE_SLOTS = 4;
+
+/** Perangkat yang sedang masuk dengan akun karyawan (GET /employees/{id}/account/sessions, manage:users). */
+export function useAccountSessions(employeeId: string, enabled = true) {
+  return useQuery({
+    queryKey: ["employee-account-sessions", employeeId],
+    enabled,
+    queryFn: async () => (await api.get<AccountSession[]>(`/employees/${employeeId}/account/sessions`)).data,
+  });
+}
+
+/** Status wajah karyawan (GET /face/enrollments/{id}/status, manage:users). */
+export function useEmployeeFaceStatus(employeeId: string) {
+  return useQuery({
+    queryKey: ["employee-face", employeeId],
+    queryFn: async () => (await api.get<S["FaceStatus"]>(`/face/enrollments/${employeeId}/status`)).data,
+  });
+}
+
+/** Atur ulang wajah karyawan agar bisa mendaftar ulang (DELETE /face/enrollments/{id}). */
+export function useResetEmployeeFace(employeeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.delete<S["FaceResetResponse"]>(`/face/enrollments/${employeeId}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["employee-face", employeeId] }),
   });
 }
 

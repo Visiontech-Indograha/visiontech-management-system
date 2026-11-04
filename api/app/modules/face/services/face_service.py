@@ -26,6 +26,8 @@ import filetype
 from app.core import storage
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.hard_delete import write_delete_audit
+from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.face.repositories.face_repository import FaceRepository, parse_embedding
 from app.modules.face.schemas.face_schema import EnrollResponse, FacePolicy, FaceStatus
@@ -110,7 +112,17 @@ class FaceService:
         return employee
 
     async def status(self, user_id: str) -> FaceStatus:
-        employee = await self._employee(user_id)
+        return self._status_of(await self._employee(user_id))
+
+    async def status_of_employee(self, employee_id: UUID) -> FaceStatus:
+        """Status wajah karyawan mana pun (dilihat HR/admin lewat detail karyawan)."""
+        employee = await self.repo.employee_face_row(employee_id)
+        if employee is None:
+            raise NotFoundError("Karyawan")
+        return self._status_of(employee)
+
+    @staticmethod
+    def _status_of(employee: Any) -> FaceStatus:
         vector, meta = parse_embedding(employee.face_embedding)
         enrolled_at = meta.get("enrolled_at")
         return FaceStatus(enrolled=vector is not None, enrolled_at=enrolled_at, model_name=meta.get("model"),
@@ -160,9 +172,13 @@ class FaceService:
         return EnrollResponse(enrolled=True, images_used=len(results),
                               quality=round(min(qualities), 3) if qualities else None)
 
-    async def reset(self, employee_id: UUID) -> None:
+    async def reset(self, employee_id: UUID, actor: CurrentUser) -> None:
         if not await self.repo.clear_embedding(employee_id):
             raise NotFoundError("Karyawan")
+        await write_delete_audit(
+            self.repo.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
+            entity_type="employee", entity_id=employee_id, action="FACE_RESET",
+        )
 
     # ── Dipakai modul absensi ─────────────────────────────────────────────────
     async def is_enrolled(self, employee_id: UUID | str) -> bool:

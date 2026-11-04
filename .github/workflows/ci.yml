@@ -24,7 +24,7 @@ jobs:
     name: API · ruff · mypy · pytest (PostgreSQL nyata)
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.api == 'true' }}
-    runs-on: [self-hosted, linux, vms]
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
@@ -36,13 +36,11 @@ jobs:
         working-directory: api
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Bersihkan sisa DB CI sebelumnya (runner self-hosted dipakai ulang)
-        run: docker rm -f vms-db >/dev/null 2>&1 || true
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"   # sama dengan Dockerfile (T-16)
-          # Runner self-hosted menyimpan cache pip lokal di /root/.cache/pip.
-          # Menghindari unduh/unggah 95 MB via Actions Cache API lambat.
+          cache: pip
+          cache-dependency-path: api/requirements-dev.txt
 
       - name: Jalankan DB — PostgreSQL 18 + PostGIS 3.6 + pgvector dari db/Dockerfile (sama dengan compose)
         # Dulu: service postgis 16-3.4 + apt install pgvector saat berjalan. Repo PGDG bullseye diarsipkan
@@ -89,15 +87,11 @@ jobs:
       - name: Uji — face-service (aturan tantangan liveness, tanpa model)
         run: python -m pytest -q -p no:warnings ../face-service/tests
 
-      - name: Bersihkan DB CI (runner self-hosted dipakai ulang antar job)
-        if: always()
-        run: docker rm -f vms-db >/dev/null 2>&1 || true
-
   web:
     name: Web · lint · typecheck · test · build
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.web == 'true' }}
-    runs-on: [self-hosted, linux, vms]
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
       run:
@@ -107,8 +101,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
-          # Runner self-hosted menyimpan cache npm lokal di ~/.npm.
-          # Menghindari unggah cache 54 MB via Actions Cache API lambat.
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run lint
       - run: npm run typecheck
@@ -119,7 +113,7 @@ jobs:
     # Juga menentukan bagian yang berubah (sudah mengambil seluruh riwayat) — tanpa job tambahan
     # yang memakan minimal 1 menit tertagih.
     name: Pemindaian rahasia (gitleaks)
-    runs-on: [self-hosted, linux, vms]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       api: ${{ steps.changes.outputs.api }}
@@ -180,8 +174,8 @@ jobs:
     name: Mobile (Flutter analyze + test)
     needs: secrets
     if: ${{ !cancelled() && needs.secrets.outputs.mobile == 'true' }}
-    runs-on: [self-hosted, linux, vms]
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: mobile
@@ -190,9 +184,7 @@ jobs:
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           channel: stable
-          cache: false
-          # Runner self-hosted sudah memiliki Flutter SDK di RUNNER_TOOL_CACHE lokal.
-          # DILARANG memakai cache: true karena mengunggah 1.73 GB ke GitHub Cache (58 menit!).
+          cache: true   # runner hosted tak punya SDK lokal; cache SDK + pub
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -201,7 +193,7 @@ jobs:
     name: Laporan ke #vms-ci
     needs: [api, web, mobile, secrets]
     if: always()
-    runs-on: [self-hosted, linux, vms]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Kirim ke Discord (berhasil & gagal; tanpa data pribadi — dok 17 §2)

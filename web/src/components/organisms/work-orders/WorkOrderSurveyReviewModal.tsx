@@ -2,6 +2,7 @@ import L from "leaflet";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { toast } from "sonner";
+import { useFileUrl } from "@/hooks/useFileUrl";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -75,6 +76,57 @@ interface WorkOrderSurveyReviewModalProps {
   onClose: () => void;
 }
 
+type PointPhotoRef = string | Record<string, unknown> | undefined;
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Foto titik bisa berupa URL penuh, id berkas, atau objek {file_id | url | file_url}; id diubah jadi URL bertiket. */
+function usePointPhotoUrl(p: PointPhotoRef): string {
+  const raw =
+    typeof p === "string"
+      ? p
+      : ((p?.url as string) || (p?.file_url as string) || (p?.file_id as string) || (p?.id as string) || "");
+  const fileId = raw && UUID_RE.test(raw) ? raw : undefined;
+  const { data } = useFileUrl(fileId, "view");
+  return fileId ? (data ?? "") : raw;
+}
+
+/** Pratinjau foto titik di popup peta: klik untuk perbesar. */
+function PointPhotoThumb({ photo, onOpen }: { photo: PointPhotoRef; onOpen: (url: string) => void }) {
+  const url = usePointPhotoUrl(photo);
+  if (!url) return null;
+  return (
+    <div
+      onClick={() => onOpen(url)}
+      className="cursor-pointer overflow-hidden rounded border border-border mt-1 h-28 bg-cover bg-center"
+      style={{ backgroundImage: `url(${url})` }}
+    />
+  );
+}
+
+/** Kotak foto di galeri titik. */
+function PointPhotoTile({ photo, onOpen }: { photo: PointPhotoRef; onOpen: (url: string) => void }) {
+  const url = usePointPhotoUrl(photo);
+  return (
+    <ActionButton
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={() => url && onOpen(url)}
+      className="h-20 w-20 p-0 rounded-lg border border-border overflow-hidden bg-muted relative group shadow-xs hover:border-primary/50"
+    >
+      {url ? (
+        <div
+          className="h-full w-full bg-cover bg-center group-hover:scale-108 transition-transform duration-200"
+          style={{ backgroundImage: `url(${url})` }}
+        />
+      ) : (
+        <Camera className="h-6 w-6 text-muted-foreground m-auto" />
+      )}
+    </ActionButton>
+  );
+}
+
 export function WorkOrderSurveyReviewModal({
   workOrderId,
   onClose,
@@ -84,12 +136,13 @@ export function WorkOrderSurveyReviewModal({
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"both" | "map" | "list">("both");
 
+  const surveyPoints = detail?.survey_points;
   const validCoords = useMemo(() => {
-    if (!detail?.survey_points) return [];
-    return detail.survey_points
+    if (!surveyPoints) return [];
+    return surveyPoints
       .filter((p) => p.site_lat != null && p.site_lng != null)
       .map((p) => [Number(p.site_lat), Number(p.site_lng)] as [number, number]);
-  }, [detail?.survey_points]);
+  }, [surveyPoints]);
 
   if (!workOrderId) return null;
 
@@ -222,35 +275,23 @@ export function WorkOrderSurveyReviewModal({
                         {detail.survey_points?.map((pt, idx) => {
                           if (pt.site_lat == null || pt.site_lng == null) return null;
                           const pos: [number, number] = [Number(pt.site_lat), Number(pt.site_lng)];
-                          const firstPhoto = pt.photos?.[0];
-                          const photoUrl =
-                            typeof firstPhoto === "string"
-                              ? firstPhoto
-                              : (firstPhoto?.url as string) || (firstPhoto?.file_url as string) || "";
-
                           return (
                             <Marker key={pt.point_id || idx} position={pos} icon={createSurveyPin(idx + 1)}>
                               <Popup className="vms-map-popup">
                                 <div className="w-56 p-1 space-y-1.5 text-ink">
-                                  <div className="font-bold text-xs">{idx + 1}. {pt.point_name}</div>
+                                  <div className="font-bold text-xs"><TextBlock as="span">{idx + 1}. {pt.point_name}</TextBlock></div>
                                   {pt.location_detail && (
                                     <div className="text-[11px] text-muted-foreground">{pt.location_detail}</div>
                                   )}
                                   <div className="text-[10px] text-primary font-medium">
-                                    {pos[0].toFixed(5)}, {pos[1].toFixed(5)}
+                                    <TextBlock as="span">{pos[0].toFixed(5)}, {pos[1].toFixed(5)}</TextBlock>
                                   </div>
                                   {pt.recommended_work_type_name && (
                                     <div className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded inline-block">
                                       {pt.recommended_work_type_name}
                                     </div>
                                   )}
-                                  {photoUrl && (
-                                    <div
-                                      onClick={() => setSelectedPhoto(photoUrl)}
-                                      className="cursor-pointer overflow-hidden rounded border border-border mt-1 h-28 bg-cover bg-center"
-                                      style={{ backgroundImage: `url(${photoUrl})` }}
-                                    />
-                                  )}
+                                  <PointPhotoThumb photo={pt.photos?.[0]} onOpen={setSelectedPhoto} />
                                 </div>
                               </Popup>
                             </Marker>
@@ -353,31 +394,9 @@ export function WorkOrderSurveyReviewModal({
                                 <TextBlock as="span">Foto Dokumentasi Titik ({pt.photos.length} Foto)</TextBlock>
                               </div>
                               <div className="flex flex-wrap gap-2.5 pt-1">
-                                {pt.photos.map((p, pIdx) => {
-                                  const photoUrl =
-                                    typeof p === "string"
-                                      ? p
-                                      : (p.url as string) || (p.file_url as string) || "";
-                                  return (
-                                    <ActionButton
-                                      key={pIdx}
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => photoUrl && setSelectedPhoto(photoUrl)}
-                                      className="h-20 w-20 p-0 rounded-lg border border-border overflow-hidden bg-muted relative group shadow-xs hover:border-primary/50"
-                                    >
-                                      {photoUrl ? (
-                                        <div
-                                          className="h-full w-full bg-cover bg-center group-hover:scale-108 transition-transform duration-200"
-                                          style={{ backgroundImage: `url(${photoUrl})` }}
-                                        />
-                                      ) : (
-                                        <Camera className="h-6 w-6 text-muted-foreground m-auto" />
-                                      )}
-                                    </ActionButton>
-                                  );
-                                })}
+                                {pt.photos.map((p, pIdx) => (
+                                  <PointPhotoTile key={pIdx} photo={p} onOpen={setSelectedPhoto} />
+                                ))}
                               </div>
                             </div>
                           )}
@@ -576,7 +595,8 @@ export function WorkOrderSurveyReviewModal({
                             <TextBlock as="span">
                               Mengunci titik survei, menyalin tugas ke jadwal harian, dan mengubah status menjadi{" "}
                             </TextBlock>
-                            <TextBlock as="span" className="font-bold text-ink">READY_TO_EXECUTE</TextBlock>.
+                            <TextBlock as="span" className="font-bold text-ink">READY_TO_EXECUTE</TextBlock>
+                            <TextBlock as="span">.</TextBlock>
                           </div>
                         </div>
                       </div>

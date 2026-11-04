@@ -71,6 +71,12 @@ export function AttendanceReviewDialog({ item, onClose }: { item: Attendance; on
       ) : (
         <TextBlock className="mb-3 text-sm text-mist">Tanpa swafoto.</TextBlock>
       )}
+      {item.evidence_photo_file_id && (
+        <div className="mb-3">
+          <TextBlock className="mb-1 text-sm font-medium">Foto bukti</TextBlock>
+          <FilePreview fileId={item.evidence_photo_file_id} fileName="Foto bukti" />
+        </div>
+      )}
       {(item.face_result || item.check_out_face_result) && (
         <div role="status" className="mb-3 rounded-control border border-line bg-surface p-3 text-sm">
           <TextBlock className="font-medium">Verifikasi Wajah (Server)</TextBlock>

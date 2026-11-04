@@ -88,6 +88,19 @@ describe("Absensi", () => {
     expect(notice).toHaveTextContent(/Absen pulang 02 Okt 2026 09\.33 WIB berlaku bila absensi ini disetujui\./);
   });
 
+  it("dialog tinjau menampilkan foto bukti terpisah tanpa label wajah", async () => {
+    setup((url) =>
+      url === "/attendance"
+        ? { data: { items: [row({ evidence_photo_file_id: "f-bukti" })], total: 1, page: 1, size: 50 } }
+        : undefined,
+    );
+    renderRoute("/attendance", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: "Tinjau" }));
+    const dialog = screen.getByRole("dialog", { name: "Tinjau absensi" });
+    expect(within(dialog).getByText("Foto bukti")).toBeInTheDocument();
+    expect(within(dialog).queryByText("Verifikasi Wajah (Server)")).not.toBeInTheDocument();
+  });
+
   it("absen online biasa tidak memunculkan tanda offline", async () => {
     setup();
     renderRoute("/attendance", { role: "PM" });

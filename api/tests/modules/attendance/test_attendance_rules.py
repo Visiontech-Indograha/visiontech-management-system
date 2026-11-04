@@ -212,6 +212,22 @@ def test_only_own_attendance_waiting_for_review_can_be_explained(client, world):
     assert _row(waiting_id)[5] == "Titik lokasi di gerbang proyek"
 
 
+def test_evidence_photo_is_attached_only_by_the_owner(client, world):
+    """Foto bukti biasa: milik sendiri OK (tanpa wajah); absensi/foto orang lain ditolak."""
+    att_id = _check_in(client, world, who="member").json()["id"]
+    member, leader = world.headers(client, "member"), world.headers(client, "leader")
+    own_photo, other_photo = _selfie(client, world, "member"), _selfie(client, world, "leader")
+
+    assert client.post(f"/attendance/{att_id}/evidence", headers=leader,
+                       json={"evidence_file_id": own_photo}).status_code == 404
+    foreign = client.post(f"/attendance/{att_id}/evidence", headers=member, json={"evidence_file_id": other_photo})
+    assert foreign.status_code == 422 and foreign.json()["error"]["code"] == "EVIDENCE_NOT_OWNED"
+    ok = client.post(f"/attendance/{att_id}/evidence", headers=member, json={"evidence_file_id": own_photo})
+    assert ok.status_code == 200, ok.text
+    listed = client.get("/attendance", headers=member).json()["items"]
+    assert [r["evidence_photo_file_id"] for r in listed if r["id"] == att_id] == [own_photo]
+
+
 def test_review_rules(client, world):
     """Peninjau (PM/OM/HR/admin) tidak pernah memverifikasi absensi sendiri; catatan wajib."""
     pm = world.headers(client, "pm")

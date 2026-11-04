@@ -12,7 +12,7 @@ from uuid import UUID
 from fastapi import Request
 
 from app.core.security import CurrentUser
-from app.modules.hse.schemas import (
+from app.modules.hse.schemas.hse_schema import (
     HseAcknowledgeCreate,
     HseCampaignAuditStats,
     HseCampaignCreate,

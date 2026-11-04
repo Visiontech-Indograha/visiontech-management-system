@@ -1,5 +1,5 @@
 """
-scripts/audit_10_cycles.py
+scripts/uji/audit_10_cycles.py
 Script eksekusi 10 Siklus Audit Multi-Perspektif & Verifikasi Menyeluruh VMS V2.
 
 10 Siklus Audit:
@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 API_DIR = ROOT / "api"
 WEB_DIR = ROOT / "web"
 MOBILE_DIR = ROOT / "mobile"

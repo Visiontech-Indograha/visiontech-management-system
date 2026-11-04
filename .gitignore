@@ -118,7 +118,6 @@ skills-lock.json
 MEMORY.md
 memory.md
 CLAUDE.md
-CHANGELOG.md
 *.agent.md
 
 !web/src/lib/
@@ -168,3 +167,8 @@ scripts/akun-uji-lokal.txt
 *.apk
 *.aab
 *.ipa
+
+# Fixture Postman: hanya berkas uji sintetis; dokumen/foto orang nyata jangan pernah di-commit
+postman/fixtures/*.pdf
+postman/fixtures/*.jpg
+postman/fixtures/*.jpeg

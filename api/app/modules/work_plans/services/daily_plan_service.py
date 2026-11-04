@@ -57,6 +57,21 @@ FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 BACKDATE_DAYS = 7
 DELETABLE = ("DRAFT", "SUBMITTED", "APPROVED")  # APPROVED = belum dimulai (ONGOING belum)
 
+# Nama status untuk pesan galat (Bahasa Indonesia sederhana, tanpa kode enum).
+PLAN_STATUS_ID = {
+    "DRAFT": "Draf", "SUBMITTED": "Diajukan", "APPROVED": "Disetujui",
+    "ONGOING": "Berjalan", "COMPLETED": "Selesai",
+}
+
+
+def _status_conflict(status: str) -> AppError:
+    label = PLAN_STATUS_ID.get(status, status)
+    return AppError(
+        "INVALID_STATE",
+        f"Jadwal ini sekarang berstatus {label}, jadi tindakan ini tidak bisa dilakukan. Muat ulang halaman.",
+        status=409,
+    )
+
 
 def _week(day: date) -> tuple[date, date]:
     start = day - timedelta(days=day.weekday())
@@ -84,8 +99,8 @@ class DailyPlanService:
 
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:
-        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN/HR (semua)."""
-        if is_admin(user) or user.has_role("ADMIN_HR_GA"):
+        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN (semua). HR/GA tidak melihat rencana."""
+        if is_admin(user):
             return None
         return user.employee_id or "00000000-0000-0000-0000-000000000000"
 
@@ -441,6 +456,24 @@ class DailyPlanService:
         return await self.repo.get(daily_plan_id)
 
     # ── Status ────────────────────────────────────────────────────────────────
+    async def _lock_status(self, daily_plan_id: UUID | str, allowed: tuple[str, ...]) -> str:
+        """Kunci baris jadwal dan pastikan statusnya (yang sudah terkunci, bukan snapshot awal) termasuk `allowed`."""
+        current = await self.repo.lock_status(daily_plan_id)
+        if current is None:
+            raise NotFoundError("Jadwal harian")
+        if current not in allowed:
+            raise _status_conflict(current)
+        return current
+
+    async def _set_status_guarded(self, daily_plan_id: UUID | str, status: str, allowed: tuple[str, ...],
+                                  **fields: Any) -> None:
+        """Pindah status hanya jika masih dari `allowed`. Baris tidak berubah = status sudah diganti aksi lain."""
+        if await self.repo.set_status(daily_plan_id, status, allowed=allowed, **fields) == 0:
+            current = await self.repo.lock_status(daily_plan_id)
+            if current is None:
+                raise NotFoundError("Jadwal harian")
+            raise _status_conflict(current)
+
     async def _require_items_unless_standby(self, access: DailyAccess, daily_plan_id: UUID | str) -> None:
         """Jadwal STANDBY (tim siaga) boleh diajukan/disetujui tanpa item; jadwal WORK wajib berisi pekerjaan."""
         if access.plan.kind == "STANDBY":
@@ -461,18 +494,19 @@ class DailyPlanService:
 
     async def approve(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        # Kunci baris dulu: dua persetujuan bersamaan berurutan, yang kedua melihat APPROVED dan dapat 409.
+        current = await self._lock_status(daily_plan_id, EDITABLE)
         work_date = access.plan.work_date
         today = jakarta_now().date()
         if work_date < today - timedelta(days=BACKDATE_DAYS):
             raise ValidationError(f"Jadwal lebih dari {BACKDATE_DAYS} hari yang lalu tidak dapat disetujui.")
         await self._require_items_unless_standby(access, daily_plan_id)
-        one_step = access.plan.status == "DRAFT"
+        one_step = current == "DRAFT"
         if one_step:
             # PM/OM menyetujui draf miliknya dalam satu langkah (submit+approve atomik); jejak keduanya dicatat.
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "SUBMITTED",
                                       {"via": "ONE_STEP_APPROVE"})
-        await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
+        await self._set_status_guarded(daily_plan_id, "APPROVED", EDITABLE, approver=user.employee_id)
         if one_step:
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "APPROVED",
                                       {"via": "ONE_STEP_APPROVE", "from": "DRAFT"})
@@ -494,9 +528,11 @@ class DailyPlanService:
         return {"approved": approved, "skipped": skipped}
 
     async def reject(self, user: CurrentUser, daily_plan_id: UUID, reason: str) -> Any:
-        access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
-        require_daily_status(access, "SUBMITTED", "APPROVED")
-        await self.repo.set_status(daily_plan_id, "DRAFT", rejection_reason=reason.strip())
+        await self.access(user, daily_plan_id, DailyNeed.MANAGE)
+        # Kunci baris: tolak yang tertunda di belakang persetujuan/mulai tidak menimpa status yang sudah baru.
+        await self._lock_status(daily_plan_id, ("SUBMITTED", "APPROVED"))
+        await self._set_status_guarded(daily_plan_id, "DRAFT", ("SUBMITTED", "APPROVED"),
+                                       rejection_reason=reason.strip())
         await NotificationService(self.db).daily_rejected(daily_plan_id, reason.strip())
         return await self.repo.get(daily_plan_id)
 

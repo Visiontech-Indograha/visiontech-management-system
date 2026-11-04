@@ -179,7 +179,7 @@ class OvertimeHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ListScreen(
     title: 'Riwayat Lembur',
-    empty: 'Belum ada pengajuan lembur.',
+    empty: 'Belum ada pengajuan lembur. Ajukan lembur dari tab Jadwal kerja: buka jadwal hari ini, lalu tekan Ajukan lembur.',
     load: (ref) => ref.read(syncEngineProvider).api.myOvertime(),
     builder: (o) => SurfaceCard(
       child: Column(

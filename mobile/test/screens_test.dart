@@ -219,6 +219,24 @@ void main() {
       await settle(tester);
     }
 
+    // Sebelum kamera swafoto ada layar konfirmasi singkat. Selama dialog tampil, tombol absen masih
+    // memegang indikator proses, jadi cukup tunggu dialognya muncul (tanpa pumpAndSettle).
+    const swafotoWajib = 'Swafoto wajib. Pastikan hanya wajah Anda di depan kamera.';
+    Future<void> tapCheckInSampaiSwafoto(WidgetTester tester) async {
+      await tester.ensureVisible(find.text('Absen masuk'));
+      await tester.tap(find.text('Absen masuk'));
+      for (var i = 0; i < 40 && find.text(swafotoWajib).evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      expect(find.text(swafotoWajib), findsOneWidget);
+    }
+
+    Future<void> lanjutSwafoto(WidgetTester tester) async {
+      await tester.tap(find.widgetWithText(FilledButton, 'Lanjut'));
+      await settle(tester);
+    }
+
     testWidgets(
       'K-12: akurasi GPS > 100 m ditolak sebelum swafoto/pengiriman',
       (tester) async {
@@ -248,7 +266,8 @@ void main() {
         );
         await show(tester, const AttendanceScreen());
 
-        await tapCheckIn(tester);
+        await tapCheckInSampaiSwafoto(tester);
+        await lanjutSwafoto(tester);
 
         final sent = backend.requests
             .where((r) => r.path.endsWith('/check-in'))
@@ -269,9 +288,23 @@ void main() {
       await show(tester, const AttendanceScreen());
       expect(find.text('Lokasi tugas: Lokasi d1'), findsWidgets);
 
-      await tapCheckIn(tester);
+      await tapCheckInSampaiSwafoto(tester);
+      await lanjutSwafoto(tester);
       final sent = backend.requests.where((r) => r.path.endsWith('/check-in')).single;
       expect((sent.data as Map)['site_id'], 'd1');
+    });
+
+    testWidgets('layar swafoto: Batal tidak mengirim absen masuk', (tester) async {
+      online();
+      GeolocatorPlatform.instance = _FakeGps(_at(1.6650, 101.4478, accuracy: 8));
+      await show(tester, const AttendanceScreen());
+
+      await tapCheckInSampaiSwafoto(tester);
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Batal'));
+      await settle(tester);
+
+      expect(find.text(swafotoWajib), findsNothing);
+      expect(backend.requests.where((r) => r.path.endsWith('/check-in')), isEmpty);
     });
 
     Map<String, Object?> record(String workDate, {String? out}) => {
@@ -313,6 +346,31 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Absen masuk'), findsNothing);
+    });
+
+    testWidgets('terlambat tanpa foto bukti: kartu hari ini menawarkan "Tambah foto bukti"', (tester) async {
+      online();
+      Map<String, dynamic> late({Object? ev}) => {
+        ...record('2099-01-01', out: '2099-01-01T10:00:00Z'),
+        'is_late': true,
+        'evidence_photo_file_id': ev,
+      };
+      backend.routes['/attendance'] = (_) => {'items': [late()], 'total': 1, 'today': '2099-01-01'};
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Tambah foto bukti'), findsOneWidget);
+    });
+
+    testWidgets('terlambat dengan foto bukti: tombol tidak tampil', (tester) async {
+      online();
+      backend.routes['/attendance'] = (_) => {
+        'items': [
+          {...record('2099-01-01', out: '2099-01-01T10:00:00Z'), 'is_late': true, 'evidence_photo_file_id': 'f1'},
+        ],
+        'total': 1,
+        'today': '2099-01-01',
+      };
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Tambah foto bukti'), findsNothing);
     });
   });
 
@@ -365,7 +423,7 @@ void main() {
       backend.routes['/start'] = (_) => standbyDetail('ONGOING');
       await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
 
-      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsOneWidget);
       expect(find.text('Mulai hari kerja'), findsNothing);
       expect(backend.requests.any((r) => r.path.endsWith('/start')), isFalse);
     });
@@ -381,7 +439,7 @@ void main() {
       };
       await show(tester, const DailyPlanScreen(dailyPlanId: 's'));
 
-      expect(find.text('Siaga — menunggu perintah PM'), findsNothing);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsNothing);
       expect(find.text('Mulai hari kerja'), findsOneWidget);
     });
 
@@ -419,7 +477,7 @@ void main() {
       await tester.tap(find.text('Tim Anda mendapat tugas'));
       await settle(tester);
       expect(backend.requests.any((r) => r.path.endsWith('/work-plans/daily/s')), isTrue);
-      expect(find.text('Siaga — menunggu perintah PM'), findsOneWidget);
+      expect(find.text('Siaga — menunggu perintah atasan'), findsOneWidget);
     });
   });
 
@@ -510,7 +568,7 @@ void main() {
       backend.routes['/complete'] = (_) => planDetail('COMPLETED');
       await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
 
-      expect(find.textContaining('menunggu keputusan PM untuk pindah hari'), findsOneWidget);
+      expect(find.textContaining('menunggu keputusan atasan untuk pindah hari'), findsOneWidget);
       await tester.tap(find.text('Selesaikan hari kerja'));
       await settle(tester);
       expect(find.text('Selesaikan hari kerja?'), findsNothing);
@@ -559,7 +617,7 @@ void main() {
 
     Future<void> openItem(WidgetTester tester, {num saved = 4}) async {
       backend.routes['/work-plans/items/i1'] = (_) => itemRow(saved: saved);
-      backend.routes['/by-work-type/wt1'] = (_) => <Object>[];
+      backend.routes['/work-types'] = (_) => <Object>[];
       await show(
         tester,
         Scaffold(
@@ -648,7 +706,7 @@ void main() {
         find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
         'Hujan deras sejak siang',
       );
-      await tester.tap(find.text('Kirim ke PM'));
+      await tester.tap(find.text('Kirim ke atasan'));
       await settle(tester);
 
       expect(find.textContaining('disimpan di HP'), findsOneWidget);
@@ -672,7 +730,7 @@ void main() {
         find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField)),
         'Material belum datang',
       );
-      await tester.tap(find.text('Kirim ke PM'));
+      await tester.tap(find.text('Kirim ke atasan'));
       await settle(tester);
 
       expect(find.textContaining('Permintaan pindah hari terkirim'), findsOneWidget);
@@ -680,14 +738,20 @@ void main() {
       expect(backend.sentOps.single['op_type'], 'PLAN_ROLLOVER_REQUEST');
     });
 
-    // Slot foto wajib = aturan server (image_requirement jenis pekerjaan item); harus tampil juga tanpa sinyal.
-    final mandatorySlot = <Map<String, dynamic>>[
-      {'image_requirement_id': 'r1', 'work_type_id': 'wt1', 'name': 'Foto sesudah pemasangan', 'is_mandatory': true, 'sort_order': 1},
+    // Slot foto wajib = aturan server (foto jenis pekerjaan item); harus tampil juga tanpa sinyal.
+    // Server mengirim slot sebagai `photos` pada jenis pekerjaan; klien memetakannya ke bentuk slot.
+    final workTypesWithSlot = <Map<String, dynamic>>[
+      {
+        'id': 'wt1',
+        'photos': [
+          {'id': 'r1', 'label': 'Foto sesudah pemasangan', 'required': true, 'sort_order': 1},
+        ],
+      },
     ];
 
     testWidgets('slot foto wajib tetap tampil tanpa sinyal dari salinan yang sudah pernah dimuat', (tester) async {
       backend.routes['/work-plans/items/i1'] = (_) => itemRow();
-      backend.routes['/by-work-type/wt1'] = (_) => mandatorySlot;
+      backend.routes['/work-types'] = (_) => workTypesWithSlot;
       await show(tester, const ItemProgressScreen(itemId: 'i1', dayStatus: 'ONGOING', isLeader: true));
       expect(find.text('Foto sesudah pemasangan'), findsWidgets);
 

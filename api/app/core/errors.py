@@ -85,7 +85,7 @@ class StorageError(AppError):
 
 
 def trigger_rule_message(exc: BaseException) -> str | None:
-    """Pesan aturan bisnis dari trigger kita (`RAISE EXCEPTION '…' USING ERRCODE = '23514'`, db/02),
+    """Pesan aturan bisnis dari trigger kita (`RAISE EXCEPTION '…' USING ERRCODE = '23514'`, db/06),
     atau None. CHECK constraint biasa juga 23514 tetapi membawa `constraint_name` dan pesan bahasa
     Inggris — itu tetap disembunyikan sebagai DB_ERROR."""
     cause = getattr(getattr(exc, "orig", None), "__cause__", None)
@@ -95,7 +95,7 @@ def trigger_rule_message(exc: BaseException) -> str | None:
     return None
 
 
-# Kode 23xxx yang dipakai `RAISE EXCEPTION` di trigger kita (db/02) → galat untuk pengguna.
+# Kode 23xxx yang dipakai `RAISE EXCEPTION` di trigger kita (db/06) → galat untuk pengguna.
 _TRIGGER_CODES: dict[str, tuple[str, int]] = {
     "23514": ("VALIDATION_ERROR", 422),     # aturan data (SIM, radius, dokumen terkunci, …)
     "23505": ("PERSONNEL_CONFLICT", 409),   # bentrok jadwal personel (tg_member_no_conflict)

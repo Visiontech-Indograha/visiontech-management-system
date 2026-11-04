@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Pasang lingkungan BETA (docs/40) di server — kembar prod, data & jaringan terpisah. PROD HANYA DIBACA.
+# Pasang lingkungan BETA (docs/40) di server — kembar prod, data & jaringan terpisah. PROD TIDAK DISALIN.
 #
-#   ./pasang-beta.sh siapkan   # folder, kredensial baru, DB & MinIO beta, env aplikasi, cron, Tailscale
-#   ./pasang-beta.sh data      # (setelah deploy beta pertama) salin data prod V1 → DB beta V2, lalu berkas
-#   ./pasang-beta.sh berkas    # hanya salin ulang berkas MinIO prod → beta
+#   ./pasang-beta.sh siapkan   # folder, kredensial baru, DB & MinIO beta, env aplikasi, cron, Tailscale (tailnet saja)
+#   ./pasang-beta.sh data      # (setelah deploy beta pertama) isi DB beta dengan data uji SINTETIS (db/07_master_seed_v2.sql)
+#   ./pasang-beta.sh berkas    # DINONAKTIFKAN: berkas prod (foto, dokumen) tidak boleh masuk beta
 #
+# Aturan: beta tidak membaca dump, DB, atau berkas prod. Hanya berkas konfigurasi non-rahasia dari api.env prod
+# yang dijadikan templat (kunci koneksi & rahasia diganti).
 # Aman diulang: berkas rahasia yang sudah ada tidak ditimpa; DB beta tidak diisi ulang bila sudah berisi.
 set -euo pipefail
 
@@ -86,11 +88,15 @@ EOF
   cp src/deploy/autodeploy.sh src/deploy/backup.sh .
   chmod +x autodeploy.sh backup.sh
 
-  # Akses: web beta khusus tailnet (:8444), API beta publik untuk HP (Funnel :10000). Prod tidak diubah.
+  # Akses: web beta dan API beta HANYA tailnet (Tailscale Serve). Tidak ada layanan beta yang Funnel (publik).
+  # Funnel 10000 dari pemasangan lama dimatikan dulu bila masih ada. Sintaks `off` belum diverifikasi di repo:
+  # galat diabaikan, dan pemilik wajib cek `tailscale funnel status` (runbook deploy/RUNBOOK-beta-aman.md).
+  sudo -n tailscale funnel --https=10000 off >/dev/null 2>&1 \
+    || tailscale funnel --https=10000 off >/dev/null 2>&1 || true
   sudo -n tailscale serve --bg --https=8444 http://127.0.0.1:8081 >/dev/null 2>&1 \
     || tailscale serve --bg --https=8444 http://127.0.0.1:8081 || echo "PERHATIAN: atur tailscale serve 8444 manual"
-  sudo -n tailscale funnel --bg --https=10000 http://127.0.0.1:8001 >/dev/null 2>&1 \
-    || tailscale funnel --bg --https=10000 http://127.0.0.1:8001 || echo "PERHATIAN: atur tailscale funnel 10000 manual"
+  sudo -n tailscale serve --bg --https=10000 http://127.0.0.1:8001 >/dev/null 2>&1 \
+    || tailscale serve --bg --https=10000 http://127.0.0.1:8001 || echo "PERHATIAN: atur tailscale serve 10000 manual"
 
   local line="* * * * * VMS_DEPLOY_DIR=$BETA $BETA/autodeploy.sh >> $BETA/logs/cron.log 2>&1"
   ( crontab -l 2>/dev/null | grep -vF "$BETA/autodeploy.sh"; echo "$line"
@@ -100,53 +106,21 @@ EOF
 
 data() {
   cd "$BETA"
-  local prod_db_name beta_pw
-  prod_db_name=$(val DATABASE_URL "$PROD/api.env" | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#')
-  beta_pw=$(val POSTGRES_PASSWORD infra.env)
-  # 1) Dump prod (pg_dump = hanya membaca, lewat soket kontainer) → DB sementara `sumber_v1` di kontainer BETA.
-  #    Superuser beta melewati RLS V1, jadi semua baris terbaca tanpa memakai kredensial prod.
-  docker exec vms_db_beta psql -U vms_app -d postgres -q -c "DROP DATABASE IF EXISTS sumber_v1" -c "CREATE DATABASE sumber_v1"
-  docker exec vms_db_prod sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$prod_db_name' -Fc" \
-    | docker exec -i vms_db_beta pg_restore -U vms_app -d sumber_v1 --no-owner --no-acl
-  # 2) sumber_v1 (V1) → vms_beta (V2); skrip menolak bila beta sudah berisi karyawan.
-  docker run --rm --network host -v "$BETA/src/scripts:/s:ro" \
-    -e SUMBER_DSN="postgresql://vms_app:${beta_pw}@127.0.0.1:5435/sumber_v1" \
-    -e TUJUAN_DSN="postgresql://vms_app:${beta_pw}@127.0.0.1:5435/vms_beta" \
-    vms-beta-api python /s/migrasi_v1_ke_v2.py
-  docker exec vms_db_beta psql -U vms_app -d postgres -q -c "DROP DATABASE sumber_v1"
-  berkas
+  # Data uji SINTETIS dari repo (bukan dump prod). Dimuat hanya bila DB beta belum berisi karyawan.
+  # Seed ini memakai ON CONFLICT DO NOTHING dan berada di dalam BEGIN/COMMIT.
+  if docker exec vms_db_beta psql -U vms_app -d vms_beta -Atc "select count(*) from employee" | grep -qx 0; then
+    docker exec -i vms_db_beta psql -U vms_app -d vms_beta -q -v ON_ERROR_STOP=1 < "src/db/07_master_seed_v2.sql"
+    echo "data uji sintetis (db/07_master_seed_v2.sql) dimuat ke vms_beta"
+  else
+    echo "DB beta sudah berisi karyawan; data uji tidak dimuat ulang"
+  fi
 }
 
 berkas() {
-  cd "$BETA"
-  local prod_minio_key prod_minio_secret minio_user minio_pw
-  # 3) Berkas prod → MinIO beta (salinan; prod hanya dibaca).
-  prod_minio_key=$(val MINIO_ACCESS_KEY "$PROD/api.env"); prod_minio_secret=$(val MINIO_SECRET_KEY "$PROD/api.env")
-  minio_user=$(val MINIO_ROOT_USER infra.env); minio_pw=$(val MINIO_ROOT_PASSWORD infra.env)
-  # Klien MinIO Python dari image API beta (image `mc` resmi kini butuh login registri).
-  docker run --rm --network host -e PK="$prod_minio_key" -e PS="$prod_minio_secret" -e BK="$minio_user" \
-    -e BS="$minio_pw" --entrypoint python vms-beta-api -c '
-import io, os
-from minio import Minio
-prod = Minio("127.0.0.1:9000", access_key=os.environ["PK"], secret_key=os.environ["PS"], secure=False)
-beta = Minio("127.0.0.1:9002", access_key=os.environ["BK"], secret_key=os.environ["BS"], secure=False)
-for bucket in ("vms-files", "vms-bucket"):
-    if not beta.bucket_exists(bucket):
-        beta.make_bucket(bucket)
-    n = 0
-    for obj in prod.list_objects(bucket, recursive=True):
-        resp = prod.get_object(bucket, obj.object_name)
-        try:
-            data = resp.read()
-        finally:
-            resp.close(); resp.release_conn()
-        beta.put_object(bucket, obj.object_name, io.BytesIO(data), len(data),
-                        content_type=obj.content_type or "application/octet-stream")
-        n += 1
-    print(f"{bucket}: {n} berkas disalin")
-'
-  docker restart vms_beta_api >/dev/null
-  echo "berkas beta selesai (salinan MinIO prod saat ini)"
+  # DINONAKTIFKAN. Dulu menyalin SEMUA berkas MinIO prod (foto absensi, dokumen karyawan) ke beta.
+  # Beta memakai berkas uji buatan sendiri (unggah lewat aplikasi beta), bukan salinan prod.
+  echo "DINONAKTIFKAN: berkas prod tidak boleh disalin ke beta (lihat deploy/RUNBOOK-beta-aman.md)." >&2
+  exit 2
 }
 
 case "${1:-}" in

@@ -79,7 +79,7 @@ async def get_work_order(
     controller: WorkOrderController = Depends(),
 ) -> WorkOrderDetailOut:
     """Detail lengkap Work Order termasuk titik survei, item pekerjaan, dan BoM."""
-    return await controller.get_work_order(work_order_id)
+    return await controller.get_work_order(current_user, work_order_id)
 
 
 @router.post("/{work_order_id}/assign-survey", response_model=WorkOrderDetailOut)

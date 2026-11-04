@@ -20,7 +20,6 @@ from app.modules.employees.schemas.employee_schema import (
     EmployeeCreate,
     EmployeeDetail,
     EmployeeListResponse,
-    EmployeeOut,
     EmployeeUpdate,
     MyPhotoIn,
     MyPhotoOut,
@@ -31,20 +30,6 @@ router = APIRouter(prefix="/employees", tags=["Employees"])
 _VIEW = Depends(require_permission(Permission.VIEW_USERS))
 _MANAGE = Depends(require_permission(Permission.MANAGE_USERS))
 _DELETE_ANY = Depends(require_permission(Permission.DELETE_ANY))
-
-
-def _sees_private(user: CurrentUser, employee_id: UUID) -> bool:
-    """Kontak pribadi (telepon, email, alamat) hanya untuk pemiliknya dan pengelola karyawan (HR/admin)."""
-    return Permission.MANAGE_USERS.value in user.permissions or str(employee_id) == (user.employee_id or "")
-
-
-def _private_hidden[T: EmployeeOut](emp: T, user: CurrentUser) -> T:
-    if _sees_private(user, emp.employee_id):
-        return emp
-    hidden: dict[str, object] = {"phone_number": None, "email": None, "city": None}
-    if isinstance(emp, EmployeeDetail):
-        hidden["addresses"] = []
-    return emp.model_copy(update=hidden)
 
 
 @router.get("", response_model=EmployeeListResponse)
@@ -61,9 +46,10 @@ async def list_employees(
     controller: EmployeeController = Depends(),
 ) -> EmployeeListResponse:
     """Direktori karyawan (cari nama / no. karyawan / email; saring status, divisi, kantor, jabatan)."""
-    result = await controller.list(page=page, size=size, status=employee_status, division_id=division_id,
-                                   office_id=office_id, position_id=position_id, q=q)
-    return result.model_copy(update={"items": [_private_hidden(e, current_user) for e in result.items]})
+    # Cakupan: karyawan/TL = dirinya, divisi, dan tim; PM = jangkauannya; HR/OM/SA/Finance/HSE/aset = semua.
+    # Kolom sensitif (kontak, PKWT, peran sistem) hanya untuk HR/OM/SA, PM terkait, dan pemiliknya.
+    return await controller.list(user=current_user, page=page, size=size, status=employee_status,
+                                 division_id=division_id, office_id=office_id, position_id=position_id, q=q)
 
 
 @router.get("/next-no", response_model=NextEmployeeNo, summary="Usulan nomor karyawan berikutnya")
@@ -82,7 +68,8 @@ async def get_employee(
     controller: EmployeeController = Depends(),
 ) -> EmployeeDetail:
     """Detail karyawan + alamat (kontak pribadi hanya untuk pemilik & HR/admin)."""
-    return _private_hidden(await controller.detail(employee_id), current_user)
+    # Di luar cakupan → 404. Kontak & alamat hanya untuk pemilik, HR/OM/SA, dan PM terkait.
+    return await controller.detail(current_user, employee_id)
 
 
 @router.post("", response_model=EmployeeDetail, status_code=status.HTTP_201_CREATED)

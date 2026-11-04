@@ -59,7 +59,8 @@ describe("Akun & keamanan", () => {
     it("tanpa persetujuan terpisah: tidak ada /face/consent maupun kotak centang", async () => {
       const calls = setup(faceStatus({ required: false }));
       renderRoute("/account", { role: "field" });
-      expect(await screen.findByText(/hanya untuk pekerja lapangan/)).toBeInTheDocument();
+      expect(await screen.findByText(/hanya diwajibkan untuk karyawan lapangan/)).toBeInTheDocument();
+      expect(screen.getByText("Tidak diwajibkan")).toBeInTheDocument();
       expect(screen.queryByRole("checkbox")).toBeNull();
       expect(calls.some((c) => c.url === "/face/consent")).toBe(false);
     });
@@ -73,11 +74,12 @@ describe("Akun & keamanan", () => {
       expect(document.querySelector('input[type="file"]')).toBeNull(); // foto orang lain tak bisa didaftarkan
     });
 
-    it("sudah terdaftar: info model, daftar ulang lewat HR (tanpa tombol daftar ulang)", async () => {
+    it("sudah terdaftar: tanggal daftar, daftar ulang lewat HR (tanpa tombol daftar ulang)", async () => {
       setup(faceStatus({ enrolled: true, model_name: "w600k_mbf", enrolled_at: "2026-10-20T02:00:00Z" }));
       renderRoute("/account", { role: "field" });
       const info = await screen.findByTestId("face-enroll-info");
-      expect(within(info).getByText("Model: w600k_mbf")).toBeInTheDocument();
+      expect(within(info).getByText(/Didaftarkan pada/)).toBeInTheDocument();
+      expect(within(info).queryByText(/w600k_mbf/)).toBeNull(); // nama model teknis tidak ditampilkan ke karyawan
       expect(within(info).getByText(/Minta HR mengatur ulang/)).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Daftar Ulang Wajah" })).toBeNull();
     });
@@ -126,7 +128,7 @@ describe("Tata letak halaman Akun & keamanan", () => {
     });
     renderRoute("/account", { role: "field" });
     const akun = await screen.findByRole("region", { name: "Akun" });
-    const wajah = await screen.findByRole("region", { name: "Biometrik Wajah" });
+    const wajah = await screen.findByRole("region", { name: "Pengenalan wajah" });
     const perangkat = await screen.findByRole("region", { name: "Perangkat yang masuk" });
 
     const order = [akun, wajah, perangkat].map((e) => e.compareDocumentPosition(perangkat));

@@ -800,6 +800,22 @@ Future<bool> confirmAction(
   return ok == true;
 }
 
+/// Tombol Back saat form berisi isian belum dikirim: true bila pengguna memilih "Ya, buang".
+Future<bool> confirmBuangIsian(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Buang isian?'),
+      content: const Text('Isian yang belum dikirim akan hilang.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Lanjut mengisi')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ya, buang')),
+      ],
+    ),
+  );
+  return ok == true;
+}
+
 
 /// Deteksi layar ponsel sempit (< 360 dp) agar tata letak kartu otomatis menyederhanakan jarak.
 bool isCompactPhone(BuildContext context) => MediaQuery.sizeOf(context).width < 360;
@@ -827,7 +843,7 @@ Future<T?> showVmsModalBottomSheet<T>({
       return ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: maxHeight,
-          maxWidth: 640,
+          maxWidth: (mq.size.width * 0.96).clamp(0.0, 960.0),
         ),
         child: Padding(
           padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),

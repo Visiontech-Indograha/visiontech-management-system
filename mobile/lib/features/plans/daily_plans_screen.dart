@@ -210,6 +210,11 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
             ),
             const SizedBox(height: 8),
             // Baris chip status cepat
+            Text(
+              'Geser ke kanan untuk melihat filter lainnya.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -314,7 +319,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               EmptyState(
                 icon: Icons.event_busy_rounded,
                 title: _only == null ? 'Tidak ada jadwal minggu ini' : 'Tidak ada ${phaseLabel[_only]} minggu ini',
-                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui PM.',
+                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui atasan.',
               )
             else
               for (final (n, p) in shown.indexed)

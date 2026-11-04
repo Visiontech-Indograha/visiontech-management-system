@@ -111,7 +111,7 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md p-6 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-xl">
+      <DialogContent className="w-[92vw] sm:max-w-xl p-6 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-xl">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-base font-semibold text-white">
             {title || "Unduh Dokumen"}

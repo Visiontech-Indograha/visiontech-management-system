@@ -14,7 +14,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.repository import BaseRepository
-from app.modules.hse.schemas import VehicleInspectionCreate, VehicleInspectionVerify
+from app.modules.hse.schemas.hse_schema import VehicleInspectionCreate, VehicleInspectionVerify
 
 
 class VehicleInspectionRepository(BaseRepository):
@@ -79,7 +79,7 @@ class VehicleInspectionRepository(BaseRepository):
         offset: int = 0,
     ) -> Sequence[dict[str, Any]]:
         conditions = ["i.delete_at IS NULL"]
-        params: dict[str, Any] = {"limit": limit, "offset": offset}
+        params: dict[str, Any] = {"limit": limit + offset}
 
         if vehicle_id:
             conditions.append("i.vehicle_id = :vehicle_id")
@@ -113,10 +113,10 @@ class VehicleInspectionRepository(BaseRepository):
             LEFT JOIN employee ve ON ve.employee_id = vu.employee_id
             WHERE {where_clause}
             ORDER BY i.inspection_date DESC, i.create_at DESC
-            LIMIT :limit OFFSET :offset;
+            LIMIT :limit;
         """
         rows = await self.fetchall(query, params)
-        return [dict(r._mapping) for r in rows]
+        return [dict(r._mapping) for r in rows][offset:]
 
     async def verify(
         self,
@@ -128,7 +128,7 @@ class VehicleInspectionRepository(BaseRepository):
             UPDATE vehicle_safety_inspections
             SET
                 status = :status,
-                notes = CASE WHEN :notes IS NOT NULL THEN :notes ELSE notes END,
+                notes = COALESCE(CAST(:notes AS TEXT), notes),
                 verified_by_id = :verifier_id,
                 verified_at = NOW(),
                 update_at = NOW()

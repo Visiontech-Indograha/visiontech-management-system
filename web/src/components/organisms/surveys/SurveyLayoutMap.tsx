@@ -1,5 +1,5 @@
 import L from "leaflet";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, Marker, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -33,11 +33,18 @@ const coord = (p: Point): LatLng | null =>
 /** Zoom maksimal yang memuat semua titik, dengan auto-resize container saat modal/tab dibuka. */
 function FitPoints({ coords }: { coords: LatLng[] }) {
   const map = useMap();
+  // Fit hanya saat jumlah titik berubah, bukan tiap marker digeser (pan/zoom pengguna dipertahankan).
+  const coordsRef = useRef(coords);
+  useEffect(() => {
+    coordsRef.current = coords;
+  });
+  const count = coords.length;
   useEffect(() => {
     const trigger = () => {
+      const pts = coordsRef.current;
       map.invalidateSize();
-      if (coords.length === 1) map.setView(coords[0], 18);
-      else if (coords.length > 1) map.fitBounds(L.latLngBounds(coords), { padding: [80, 80], maxZoom: 18 });
+      if (pts.length === 1) map.setView(pts[0], 18);
+      else if (pts.length > 1) map.fitBounds(L.latLngBounds(pts), { padding: [80, 80], maxZoom: 18 });
     };
 
     const t1 = setTimeout(trigger, 100);
@@ -59,7 +66,7 @@ function FitPoints({ coords }: { coords: LatLng[] }) {
       clearTimeout(t3);
       ro?.disconnect();
     };
-  }, [map, coords]);
+  }, [map, count]);
   return null;
 }
 

@@ -5,12 +5,10 @@ Modul ini bertanggung jawab untuk inisialisasi aplikasi, middleware,
 logging terstruktur, serta rute-rute dasar (health, ready) dan router utama.
 """
 import logging
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.exception_handlers import register_exception_handlers
@@ -51,10 +49,9 @@ def create_app() -> FastAPI:
     # Daftarkan penanganan galat aplikasi (error handlers)
     register_exception_handlers(app)
 
-    # Mount direktori uploads fisik untuk akses foto & dokumen
-    uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
-    uploads_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+    # Folder `uploads/` TIDAK dipasang sebagai berkas statis: itu menyajikan semua isi (termasuk foto karyawan dan
+    # inspeksi) tanpa login. Media rujukan publik lewat /media/preview (daftar folder sempit); unggahan pengguna lewat
+    # /files/{id}/url dengan pemeriksaan akses.
 
     @app.get("/health")
     async def health_check() -> dict[str, str]:
@@ -72,12 +69,11 @@ def create_app() -> FastAPI:
         Endpoint kesiapan (readiness probe).
         Memastikan basis data benar-benar bisa dihubungi sebelum melayani request.
         """
+        # Body sengaja minimal (tanpa status DB & versi): autodeploy/healthcheck hanya membaca kode status.
         is_healthy = await check_database_health()
         if not is_healthy:
-            return JSONResponse(
-                {"status": "not_ready", "db": "unreachable", "version": APP_VERSION}, status_code=503
-            )
-        return JSONResponse({"status": "ready", "db": "ok", "version": APP_VERSION})
+            return JSONResponse({"status": "not_ready"}, status_code=503)
+        return JSONResponse({"status": "ready"})
 
     # Memasukkan router utama v1 ke dalam aplikasi
     from app.api.v1.router import api_router

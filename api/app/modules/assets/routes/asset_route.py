@@ -52,7 +52,7 @@ async def asset_availability(
     controller: AssetController = Depends(),
 ) -> list[AssetAvailabilityOut]:
     """Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana)."""
-    return await controller.handle_availability(work_date, team_id)
+    return await controller.handle_availability(work_date, team_id, current_user)
 
 
 # ── Alat ───────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ async def list_tools(
     controller: AssetController = Depends(),
 ) -> list[ToolOut]:
     """Daftar alat (pribadi & umum) beserta pemegangnya saat ini."""
-    rows = await controller.handle_list_tools(office_id, asset_status)
+    rows = await controller.handle_list_tools(office_id, asset_status, current_user)
     return list(apply_list(rows, params, response, lambda r: (r.name, r.tool_code, r.office_name, r.division_name)))
 
 
@@ -114,7 +114,7 @@ async def list_vehicles(
     controller: AssetController = Depends(),
 ) -> list[VehicleOut]:
     """Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini."""
-    rows = await controller.handle_list_vehicles(office_id, asset_status)
+    rows = await controller.handle_list_vehicles(office_id, asset_status, current_user)
     return list(apply_list(rows, params, response, lambda r: (r.name, r.number_plate, r.office_name, r.division_name)))
 
 
@@ -157,7 +157,7 @@ async def list_vehicle_files(
     vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
 ) -> list[VehicleFileOut]:
     """Berkas kendaraan (STNK, BPKB, KIR)."""
-    return await controller.handle_vehicle_files(vehicle_id)
+    return await controller.handle_vehicle_files(current_user, vehicle_id)
 
 
 @router.post("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut], status_code=201)
@@ -174,7 +174,7 @@ async def list_inspections(
     vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
 ) -> list[InspectionOut]:
     """Riwayat inspeksi kendaraan (terbaru dulu)."""
-    return await controller.handle_inspections(vehicle_id)
+    return await controller.handle_inspections(current_user, vehicle_id)
 
 
 @router.post("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut], status_code=201)

@@ -752,6 +752,7 @@ CREATE INDEX IF NOT EXISTS idx_work_plan_attachment_daily ON work_plan_attachmen
 CREATE INDEX IF NOT EXISTS idx_employee_office ON employee (office_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_employee_division ON employee (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_user_sessions_refresh_token_hash ON user_sessions (refresh_token_hash);
 CREATE INDEX IF NOT EXISTS idx_division_om ON division (om_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_division_pm ON division (pm_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_team_office ON team (office_id) WHERE delete_at IS NULL;
@@ -793,122 +794,35 @@ CREATE INDEX IF NOT EXISTS idx_clearance_assignment ON offboarding_clearance_ite
 
 COMMIT;
 
--- 35. Tabel client_sites (Cabang / Lokasi Klien)
-CREATE TABLE IF NOT EXISTS client_sites (
-    site_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    client_id UUID NOT NULL REFERENCES client(client_id) ON DELETE CASCADE,
-    site_name VARCHAR(150) NOT NULL,
-    address TEXT NOT NULL,
-    latitude NUMERIC(10, 7) NOT NULL,
-    longitude NUMERIC(10, 7) NOT NULL,
-    geofence_radius_meters INTEGER NOT NULL DEFAULT 100,
-    pic_name VARCHAR(120),
-    pic_phone VARCHAR(30),
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
-);
-CREATE INDEX IF NOT EXISTS idx_client_sites_client ON client_sites(client_id) WHERE delete_at IS NULL;
 
--- 36. Tabel client_work_orders (Peleburan projects & work_completion)
-CREATE TABLE IF NOT EXISTS client_work_orders (
-    work_order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    wo_number VARCHAR(60) NOT NULL UNIQUE,
-    client_id UUID NOT NULL REFERENCES client(client_id) ON DELETE RESTRICT,
-    client_site_id UUID REFERENCES client_sites(site_id) ON DELETE SET NULL,
-    division_id UUID NOT NULL REFERENCES division(division_id) ON DELETE RESTRICT,
-    pm_id UUID NOT NULL REFERENCES employee(employee_id) ON DELETE RESTRICT,
-    lead_team_id UUID REFERENCES team(team_id) ON DELETE SET NULL,
-    title VARCHAR(200) NOT NULL,
-    initial_complaint TEXT,
-    status VARCHAR(40) NOT NULL DEFAULT 'WAITING_SURVEY'
-        CHECK (status IN ('WAITING_SURVEY', 'SURVEY_IN_PROGRESS', 'SURVEY_SUBMITTED', 'READY_TO_EXECUTE', 'IN_PROGRESS', 'COMPLETED', 'BAST_SIGNED', 'CANCELLED')),
-    survey_assigned_at TIMESTAMPTZ,
-    survey_submitted_at TIMESTAMPTZ,
-    survey_approved_at TIMESTAMPTZ,
-    survey_approved_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
-    bast_signed_at TIMESTAMPTZ,
-    bast_signer_name VARCHAR(120),
-    bast_signature_file_id UUID REFERENCES file_object(id) ON DELETE SET NULL,
-    verify_hash VARCHAR(128),
+-- 41. Tabel hse_campaigns (v2_0019) + daftar foto carousel media_paths (v2_0021)
+CREATE TABLE IF NOT EXISTS hse_campaigns (
+    campaign_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    summary TEXT,
+    content_html TEXT NOT NULL,
+    media_path VARCHAR(255),
+    media_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
+    target_audience VARCHAR(50) NOT NULL DEFAULT 'ALL',
+    target_user_ids JSONB,
+    is_mandatory BOOLEAN NOT NULL DEFAULT TRUE,
+    cooldown_seconds INT NOT NULL DEFAULT 5,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by_id UUID NOT NULL REFERENCES users(user_id),
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
+    delete_at TIMESTAMPTZ
 );
-CREATE INDEX IF NOT EXISTS idx_cwo_division_status ON client_work_orders(division_id, status) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_cwo_client ON client_work_orders(client_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_cwo_team ON client_work_orders(lead_team_id) WHERE delete_at IS NULL;
-
--- 37. Tabel work_order_surveys
-CREATE TABLE IF NOT EXISTS work_order_surveys (
-    survey_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    work_order_id UUID NOT NULL REFERENCES client_work_orders(work_order_id) ON DELETE CASCADE,
-    surveyor_team_id UUID REFERENCES team(team_id) ON DELETE SET NULL,
-    survey_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    narrative TEXT,
-    general_bom JSONB NOT NULL DEFAULT '[]'::jsonb,
-    format VARCHAR(20) NOT NULL DEFAULT 'CCTV',
-    status VARCHAR(30) NOT NULL DEFAULT 'DRAFT',
-    submitted_at TIMESTAMPTZ,
-    approved_at TIMESTAMPTZ,
-    approved_by UUID REFERENCES users(user_id) ON DELETE SET NULL,
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
+ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_paths JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_captions JSONB NOT NULL DEFAULT '[]'::jsonb;  -- v2_0023
+CREATE INDEX IF NOT EXISTS idx_hse_campaigns_dates ON hse_campaigns (is_active, start_date, end_date) WHERE delete_at IS NULL;
+-- Penanda popup per hari (v2_0022). UTANG: tidak dipakai lagi, sengaja tidak di-drop
+CREATE TABLE IF NOT EXISTS hse_campaign_views (
+    campaign_id UUID NOT NULL REFERENCES hse_campaigns(campaign_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    view_date DATE NOT NULL,
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (campaign_id, user_id, view_date)
 );
-CREATE INDEX IF NOT EXISTS idx_wo_surveys_wo ON work_order_surveys(work_order_id) WHERE delete_at IS NULL;
-
--- 38. Tabel work_order_survey_points
-CREATE TABLE IF NOT EXISTS work_order_survey_points (
-    point_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    work_order_id UUID NOT NULL REFERENCES client_work_orders(work_order_id) ON DELETE CASCADE,
-    survey_id UUID REFERENCES work_order_surveys(survey_id) ON DELETE CASCADE,
-    point_name VARCHAR(150) NOT NULL,
-    location_detail TEXT,
-    site_lat NUMERIC(10, 7),
-    site_lng NUMERIC(10, 7),
-    recommended_work_type_id UUID REFERENCES work_type(work_type_id) ON DELETE RESTRICT,
-    recommended_bom JSONB NOT NULL DEFAULT '[]'::jsonb,
-    remarks TEXT,
-    photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
-    status VARCHAR(30) NOT NULL DEFAULT 'TODO',
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
-);
-CREATE INDEX IF NOT EXISTS idx_wo_survey_points_wo ON work_order_survey_points(work_order_id) WHERE delete_at IS NULL;
-
--- 39. Tabel work_order_items (Daftar Tugas Kunci)
-CREATE TABLE IF NOT EXISTS work_order_items (
-    item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    work_order_id UUID NOT NULL REFERENCES client_work_orders(work_order_id) ON DELETE CASCADE,
-    survey_point_id UUID REFERENCES work_order_survey_points(point_id) ON DELETE SET NULL,
-    work_type_id UUID NOT NULL REFERENCES work_type(work_type_id) ON DELETE RESTRICT,
-    title VARCHAR(200) NOT NULL,
-    location_detail TEXT,
-    target_qty NUMERIC(10, 2) NOT NULL DEFAULT 1,
-    completed_qty NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    photo_slots_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
-    status VARCHAR(30) NOT NULL DEFAULT 'PENDING'
-        CHECK (status IN ('PENDING', 'IN_PROGRESS', 'DONE')),
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
-);
-CREATE INDEX IF NOT EXISTS idx_wo_items_wo ON work_order_items(work_order_id) WHERE delete_at IS NULL;
-
--- 40. Tabel work_order_bom
-CREATE TABLE IF NOT EXISTS work_order_bom (
-    bom_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    work_order_id UUID NOT NULL REFERENCES client_work_orders(work_order_id) ON DELETE CASCADE,
-    work_order_item_id UUID REFERENCES work_order_items(item_id) ON DELETE CASCADE,
-    item_name VARCHAR(150) NOT NULL,
-    unit VARCHAR(30) NOT NULL DEFAULT 'pcs',
-    estimated_qty NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    actual_qty NUMERIC(10, 2) NOT NULL DEFAULT 0,
-    create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    delete_at TIMESTAMPTZ NULL
-);
-CREATE INDEX IF NOT EXISTS idx_wo_bom_wo ON work_order_bom(work_order_id) WHERE delete_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_wo_bom_item ON work_order_bom(work_order_item_id) WHERE delete_at IS NULL;

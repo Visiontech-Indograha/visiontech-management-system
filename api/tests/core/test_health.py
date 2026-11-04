@@ -28,7 +28,8 @@ def test_version_endpoint(client):
 def test_ready_check(client):
     response = client.get("/ready")
     assert response.status_code == 200
-    assert response.json() == {"status": "ready", "db": "ok", "version": APP_VERSION}
+    # Body minimal: status DB & versi tidak dibuka ke publik (audit kebocoran akses).
+    assert response.json() == {"status": "ready"}
     assert "X-Request-ID" in response.headers
 
 

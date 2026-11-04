@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { LoadingBar } from "@/components/molecules/LoadingBar";
 import {
   Briefcase,
   AlertCircle,
@@ -111,13 +112,13 @@ export function WorkOrderList({
       case "SURVEY_SUBMITTED":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-warning-bg text-warning border border-warning-border animate-pulse">
-            <TextBlock as="span">Menunggu Review</TextBlock>
+            <TextBlock as="span">Menunggu pengecekan</TextBlock>
           </div>
         );
       case "READY_TO_EXECUTE":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-bg text-success border border-success-border">
-            <TextBlock as="span">Siap Eksekusi</TextBlock>
+            <TextBlock as="span">Siap dikerjakan</TextBlock>
           </div>
         );
       case "IN_PROGRESS":
@@ -129,13 +130,13 @@ export function WorkOrderList({
       case "COMPLETED":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-bg text-success border border-success-border">
-            <TextBlock as="span">Selesai (Siap BAST)</TextBlock>
+            <TextBlock as="span">Selesai (siap surat serah terima)</TextBlock>
           </div>
         );
       case "BAST_SIGNED":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-success-bg text-success border border-success-border">
-            <TextBlock as="span">BAST Resmi Terbit</TextBlock>
+            <TextBlock as="span">Surat serah terima terbit</TextBlock>
           </div>
         );
       case "CANCELLED":
@@ -212,7 +213,7 @@ export function WorkOrderList({
           }`}
         >
           <div className="flex items-center gap-1.5">
-            <TextBlock as="span">2. Review Survei</TextBlock>
+            <TextBlock as="span">2. Cek hasil survei</TextBlock>
             {categorized.surveyReview.length > 0 && (
               <div className="h-2 w-2 rounded-full bg-warning animate-ping" />
             )}
@@ -254,7 +255,7 @@ export function WorkOrderList({
               : "border-transparent text-muted-foreground hover:text-ink hover:bg-muted/30"
           }`}
         >
-          <TextBlock as="span">4. Selesai & BAST</TextBlock>
+          <TextBlock as="span">4. Selesai & serah terima</TextBlock>
           <div className="ml-2 px-2 py-0.5 text-xs rounded-full bg-muted font-bold">
             <TextBlock as="span">{categorized.completed.length}</TextBlock>
           </div>
@@ -265,8 +266,8 @@ export function WorkOrderList({
       {isError ? (
         <div className="py-12 text-center border border-dashed rounded-xl border-danger-border bg-danger-bg/20">
           <AlertCircle className="h-10 w-10 text-danger mx-auto mb-2" />
-          <TextBlock className="font-semibold text-danger text-base">Gagal memuat daftar Work Orders</TextBlock>
-          <div className="text-xs text-muted-foreground mt-1 mb-3">Terjadi gangguan koneksi ke server.</div>
+          <TextBlock className="font-semibold text-danger text-base">Daftar tugas klien belum bisa dimuat</TextBlock>
+          <div className="text-xs text-muted-foreground mt-1 mb-3"><TextBlock as="span">Terjadi gangguan koneksi ke server.</TextBlock></div>
           {onRetry && (
             <ActionButton type="button" variant="outline" size="sm" onClick={onRetry}>
               Coba Lagi
@@ -274,8 +275,11 @@ export function WorkOrderList({
           )}
         </div>
       ) : isLoading ? (
-        <div className="py-16 text-center">
-          <TextBlock className="text-muted-foreground">Memuat daftar Work Orders...</TextBlock>
+        <div className="grid gap-3 py-6 md:grid-cols-2" role="status" aria-live="polite">
+          <TextBlock className="sr-only">Sedang memuat daftar tugas klien</TextBlock>
+          <LoadingBar className="h-28" />
+          <LoadingBar className="h-28" />
+          <LoadingBar className="h-28" />
         </div>
       ) : currentList.length === 0 ? (
         <div className="py-16 text-center border border-dashed rounded-xl border-border bg-card/30">
@@ -286,7 +290,7 @@ export function WorkOrderList({
               {activeTab === "intake" && "Semua permintaan tugas klien telah memiliki jadwal survei atau sudah diproses."}
               {activeTab === "survey_review" && "Belum ada survei yang menunggu review dari Project Manager."}
               {activeTab === "execution" && "Belum ada tugas yang siap atau sedang dikerjakan tim teknisi."}
-              {activeTab === "completed" && "Belum ada tugas yang selesai atau diterbitkan BAST."}
+              {activeTab === "completed" && "Belum ada tugas yang selesai atau surat serah terimanya terbit."}
             </TextBlock>
           </div>
         </div>
@@ -404,7 +408,7 @@ export function WorkOrderList({
                       className="text-xs py-1 bg-warning text-white hover:bg-warning/90"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                      <TextBlock as="span">Review Survei</TextBlock>
+                      <TextBlock as="span">Cek hasil survei</TextBlock>
                     </ActionButton>
                   )}
 
@@ -417,7 +421,7 @@ export function WorkOrderList({
                       className="text-xs py-1 bg-success text-white hover:bg-success/90"
                     >
                       <FileCheck2 className="h-3.5 w-3.5 mr-1" />
-                      <TextBlock as="span">Tanda Tangan BAST</TextBlock>
+                      <TextBlock as="span">Tandatangani serah terima</TextBlock>
                     </ActionButton>
                   )}
 
@@ -430,7 +434,7 @@ export function WorkOrderList({
                       className="text-xs py-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 flex items-center gap-1.5"
                     >
                       <Download className="h-3.5 w-3.5" />
-                      <TextBlock as="span">Unduh BAST (.pdf)</TextBlock>
+                      <TextBlock as="span">Unduh surat serah terima (.pdf)</TextBlock>
                     </ActionButton>
                   )}
                 </div>

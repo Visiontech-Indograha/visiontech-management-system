@@ -12625,6 +12625,324 @@
     }
    }
   },
+  "/api/v1/employees/{emp_id}/account/sessions": {
+   "get": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "List Sessions",
+    "description": "Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin).",
+    "operationId": "list_sessions_api_v1_employees__emp_id__account_sessions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/AuthSessionResponseSchema"
+         },
+         "title": "Response List Sessions Api V1 Employees  Emp Id  Account Sessions Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/revoke-all": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Revoke All Sessions",
+    "description": "Paksa keluar semua perangkat akun karyawan; tercatat di audit.",
+    "operationId": "revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/{session_id}/revoke": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Revoke Session",
+    "description": "Cabut satu perangkat akun karyawan; sesi milik akun lain → 404.",
+    "operationId": "revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     },
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Session Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/device-slots/reset": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Reset Device Slots",
+    "description": "Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit.",
+    "operationId": "reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/unlock": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Unlock",
+    "description": "Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit.",
+    "operationId": "unlock_api_v1_employees__emp_id__account_unlock_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/login": {
+   "post": {
+    "tags": [
+     "Employee Account"
+    ],
+    "summary": "Change Login",
+    "description": "Ganti email login akun (unik); sesi lama dicabut; tercatat di audit.",
+    "operationId": "change_login_api_v1_employees__emp_id__account_login_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "emp_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Emp Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountLoginUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/sync/operations": {
    "post": {
     "tags": [
@@ -13203,6 +13521,69 @@
     }
    }
   },
+  "/api/v1/attendance/{att_id}/evidence": {
+   "post": {
+    "tags": [
+     "Attendance"
+    ],
+    "summary": "Attach Evidence",
+    "description": "Foto bukti biasa (terlambat / di luar radius) untuk absensi sendiri, tanpa pencocokan wajah.",
+    "operationId": "attach_evidence_api_v1_attendance__att_id__evidence_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "att_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Att Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvidenceRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Attach Evidence Api V1 Attendance  Att Id  Evidence Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/attendance/{att_id}/review": {
    "post": {
     "tags": [
@@ -13678,13 +14059,89 @@
     ]
    }
   },
+  "/api/v1/face/enrollment/me": {
+   "delete": {
+    "tags": [
+     "Face"
+    ],
+    "summary": "Reset Own Face Enrollment",
+    "description": "Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas.",
+    "operationId": "reset_own_face_enrollment_api_v1_face_enrollment_me_delete",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceResetResponse"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/face/enrollments/{employee_id}/status": {
+   "get": {
+    "tags": [
+     "Face"
+    ],
+    "summary": "Get Employee Face Status",
+    "description": "Apakah wajah karyawan sudah terdaftar (HR/admin).",
+    "operationId": "get_employee_face_status_api_v1_face_enrollments__employee_id__status_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "employee_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Employee Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceStatus"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/face/enrollments/{employee_id}": {
    "delete": {
     "tags": [
      "Face"
     ],
     "summary": "Reset Face Enrollment",
-    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).",
+    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.",
     "operationId": "reset_face_enrollment_api_v1_face_enrollments__employee_id__delete",
     "security": [
      {
@@ -16740,6 +17197,22 @@
     "title": "AccountCreate",
     "description": "Schema for creating a new user account."
    },
+   "AccountLoginUpdate": {
+    "properties": {
+     "login": {
+      "type": "string",
+      "maxLength": 254,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Login"
+     }
+    },
+    "type": "object",
+    "required": [
+     "login"
+    ],
+    "title": "AccountLoginUpdate",
+    "description": "Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem)."
+   },
    "AccountOut": {
     "properties": {
      "exists": {
@@ -16845,6 +17318,20 @@
     ],
     "title": "AccountRoleUpdate",
     "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER)."
+   },
+   "AccountSessionsRevoked": {
+    "properties": {
+     "revoked": {
+      "type": "integer",
+      "title": "Revoked"
+     }
+    },
+    "type": "object",
+    "required": [
+     "revoked"
+    ],
+    "title": "AccountSessionsRevoked",
+    "description": "Jumlah sesi perangkat yang dicabut oleh HR/admin."
    },
    "AccountWithPassword": {
     "properties": {
@@ -17609,6 +18096,18 @@
        }
       ],
       "title": "Selfie File Id"
+     },
+     "evidence_photo_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence Photo File Id"
      },
      "face_result": {
       "anyOf": [
@@ -18732,6 +19231,18 @@
       ],
       "title": "Selfie File Id"
      },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
+     },
      "face_result": {
       "anyOf": [
        {
@@ -18816,6 +19327,18 @@
        }
       ],
       "title": "Selfie File Id"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      },
      "explanation": {
       "anyOf": [
@@ -22475,6 +22998,21 @@
     ],
     "title": "EnrollResponse"
    },
+   "EvidenceRequest": {
+    "properties": {
+     "evidence_file_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Evidence File Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "evidence_file_id"
+    ],
+    "title": "EvidenceRequest",
+    "description": "Menempelkan foto bukti biasa (tanpa pencocokan wajah) ke absensi sendiri."
+   },
    "ExecutionBomOut": {
     "properties": {
      "bom_id": {
@@ -23205,6 +23743,25 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23238,7 +23795,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23307,6 +23864,25 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23340,7 +23916,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23457,6 +24033,37 @@
        }
       ],
       "title": "Media Path"
+     },
+     "media_paths": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Paths"
+     },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
      },
      "target_audience": {
       "anyOf": [
@@ -27112,6 +27719,18 @@
        }
       ],
       "title": "Selfie File Id"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      }
     },
     "type": "object",
@@ -34101,6 +34720,29 @@
       ],
       "title": "Bast Signer Name"
      },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
+     },
      "total_items": {
       "type": "integer",
       "title": "Total Items",
@@ -34475,6 +35117,29 @@
        }
       ],
       "title": "Bast Signer Name"
+     },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
      },
      "total_items": {
       "type": "integer",

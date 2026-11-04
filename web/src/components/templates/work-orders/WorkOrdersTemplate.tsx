@@ -1,7 +1,5 @@
 import { PageTemplate } from "@/components/templates/PageTemplate";
-import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextBlock } from "@/components/molecules/TextBlock";
-import { Plus } from "@/components/molecules/Glyphs";
+import { WorkOrderCreateAction } from "@/components/organisms/work-orders/WorkOrderCreateAction";
 import { WorkOrderList } from "@/components/organisms/work-orders/WorkOrderList";
 import { WorkOrderCreateModal } from "@/components/organisms/work-orders/WorkOrderCreateModal";
 import { WorkOrderAssignModal } from "@/components/organisms/work-orders/WorkOrderAssignModal";
@@ -58,14 +56,9 @@ export function WorkOrdersTemplate({
 }: WorkOrdersTemplateProps) {
   return (
     <PageTemplate
-      title="Manajemen Tugas Klien (Work Orders)"
-      description="Alur kerja terpadu: Permintaan Masuk → Penugasan Survei → Review Hasil → Eksekusi Lapangan → BAST Resmi."
-      action={
-        <ActionButton type="button" variant="default" onClick={onOpenCreate}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          <TextBlock as="span">Buat Work Order Baru</TextBlock>
-        </ActionButton>
-      }
+      title="Tugas Klien"
+      description="Alur tugas: permintaan masuk → survei lapangan → cek hasil survei → pengerjaan di lapangan → surat serah terima resmi."
+      action={<WorkOrderCreateAction onClick={onOpenCreate} />}
     >
       <WorkOrderList
         workOrders={workOrders}

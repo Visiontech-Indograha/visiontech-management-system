@@ -5,6 +5,7 @@ import { LeaveReviewDialog } from "@/components/organisms/leaves/LeaveReviewDial
 import { CancelLeaveDialog } from "@/components/organisms/leaves/CancelLeaveDialog";
 import { LeaveBalanceCard } from "@/components/organisms/leaves/LeaveBalanceCard";
 import { LeaveList } from "@/components/organisms/leaves/LeaveList";
+import { LeaveHrQueueCard } from "@/components/organisms/leaves/LeaveHrQueueCard";
 import type { Paged } from "@/lib/paged";
 import type { LeaveBalance, LeaveRequest } from "@/services/leaveService";
 import { PageTemplate } from "../PageTemplate";
@@ -32,7 +33,11 @@ export function LeavesTemplate({
   onReview,
   onCloseApply,
   onCloseReview,
+  hrQueueCount,
+  onShowHrQueue,
 }: {
+  hrQueueCount: number;
+  onShowHrQueue: () => void;
   leaves: UseQueryResult<Paged<LeaveRequest>>;
   balance: UseQueryResult<LeaveBalance>;
   statusFilter: string;
@@ -64,6 +69,9 @@ export function LeavesTemplate({
     >
       <div className="space-y-6">
         <LeaveBalanceCard balanceQuery={balance} />
+        {canFinalReview && (
+          <LeaveHrQueueCard count={hrQueueCount} active={statusFilter === "APPROVED_BY_PM"} onShow={onShowHrQueue} />
+        )}
         <LeaveList
           leaves={leaves}
           statusFilter={statusFilter}

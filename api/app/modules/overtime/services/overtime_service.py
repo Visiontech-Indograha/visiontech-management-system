@@ -94,7 +94,7 @@ class OvertimeService:
 
     async def list_overtimes(self, user: CurrentUser, daily_plan_id: UUID | None = None) -> Sequence[Any]:
         if daily_plan_id:
-            await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
+            await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
             return await self.repo.list_by_plan(daily_plan_id)
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
             return await self.repo.list_all_active(None)
@@ -125,7 +125,7 @@ class OvertimeService:
         return out
 
     async def list_by_plan(self, user: CurrentUser, daily_plan_id: UUID) -> Sequence[Any]:
-        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
+        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
         return await self.repo.list_by_plan(daily_plan_id)
 
     async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:

@@ -10,7 +10,7 @@ import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
 import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
 import { NotFoundPage } from "@/pages/system/NotFoundPage";
 import { UuidParamGuard } from "@/app/UuidParamGuard";
-import { NAV_ITEMS } from "./navigation";
+import { NAV_ITEMS, type NavItem } from "./navigation";
 import {
   AccountPage,
   AssetsPage,
@@ -36,6 +36,7 @@ import {
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
+import { RouteErrorPage } from "@/pages/system/RouteErrorPage";
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
@@ -63,6 +64,7 @@ const PAGES: Record<string, ReactNode> = {
 export const routes: RouteObject[] = [
   {
     element: <TitleLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
@@ -101,7 +103,9 @@ export const routes: RouteObject[] = [
               { path: "/surveys/:surveyId",
                 element: (
                   <UuidParamGuard param="surveyId">
-                    <SurveyDetailPage />
+                    <RequireAccess item={{ path: "/surveys", label: "Survei", requires: ["create:plan"] } as NavItem}>
+                      <SurveyDetailPage />
+                    </RequireAccess>
                   </UuidParamGuard>
                 ),
               },
@@ -112,12 +116,15 @@ export const routes: RouteObject[] = [
               // Alias bahasa Indonesia
               { path: "/inventory", element: <Navigate to="/assets" replace /> },
               { path: "/presensi", element: <Navigate to="/attendance" replace /> },
+              { path: "/hse", element: <Navigate to="/safety-campaigns" replace /> },
               { path: "/finances", element: <Navigate to="/alokasi-mingguan" replace /> },
               {
                 path: "/directory/:id",
                 element: (
                   <UuidParamGuard>
-                    <EmployeeDetailPage />
+                    <RequireAccess item={{ path: "/directory", label: "Direktori", requires: ["view:users"] } as NavItem}>
+                      <EmployeeDetailPage />
+                    </RequireAccess>
                   </UuidParamGuard>
                 ),
               },

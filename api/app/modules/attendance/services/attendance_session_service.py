@@ -121,15 +121,22 @@ class AttendanceSessionService:
         return row
 
     async def ensure_check_in_refs(
-        self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None, *, user_id: str | None = None
+        self, org_id: str, site_id: UUID | None, selfie_file_id: UUID | None, *, user_id: str | None = None,
+        evidence_file_id: UUID | None = None,
     ) -> None:
         """Lokasi & swafoto absen (masuk maupun pulang) harus milik organisasi pengguna (galat 422 bila bukan),
         dan swafoto harus diunggah oleh akun yang absen itu sendiri (bukan foto orang lain)."""
-        await ensure_same_org(self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id])
+        await ensure_same_org(
+            self.repo.db, org_id, sites=[site_id] if site_id else [], files=[selfie_file_id, evidence_file_id]
+        )
         if user_id and selfie_file_id:
             uploader = await self.repo.file_uploader(selfie_file_id)
             if uploader is not None and str(uploader) != str(user_id):
                 raise AppError("SELFIE_NOT_OWNED", "Swafoto harus diunggah dari akun Anda sendiri.", status=422)
+        if user_id and evidence_file_id:  # foto bukti: cukup milik akun sendiri, TANPA pencocokan wajah
+            uploader = await self.repo.file_uploader(evidence_file_id)
+            if uploader is not None and str(uploader) != str(user_id):
+                raise AppError("EVIDENCE_NOT_OWNED", "Foto bukti harus diunggah dari akun Anda sendiri.", status=422)
 
     async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
@@ -300,6 +307,7 @@ class AttendanceSessionService:
         origin: str,
         selfie_file_id: UUID | None,
         accuracy_m: float | None = None,
+        evidence_file_id: UUID | None = None,
         channel: str = "MOBILE",
         explanation: str | None = None,
         at: Any = None,
@@ -437,6 +445,7 @@ class AttendanceSessionService:
                 lat=lat,
                 origin=origin,
                 selfie_file_id=selfie_file_id,
+                evidence_file_id=evidence_file_id,
                 face_result=outcome.result if outcome else None,
                 face_similarity=outcome.similarity if outcome else None,
                 face_status=face_status_of(outcome),
@@ -468,6 +477,7 @@ class AttendanceSessionService:
         selfie_file_id: UUID | None = None,
         explanation: str | None = None,
         accuracy_m: float | None = None,
+        evidence_file_id: UUID | None = None,
     ) -> Any:
         """
         Menutup sesi absensi harian yang sedang terbuka (absen pulang).
@@ -576,7 +586,8 @@ class AttendanceSessionService:
 
         try:
             row = await self.repo.close(
-                session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id, explanation=explanation, at=now_local
+                session.id, lat=lat, lng=lng, selfie_file_id=selfie_file_id,
+                evidence_file_id=evidence_file_id, explanation=explanation, at=now_local
             )
         except IntegrityError as exc:  # T7: di luar radius tanpa swafoto/penjelasan → pesan aturan dari trigger
             rule = trigger_rule_message(exc)
@@ -690,6 +701,18 @@ class AttendanceSessionService:
         if not explanation.strip():
             raise ValidationError("Penjelasan wajib diisi.")
         await self.repo.set_explanation(attendance_id, explanation.strip())
+
+    async def attach_evidence(self, org_id: str, user_id: str, attendance_id: UUID, evidence_file_id: UUID) -> None:
+        """Foto bukti biasa (mis. terlambat) untuk absensi sendiri; TANPA pencocokan wajah."""
+        attendance = await self.repo.get(attendance_id, org_id)
+        employee_id = await self.repo.employee_of(user_id)
+        if attendance is None or attendance.employee_id != employee_id:
+            raise NotFoundError("Absensi")
+        await ensure_same_org(self.repo.db, org_id, files=[evidence_file_id])
+        uploader = await self.repo.file_uploader(evidence_file_id)
+        if uploader is None or str(uploader) != str(user_id):
+            raise AppError("EVIDENCE_NOT_OWNED", "Foto bukti harus diunggah dari akun Anda sendiri.", status=422)
+        await self.repo.set_evidence(attendance_id, evidence_file_id)
 
     async def admin_patch(self, attendance_id: UUID, actor: CurrentUser, data: AttendanceAdminPatch) -> None:
         """SUPER_ADMIN mengoreksi absensi; nilai lama tidak disimpan, alasan dicatat di audit."""

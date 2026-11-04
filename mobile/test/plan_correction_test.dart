@@ -22,12 +22,12 @@ void main() {
   });
 
   test('judul dan keterangan status koreksi', () {
-    expect(correctionStateTitle('REQUESTED'), 'Koreksi menunggu keputusan PM');
-    expect(correctionStateTitle('REVISING'), 'PM meminta revisi laporan');
-    expect(correctionStateTitle('IN_REVIEW'), 'Revisi menunggu pemeriksaan PM');
+    expect(correctionStateTitle('REQUESTED'), 'Koreksi menunggu keputusan atasan');
+    expect(correctionStateTitle('REVISING'), 'Atasan meminta revisi laporan');
+    expect(correctionStateTitle('IN_REVIEW'), 'Revisi menunggu pemeriksaan atasan');
     expect(
       correctionStateSubtitle({'status': 'REVISING', 'review_note': 'Lampirkan foto'}),
-      'Catatan PM: Lampirkan foto',
+      'Catatan atasan: Lampirkan foto',
     );
     expect(
       correctionStateSubtitle({'status': 'REVISING', 'review_note': null}),

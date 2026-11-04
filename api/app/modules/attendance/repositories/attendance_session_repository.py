@@ -29,6 +29,20 @@ def _haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> i
     return round(r * c)
 
 
+def _face_visible(att_emp: str) -> str:
+    """Hasil & status pengenalan wajah hanya untuk: pemilik absensi, pemegang VIEW_ALL (OM/Finance/OPS),
+    HR/Finance/OM/SA, dan PM untuk karyawan di DIVISI yang ia pimpin (bawahan), bukan jangkauan proyek."""
+    return f"""(
+        CAST(:view_all AS boolean)
+        OR {att_emp} IS NOT DISTINCT FROM (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
+        OR EXISTS (SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE'))
+        OR EXISTS (SELECT 1 FROM employee x JOIN division dv ON dv.division_id = x.division_id AND dv.delete_at IS NULL
+                   WHERE x.employee_id = {att_emp}
+                     AND dv.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)))
+    )"""
+
+
 def _pm_reach(emp_expr: str) -> str:
     """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
     dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
@@ -97,6 +111,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.update_at AS reviewed_at,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                        AS selfie_file_id,
+                       (SELECT f.id FROM file_object f WHERE f.storage_key = a.out_of_radius_photo_path LIMIT 1)
+                           AS evidence_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    a.face_status AS face_status,
@@ -422,6 +438,7 @@ class AttendanceSessionRepository(BaseRepository):
         face_similarity: float | None,
         face_status: str = "NOT_CHECKED",
         source: str = "MOBILE",
+        evidence_file_id: UUID | None = None,
         explanation: str | None = None,
         at: Any = None,
     ) -> Any:
@@ -486,6 +503,15 @@ class AttendanceSessionRepository(BaseRepository):
         if photo_path is None:
             raise LookupError("swafoto absen tidak ditemukan")
 
+        # Foto bukti biasa (tanpa wajah) bila dikirim; klien lama: swafoto dipakai sebagai bukti agar trigger lolos.
+        evidence_path = (
+            await self.scalar(
+                "SELECT storage_key FROM file_object WHERE id = CAST(:fid AS uuid)", {"fid": str(evidence_file_id)}
+            )
+            if evidence_file_id
+            else None
+        ) or photo_path
+
         om_status = "AUTO_VALID" if is_within_radius else "PENDING_OM"
         # Skor 0 = wajah belum diperiksa (bukan "cocok"); skor dari pencocokan server sebelum insert (M7).
         face_score = float(face_similarity * 100.0) if face_similarity is not None else 0.0
@@ -523,6 +549,8 @@ class AttendanceSessionRepository(BaseRepository):
                       END AS status,
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       CAST(:selfie_id AS uuid) AS selfie_file_id,
+                      (SELECT f.id FROM file_object f WHERE f.storage_key = out_of_radius_photo_path LIMIT 1)
+                          AS evidence_photo_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       face_status AS face_status,
@@ -545,7 +573,7 @@ class AttendanceSessionRepository(BaseRepository):
                 "photo_path": photo_path,
                 "dist_target": distance_to_target,
                 "in_radius": is_within_radius,
-                "out_photo": photo_path if not is_within_radius else None,
+                "out_photo": evidence_path if not is_within_radius else None,
                 "note": explanation,
                 "om_status": om_status,
                 "dist_main": dist_main,
@@ -563,6 +591,7 @@ class AttendanceSessionRepository(BaseRepository):
         lat: float | None = None,
         lng: float | None = None,
         selfie_file_id: UUID | None = None,
+        evidence_file_id: UUID | None = None,
         explanation: str | None = None,
         at: Any = None,
     ) -> Any:
@@ -572,6 +601,10 @@ class AttendanceSessionRepository(BaseRepository):
             UPDATE attendance
                SET clock_out_at = COALESCE(CAST(:at AS timestamptz), NOW()),
                    out_of_radius_note = COALESCE(out_of_radius_note || '; ', '') || COALESCE(:exp, ''),
+                   out_of_radius_photo_path = COALESCE(
+                       out_of_radius_photo_path,
+                       (SELECT storage_key FROM file_object WHERE id = CAST(:evid AS uuid))
+                   ),
                    update_at = NOW()
              WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
             RETURNING attendance_id AS id, employee_id, attendance_date AS work_date,
@@ -596,6 +629,9 @@ class AttendanceSessionRepository(BaseRepository):
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
                           AS selfie_file_id,
+                          (SELECT f.id FROM file_object f
+                           WHERE f.storage_key = attendance.out_of_radius_photo_path LIMIT 1)
+                              AS evidence_photo_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       face_status AS face_status,
@@ -604,7 +640,8 @@ class AttendanceSessionRepository(BaseRepository):
                       NULL::float AS check_out_distance_m, FALSE AS check_out_outside,
                       NULL::uuid AS check_out_selfie_file_id, NULL::text AS check_out_explanation
             """,
-            {"id": str(attendance_id), "exp": explanation.strip() if explanation else None, "at": at},
+            {"id": str(attendance_id), "exp": explanation.strip() if explanation else None, "at": at,
+             "evid": str(evidence_file_id) if evidence_file_id else None},
         )
 
     async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
@@ -675,6 +712,9 @@ class AttendanceSessionRepository(BaseRepository):
                       out_of_radius_note AS explanation, update_at AS reviewed_at,
                       (SELECT f.id FROM file_object f WHERE f.storage_key = attendance.face_photo_path LIMIT 1)
                           AS selfie_file_id,
+                          (SELECT f.id FROM file_object f
+                           WHERE f.storage_key = attendance.out_of_radius_photo_path LIMIT 1)
+                              AS evidence_photo_file_id,
                       CASE WHEN face_match_score = 0 THEN 'SKIPPED' WHEN face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                       face_status AS face_status,
@@ -709,6 +749,8 @@ class AttendanceSessionRepository(BaseRepository):
                    a.update_at AS reviewed_at,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                        AS selfie_file_id,
+                       (SELECT f.id FROM file_object f WHERE f.storage_key = a.out_of_radius_photo_path LIMIT 1)
+                           AS evidence_photo_file_id,
                    CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
                            ELSE 'MISMATCH' END AS face_result,
                    a.face_status AS face_status,
@@ -858,14 +900,19 @@ class AttendanceSessionRepository(BaseRepository):
                    a.update_at AS reviewed_at,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = a.face_photo_path LIMIT 1)
                        AS selfie_file_id,
+                       (SELECT f.id FROM file_object f WHERE f.storage_key = a.out_of_radius_photo_path LIMIT 1)
+                           AS evidence_photo_file_id,
                    a.out_of_radius_note AS review_note,
                    e.full_name AS employee_name,
                    (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
                        AS employee_photo_file_id,
-                   CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
-                           ELSE 'MISMATCH' END AS face_result,
-                   a.face_status AS face_status,
-                   (a.face_match_score / 100.0)::float AS face_similarity,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN
+                       CASE WHEN a.face_match_score = 0 THEN 'SKIPPED' WHEN a.face_match_score >= 80.0 THEN 'MATCH'
+                           ELSE 'MISMATCH' END
+                   END AS face_result,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN a.face_status END AS face_status,
+                   CASE WHEN {_face_visible('a.employee_id')} THEN (a.face_match_score / 100.0)::float END
+                       AS face_similarity,
                    NULL::text AS check_out_face_result,
                    NULL::float AS check_out_face_similarity,
                    FALSE AS offline,
@@ -915,6 +962,20 @@ class AttendanceSessionRepository(BaseRepository):
         rows = await self.fetchall(query, params)
         total = await self.scalar(count_query, params)
         return list(rows), int(total or 0)
+
+    async def set_evidence(self, attendance_id: UUID | str, evidence_file_id: UUID | str) -> None:
+        """Menempelkan foto bukti biasa (tanpa pencocokan wajah); bukti yang sudah ada tidak ditimpa."""
+        await self.execute(
+            """
+            UPDATE attendance
+               SET out_of_radius_photo_path = COALESCE(
+                       out_of_radius_photo_path,
+                       (SELECT storage_key FROM file_object WHERE id = CAST(:fid AS uuid))),
+                   update_at = NOW()
+             WHERE attendance_id = CAST(:id AS uuid) AND delete_at IS NULL
+            """,
+            {"fid": str(evidence_file_id), "id": str(attendance_id)},
+        )
 
     async def set_explanation(self, attendance_id: UUID | str, explanation: str) -> None:
         """Menambahkan penjelasan alasan di luar radius."""

@@ -9553,6 +9553,58 @@
     }
    }
   },
+  "/api/v1/hse/campaigns/{campaign_id}/seen": {
+   "post": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Catat popup K3 sudah tampil hari ini (paling banyak sekali sehari per pengguna)",
+    "operationId": "mark_campaign_seen_api_v1_hse_campaigns__campaign_id__seen_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "campaign_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Campaign Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": {
+          "type": "boolean"
+         },
+         "title": "Response Mark Campaign Seen Api V1 Hse Campaigns  Campaign Id  Seen Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
    "post": {
     "tags": [
@@ -23743,6 +23795,16 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23776,7 +23838,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23845,6 +23907,16 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23878,7 +23950,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23995,6 +24067,22 @@
        }
       ],
       "title": "Media Path"
+     },
+     "media_paths": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Paths"
      },
      "target_audience": {
       "anyOf": [

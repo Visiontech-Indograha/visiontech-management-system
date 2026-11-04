@@ -10,6 +10,7 @@ type ActiveCampaignDto = Pick<
   | "summary"
   | "content_html"
   | "media_path"
+  | "media_paths"
   | "target_audience"
   | "is_mandatory"
   | "cooldown_seconds"
@@ -23,6 +24,9 @@ export interface HseCampaign {
   title: string;
   content_body: string;
   target_audience: string;
+  /** Foto carousel: id berkas (file_object) berurutan. Kosong untuk kampanye tanpa foto. */
+  media_ids: string[];
+  /** Gambar tunggal lama (URL), dipakai bila belum ada daftar foto. */
   media_url?: string | null;
   start_date: string;
   end_date: string;
@@ -65,7 +69,9 @@ function mapCampaign(campaign: CampaignDto | ActiveCampaignDto): HseCampaign {
     title: campaign.title,
     content_body: campaign.content_html,
     target_audience: campaign.target_audience,
-    media_url: campaign.media_path,
+    media_ids: (campaign.media_paths ?? []).map(String),
+    // Kampanye lama memakai media_path sebagai URL; kampanye carousel menyimpan id berkas di media_paths.
+    media_url: campaign.media_paths?.length ? null : campaign.media_path,
     start_date: campaign.start_date,
     end_date: campaign.end_date,
     is_mandatory: campaign.is_mandatory,
@@ -101,6 +107,11 @@ export async function fetchActiveHsePopup(): Promise<HseCampaign | null> {
   return res.data.campaign ? mapCampaign(res.data.campaign) : null;
 }
 
+/** Catat bahwa popup sudah tampil hari ini; popup tidak muncul lagi untuk kampanye ini sampai besok. */
+export async function markHseCampaignSeen(campaignId: string): Promise<void> {
+  await api.post(`/hse/campaigns/${campaignId}/seen`);
+}
+
 export async function acknowledgeHseCampaign(
   campaignId: string,
   readDurationSeconds: number,
@@ -124,17 +135,19 @@ export async function createHseCampaign(payload: {
   title: string;
   content_body: string;
   target_audience: "ALL" | "FIELD" | "OFFICE";
-  media_url?: string | null;
+  /** Id berkas foto (file_object) berurutan, maks 8. */
+  media_ids?: string[];
   start_date: string;
   end_date: string;
   is_mandatory: boolean;
   cooldown_seconds: number;
 }): Promise<HseCampaign> {
+  const mediaIds = payload.media_ids ?? [];
   const apiPayload: Schemas["HseCampaignCreate"] = {
     title: payload.title,
     content_html: payload.content_body,
     target_audience: payload.target_audience,
-    media_path: payload.media_url,
+    media_paths: mediaIds,
     start_date: payload.start_date,
     end_date: payload.end_date,
     is_mandatory: payload.is_mandatory,

@@ -2553,6 +2553,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hse/campaigns/{campaign_id}/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Catat popup K3 sudah tampil hari ini (paling banyak sekali sehari per pengguna) */
+        post: operations["mark_campaign_seen_api_v1_hse_campaigns__campaign_id__seen_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
         parameters: {
             query?: never;
@@ -7294,6 +7311,11 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7312,7 +7334,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7358,6 +7380,11 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7376,7 +7403,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7436,6 +7463,8 @@ export interface components {
             content_html?: string | null;
             /** Media Path */
             media_path?: string | null;
+            /** Media Paths */
+            media_paths?: string[] | null;
             /** Target Audience */
             target_audience?: string | null;
             /** Target User Ids */
@@ -16996,6 +17025,39 @@ export interface operations {
         };
     };
     delete_campaign_api_v1_hse_campaigns__campaign_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                campaign_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_campaign_seen_api_v1_hse_campaigns__campaign_id__seen_post: {
         parameters: {
             query?: never;
             header?: never;

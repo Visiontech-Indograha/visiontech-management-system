@@ -4,13 +4,18 @@ Modul dependensi (dependencies) FastAPI untuk VMS.
 Berisi fungsi-fungsi dependency injection (DI) untuk mendapatkan sesi database,
 pengguna saat ini (current user), otorisasi peran/akses, dan pembuatan service.
 """
+import hashlib
+import json
 import logging
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Coroutine
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, Query
+from fastapi import Depends, Header, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +27,7 @@ from app.core.security import CurrentUser, verify_file_access_ticket, verify_jwt
 from app.core.time import utcnow
 from app.database.session import AsyncSessionLocal, set_request_context, unit_of_work
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
+from app.shared import idempotency_repository as repo
 from app.shared.access.access_service import DailyAccess, DailyNeed, check_daily_access
 
 logger = logging.getLogger(__name__)
@@ -269,3 +275,127 @@ async def get_file_viewer_db(
             status=500,
         ) from None
     return db
+
+
+# ── Idempotency-Key opsional (F-03, docs/06 Idempotensi) ─────────────────────────
+# Tanpa header: tidak ada yang disimpan atau diperiksa (perilaku lama, APK lama tetap jalan).
+# Dengan header, kunci disimpan per (organisasi, pengguna, kunci):
+#   * kunci dipakai permintaan lain yang sedang berjalan → 409 (kunci advisory transaksi);
+#   * kunci sudah selesai dan hash permintaan sama → respons tersimpan (status dan badan asli);
+#   * kunci sudah selesai dan hash berbeda → 422;
+#   * kunci baru → aksi dijalankan; respons disimpan dalam transaksi yang sama (commit bersama aksi).
+#     Bila aksi gagal dan transaksi di-rollback, kunci tidak tersimpan sehingga klien boleh mencoba lagi.
+#
+# Pemakaian di route (dependency paling akhir, setelah dependency izin):
+#     idem: IdempotencyGuard = Depends(idempotency_guard)
+#     tersimpan = idem.tersimpan()
+#     if tersimpan is not None:
+#         return tersimpan
+#     hasil = await controller.handle_x(current_user, data)
+#     return await idem.simpan(hasil, status.HTTP_201_CREATED)
+
+IDEMPOTENCY_HEADER = "Idempotency-Key"
+_POLA_KUNCI_IDEMPOTEN = re.compile(r"[A-Za-z0-9._:-]{8,128}")
+_T = TypeVar("_T")
+
+
+def hash_permintaan(method: str, path: str, body: bytes) -> str:
+    """SHA-256 atas metode, path, dan badan. Badan JSON dinormalkan (kunci terurut, tanpa spasi)
+    agar urutan kunci atau spasi tidak membuat hash berbeda untuk isi yang sama."""
+    try:
+        isi = json.dumps(json.loads(body), sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    except ValueError:
+        isi = body
+    return hashlib.sha256(method.encode() + b"\n" + path.encode() + b"\n" + isi).hexdigest()
+
+
+class IdempotencyGuard:
+    """Status Idempotency-Key untuk satu permintaan. Tanpa header, semua metodenya no-op."""
+
+    def __init__(
+        self,
+        db: AsyncSession | None = None,
+        *,
+        org: str = "",
+        user: str = "",
+        key: str | None = None,
+        request_hash: str = "",
+        tersimpan: repo.Respons | None = None,
+    ) -> None:
+        self._db = db
+        self._org = org
+        self._user = user
+        self._key = key
+        self._hash = request_hash
+        self._tersimpan = tersimpan
+
+    def tersimpan(self) -> JSONResponse | None:
+        """Respons yang sudah tersimpan untuk kunci ini (replay), atau None bila aksi harus dijalankan."""
+        if self._tersimpan is None:
+            return None
+        return JSONResponse(status_code=self._tersimpan.status_code, content=self._tersimpan.body)
+
+    async def simpan(self, hasil: _T, status_code: int) -> _T:
+        """Simpan respons aksi yang baru selesai (dalam transaksi permintaan). Tanpa kunci: no-op."""
+        if self._key is None or self._db is None:
+            return hasil
+        body_json = json.dumps(jsonable_encoder(hasil), ensure_ascii=False, separators=(",", ":"))
+        tersimpan = await repo.simpan(
+            self._db,
+            org=self._org,
+            user=self._user,
+            key=self._key,
+            request_hash=self._hash,
+            status_code=status_code,
+            body_json=body_json,
+        )
+        if not tersimpan:
+            raise AppError(
+                "IDEMPOTENCY_SEDANG_DIPROSES",
+                "Permintaan dengan kunci ini sedang diproses. Tunggu sebentar lalu coba lagi.",
+                status=409,
+            )
+        return hasil
+
+
+async def idempotency_guard(
+    request: Request,
+    db: AsyncSession = Depends(get_db_with_user),
+    current_user: CurrentUser = Depends(get_current_user),
+    idempotency_key: str | None = Header(
+        None, alias=IDEMPOTENCY_HEADER, description="Kunci unik per aksi (UUID v4 disarankan)."
+    ),
+) -> IdempotencyGuard:
+    if idempotency_key is None:
+        return IdempotencyGuard()
+    if _POLA_KUNCI_IDEMPOTEN.fullmatch(idempotency_key) is None:
+        raise AppError(
+            "IDEMPOTENCY_KUNCI_TIDAK_VALID",
+            "Idempotency-Key harus 8 sampai 128 karakter: huruf, angka, titik, garis bawah, titik dua, atau strip.",
+            status=422,
+        )
+    body = await request.body()
+    request_hash = hash_permintaan(request.method, request.url.path, body)
+    org, user = current_user.organization_id, current_user.user_id
+
+    if not await repo.kunci_operasi(db, f"idempotency:{org}:{user}:{idempotency_key}"):
+        raise AppError(
+            "IDEMPOTENCY_SEDANG_DIPROSES",
+            "Permintaan dengan kunci ini sedang diproses. Tunggu sebentar lalu coba lagi.",
+            status=409,
+        )
+    tersimpan = await repo.ambil(db, org, user, idempotency_key)
+    if tersimpan is not None and tersimpan.request_hash != request_hash:
+        raise AppError(
+            "IDEMPOTENCY_KUNCI_DIPAKAI",
+            "Idempotency-Key ini sudah dipakai untuk permintaan lain.",
+            status=422,
+        )
+    return IdempotencyGuard(
+        db,
+        org=org,
+        user=user,
+        key=idempotency_key,
+        request_hash=request_hash,
+        tersimpan=tersimpan,
+    )

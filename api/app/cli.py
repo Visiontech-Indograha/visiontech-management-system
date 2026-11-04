@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.security import hash_password
 from app.database.session import make_engine
+from app.shared import idempotency_repository
 
 
 def _operator_url() -> str:
@@ -119,6 +120,15 @@ async def cleanup_orphans() -> None:
     await engine.dispose()
 
 
+async def cleanup_idempotency(hari: int) -> None:
+    """Hapus Idempotency-Key yang lebih tua dari `hari` hari (F-03). Dijalankan manual, tanpa cron."""
+    engine = make_engine(_operator_url())
+    async with engine.begin() as conn:
+        jumlah = await idempotency_repository.hapus_lebih_lama(conn, hari)
+        print(f"Dihapus {jumlah} Idempotency-Key lebih dari {hari} hari.")
+    await engine.dispose()
+
+
 async def backup_database(cycle: str = "WEEKLY", output_dir: str = "backups") -> dict[str, Any]:
     """
     Menjalankan prosedur backup data sistem terkompresi dan mencatatkannya ke registry.
@@ -146,6 +156,8 @@ def main() -> None:
 
     subparsers.add_parser("seed", help="Seed database with initial data")
     subparsers.add_parser("cleanup-orphans", help="Cleanup orphan sessions and tokens")
+    idem_parser = subparsers.add_parser("cleanup-idempotency", help="Hapus Idempotency-Key lebih tua dari N hari")
+    idem_parser.add_argument("--hari", type=int, default=7, help="Batas umur kunci (hari)")
 
     backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
     backup_parser.add_argument(
@@ -169,6 +181,8 @@ def main() -> None:
         asyncio.run(seed())
     elif args.command == "cleanup-orphans":
         asyncio.run(cleanup_orphans())
+    elif args.command == "cleanup-idempotency":
+        asyncio.run(cleanup_idempotency(args.hari))
     elif args.command == "backup-db":
         asyncio.run(backup_database(cycle=args.cycle, output_dir=args.output_dir))
     else:

@@ -826,3 +826,17 @@ CREATE TABLE IF NOT EXISTS hse_campaign_views (
     first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (campaign_id, user_id, view_date)
 );
+
+-- Idempotency-Key opsional (v2_0025, F-03). Hanya operasi selesai; dibersihkan `cleanup-idempotency` (>7 hari).
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    idempotency_key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    key VARCHAR(128) NOT NULL,
+    request_hash CHAR(64) NOT NULL,
+    status SMALLINT NOT NULL CHECK (status BETWEEN 100 AND 599),
+    response_body JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_idempotency_keys_scope UNIQUE (organization_id, user_id, key)
+);
+CREATE INDEX IF NOT EXISTS ix_idempotency_keys_created_at ON idempotency_keys (created_at);

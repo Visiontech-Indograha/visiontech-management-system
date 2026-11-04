@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -234,10 +234,17 @@ async def list_loan_requests(
 
 @router.post("/loan-requests", response_model=LoanRequestOut, status_code=status.HTTP_201_CREATED)
 async def request_loan(
-    data: LoanRequestCreate, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
-) -> LoanRequestOut:
-    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri."""
-    return await controller.handle_request_loan(current_user, data)
+    data: LoanRequestCreate,
+    current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> LoanRequestOut | Response:
+    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_request_loan(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.post("/loan-requests/{request_id}/cancel", response_model=LoanRequestOut)

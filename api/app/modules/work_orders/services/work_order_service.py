@@ -107,6 +107,23 @@ class WorkOrderService:
         data["bom"] = [dict(b._mapping) if hasattr(b, "_mapping") else dict(b) for b in bom]
         return data
 
+    async def _authorize(self, user: CurrentUser, work_order_id: UUID | str, need: str, message: str) -> None:
+        """Cakupan dulu: WO di luar cakupan pengguna → 404 (keberadaannya tidak dibocorkan). Lalu hak aksi → 403:
+        - `manage`: SA/OM, atau PM yang mengelola WO itu / memimpin divisinya;
+        - `team`: ketua atau anggota aktif tim yang ditugaskan ke WO (kirim survei, progres, realisasi BoM);
+        - `signer`: ketua tim WO itu atau `manage` (penandatangan BAST)."""
+        access = await self.repo.work_order_access(work_order_id, viewer_params(user))
+        manages = sees_all_work_orders(user) or bool(access is not None and access.manages)
+        if access is None or not (manages or access.on_team):
+            raise NotFoundError("Work Order tidak ditemukan.")
+        allowed = {
+            "manage": manages,
+            "team": bool(access.on_team),
+            "signer": manages or bool(access.on_leader),
+        }[need]
+        if not allowed:
+            raise ForbiddenError(message)
+
     async def create_work_order(self, data: WorkOrderCreate, current_user: CurrentUser) -> Any:
         # Cek kewenangan
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
@@ -129,6 +146,10 @@ class WorkOrderService:
     async def assign_survey(
         self, work_order_id: UUID | str, data: WorkOrderAssignSurvey, current_user: CurrentUser
     ) -> Any:
+        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+            raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat menugaskan survei.")
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat menugaskan survei.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
@@ -146,6 +167,8 @@ class WorkOrderService:
     async def submit_survey(
         self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
     ) -> Any:
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengirim laporan survei.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
@@ -169,6 +192,8 @@ class WorkOrderService:
         """
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
             raise ForbiddenError("Hanya PM atau OM yang dapat menyetujui survei dan mengunci daftar tugas.")
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat menyetujui survei.")
 
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
@@ -188,8 +213,14 @@ class WorkOrderService:
         item_id: UUID | str,
         completed_qty: Decimal,
         status: str,
-        photo_slots_snapshot: list[dict[str, Any]] | None = None,
+        photo_slots_snapshot: list[dict[str, Any]] | None,
+        current_user: CurrentUser,
     ) -> None:
+        work_order_id = await self.repo.work_order_of_item(item_id)
+        if work_order_id is None:
+            raise NotFoundError("Item pekerjaan tidak ditemukan.")
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengubah progres.")
         await self.repo.update_item_progress(
             item_id=item_id,
             completed_qty=completed_qty,
@@ -197,12 +228,20 @@ class WorkOrderService:
             photo_slots_snapshot=photo_slots_snapshot,
         )
 
-    async def update_bom_actual(self, bom_id: UUID | str, actual_qty: Decimal) -> None:
+    async def update_bom_actual(self, bom_id: UUID | str, actual_qty: Decimal, current_user: CurrentUser) -> None:
+        work_order_id = await self.repo.work_order_of_bom(bom_id)
+        if work_order_id is None:
+            raise NotFoundError("Item BoM tidak ditemukan.")
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mencatat realisasi BoM.")
         await self.repo.update_bom_actual(bom_id=bom_id, actual_qty=actual_qty)
 
     async def sign_bast(
         self, work_order_id: UUID | str, data: WorkOrderSignBast, current_user: CurrentUser
     ) -> Any:
+        await self._authorize(current_user, work_order_id, "signer",
+                              "Hanya ketua tim yang ditugaskan ke WO ini atau PM/OM divisinya yang dapat "
+                              "menandatangani BAST.")
         wo = await self.repo.get_work_order(work_order_id)
         if not wo:
             raise NotFoundError("Work Order tidak ditemukan.")
@@ -278,7 +317,9 @@ class WorkOrderService:
         """
         if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat mengunduh dokumen resmi.")
-        detail = await self.get_work_order(work_order_id)
+        await self._authorize(current_user, work_order_id, "manage",
+                              "Hanya PM WO ini atau PM/OM divisinya yang dapat mengunduh dokumen resmi.")
+        detail = await self.get_work_order(work_order_id, current_user)
         order_dict = {
             "completion_id": str(detail["work_order_id"]),
             "project_title": detail["title"],

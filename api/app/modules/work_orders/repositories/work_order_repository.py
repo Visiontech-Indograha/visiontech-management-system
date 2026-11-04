@@ -19,7 +19,12 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
 from app.core.time import utcnow
-from app.shared.access.scope_rules import work_order_visible_sql
+from app.shared.access.scope_rules import (
+    work_order_leader_sql,
+    work_order_manage_sql,
+    work_order_team_sql,
+    work_order_visible_sql,
+)
 
 
 class WorkOrderRepository(BaseRepository):
@@ -174,6 +179,31 @@ class WorkOrderRepository(BaseRepository):
             sql += f" AND {work_order_visible_sql('wo')}"
             params.update(viewer)
         return await self.fetchone(sql, params)
+
+    async def work_order_access(self, work_order_id: UUID | str, viewer: dict[str, Any]) -> Any:
+        """Hak pengguna atas WO: `on_team` (ketua/anggota tim), `on_leader` (ketua tim), `manages` (PM WO/divisi).
+        None = WO tidak ada. Kebijakan 404/403 ada di service."""
+        sql = f"""
+            SELECT
+                {work_order_team_sql('wo')} AS on_team,
+                {work_order_leader_sql('wo')} AS on_leader,
+                {work_order_manage_sql('wo')} AS manages
+            FROM client_work_orders wo
+            WHERE wo.work_order_id = CAST(:id AS uuid) AND wo.delete_at IS NULL
+        """
+        return await self.fetchone(sql, {"id": str(work_order_id), **viewer})
+
+    async def work_order_of_item(self, item_id: UUID | str) -> UUID | None:
+        found: UUID | None = await self.scalar(
+            "SELECT work_order_id FROM work_order_items WHERE item_id = CAST(:id AS uuid)", {"id": str(item_id)}
+        )
+        return found
+
+    async def work_order_of_bom(self, bom_id: UUID | str) -> UUID | None:
+        found: UUID | None = await self.scalar(
+            "SELECT work_order_id FROM work_order_bom WHERE bom_id = CAST(:id AS uuid)", {"id": str(bom_id)}
+        )
+        return found
 
     async def create_work_order(self, data: dict[str, Any]) -> str:
         sql = """

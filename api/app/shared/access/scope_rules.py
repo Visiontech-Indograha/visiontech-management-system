@@ -26,11 +26,11 @@ from app.shared.access.pm_reach import pm_reaches_employee
 _VIEWER = "CAST(:viewer_emp AS uuid)"
 
 # Izin yang memberi pandangan direktori karyawan seluruh organisasi (tanpa kolom sensitif kecuali di bawah).
+# Finance (VIEW_ALL_ATTENDANCE) dan HSE (VIEW_HSE_CAMPAIGNS) sengaja tidak termasuk: data uang makan/lembur dan
+# absensi mereka dibaca lewat endpoint absensi/lembur sendiri yang memakai cakupannya masing-masing.
 _DIRECTORY_ALL_PERMS = (
     Permission.MANAGE_USERS,
-    Permission.VIEW_ALL_ATTENDANCE,
     Permission.MANAGE_ASSETS,
-    Permission.VIEW_HSE_CAMPAIGNS,
     Permission.MANAGE_DIVISIONS,
 )
 
@@ -45,8 +45,8 @@ def is_pm(user: CurrentUser) -> bool:
 
 
 def sees_all_employees(user: CurrentUser) -> bool:
-    """Direktori karyawan seluruh organisasi: SA, OM, dan peran HR/Finance/HSE/aset yang memang mengurusnya."""
-    return user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER) or any(
+    """Direktori karyawan seluruh organisasi: SA, OM (dan V1 OPS), HR, serta pengelola aset dan divisi."""
+    return user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER, "OPS") or any(
         _has_perm(user, p) for p in _DIRECTORY_ALL_PERMS
     )
 
@@ -214,9 +214,8 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
 
 # ── Work order ──────────────────────────────────────────────────────────────────
 
-def work_order_visible_sql(wo: str = "wo") -> str:
-    """WO terlihat: tim pengguna (ketua/anggota) ditugaskan ke WO itu; PM (`:pm`) untuk WO yang ia kelola
-    atau WO di divisi yang dipimpinnya."""
+def work_order_team_sql(wo: str = "wo") -> str:
+    """Pengguna ketua atau anggota aktif tim yang ditugaskan ke WO (`lead_team_id`)."""
     return f"""(
         EXISTS (
             SELECT 1 FROM team tm
@@ -225,9 +224,29 @@ def work_order_visible_sql(wo: str = "wo") -> str:
                       SELECT 1 FROM member mv WHERE mv.team_id = tm.team_id AND mv.employee_id = {_VIEWER}
                         AND mv.is_active AND mv.delete_at IS NULL))
         )
-        OR (CAST(:pm AS boolean) AND (
-            {wo}.pm_id = {_VIEWER}
-            OR {wo}.division_id IN (SELECT d.division_id FROM division d
-                                    WHERE d.pm_id = {_VIEWER} AND d.delete_at IS NULL)
-        ))
     )"""
+
+
+def work_order_leader_sql(wo: str = "wo") -> str:
+    """Pengguna ketua tim yang ditugaskan ke WO (penandatangan BAST di lapangan)."""
+    return f"""(
+        EXISTS (
+            SELECT 1 FROM team tm
+            WHERE tm.team_id = {wo}.lead_team_id AND tm.leader_employee_id = {_VIEWER}
+        )
+    )"""
+
+
+def work_order_manage_sql(wo: str = "wo") -> str:
+    """Pengelola WO: PM yang mengelola WO itu atau memimpin divisinya (`:pm` = pengguna berperan PM)."""
+    return f"""(CAST(:pm AS boolean) AND (
+        {wo}.pm_id = {_VIEWER}
+        OR {wo}.division_id IN (SELECT d.division_id FROM division d
+                                WHERE d.pm_id = {_VIEWER} AND d.delete_at IS NULL)
+    ))"""
+
+
+def work_order_visible_sql(wo: str = "wo") -> str:
+    """WO terlihat: tim pengguna (ketua/anggota) ditugaskan ke WO itu; PM (`:pm`) untuk WO yang ia kelola
+    atau WO di divisi yang dipimpinnya."""
+    return f"({work_order_team_sql(wo)} OR {work_order_manage_sql(wo)})"

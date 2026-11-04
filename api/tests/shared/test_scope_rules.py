@@ -26,10 +26,10 @@ def test_work_orders_full_scope_only_for_sa_om_and_legacy_admin_ops():
         assert not sr.sees_all_work_orders(_user(*roles)), roles
 
 
-def test_directory_full_scope_for_hr_finance_hse_and_asset_but_not_pm_or_employee():
-    for roles in (("SUPER_ADMIN",), ("OPERATIONAL_MANAGER",), ("ADMIN_HR_GA",), ("FINANCE",), ("HSE",), ("ASSET",)):
+def test_directory_full_scope_for_hr_asset_and_om_but_not_finance_hse_pm_or_employee():
+    for roles in (("SUPER_ADMIN",), ("OPERATIONAL_MANAGER",), ("ADMIN_HR_GA",), ("ASSET",)):
         assert sr.sees_all_employees(_user(*roles)), roles
-    for roles in (("PROJECT_MANAGER",), ("TEAM_LEADER",), ("EMPLOYEE",)):
+    for roles in (("FINANCE",), ("HSE",), ("PROJECT_MANAGER",), ("TEAM_LEADER",), ("EMPLOYEE",)):
         assert not sr.sees_all_employees(_user(*roles)), roles
 
 

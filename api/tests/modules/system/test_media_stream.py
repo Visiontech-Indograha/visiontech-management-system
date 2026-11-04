@@ -26,3 +26,12 @@ def test_secret_file_is_not_served(client):
 
 def test_upload_route_is_gone(client):
     assert client.post("/media/upload", files={"file": ("x.txt", b"x", "text/plain")}).status_code in (404, 405)
+
+
+@pytest.mark.parametrize("path", [
+    "/uploads/employees/Ade_Candra_3x4_Red.jpg", "/uploads/inspections/x.jpg", "/uploads/docs/x.pdf",
+    "/uploads/sop/x.png", "/uploads/", "/uploads/../.env",
+])
+def test_uploads_folder_is_not_mounted_as_static_files(client, path: str):
+    """Folder `uploads/` tidak boleh disajikan statis tanpa login (foto karyawan, inspeksi, dokumen)."""
+    assert client.get(path).status_code in (404, 405)

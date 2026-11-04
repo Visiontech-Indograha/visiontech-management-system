@@ -23743,6 +23743,25 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23776,7 +23795,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23845,6 +23864,25 @@
       "title": "Media Path",
       "description": "Path foto banner atau infografis K3"
      },
+     "media_paths": {
+      "items": {
+       "type": "string",
+       "format": "uuid"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Paths",
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8"
+     },
+     "media_captions": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "maxItems": 8,
+      "title": "Media Captions",
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto"
+     },
      "target_audience": {
       "type": "string",
       "title": "Target Audience",
@@ -23878,7 +23916,7 @@
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "default": 5
      },
      "start_date": {
@@ -23995,6 +24033,37 @@
        }
       ],
       "title": "Media Path"
+     },
+     "media_paths": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string",
+         "format": "uuid"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Paths"
+     },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array",
+        "maxItems": 8
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
      },
      "target_audience": {
       "anyOf": [

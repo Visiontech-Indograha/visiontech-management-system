@@ -6543,7 +6543,7 @@
      },
      "cooldown_seconds": {
       "default": 5,
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
@@ -6567,6 +6567,15 @@
       "title": "Is Mandatory",
       "type": "boolean"
      },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6579,6 +6588,16 @@
       ],
       "description": "Path foto banner atau infografis K3",
       "title": "Media Path"
+     },
+     "media_paths": {
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Paths",
+      "type": "array"
      },
      "start_date": {
       "description": "Tanggal awal penayangan kampanye",
@@ -6650,7 +6669,7 @@
      },
      "cooldown_seconds": {
       "default": 5,
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
@@ -6695,6 +6714,15 @@
       "title": "Is Mandatory",
       "type": "boolean"
      },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6707,6 +6735,16 @@
       ],
       "description": "Path foto banner atau infografis K3",
       "title": "Media Path"
+     },
+     "media_paths": {
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Paths",
+      "type": "array"
      },
      "start_date": {
       "description": "Tanggal awal penayangan kampanye",
@@ -6838,6 +6876,21 @@
       ],
       "title": "Is Mandatory"
      },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "maxItems": 8,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6848,6 +6901,22 @@
        }
       ],
       "title": "Media Path"
+     },
+     "media_paths": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "maxItems": 8,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Paths"
      },
      "start_date": {
       "anyOf": [

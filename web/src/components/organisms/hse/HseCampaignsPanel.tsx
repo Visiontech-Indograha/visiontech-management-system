@@ -27,6 +27,9 @@ import {
 import { htmlToText } from "@/lib/htmlToText";
 import { toast } from "sonner";
 import { formatDateTime } from "@/lib/format";
+import { uploadFiles } from "@/services/uploadService";
+import { carouselConfigError, CAROUSEL_MAX_SECONDS } from "@/lib/hseCarousel";
+import { HseCampaignPhotosField, type CampaignPhotoDraft } from "@/components/organisms/hse/HseCampaignPhotosField";
 
 export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action: ReactNode; body: ReactNode }) => ReactNode }) {
   const queryClient = useQueryClient();
@@ -38,13 +41,14 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
   const [title, setTitle] = useState("");
   const [contentBody, setContentBody] = useState("");
   const [targetAudience, setTargetAudience] = useState<"ALL" | "FIELD" | "OFFICE">("ALL");
-  const [mediaUrl, setMediaUrl] = useState("");
+  const [photos, setPhotos] = useState<CampaignPhotoDraft[]>([]);
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(() =>
     new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   );
   const [isMandatory, setIsMandatory] = useState(true);
-  const [cooldownSeconds, setCooldownSeconds] = useState(5);
+  const [cooldownSeconds, setCooldownSeconds] = useState(10);
+  const configError = carouselConfigError(photos.length, Number(cooldownSeconds));
 
   // Query Kampanye K3
   const { data: campaigns = [], isLoading: isLoadingCampaigns } = useQuery<HseCampaign[]>({
@@ -67,23 +71,27 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
 
   // Mutasi Buat Kampanye
   const createMutation = useMutation({
-    mutationFn: () =>
-      createHseCampaign({
+    mutationFn: async () => {
+      // Foto diunggah dulu (urutan dipertahankan), lalu kampanye diterbitkan dengan daftar id berkasnya.
+      const mediaIds = photos.length > 0 ? await uploadFiles(photos.map((p) => p.file)) : [];
+      return createHseCampaign({
         title,
         content_body: contentBody,
         target_audience: targetAudience,
-        media_url: mediaUrl || null,
+        media_ids: mediaIds,
+        media_captions: photos.map((p) => p.caption.trim()),
         start_date: startDate,
         end_date: endDate,
         is_mandatory: isMandatory,
         cooldown_seconds: Number(cooldownSeconds),
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Kampanye K3/HSE berhasil diterbitkan!");
       setIsCreateOpen(false);
       setTitle("");
       setContentBody("");
-      setMediaUrl("");
+      setPhotos([]);
       queryClient.invalidateQueries({ queryKey: ["hse", "campaigns"] });
     },
     onError: () => {
@@ -341,6 +349,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
           onClose={() => setIsCreateOpen(false)}
           title="Terbitkan Kampanye Keselamatan Kerja (HSE)"
           size="xl"
+          className="sm:w-[min(960px,94vw)] sm:max-w-[960px]"
           footer={
             <div className="flex justify-end gap-2 w-full">
               <ActionButton
@@ -352,7 +361,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
               </ActionButton>
               <ActionButton
                 variant="default"
-                disabled={!title || !contentBody || createMutation.isPending}
+                disabled={!title || !contentBody || createMutation.isPending || configError !== null}
                 onClick={() => createMutation.mutate()}
               >
                 <TextBlock as="span">
@@ -362,7 +371,8 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
             </div>
           }
         >
-          <div className="space-y-4 pt-2">
+          <div className="grid grid-cols-1 gap-6 pt-2 lg:grid-cols-2">
+          <div className="min-w-0 space-y-4">
             <div>
               <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
                 Judul Kampanye Keselamatan *
@@ -394,16 +404,26 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
 
               <div>
                 <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
-                  Cooldown Wajib Baca (Detik)
+                  Durasi Baca Wajib (Detik)
                 </ControlLabel>
                 <ControlInput
                   type="number"
-                  min="0"
-                  max="60"
+                  min={photos.length > 0 ? 10 : 0}
+                  max={CAROUSEL_MAX_SECONDS}
                   value={cooldownSeconds}
+                  aria-invalid={configError !== null}
+                  aria-describedby="hse-duration-help"
                   onChange={(e) => setCooldownSeconds(Number(e.target.value))}
                   className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
                 />
+                <TextBlock
+                  as="p"
+                  id="hse-duration-help"
+                  role={configError ? "alert" : undefined}
+                  className={configError ? "mt-1 text-xs font-medium text-destructive" : "mt-1 text-xs text-mist"}
+                >
+                  {configError ?? "Tombol konfirmasi aktif setelah durasi ini. Dengan foto: 10-300 detik, minimal 3 detik per foto."}
+                </TextBlock>
               </div>
             </div>
 
@@ -447,19 +467,6 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
 
             <div>
               <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
-                URL Gambar / Poster Edukasi (Opsional)
-              </ControlLabel>
-              <ControlInput
-                type="text"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                placeholder="https://..."
-                className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
-              />
-            </div>
-
-            <div>
-              <ControlLabel className="block text-xs font-semibold uppercase tracking-wider text-mist mb-1">
                 Isi Panduan Keselamatan *
               </ControlLabel>
               <ControlTextarea
@@ -470,6 +477,14 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                 className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
               />
             </div>
+          </div>
+          <div className="min-w-0 space-y-4">
+            <HseCampaignPhotosField
+              photos={photos}
+              onChange={setPhotos}
+              durationSeconds={Number(cooldownSeconds)}
+            />
+          </div>
           </div>
         </VmsDialog>
       )}

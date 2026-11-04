@@ -27,10 +27,10 @@ concurrency:
   group: apk-${{ github.event.inputs.env || github.ref_name }}
   cancel-in-progress: true
 
-# Tetap di ubuntu-latest: runner self-hosted belum punya Android SDK (lihat docs/RUNBOOK-CI.md).
+# Tetap di ubuntu-24.04: runner self-hosted belum punya Android SDK (lihat docs/RUNBOOK-CI.md).
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       ENV_NAME: ${{ github.event.inputs.env || github.ref_name }}

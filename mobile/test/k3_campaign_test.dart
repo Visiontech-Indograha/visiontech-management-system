@@ -152,7 +152,6 @@ void main() {
     await setScreen(tester, 360, 800);
     final backend = FakeBackend();
     backend.routes['/hse/campaigns/active-popup'] = (_) => {'campaign': _json()};
-    backend.routes['/hse/campaigns/c1/seen'] = (_) => {'ok': true};
     final acks = <Map<String, dynamic>>[];
     backend.routes['/hse/campaigns/c1/acknowledge'] = (o) {
       acks.add(Map<String, dynamic>.from(o.data as Map));

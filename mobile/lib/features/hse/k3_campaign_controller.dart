@@ -48,8 +48,6 @@ class K3CampaignController extends Notifier<K3State> {
       if (raw is! Map) return;
       final campaign = K3Campaign.fromJson(Map<String, dynamic>.from(raw));
       state = K3State(campaign: campaign);
-      // Penanda "sudah tampil" hanya untuk statistik server; galatnya tidak perlu diketahui pengguna.
-      unawaited(ref.read(k3ApiProvider).markK3Seen(campaign.id).catchError((Object _) {}));
     } catch (_) {
       // Diam-diam: dicoba lagi saat aplikasi kembali ke depan atau saat online.
     } finally {

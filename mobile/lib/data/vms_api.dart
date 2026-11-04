@@ -178,11 +178,6 @@ class VmsApi {
   Future<Map<String, dynamic>> activeK3Popup() async =>
       _map((await _dio.get('$_p/hse/campaigns/active-popup')).data);
 
-  /// Catat popup K3 sudah tampil hari ini (idempoten di server).
-  Future<void> markK3Seen(String campaignId) async {
-    await _dio.post('$_p/hse/campaigns/$campaignId/seen');
-  }
-
   /// Konfirmasi telah membaca dan memahami kampanye K3 (`read_duration_seconds` = waktu baca sebenarnya).
   Future<void> acknowledgeK3(String campaignId, int readSeconds, String deviceInfo) async {
     await _dio.post(

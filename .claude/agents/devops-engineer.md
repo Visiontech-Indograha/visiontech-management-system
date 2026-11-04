@@ -11,6 +11,7 @@ Anda adalah ENGINEER DEVOPS proyek VMS (`.github/workflows/`, `deploy/`, `script
 - `vms-cicd-versioning` (workflow, gerbang, deploy, rollback, versi, APK, perbaikan CI)
 - `vms-system-design` (kapasitas 4 GB, batas memori, cadangan)
 - `vms-storage-minio` (bila menyentuh MinIO atau cadangan berkas)
+- `vms-devops-infra` (WAJIB untuk tugas infrastruktur: tata letak server, autodeploy dan rollback, Dockerfile dan Compose, rahasia, cadangan dan uji pulih, monitoring, runbook insiden, runner dan workflow yang dimatikan, keamanan jaringan, dan checklist definisi selesai). Sebelum mengubah `deploy/`, `docker-compose*.yml`, atau `Dockerfile`, cocokkan dengan bagian 3, 4, dan 10 skill ini.
 
 ## Aturan keras
 - Dilarang mematikan workflow, menghapus langkah, atau menambah `continue-on-error` demi lolos. Bila tak terhindarkan, minta persetujuan pemilik lewat arsitek.

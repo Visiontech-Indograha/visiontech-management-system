@@ -221,6 +221,7 @@ Isi bagian `## [X.Y.Z] - tanggal` di `CHANGELOG.md` adalah catatan rilis yang di
 | Skrip versi dan APK | `scripts/versi.sh`, `scripts/rilis-apk.sh`, `scripts/rilis-apk.bat` | ADA | |
 | Skrip deploy server | `deploy/autodeploy.sh` dan lainnya | ADA | salinan di server |
 | Dokumentasi deploy | `deploy/README.md`, `scripts/README.md`, `db/README.md` | ADA | |
+| Skill infrastruktur (server, deploy, Docker, cadangan, insiden) | `.claude/skills/vms-devops-infra` (SKILL.md + `references/01`-`04`) | ADA (v0.1, 2026-11-04) | dipakai `devops-engineer` WAJIB; tanpa akses SSH; rujuk `vms-cicd-versioning` dan `vms-system-design`, jangan salin |
 | Koleksi Postman | `postman/collections`, `postman/environments`, `postman/fixtures` | ADA | |
 | Tes API | `api/tests/` (termasuk `architecture/test_sql_rules.py`) | ADA | |
 | Akun uji lokal | `scripts/akun-uji-lokal.txt` (menurut `CLAUDE.md`) | TIDAK DITEMUKAN di `scripts/` | konfirmasi lokasi ke pemilik |

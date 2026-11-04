@@ -10,6 +10,7 @@ Berkas ini adalah indeks. Aturan kerja lengkap ada di `docs/PANDUAN-AGENTIK.md`.
 | `vms-qa` | `qa` | uji awam per peran, audit kebocoran GET-only, matriks peran x endpoint, uji HP (adb aman), uji web (Playwright), laporan |
 | `vms-cicd-versioning` | arsitek, `devops-engineer`, semua engineer (konvensi commit) | cabang, workflow, gerbang, deploy, rollback, APK, versi, perbaikan CI |
 | `vms-system-design` | arsitek, `api-engineer`, `db-engineer`, `devops-engineer` | kapasitas 4 GB, Big O sistem, caching, antrean, rate limit, idempotensi, RLS, observability |
+| `vms-devops-infra` | arsitek, `devops-engineer` (WAJIB untuk tugas infrastruktur) | tata letak server prod dan beta, autodeploy dan rollback, Dockerfile dan Compose, rahasia, cadangan dan uji pulih, monitoring, runbook insiden, runner dan workflow yang dimatikan, keamanan jaringan, anti-pola dengan bukti berkas:baris |
 
 ## 2. Skill lapisan (ditulis agen lain; rujuk nama persis)
 

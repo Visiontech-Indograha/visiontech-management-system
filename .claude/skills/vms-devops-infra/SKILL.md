@@ -31,7 +31,7 @@ Server `visiontech-bar`, Tailscale 100.117.92.14, RAM 4 GB (`docs/08` baris 32).
 
 Sumber: `docs/08` baris 35-38; `deploy/autodeploy.sh:10-16`; `deploy/beta/compose.yml`; `deploy/beta/compose.infra.yml`; `deploy/uptime-kuma.compose.yml:17`.
 
-Jalur publik yang sudah ada (inventaris, perlu dicek pemilik): Cloudflare Tunnel ke web prod (`deploy/tutup-port-layanan.sh:3`); Tailscale Funnel API beta publik di :10000 (`deploy/beta/pasang-beta.sh:92-93`). Detail di `references/01`.
+Jalur publik yang sudah ada (inventaris, perlu dicek pemilik): Cloudflare Tunnel ke web prod (`deploy/tutup-port-layanan.sh:3`). API beta TIDAK publik lagi: sejak branch `fix/beta-aman` memakai Tailscale Serve :10000 (`deploy/beta/pasang-beta.sh:92-95`); Funnel 10000 lama harus dimatikan pemilik. Detail di `references/01` dan `deploy/RUNBOOK-beta-aman.md`.
 
 ## 2. Alur autodeploy (ringkas; detail di `references/02-autodeploy-dan-ci.md`)
 
@@ -109,7 +109,7 @@ Checklist untuk setiap Dockerfile baru atau diubah:
 
 ## 9. Keamanan infrastruktur (ringkas; detail di `references/01` 1.3-1.5)
 
-- Port publik: hanya yang disengaja (Cloudflare Tunnel ke 8080; Funnel 10000). Semua lain diikat ke localhost atau IP tailnet.
+- Port publik: hanya yang disengaja (Cloudflare Tunnel ke 8080). Semua lain diikat ke localhost atau IP tailnet. Beta TIDAK boleh punya Funnel.
 - Tailscale: Serve untuk tailnet, Funnel untuk publik, satu port hanya salah satu (Tailscale KB, https://tailscale.com/kb/1312/serve, diakses 2026-11-04). ACL belum diperiksa dari repo; daftarnya ada di `references/01` 1.4.
 - Firewall: ufw menolak masuk kecuali SSH, web, dan `tailscale0` (`hardening-server.sh:61,69`). Status penerapan TIDAK DIKETAHUI.
 - SSH: kunci saja, root login mati (`hardening-server.sh:14-16`). Terapkan dengan `--ya` oleh pemilik.
@@ -139,8 +139,9 @@ Sebuah perubahan di `deploy/`, `.github/`, `scripts/`, Dockerfile, atau compose 
 | A-4 | Tag tidak dipin, termasuk `latest` | `api/Dockerfile:1`, `db/Dockerfile:10`, `deploy/beta/compose.infra.yml:22` (`minio:latest`), `deploy/uptime-kuma.compose.yml:13` (`:1`) | Terbuka |
 | A-5 | Batas memori face berbeda antar dokumen | `deploy/compose.limits.yml:21` (768m) vs `deploy/pasang-face-service.sh:57` dan `deploy/beta/compose.yml:33` (1200m) | Perlu keputusan pemilik |
 | A-6 | Dokumen tidak sama dengan kode | `deploy/README.md` (salin manual) vs `autodeploy.sh:40-50` (self-update, commit `47895c20`); README "14 dump" vs `backup.sh:18` (7) | Perbaiki dokumen |
-| A-7 | Beta menyalin dump DB prod | `deploy/beta/pasang-beta.sh:104-110` (`pg_dump` prod ke `sumber_v1` beta) | TIDAK YAKIN isi beta; perlu kebijakan data dari pemilik |
-| A-8 | API beta publik lewat Funnel | `deploy/beta/pasang-beta.sh:92-93` (:10000 -> 8001) | Disengaja (komentar); catat di ADR, batasi bila perlu |
+| A-7 | Beta menyalin dump DB dan berkas MinIO prod | `deploy/beta/pasang-beta.sh` (`data`: `pg_dump` prod; `berkas`: salin semua bucket prod) | Diperbaiki di `fix/beta-aman`: data beta = `db/07_master_seed_v2.sql`; `berkas` dinonaktifkan. Perlu verifikasi di server (pemilik). |
+| A-8 | API beta publik lewat Funnel | `deploy/beta/pasang-beta.sh:92-95` (sebelumnya Funnel :10000) | Diperbaiki di `fix/beta-aman`: Serve (tailnet). APK beta tetap memakai URL :10000 dan hanya jalan dengan Tailscale aktif di HP. |
+| A-18 | Batas memori face berbeda (768m vs 1200m) | `deploy/compose.limits.yml` | Diseragamkan ke 1200m (nilai terpasang). Pertanyaan ke pemilik: turunkan? |
 | A-9 | Seluruh CI bergantung pada satu runner | `gh api .../actions/runners` (satu runner `vms-pc`); `ci.yml:27` | Titik tunggal gagal |
 | A-10 | Branch prod tanpa proteksi | `gh api .../branches/prod/protection` (404); `docs/08` tabel tenggat utang (baris Branch protection) | Terbuka (pemilik) |
 | A-11 | Lokasi compose prod tidak konsisten di dokumen | `deploy/README.md` (`vms-mvp/compose.yml`) vs `deploy/tutup-port-db.sh:6` (`~/deploy/visiontech/`) | TIDAK YAKIN, verifikasi di server |
@@ -196,7 +197,7 @@ Yang TIDAK dipakai untuk infra VMS: `claude-api`, `plugin-authoring`, `init` (ta
 
 1. Runner `vms-pc`: apakah ini PC pengembang, dan apa rencana bila mati.
 2. Lokasi compose prod (A-11) dan isi crontab prod.
-3. Funnel :10000 untuk API beta, dan kebijakan data beta (A-7, A-8).
+3. Funnel :10000 untuk API beta: sudah diganti Serve di kode; pemilik mematikan Funnel di server dan memastikan HP beta memakai Tailscale (A-7, A-8).
 4. Batas memori face: 768m atau 1200m (A-5).
 5. Status offsite, uji pulih terakhir, dan status ufw serta ACL Tailscale di server.
 6. RPO dan RTO yang disetujui.

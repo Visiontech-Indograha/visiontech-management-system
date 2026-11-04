@@ -487,8 +487,10 @@ class DailyPlanService:
     async def submit(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT")
+        # Kunci lalu periksa ulang: pengajuan bersamaan berurutan, yang kedua melihat SUBMITTED dan dapat 409.
+        await self._lock_status(daily_plan_id, ("DRAFT",))
         await self._require_items_unless_standby(access, daily_plan_id)
-        await self.repo.set_status(daily_plan_id, "SUBMITTED")
+        await self._set_status_guarded(daily_plan_id, "SUBMITTED", ("DRAFT",))
         await NotificationService(self.db).daily_submitted(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
@@ -539,6 +541,7 @@ class DailyPlanService:
     async def start(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.LEADER)
         require_daily_status(access, "APPROVED")
+        await self._lock_status(daily_plan_id, ("APPROVED",))
         if access.plan.work_date > jakarta_now().date():
             raise ValidationError("Jadwal baru bisa dimulai pada tanggalnya.")
         if not await self.repo.leader_checked_in(daily_plan_id, jakarta_now().date()):
@@ -547,7 +550,7 @@ class DailyPlanService:
                 "Ketua tim harus absen masuk hari ini sebelum jadwal dimulai.",
                 status=409,
             )
-        await self.repo.set_status(daily_plan_id, "ONGOING")
+        await self._set_status_guarded(daily_plan_id, "ONGOING", ("APPROVED",))
         return await self.repo.get(daily_plan_id)
 
     async def complete(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
@@ -555,6 +558,7 @@ class DailyPlanService:
         if not (access.is_leader or access.manages):
             raise AppError("FORBIDDEN", "Hanya ketua tim atau PM/OM divisi yang dapat menutup jadwal.", status=403)
         require_daily_status(access, "ONGOING")
+        await self._lock_status(daily_plan_id, ("ONGOING",))
         if await self.repo.has_open_correction(daily_plan_id):
             raise AppError(
                 "CORRECTION_OPEN",
@@ -582,7 +586,7 @@ class DailyPlanService:
                     status=409,
                 )
             await self.repo.cancel_unfinished_items(daily_plan_id)
-        await self.repo.set_status(daily_plan_id, "COMPLETED")
+        await self._set_status_guarded(daily_plan_id, "COMPLETED", ("ONGOING",))
         await self.repo.release_plan_assets(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 

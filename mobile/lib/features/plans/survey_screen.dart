@@ -634,7 +634,10 @@ class _PointCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            SizedBox(
+            if (photos.isEmpty)
+              Text('Tidak ada foto', style: Theme.of(context).textTheme.bodySmall)
+            else
+              SizedBox(
               height: 64,
               child: ListView(
                 scrollDirection: Axis.horizontal,

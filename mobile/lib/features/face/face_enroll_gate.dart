@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart' show NetworkHint;
@@ -72,7 +73,10 @@ class _EnrollRequiredScreenState extends ConsumerState<_EnrollRequiredScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
+    // Latar terang: ikon status bar gelap agar jam/baterai terbaca.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
+      child: Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -119,6 +123,7 @@ class _EnrollRequiredScreenState extends ConsumerState<_EnrollRequiredScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

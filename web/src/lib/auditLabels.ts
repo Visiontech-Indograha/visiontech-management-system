@@ -1,4 +1,4 @@
-/** Tabel yang diaudit trigger tg_audit_row (db/02_functions.sql, 04_signature_auth.sql, 05_face.sql). */
+/** Tabel yang diaudit trigger tg_audit_row (db/06_master_schema_v2.sql). */
 export const AUDIT_ENTITIES: Record<string, string> = {
   work_plan: "Rencana Kerja / pekerjaan",
   plan_document: "Dokumen rencana kerja",

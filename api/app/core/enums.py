@@ -1,5 +1,5 @@
 """
-Enum domain yang identik dengan tipe enum PostgreSQL di `db/01_schema.sql`.
+Enum domain yang identik dengan tipe enum PostgreSQL di `db/06_master_schema_v2.sql`.
 
 Satu sumber nilai untuk kode Python: pakai anggota enum ini, bukan string lepas, supaya salah ketik
 seperti `'EXTENSION'` (seharusnya `'EXTEND'`) atau `'APPLIED'` tidak lolos. Kesetaraan dengan

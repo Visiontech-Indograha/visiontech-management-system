@@ -201,7 +201,7 @@ class FaceService:
                 detail={"reason": "SELF_RESET_FACE"},
                 action="FACE_SELF_RESET",
             )
-        return employee.employee_id
+        return UUID(str(employee.employee_id))
 
     # ── Dipakai modul absensi ─────────────────────────────────────────────────
     async def is_enrolled(self, employee_id: UUID | str) -> bool:

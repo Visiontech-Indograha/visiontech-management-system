@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -28,9 +28,14 @@ async def report_overtime(
     data: OvertimeCreate,
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
-) -> OvertimeResponse:
-    """Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim)."""
-    return await controller.handle_report(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> OvertimeResponse | Response:
+    """Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_report(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.get("", response_model=list[OvertimeResponse])

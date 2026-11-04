@@ -21,7 +21,7 @@ Akun uji: `cd api && .venv/Scripts/python.exe ../scripts/seed_uji_lokal.py --ya-
 Menguji wajah: jalankan face-service lokal (`face-service/README.md`), isi `FACE_SERVICE_TOKEN`, lalu `FACE_ENROLLMENT_REQUIRED=true`.
 Tanpa face-service (dev): `FACE_FAKE_MODE=true` (hanya `APP_ENV=development`; di lingkungan lain API menolak start).
 Pendaftaran menyimpan embedding sintetis dan swafoto apa pun dari karyawan terdaftar cocok (skor 95). Isi akun uji:
-`cd api && FACE_FAKE_MODE=true .venv/Scripts/python.exe ../scripts/seed-wajah-dev.py` (menolak bila DB bukan localhost).
+`cd api && FACE_FAKE_MODE=true .venv/Scripts/python.exe ../scripts/seed_wajah_dev.py` (menolak bila DB bukan localhost).
 Absen tanpa verifikasi wajah (tidak diperiksa, belum terdaftar, layanan mati) bertanda `face_status` dan masuk antrian review.
 
 ## Uji di server

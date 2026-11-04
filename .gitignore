@@ -118,7 +118,6 @@ skills-lock.json
 MEMORY.md
 memory.md
 CLAUDE.md
-CHANGELOG.md
 *.agent.md
 
 !web/src/lib/

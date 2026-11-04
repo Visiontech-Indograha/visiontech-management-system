@@ -16,7 +16,7 @@ Widget vmsAppFrame(BuildContext context, Widget? child) {
     child: child ?? const SizedBox.shrink(),
   );
   return ScaffoldMessenger(
-    // APK beta uji lokal (scripts/bangun-beta.sh): pita agar tidak tertukar dengan aplikasi prod.
+    // APK beta uji lokal (build beta lokal): pita agar tidak tertukar dengan aplikasi prod.
     child: _isBeta
         ? Banner(
             message: 'BETA · uji lokal',

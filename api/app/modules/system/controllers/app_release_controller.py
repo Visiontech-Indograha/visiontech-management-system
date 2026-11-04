@@ -44,10 +44,11 @@ class AppReleaseController:
         name: str,
     ) -> FileResponse:
         """Mengunduh berkas APK berversi (immutable cache)."""
+        path = self.service.resolve_file(name)
         return FileResponse(
-            self.service.resolve_file(name),
+            path,
             media_type=APK_MEDIA_TYPE,
-            filename=name,
+            filename=path.name,
             headers={"Cache-Control": "public, max-age=31536000, immutable"},
         )
 

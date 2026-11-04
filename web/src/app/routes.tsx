@@ -10,7 +10,7 @@ import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
 import { ForbiddenPage } from "@/pages/system/ForbiddenPage";
 import { NotFoundPage } from "@/pages/system/NotFoundPage";
 import { UuidParamGuard } from "@/app/UuidParamGuard";
-import { NAV_ITEMS } from "./navigation";
+import { NAV_ITEMS, type NavItem } from "./navigation";
 import {
   AccountPage,
   AssetsPage,
@@ -101,7 +101,9 @@ export const routes: RouteObject[] = [
               { path: "/surveys/:surveyId",
                 element: (
                   <UuidParamGuard param="surveyId">
-                    <SurveyDetailPage />
+                    <RequireAccess item={{ path: "/surveys", label: "Survei", requires: ["create:plan"] } as NavItem}>
+                      <SurveyDetailPage />
+                    </RequireAccess>
                   </UuidParamGuard>
                 ),
               },
@@ -117,7 +119,9 @@ export const routes: RouteObject[] = [
                 path: "/directory/:id",
                 element: (
                   <UuidParamGuard>
-                    <EmployeeDetailPage />
+                    <RequireAccess item={{ path: "/directory", label: "Direktori", requires: ["view:users"] } as NavItem}>
+                      <EmployeeDetailPage />
+                    </RequireAccess>
                   </UuidParamGuard>
                 ),
               },

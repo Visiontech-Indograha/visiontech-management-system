@@ -947,6 +947,18 @@
       ],
       "title": "Encouragement Message"
      },
+     "evidence_photo_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence Photo File Id"
+     },
      "explanation": {
       "anyOf": [
        {
@@ -1990,6 +2002,18 @@
       "title": "Channel",
       "type": "string"
      },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
+     },
      "explanation": {
       "anyOf": [
        {
@@ -2091,6 +2115,18 @@
       ],
       "title": "Channel",
       "type": "string"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      },
      "explanation": {
       "anyOf": [
@@ -5761,6 +5797,21 @@
     "title": "EnrollResponse",
     "type": "object"
    },
+   "EvidenceRequest": {
+    "description": "Menempelkan foto bukti biasa (tanpa pencocokan wajah) ke absensi sendiri.",
+    "properties": {
+     "evidence_file_id": {
+      "format": "uuid",
+      "title": "Evidence File Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "evidence_file_id"
+    ],
+    "title": "EvidenceRequest",
+    "type": "object"
+   },
    "ExecutionBomOut": {
     "properties": {
      "actual_qty": {
@@ -6376,6 +6427,551 @@
      }
     },
     "title": "HomeSummary",
+    "type": "object"
+   },
+   "HseAcknowledgeCreate": {
+    "properties": {
+     "device_info": {
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Informasi perangkat klien",
+      "title": "Device Info"
+     },
+     "platform": {
+      "default": "web",
+      "description": "Platform: web atau mobile",
+      "title": "Platform",
+      "type": "string"
+     },
+     "read_duration_seconds": {
+      "default": 0,
+      "description": "Total durasi waktu membaca dalam detik",
+      "minimum": 0.0,
+      "title": "Read Duration Seconds",
+      "type": "integer"
+     },
+     "scroll_completed": {
+      "default": true,
+      "description": "Apakah user telah melakukan scroll hingga akhir materi",
+      "title": "Scroll Completed",
+      "type": "boolean"
+     }
+    },
+    "title": "HseAcknowledgeCreate",
+    "type": "object"
+   },
+   "HseCampaignAuditStats": {
+    "properties": {
+     "campaign_id": {
+      "format": "uuid",
+      "title": "Campaign Id",
+      "type": "string"
+     },
+     "readers": {
+      "items": {
+       "$ref": "#/components/schemas/HseReaderItem"
+      },
+      "title": "Readers",
+      "type": "array"
+     },
+     "target_audience": {
+      "title": "Target Audience",
+      "type": "string"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "total_acknowledged": {
+      "title": "Total Acknowledged",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "campaign_id",
+     "title",
+     "target_audience",
+     "total_acknowledged",
+     "readers"
+    ],
+    "title": "HseCampaignAuditStats",
+    "type": "object"
+   },
+   "HseCampaignCreate": {
+    "properties": {
+     "content_html": {
+      "description": "Isi materi keselamatan (HTML/Markdown)",
+      "title": "Content Html",
+      "type": "string"
+     },
+     "cooldown_seconds": {
+      "default": 5,
+      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "maximum": 300.0,
+      "minimum": 0.0,
+      "title": "Cooldown Seconds",
+      "type": "integer"
+     },
+     "end_date": {
+      "description": "Tanggal akhir penayangan kampanye",
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "is_active": {
+      "default": true,
+      "description": "Status keaktifan kampanye",
+      "title": "Is Active",
+      "type": "boolean"
+     },
+     "is_mandatory": {
+      "default": true,
+      "description": "Apakah wajib dibaca saat popup muncul",
+      "title": "Is Mandatory",
+      "type": "boolean"
+     },
+     "media_path": {
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Path foto banner atau infografis K3",
+      "title": "Media Path"
+     },
+     "start_date": {
+      "description": "Tanggal awal penayangan kampanye",
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     },
+     "summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Ringkasan singkat kampanye",
+      "title": "Summary"
+     },
+     "target_audience": {
+      "default": "ALL",
+      "description": "Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL",
+      "title": "Target Audience",
+      "type": "string"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Daftar user_id jika target_audience=INDIVIDUAL",
+      "title": "Target User Ids"
+     },
+     "title": {
+      "description": "Judul kampanye atau briefing K3",
+      "maxLength": 255,
+      "title": "Title",
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "content_html",
+     "start_date",
+     "end_date"
+    ],
+    "title": "HseCampaignCreate",
+    "type": "object"
+   },
+   "HseCampaignResponse": {
+    "properties": {
+     "campaign_id": {
+      "format": "uuid",
+      "title": "Campaign Id",
+      "type": "string"
+     },
+     "content_html": {
+      "description": "Isi materi keselamatan (HTML/Markdown)",
+      "title": "Content Html",
+      "type": "string"
+     },
+     "cooldown_seconds": {
+      "default": 5,
+      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "maximum": 300.0,
+      "minimum": 0.0,
+      "title": "Cooldown Seconds",
+      "type": "integer"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "created_by_id": {
+      "format": "uuid",
+      "title": "Created By Id",
+      "type": "string"
+     },
+     "creator_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Creator Name"
+     },
+     "end_date": {
+      "description": "Tanggal akhir penayangan kampanye",
+      "format": "date",
+      "title": "End Date",
+      "type": "string"
+     },
+     "is_active": {
+      "default": true,
+      "description": "Status keaktifan kampanye",
+      "title": "Is Active",
+      "type": "boolean"
+     },
+     "is_mandatory": {
+      "default": true,
+      "description": "Apakah wajib dibaca saat popup muncul",
+      "title": "Is Mandatory",
+      "type": "boolean"
+     },
+     "media_path": {
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Path foto banner atau infografis K3",
+      "title": "Media Path"
+     },
+     "start_date": {
+      "description": "Tanggal awal penayangan kampanye",
+      "format": "date",
+      "title": "Start Date",
+      "type": "string"
+     },
+     "summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Ringkasan singkat kampanye",
+      "title": "Summary"
+     },
+     "target_audience": {
+      "default": "ALL",
+      "description": "Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL",
+      "title": "Target Audience",
+      "type": "string"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Daftar user_id jika target_audience=INDIVIDUAL",
+      "title": "Target User Ids"
+     },
+     "title": {
+      "description": "Judul kampanye atau briefing K3",
+      "maxLength": 255,
+      "title": "Title",
+      "type": "string"
+     },
+     "total_readers": {
+      "default": 0,
+      "title": "Total Readers",
+      "type": "integer"
+     },
+     "update_at": {
+      "format": "date-time",
+      "title": "Update At",
+      "type": "string"
+     }
+    },
+    "required": [
+     "title",
+     "content_html",
+     "start_date",
+     "end_date",
+     "campaign_id",
+     "created_by_id",
+     "create_at",
+     "update_at"
+    ],
+    "title": "HseCampaignResponse",
+    "type": "object"
+   },
+   "HseCampaignUpdate": {
+    "properties": {
+     "content_html": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Content Html"
+     },
+     "cooldown_seconds": {
+      "anyOf": [
+       {
+        "maximum": 300.0,
+        "minimum": 0.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cooldown Seconds"
+     },
+     "end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Date"
+     },
+     "is_active": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Active"
+     },
+     "is_mandatory": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Is Mandatory"
+     },
+     "media_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Path"
+     },
+     "start_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Start Date"
+     },
+     "summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Summary"
+     },
+     "target_audience": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target Audience"
+     },
+     "target_user_ids": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Target User Ids"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "maxLength": 255,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     }
+    },
+    "title": "HseCampaignUpdate",
+    "type": "object"
+   },
+   "HseReaderItem": {
+    "properties": {
+     "acknowledged_at": {
+      "format": "date-time",
+      "title": "Acknowledged At",
+      "type": "string"
+     },
+     "acknowledgment_id": {
+      "format": "uuid",
+      "title": "Acknowledgment Id",
+      "type": "string"
+     },
+     "campaign_id": {
+      "format": "uuid",
+      "title": "Campaign Id",
+      "type": "string"
+     },
+     "device_info": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Device Info"
+     },
+     "email": {
+      "title": "Email",
+      "type": "string"
+     },
+     "employee_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Employee No"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "platform": {
+      "title": "Platform",
+      "type": "string"
+     },
+     "read_duration_seconds": {
+      "title": "Read Duration Seconds",
+      "type": "integer"
+     },
+     "scroll_completed": {
+      "title": "Scroll Completed",
+      "type": "boolean"
+     },
+     "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "acknowledgment_id",
+     "campaign_id",
+     "user_id",
+     "full_name",
+     "email",
+     "platform",
+     "scroll_completed",
+     "read_duration_seconds",
+     "acknowledged_at"
+    ],
+    "title": "HseReaderItem",
     "type": "object"
    },
    "InspectionCreate": {
@@ -9824,6 +10420,18 @@
       "minLength": 8,
       "title": "Device Id",
       "type": "string"
+     },
+     "evidence_file_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Evidence File Id"
      },
      "kind": {
       "enum": [
@@ -14182,6 +14790,264 @@
      "created_at"
     ],
     "title": "VehicleFileOut",
+    "type": "object"
+   },
+   "VehicleInspectionCreate": {
+    "properties": {
+     "checklist_json": {
+      "additionalProperties": true,
+      "description": "Status checklist per item (rem, ban, oli, lampu, dll)",
+      "title": "Checklist Json",
+      "type": "object"
+     },
+     "inspection_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspection Date"
+     },
+     "inspector_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Id"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "odometer_km": {
+      "anyOf": [
+       {
+        "minimum": 0.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Odometer Km"
+     },
+     "period_type": {
+      "default": "DAILY",
+      "description": "DAILY, WEEKLY, MONTHLY",
+      "title": "Period Type",
+      "type": "string"
+     },
+     "photos_json": {
+      "description": "Array URL/Path foto bukti inspeksi kendaraan",
+      "items": {
+       "type": "string"
+      },
+      "title": "Photos Json",
+      "type": "array"
+     },
+     "vehicle_id": {
+      "format": "uuid",
+      "title": "Vehicle Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "vehicle_id"
+    ],
+    "title": "VehicleInspectionCreate",
+    "type": "object"
+   },
+   "VehicleInspectionResponse": {
+    "properties": {
+     "checklist_json": {
+      "additionalProperties": true,
+      "title": "Checklist Json",
+      "type": "object"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "inspection_date": {
+      "format": "date",
+      "title": "Inspection Date",
+      "type": "string"
+     },
+     "inspection_id": {
+      "format": "uuid",
+      "title": "Inspection Id",
+      "type": "string"
+     },
+     "inspector_id": {
+      "format": "uuid",
+      "title": "Inspector Id",
+      "type": "string"
+     },
+     "inspector_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Inspector Name"
+     },
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "number_plate": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Number Plate"
+     },
+     "odometer_km": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Odometer Km"
+     },
+     "period_type": {
+      "title": "Period Type",
+      "type": "string"
+     },
+     "photos_json": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Photos Json",
+      "type": "array"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     },
+     "vehicle_id": {
+      "format": "uuid",
+      "title": "Vehicle Id",
+      "type": "string"
+     },
+     "vehicle_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Vehicle Name"
+     },
+     "verified_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified At"
+     },
+     "verified_by_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verified By Id"
+     },
+     "verifier_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Verifier Name"
+     }
+    },
+    "required": [
+     "inspection_id",
+     "vehicle_id",
+     "inspector_id",
+     "period_type",
+     "inspection_date",
+     "checklist_json",
+     "photos_json",
+     "status",
+     "create_at"
+    ],
+    "title": "VehicleInspectionResponse",
+    "type": "object"
+   },
+   "VehicleInspectionVerify": {
+    "properties": {
+     "notes": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes"
+     },
+     "status": {
+      "description": "VERIFIED atau REJECTED",
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status"
+    ],
+    "title": "VehicleInspectionVerify",
     "type": "object"
    },
    "VehicleOut": {
@@ -19750,6 +20616,69 @@
     ]
    }
   },
+  "/api/v1/attendance/{att_id}/evidence": {
+   "post": {
+    "description": "Foto bukti biasa (terlambat / di luar radius) untuk absensi sendiri, tanpa pencocokan wajah.",
+    "operationId": "attach_evidence_api_v1_attendance__att_id__evidence_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "att_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Att Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EvidenceRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "string"
+         },
+         "title": "Response Attach Evidence Api V1 Attendance  Att Id  Evidence Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Attach Evidence",
+    "tags": [
+     "Attendance"
+    ]
+   }
+  },
   "/api/v1/attendance/{att_id}/explain": {
    "post": {
     "description": "P4-4 · domain.js EXPLAIN_ATTENDANCE — hanya absensi sendiri yang menunggu pemeriksaan.",
@@ -23707,6 +24636,736 @@
     "summary": "Ringkasan Beranda sesuai peran",
     "tags": [
      "Home"
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns": {
+   "get": {
+    "operationId": "list_campaigns_api_v1_hse_campaigns_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 50,
+       "maximum": 100,
+       "minimum": 1,
+       "title": "Limit",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "minimum": 0,
+       "title": "Offset",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "is_active",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Is Active"
+      }
+     },
+     {
+      "in": "query",
+      "name": "target_audience",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Target Audience"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/HseCampaignResponse"
+         },
+         "title": "Response List Campaigns Api V1 Hse Campaigns Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daftar kampanye keselamatan K3",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   },
+   "post": {
+    "operationId": "create_campaign_api_v1_hse_campaigns_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseCampaignCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Buat kampanye keselamatan K3 baru",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns/active-popup": {
+   "get": {
+    "description": "Dipanggil saat pengguna login atau membuka aplikasi (Web & Mobile).\nJika mengembalikan kampanye, aplikasi menampilkan Modal Pop-up Non-Skippable\ndengan penghitung waktu mundur (cooldown).",
+    "operationId": "get_active_popup_api_v1_hse_campaigns_active_popup_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Get Active Popup Api V1 Hse Campaigns Active Popup Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ambil popup materi K3 wajib yang belum dibaca pengguna saat ini",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}": {
+   "delete": {
+    "operationId": "delete_campaign_api_v1_hse_campaigns__campaign_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "campaign_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Campaign Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {
+          "type": "boolean"
+         },
+         "title": "Response Delete Campaign Api V1 Hse Campaigns  Campaign Id  Delete",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Hapus kampanye K3 (soft delete)",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   },
+   "get": {
+    "operationId": "get_campaign_api_v1_hse_campaigns__campaign_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "campaign_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Campaign Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Detail kampanye K3",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   },
+   "put": {
+    "operationId": "update_campaign_api_v1_hse_campaigns__campaign_id__put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "campaign_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Campaign Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseCampaignUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Perbarui kampanye K3",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}/acknowledge": {
+   "post": {
+    "operationId": "acknowledge_campaign_api_v1_hse_campaigns__campaign_id__acknowledge_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "campaign_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Campaign Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/HseAcknowledgeCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Acknowledge Campaign Api V1 Hse Campaigns  Campaign Id  Acknowledge Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Konfirmasi telah membaca materi K3 (melewati cooldown & scroll)",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/campaigns/{campaign_id}/readers": {
+   "get": {
+    "operationId": "get_campaign_readers_api_v1_hse_campaigns__campaign_id__readers_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "campaign_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Campaign Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HseCampaignAuditStats"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Audit jejak pengguna yang telah membaca kampanye K3",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/inspections": {
+   "get": {
+    "operationId": "list_inspections_api_v1_hse_inspections_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "vehicle_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "period_type",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Period Type"
+      }
+     },
+     {
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Status"
+      }
+     },
+     {
+      "in": "query",
+      "name": "from_date",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From Date"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to_date",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To Date"
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "required": false,
+      "schema": {
+       "default": 50,
+       "maximum": 100,
+       "minimum": 1,
+       "title": "Limit",
+       "type": "integer"
+      }
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "required": false,
+      "schema": {
+       "default": 0,
+       "minimum": 0,
+       "title": "Offset",
+       "type": "integer"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/VehicleInspectionResponse"
+         },
+         "title": "Response List Inspections Api V1 Hse Inspections Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daftar riwayat inspeksi keselamatan kendaraan",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   },
+   "post": {
+    "operationId": "create_inspection_api_v1_hse_inspections_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleInspectionCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Kirim formulir inspeksi kendaraan (checklist & foto)",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/inspections/{inspection_id}": {
+   "get": {
+    "operationId": "get_inspection_api_v1_hse_inspections__inspection_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "inspection_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Inspection Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Detail inspeksi kendaraan",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/inspections/{inspection_id}/verify": {
+   "patch": {
+    "operationId": "verify_inspection_api_v1_hse_inspections__inspection_id__verify_patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "inspection_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Inspection Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleInspectionVerify"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleInspectionResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Verifikasi hasil inspeksi kendaraan oleh HSE / Super Admin",
+    "tags": [
+     "HSE & Keselamatan Kerja"
     ]
    }
   },

@@ -39,7 +39,7 @@ def test_vehicle(world: World) -> str:
     vehicle_id = str(sync_query(
         """
         INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, status)
-        VALUES (%s, %s, 'CAR', 'Mobil Operasional Lapangan 01', %s, 'AVAILABLE')
+        VALUES (%s, %s, 'Car', 'Mobil Operasional Lapangan 01', %s, 'ready')
         RETURNING vehicle_id;
         """,
         (world.org_id, world.unit_id, f"B {world.tag[:4]} VMS"),

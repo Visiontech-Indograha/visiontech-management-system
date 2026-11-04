@@ -256,7 +256,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Laporan harian'),
-        content: Column(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
@@ -274,6 +277,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
               decoration: const InputDecoration(labelText: 'Kendala (opsional)'),
             ),
           ],
+        ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),

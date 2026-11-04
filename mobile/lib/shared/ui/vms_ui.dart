@@ -827,7 +827,7 @@ Future<T?> showVmsModalBottomSheet<T>({
       return ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: maxHeight,
-          maxWidth: 640,
+          maxWidth: (mq.size.width * 0.96).clamp(0.0, 960.0),
         ),
         child: Padding(
           padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),

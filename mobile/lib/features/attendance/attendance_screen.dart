@@ -353,9 +353,26 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         if (err != null) _snack(err);
         return;
       }
+      // Foto BUKTI di luar radius: foto biasa (kamera belakang), TIDAK dicocokkan dengan wajah.
+      File? evidenceFile;
+      if (outside) {
+        if (!mounted) return;
+        final (ev, evErr) = await captureWatermarkedPhoto(
+          context: context,
+          label: 'Foto bukti di luar radius',
+          hint: 'Foto lokasi tempat Anda berada sekarang sebagai bukti.',
+        );
+        if (ev == null) {
+          if (evErr != null) _snack(evErr);
+          return;
+        }
+        evidenceFile = ev;
+      }
       try {
-        selfieId = await ref.read(syncEngineProvider).api.uploadFile(selfieFile);
-        await ref
+        final api = ref.read(syncEngineProvider).api;
+        selfieId = await api.uploadFile(selfieFile);
+        final evidenceId = evidenceFile == null ? null : await api.uploadFile(evidenceFile);
+        final inRes = await ref
             .read(syncEngineProvider)
             .api
             .checkIn(
@@ -364,9 +381,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               lng: pos.longitude,
               accuracyM: pos.accuracy,
               selfieFileId: selfieId,
+              evidenceFileId: evidenceId,
               explanation: explanation,
             );
         _snack('Absen masuk tercatat.');
+        // Terlambat: foto bukti biasa (tanpa pencocokan wajah) menyusul; gagal/batal tidak memblokir absen.
+        if (inRes['is_late'] == true && evidenceFile == null && inRes['id'] != null) {
+          await _addEvidence(inRes['id'] as String, 'Foto bukti keterlambatan', 'Foto lokasi atau keadaan Anda sebagai bukti keterlambatan.');
+        }
       } on DioException catch (e) {
         if (!isNetworkFailure(e)) rethrow;
         // R-34: tanpa sinyal — rekam offline bertanda tangan, kirim otomatis saat online.
@@ -383,6 +405,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
               gpsTime: pos.timestamp,
               explanation: explanation,
               selfie: selfieFile,
+              evidence: evidenceFile,
             );
         _snack('Tidak ada sinyal — absen masuk tersimpan offline dan dikirim otomatis saat online.');
       }
@@ -391,6 +414,24 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Foto bukti biasa (kamera belakang, tanpa pencocokan wajah) ditempel ke absensi [attId].
+  /// Dibatalkan/gagal: absen tetap tercatat, tombol 'Tambah foto bukti' di kartu absen hari ini tetap ada.
+  Future<void> _addEvidence(String attId, String label, String hint) async {
+    if (!mounted) return;
+    final (file, err) = await captureWatermarkedPhoto(context: context, label: label, hint: hint);
+    if (file == null) {
+      _snack(err ?? 'Foto bukti belum diambil. Anda bisa menambahkannya lewat tombol "Tambah foto bukti".');
+      return;
+    }
+    try {
+      final api = ref.read(syncEngineProvider).api;
+      await api.attachAttendanceEvidence(attId, await api.uploadFile(file));
+      _snack('Foto bukti tersimpan.');
+    } catch (e) {
+      _snack('Foto bukti belum terkirim. Coba lagi lewat tombol "Tambah foto bukti". ${apiErrorMessage(e)}');
     }
   }
 
@@ -456,6 +497,34 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
         outSelfie = file;
       }
+      // Pulang di luar radius: foto bukti biasa terpisah dari swafoto (tanpa pencocokan wajah).
+      File? outEvidence;
+      Future<bool> askOutEvidence() async {
+        if (!mounted) return false;
+        final (ev, evErr) = await captureWatermarkedPhoto(
+          context: context,
+          label: 'Foto bukti di luar radius',
+          hint: 'Foto lokasi tempat Anda berada sekarang sebagai bukti.',
+        );
+        if (ev == null) {
+          if (evErr != null) _snack(evErr);
+          return false;
+        }
+        outEvidence = ev;
+        return true;
+      }
+
+      final openSite = _sites.where((s) => s['id'] == _today?['site_id']).firstOrNull;
+      final openLoc = openSite?['location'];
+      if (openSite != null && openLoc is Map) {
+        final dist = Geolocator.distanceBetween(
+          pos.latitude,
+          pos.longitude,
+          (openLoc['lat'] as num).toDouble(),
+          (openLoc['lng'] as num).toDouble(),
+        );
+        if (dist > ((openSite['radius_m'] as num?) ?? 50) && !await askOutEvidence()) return;
+      }
       Future<void> recordOffline() => ref
           .read(syncEngineProvider)
           .offlineAttendance
@@ -467,21 +536,34 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             accuracyM: pos.accuracy,
             mocked: pos.isMocked,
             gpsTime: pos.timestamp,
+            evidence: outEvidence,
           );
       if (_today?['status'] == 'OFFLINE') {
         await recordOffline();
         _snack('Absen pulang tersimpan offline dan dikirim otomatis saat online.');
       } else {
         try {
-          final res = await ref
-              .read(syncEngineProvider)
-              .api
-              .checkOut(
-                lat: pos.latitude,
-                lng: pos.longitude,
-                accuracyM: pos.accuracy,
-                selfieFileId: outSelfie == null ? null : await ref.read(syncEngineProvider).api.uploadFile(outSelfie),
-              );
+          final outApi = ref.read(syncEngineProvider).api;
+          final outSelfieId = outSelfie == null ? null : await outApi.uploadFile(outSelfie);
+          Future<Map<String, dynamic>> sendOut() async => outApi.checkOut(
+            lat: pos.latitude,
+            lng: pos.longitude,
+            accuracyM: pos.accuracy,
+            selfieFileId: outSelfieId,
+            evidenceFileId: outEvidence == null ? null : await outApi.uploadFile(outEvidence!),
+          );
+          Map<String, dynamic> res;
+          try {
+            res = await sendOut();
+          } on DioException catch (e) {
+            // Data lokasi tak tersedia di HP: server menolak (T7, di luar radius) → minta foto bukti lalu ulangi.
+            final msg = apiErrorMessage(e).toLowerCase();
+            if (e.response?.statusCode != 422 || outEvidence != null || !(msg.contains('radius') || msg.contains('zona'))) {
+              rethrow;
+            }
+            if (!await askOutEvidence()) return;
+            res = await sendOut();
+          }
           final encouragement = res['encouragement_message'] as String?;
           if (encouragement != null && encouragement.isNotEmpty && mounted) {
             await showDialog<void>(
@@ -845,6 +927,29 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               icon: Icons.check_circle_rounded,
                               text: 'Absensi hari ini selesai. Terima kasih!',
                               accent: Accent.emerald,
+                            ),
+                          if (today != null &&
+                              today['is_late'] == true &&
+                              today['evidence_photo_file_id'] == null &&
+                              today['id'] != null &&
+                              today['status'] != 'OFFLINE')
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: OutlinedButton.icon(
+                                key: const Key('tambah-foto-bukti'),
+                                onPressed: _busy
+                                    ? null
+                                    : () async {
+                                        await _addEvidence(
+                                          today['id'] as String,
+                                          'Foto bukti keterlambatan',
+                                          'Foto lokasi atau keadaan Anda sebagai bukti keterlambatan.',
+                                        );
+                                        await _load();
+                                      },
+                                icon: const Icon(Icons.add_a_photo_rounded),
+                                label: const Text('Tambah foto bukti'),
+                              ),
                             ),
                         ],
                       ),

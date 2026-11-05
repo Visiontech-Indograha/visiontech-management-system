@@ -651,6 +651,18 @@ class VmsApi {
   Future<List<Map<String, dynamic>>> myOvertime() async =>
       _list((await _dio.get('$_p/overtime')).data);
 
+  /// Setujui (APPROVED) atau tolak (REJECTED) lembur tim. Online saja: keputusan tidak diantrikan offline.
+  Future<Map<String, dynamic>> reviewOvertime({
+    required String id,
+    required String decision,
+    String? note,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/overtime/$id/review',
+      data: {'decision': decision, 'note': ?note},
+    )).data,
+  );
+
   // --- Mess, dokumen, koreksi laporan -------------------------------------------
   Future<List<Map<String, dynamic>>> myMess() async => _list((await _dio.get('$_p/mess/me')).data);
 

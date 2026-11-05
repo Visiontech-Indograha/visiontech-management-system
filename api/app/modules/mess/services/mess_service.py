@@ -175,7 +175,9 @@ class MessService:
                 await self._check_capacity(place, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
             await self._check_period(stay.employee_id, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
         status = "APPROVED" if data.approve else "REJECTED"
-        await self.repo.decide(mess_stay_id, status, user.user_id, note, utcnow())
+        # Kondisi status ada di UPDATE: dua peninjau bersamaan tidak sama-sama lolos.
+        if not await self.repo.decide(mess_stay_id, status, user.user_id, note, utcnow()):
+            raise AppError("MESS_ALREADY_DECIDED", "Pengajuan ini sudah diputuskan atau dibatalkan.", status=409)
         notifier = NotificationService(self.db)
         who = await notifier.employee_name(user.employee_id) if user.employee_id else None
         await notifier.notify_employees(
@@ -200,7 +202,8 @@ class MessService:
         if not cancellable:
             raise AppError("MESS_NOT_CANCELLABLE", "Hunian yang sudah berjalan tidak dapat dibatalkan; pakai "
                            "\"Selesai inap\".", status=409)
-        await self.repo.set_status(mess_stay_id, "CANCELLED")
+        if not await self.repo.set_status(mess_stay_id, "CANCELLED", allowed=("REQUESTED", "APPROVED")):
+            raise AppError("MESS_NOT_CANCELLABLE", "Status pengajuan sudah berubah; muat ulang.", status=409)
         if stay.status == "APPROVED" and not self._is_owner(user, stay):
             await NotificationService(self.db).notify_employees(
                 [stay.employee_id], "MESS_CANCELLED", f"Hunian di {stay.mess_name} dibatalkan",

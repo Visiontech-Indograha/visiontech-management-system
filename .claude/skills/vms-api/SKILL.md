@@ -75,8 +75,7 @@ Rincian dan contoh ada di `references/big-o-query-dan-pagination.md`.
 ## 5. Transaksi, locking, dan idempotensi (ringkas)
 
 - **Locking yang sudah dipakai**: `FOR UPDATE` di ±12 titik, misalnya `asset_repository.py:292`, `auth_session_repository.py:175` (rotasi refresh), `plan_item_repository.py:69` (rollover). Pola ini sudah dikenal tim.
-- **Celah TOCTOU**: approve/submit jadwal membaca status lalu UPDATE tanpa kondisi status. `daily_plan_service.py:462-464` (`approve`) dan `daily_plan_repository.py:309-325` (`set_status`, UPDATE tanpa `AND status = …`). Perbaikan: `UPDATE … WHERE status = ANY(:allowed)`, cek `rowcount`; 0 baris = 409.
-- **PM override status order** tanpa kondisi: `work_completion_core_repository.py` (`update_status`, riset F-13).
+- **TOCTOU sudah ditutup** (pola `UPDATE … WHERE status = ANY(:allowed)`, `RETURNING`, 0 baris = 409): jadwal harian (`daily_plan_repository.set_status`, PR #303/#308), order (`work_completion_core_repository.update_status`, `expected=`), keputusan mess dan batal mess, persetujuan dan pengiriman survei WO (`d05b3457`). Daftar sisa ada di deskripsi PR `chore/utang-api-kecil`.
 - **Idempotency**: hanya untuk sinkron offline lewat `client_op_id` (`attendance_offline_service.py:164-173`). Tidak ada `Idempotency-Key` pada endpoint online (0 kecocokan `idempotency` selain itu, sudah dihitung).
 - **Target idempotensi** (ADR 0001 keputusan 7; `docs/06` Idempotensi): endpoint tulis terotentikasi wajib `Idempotency-Key`. Tabel `idempotency_keys` di PostgreSQL adalah sumber kebenaran, TTL 24 jam, disimpan dalam transaksi yang sama dengan aksinya. Redis `SET NX` hanya kunci cepat anti-balapan. Respons login dan refresh tidak disimpan. Key sama + body sama → kembalikan respons tersimpan (200), bukan 409 (koreksi riset 01 bagian 6). Key sama + body beda → 422. Permintaan masih berjalan → 409.
 
@@ -101,11 +100,22 @@ Rincian di `references/keamanan-dan-otorisasi.md`.
 Rincian di `references/pengujian-kontrak-dan-galat.md`.
 
 - Piramida (PDF bab 11): static analysis wajib, unit banyak, integrasi ke PostgreSQL nyata, E2E sedikit.
-- Tes arsitektur sudah ada: `test_sql_rules.py`, `test_route_guards.py`, `test_router_layering.py`, `test_alembic_v2.py` (head `v2_0019`, baris `assert scripts.get_heads()`), `test_no_select_star.py`, `test_openapi_snapshot.py`.
+- Tes arsitektur sudah ada: `test_sql_rules.py`, `test_route_guards.py`, `test_router_layering.py`, `test_alembic_v2.py` (head `v2_0026`, baris `assert scripts.get_heads()`; tiap migrasi baru ditambah baris `down_revision`-nya), `test_no_select_star.py`, `test_openapi_snapshot.py`.
 - **Celah yang terbaca dari kode (belum dijalankan)**: `work_order_repository.py:122-124` (3 kecocokan `ILIKE '%' || :q || '%'`) dan `project_repository.py:44-45` (2 kecocokan) tidak ada di `KNOWN` (`test_sql_rules.py:35-45`). Berdasarkan regex, `test_no_new_forbidden_sql` (`test_sql_rules.py:98`) akan merah. Ini belum diverifikasi dengan pytest.
-- **Tes konkurensi belum ada** (0 kecocokan `gather|threading|concurren` di `api/tests`, riset 01 F-14). Tambah tiga tes: dua approve bersamaan, dua rollover bersamaan, dua serah terima aset bersamaan. Hanya satu boleh sukses.
+- **Tes konkurensi sudah ada** di `api/tests/concurrency.py`: `dua_bersamaan` (dua permintaan serentak lewat `threading.Barrier` dan `TestClient`) dan `tahan_lalu_ubah` (lihat §8.1). Contoh: `tests/modules/work_plans/test_daily_transition_cas.py`, `tests/modules/work_completion/test_order_status_cas.py`. Belum ada untuk rollover dan serah terima aset: tambahkan dengan pola yang sama, hanya satu boleh sukses.
 - **Tes matriks peran**: target `docs/06` dan ADR 0001 kriteria: peran × endpoint × ID lintas divisi (404), daftar tidak membocorkan baris lain, dan query tanpa konteks RLS mengembalikan 0 baris.
 - **CI**: `ci.yml:86-87` menjalankan `pytest` dan `ci.yml:77-84` menjalankan ruff dan mypy. Belum ada `--cov-fail-under` (riset F-22).
+
+### 8.1 Cara tes lokal tanpa `api/.venv`
+- `api/.venv` bisa diblokir (deny rule di sesi agen). Buat venv di luar repo, lalu pasang dependensi dari `api/requirements-dev.txt`: `python -m venv <folder-sementara>\venv` lalu `<folder-sementara>\venv\Scripts\python.exe -m pip install -r requirements-dev.txt`.
+- Jalankan dari `api/` dengan interpreter itu: `python -m ruff check app tests`, `python -m mypy` (strict, `api/mypy.ini`), `python -m pytest <berkas>`. Pytest hanya atas perintah user (memori `defer-test-writing`).
+- Variabel DB uji: `TEST_DATABASE_URL=postgresql+asyncpg://postgres:<sandi>@127.0.0.1:55432/<nama>`, `TEST_SETUP_DATABASE_URL=postgresql://...` (URL sinkron, dipakai `_sync_conn`), dan `TEST_ALLOW_DB_NAMES=<nama>` bila nama tidak berakhiran `_test`. Sandi diambil dari `docker inspect vms-test-db` tanpa dicetak. Lihat `vms-db` §10.1 untuk membuat DB uji pribadi.
+- Tes tanpa DB (mis. `tests/modules/hse/test_hse_ack_ip.py`, `tests/core/test_rate_limit.py`) tidak butuh variabel di atas. Gunakan service palsu dan `starlette.requests.Request` dengan scope buatan.
+
+### 8.2 Konkurensi: menahan kunci dan dua permintaan serentak
+- **Menahan kunci (deterministik)**: `tahan_lalu_ubah(sql, params, aksi)` di `api/tests/concurrency.py`. Koneksi kedua (`_sync_conn()`, `autocommit=False`) menjalankan `sql` yang memegang baris tanpa commit. `aksi` dijalankan di thread lain, `tunggu_terkunci()` menunggu sampai ada sesi dengan `wait_event_type = 'Lock'`, lalu commit. Permintaan yang benar membaca status terkini dan menjawab 409, bukan menimpa.
+- **Dua permintaan serentak**: `dua_bersamaan(lambda i: client.patch(...))` memakai `threading.Barrier(2)` dan `ThreadPoolExecutor`. `TestClient` bersifat sinkron, jadi jangan memakai `asyncio.gather`. Hasil yang diterima: `[200, 200]` (transisi idempoten) atau `[200, 409]` dengan `error.code == "INVALID_STATE"`. Status akhir harus salah satu nilai yang sah, tanpa 500.
+- Contoh acuan: `tests/modules/work_completion/test_order_status_cas.py`, `tests/modules/work_plans/test_daily_status_race.py`.
 
 ## 9. Kontrak OpenAPI dan generator tipe
 

@@ -36,6 +36,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# CHANGELOG lokal: tidak di-commit (sering konflik tiap PR); catatan rilis otomatis dari PR
+CHANGELOG.md
+
 # Pytest
 .pytest_cache/
 htmlcov/

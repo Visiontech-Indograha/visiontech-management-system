@@ -4,7 +4,7 @@ app/modules/work_completion/order_status_rules.py
 Peta transisi status order klien (work_completion.order_status). Satu sumber untuk semua penulis status:
 PM/OM override (PATCH /status dan PUT), keputusan ACC klien, dan tanda tangan PM (COMPLETED).
 
-USULAN, perlu persetujuan pemilik (riset 01 F-13). Peta diturunkan dari kode yang sudah ada:
+Disetujui pemilik, tanggal 2026-11-05 (riset 01 F-13; docs/adr/0001-peta-transisi-status-order.md). Peta diturunkan dari kode yang sudah ada:
 - UI: URGENT <-> ONGOING (tandai/hapus mendesak).
 - Override PM/OM: PENDING, CANCELLED, ONGOING, URGENT, COMPLETED.
 - Keputusan ACC: WAITING_ACC (MENUNGGU_ACC), ACCEPTED (DITERIMA), REWORK (DITOLAK_REWORK).

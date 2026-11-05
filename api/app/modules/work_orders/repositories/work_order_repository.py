@@ -274,7 +274,21 @@ class WorkOrderRepository(BaseRepository):
         format_type: str,
         points: list[dict[str, Any]],
         general_bom: list[dict[str, Any]],
-    ) -> None:
+    ) -> bool:
+        # 0. Kunci WO dan pastikan status masih menerima survei. Tanpa ini, pengiriman ulang yang
+        # berjalan bersamaan dengan persetujuan PM bisa mengembalikan status READY_TO_EXECUTE ke SURVEY_SUBMITTED.
+        locked = await self.scalar(
+            """
+            UPDATE client_work_orders SET update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid)
+              AND status IN ('WAITING_SURVEY', 'SURVEY_IN_PROGRESS', 'SURVEY_SUBMITTED') AND delete_at IS NULL
+            RETURNING work_order_id
+            """,
+            {"wo_id": str(work_order_id)},
+        )
+        if locked is None:
+            return False
+
         # 1. Update atau insert work_order_surveys
         survey_id = await self.scalar(
             "SELECT survey_id FROM work_order_surveys WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL",
@@ -365,6 +379,7 @@ class WorkOrderRepository(BaseRepository):
             """,
             {"wo_id": str(work_order_id)},
         )
+        return True
 
     async def list_survey_points(self, work_order_id: UUID | str) -> Sequence[Any]:
         sql = """
@@ -438,15 +453,32 @@ class WorkOrderRepository(BaseRepository):
             {"wo_id": str(work_order_id)},
         )
 
-    async def apply_survey_to_items(self, work_order_id: UUID | str, approved_by_user_id: UUID | str) -> None:
+    async def apply_survey_to_items(self, work_order_id: UUID | str, approved_by_user_id: UUID | str) -> bool:
         """
         Fitur Inti: PM menyetujui survei.
+        0. Klaim status SURVEY_SUBMITTED → READY_TO_EXECUTE di UPDATE bersyarat (baris terkunci sampai
+           transaksi selesai). False bila status sudah berubah: dua persetujuan bersamaan tidak
+           menyalin item/BOM dua kali.
         1. Ambil survey points.
         2. Salin tiap point menjadi work_order_items dengan photo_slots_snapshot dari work_type.
         3. Salin recommended_bom tiap point menjadi work_order_bom yang terhubung ke item_id.
         4. Salin general_bom menjadi work_order_bom (work_order_item_id = NULL).
-        5. Update status client_work_orders ke READY_TO_EXECUTE.
         """
+        claimed = await self.scalar(
+            """
+            UPDATE client_work_orders
+            SET status = 'READY_TO_EXECUTE',
+                survey_approved_at = NOW(),
+                survey_approved_by = CAST(:uid AS uuid),
+                update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND status = 'SURVEY_SUBMITTED' AND delete_at IS NULL
+            RETURNING work_order_id
+            """,
+            {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
+        )
+        if claimed is None:
+            return False
+
         points = await self.fetchall(
             """
             SELECT point_id, point_name, location_detail, recommended_work_type_id, recommended_bom
@@ -562,18 +594,7 @@ class WorkOrderRepository(BaseRepository):
             """,
             {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
         )
-
-        await self.execute(
-            """
-            UPDATE client_work_orders
-            SET status = 'READY_TO_EXECUTE',
-                survey_approved_at = NOW(),
-                survey_approved_by = CAST(:uid AS uuid),
-                update_at = NOW()
-            WHERE work_order_id = CAST(:wo_id AS uuid)
-            """,
-            {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
-        )
+        return True
 
     async def update_item_progress(
         self,

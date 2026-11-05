@@ -7605,11 +7605,31 @@
      "Mess"
     ],
     "summary": "Create Stay",
-    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.",
+    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.\nMendukung Idempotency-Key (opsional).",
     "operationId": "create_stay_api_v1_mess_post",
     "security": [
      {
       "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
      }
     ],
     "requestBody": {
@@ -15515,11 +15535,31 @@
      "Assets"
     ],
     "summary": "Lend Asset",
-    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).",
+    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).\nMendukung Idempotency-Key (opsional).",
     "operationId": "lend_asset_api_v1_assets_loans_post",
     "security": [
      {
       "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
      }
     ],
     "requestBody": {

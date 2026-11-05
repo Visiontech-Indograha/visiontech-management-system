@@ -70,7 +70,7 @@ Pola salah: baca status → cek di Python → UPDATE tanpa kondisi. Dua request 
 Klien dapat mengirim ulang (jaringan lambat, tombol ditekan dua kali, retry Dio). Tanpa idempotensi, dua pengajuan lembur, cuti, atau pinjaman aset tercipta. Unique index hanya mencegah sebagian kasus dan tidak mengembalikan respons yang sama (riset 01 T6).
 
 ### 4.2 Kondisi sekarang
-- 189 endpoint mutasi, 0 membaca `Idempotency-Key` (riset 01 F-03; verifikasi: `grep -rni idempotency api/app` hanya menemukan `attendance_offline_service.py:164-173` untuk `client_op_id`).
+- 189 endpoint mutasi; 8 di antaranya memakai `idempotency_guard` (opsional): `POST /leaves`, `POST /overtime`, `POST /mess`, `POST /mess/requests`, `POST /assets/loans`, `POST /assets/loan-requests`, dan dua bulk jadwal harian di `daily_plan_route.py`. Hitung ulang: `grep -rn "Depends(idempotency_guard)" api/app/modules`. Sinkron offline absensi tetap lewat `client_op_id` (`attendance_offline_service.py:164-173`).
 - Operasi offline: `client_op_id` dicek sebelum dijalankan dan hasil sebelumnya dikembalikan (`attendance_offline_service.py:173`).
 
 ### 4.3 Desain Target (ADR 0001 keputusan 7; `docs/06`)

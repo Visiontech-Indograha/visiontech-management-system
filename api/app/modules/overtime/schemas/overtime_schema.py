@@ -19,7 +19,9 @@ class OvertimeCreate(BaseModel):
     agar urutan dan pesan kesalahan yang muncul sama persis dengan prototipe.
     """
     daily_plan_id: UUID
-    hours: float
+    # Batas hanya didokumentasikan di OpenAPI; pemeriksaan tetap di OvertimeService (0 < jam <= 12)
+    # agar urutan dan pesan galat tidak berubah.
+    hours: float = Field(json_schema_extra={"exclusiveMinimum": 0, "maximum": 12})
     reason: str = Field(max_length=1000)
 
 

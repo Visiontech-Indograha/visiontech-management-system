@@ -48,13 +48,13 @@ export function useReviewOvertime() {
   });
 }
 
-/** Lembur milik sendiri (keyset; peninjau menerima lembur banyak orang sehingga disaring ke pengguna login). */
-export const useMyOvertime = (employeeId?: string | null) =>
+/** Lembur milik sendiri: server menyaring lewat `mine=true`, jadi satu muatan berisi baris pengguna dan "Muat lebih banyak" tepat. */
+export const useMyOvertime = () =>
   useKeysetList<Overtime[], Overtime[]>({
     key: ["overtime", "mine"],
     url: "/overtime",
-    params: { size: OT_SIZE },
-    merge: (pages) => pages.flat().filter((r) => r.employee_id === employeeId),
+    params: { mine: true, size: OT_SIZE },
+    merge: (pages) => pages.flat(),
   });
 
 const overtimeKey = (planId: string) => ["overtime", planId] as const;

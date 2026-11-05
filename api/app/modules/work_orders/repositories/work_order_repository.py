@@ -19,6 +19,12 @@ from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
 from app.core.time import utcnow
+from app.shared.access.scope_rules import (
+    work_order_leader_sql,
+    work_order_manage_sql,
+    work_order_team_sql,
+    work_order_visible_sql,
+)
 
 
 class WorkOrderRepository(BaseRepository):
@@ -54,7 +60,9 @@ class WorkOrderRepository(BaseRepository):
         lead_team_id: UUID | None = None,
         q: str | None = None,
         limit: int = 50,
+        viewer: dict[str, Any] | None = None,
     ) -> Sequence[Any]:
+        """`viewer` = parameter cakupan (scope_rules.viewer_params); None = tanpa pembatasan (pengguna berwenang)."""
         sql = """
             SELECT
                 wo.work_order_id,
@@ -81,6 +89,10 @@ class WorkOrderRepository(BaseRepository):
                 wo.survey_approved_at,
                 wo.bast_signed_at,
                 wo.bast_signer_name,
+                wo.leader_signed_at,
+                wo.leader_signed_by,
+                wo.leader_signer_name,
+                wo.leader_signature_file_id,
                 (SELECT COUNT(*)::int FROM work_order_items woi
                  WHERE woi.work_order_id = wo.work_order_id AND woi.delete_at IS NULL) AS total_items,
                 (SELECT COUNT(*)::int FROM work_order_items woi
@@ -96,6 +108,9 @@ class WorkOrderRepository(BaseRepository):
             WHERE wo.delete_at IS NULL
         """
         params: dict[str, Any] = {"limit": limit}
+        if viewer is not None:
+            sql += f" AND {work_order_visible_sql('wo')}"
+            params.update(viewer)
         if division_id:
             sql += " AND wo.division_id = CAST(:div_id AS uuid)"
             params["div_id"] = str(division_id)
@@ -122,7 +137,7 @@ class WorkOrderRepository(BaseRepository):
         sql += " ORDER BY wo.create_at DESC LIMIT :limit"
         return await self.fetchall(sql, params)
 
-    async def get_work_order(self, work_order_id: UUID | str) -> Any:
+    async def get_work_order(self, work_order_id: UUID | str, viewer: dict[str, Any] | None = None) -> Any:
         sql = """
             SELECT
                 wo.work_order_id,
@@ -149,6 +164,10 @@ class WorkOrderRepository(BaseRepository):
                 wo.survey_approved_at,
                 wo.bast_signed_at,
                 wo.bast_signer_name,
+                wo.leader_signed_at,
+                wo.leader_signed_by,
+                wo.leader_signer_name,
+                wo.leader_signature_file_id,
                 (SELECT COUNT(*)::int FROM work_order_items woi
                  WHERE woi.work_order_id = wo.work_order_id AND woi.delete_at IS NULL) AS total_items,
                 (SELECT COUNT(*)::int FROM work_order_items woi
@@ -163,7 +182,36 @@ class WorkOrderRepository(BaseRepository):
             LEFT JOIN team t ON t.team_id = wo.lead_team_id AND t.delete_at IS NULL
             WHERE wo.work_order_id = CAST(:id AS uuid) AND wo.delete_at IS NULL
         """
-        return await self.fetchone(sql, {"id": str(work_order_id)})
+        params: dict[str, Any] = {"id": str(work_order_id)}
+        if viewer is not None:
+            sql += f" AND {work_order_visible_sql('wo')}"
+            params.update(viewer)
+        return await self.fetchone(sql, params)
+
+    async def work_order_access(self, work_order_id: UUID | str, viewer: dict[str, Any]) -> Any:
+        """Hak pengguna atas WO: `on_team` (ketua/anggota tim), `on_leader` (ketua tim), `manages` (PM WO/divisi).
+        None = WO tidak ada. Kebijakan 404/403 ada di service."""
+        sql = f"""
+            SELECT
+                {work_order_team_sql('wo')} AS on_team,
+                {work_order_leader_sql('wo')} AS on_leader,
+                {work_order_manage_sql('wo')} AS manages
+            FROM client_work_orders wo
+            WHERE wo.work_order_id = CAST(:id AS uuid) AND wo.delete_at IS NULL
+        """
+        return await self.fetchone(sql, {"id": str(work_order_id), **viewer})
+
+    async def work_order_of_item(self, item_id: UUID | str) -> UUID | None:
+        found: UUID | None = await self.scalar(
+            "SELECT work_order_id FROM work_order_items WHERE item_id = CAST(:id AS uuid)", {"id": str(item_id)}
+        )
+        return found
+
+    async def work_order_of_bom(self, bom_id: UUID | str) -> UUID | None:
+        found: UUID | None = await self.scalar(
+            "SELECT work_order_id FROM work_order_bom WHERE bom_id = CAST(:id AS uuid)", {"id": str(bom_id)}
+        )
+        return found
 
     async def create_work_order(self, data: dict[str, Any]) -> str:
         sql = """
@@ -226,7 +274,21 @@ class WorkOrderRepository(BaseRepository):
         format_type: str,
         points: list[dict[str, Any]],
         general_bom: list[dict[str, Any]],
-    ) -> None:
+    ) -> bool:
+        # 0. Kunci WO dan pastikan status masih menerima survei. Tanpa ini, pengiriman ulang yang
+        # berjalan bersamaan dengan persetujuan PM bisa mengembalikan status READY_TO_EXECUTE ke SURVEY_SUBMITTED.
+        locked = await self.scalar(
+            """
+            UPDATE client_work_orders SET update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid)
+              AND status IN ('WAITING_SURVEY', 'SURVEY_IN_PROGRESS', 'SURVEY_SUBMITTED') AND delete_at IS NULL
+            RETURNING work_order_id
+            """,
+            {"wo_id": str(work_order_id)},
+        )
+        if locked is None:
+            return False
+
         # 1. Update atau insert work_order_surveys
         survey_id = await self.scalar(
             "SELECT survey_id FROM work_order_surveys WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL",
@@ -317,6 +379,7 @@ class WorkOrderRepository(BaseRepository):
             """,
             {"wo_id": str(work_order_id)},
         )
+        return True
 
     async def list_survey_points(self, work_order_id: UUID | str) -> Sequence[Any]:
         sql = """
@@ -390,15 +453,32 @@ class WorkOrderRepository(BaseRepository):
             {"wo_id": str(work_order_id)},
         )
 
-    async def apply_survey_to_items(self, work_order_id: UUID | str, approved_by_user_id: UUID | str) -> None:
+    async def apply_survey_to_items(self, work_order_id: UUID | str, approved_by_user_id: UUID | str) -> bool:
         """
         Fitur Inti: PM menyetujui survei.
+        0. Klaim status SURVEY_SUBMITTED → READY_TO_EXECUTE di UPDATE bersyarat (baris terkunci sampai
+           transaksi selesai). False bila status sudah berubah: dua persetujuan bersamaan tidak
+           menyalin item/BOM dua kali.
         1. Ambil survey points.
         2. Salin tiap point menjadi work_order_items dengan photo_slots_snapshot dari work_type.
         3. Salin recommended_bom tiap point menjadi work_order_bom yang terhubung ke item_id.
         4. Salin general_bom menjadi work_order_bom (work_order_item_id = NULL).
-        5. Update status client_work_orders ke READY_TO_EXECUTE.
         """
+        claimed = await self.scalar(
+            """
+            UPDATE client_work_orders
+            SET status = 'READY_TO_EXECUTE',
+                survey_approved_at = NOW(),
+                survey_approved_by = CAST(:uid AS uuid),
+                update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND status = 'SURVEY_SUBMITTED' AND delete_at IS NULL
+            RETURNING work_order_id
+            """,
+            {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
+        )
+        if claimed is None:
+            return False
+
         points = await self.fetchall(
             """
             SELECT point_id, point_name, location_detail, recommended_work_type_id, recommended_bom
@@ -514,18 +594,7 @@ class WorkOrderRepository(BaseRepository):
             """,
             {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
         )
-
-        await self.execute(
-            """
-            UPDATE client_work_orders
-            SET status = 'READY_TO_EXECUTE',
-                survey_approved_at = NOW(),
-                survey_approved_by = CAST(:uid AS uuid),
-                update_at = NOW()
-            WHERE work_order_id = CAST(:wo_id AS uuid)
-            """,
-            {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
-        )
+        return True
 
     async def update_item_progress(
         self,
@@ -563,14 +632,48 @@ class WorkOrderRepository(BaseRepository):
             {"bom_id": str(bom_id), "actual_qty": actual_qty},
         )
 
+    async def sign_bast_leader(
+        self,
+        work_order_id: UUID | str,
+        signer_user_id: UUID | str,
+        signer_name: str,
+        signature_file_id: UUID | str | None,
+    ) -> bool:
+        """Tanda tangan ketua tim (langkah 1). Hanya sekali: `leader_signed_at` harus masih kosong.
+        Status menjadi COMPLETED (selesai dikerjakan, menunggu persetujuan PM/OM). False bila syarat tak terpenuhi."""
+        found = await self.scalar(
+            """
+            UPDATE client_work_orders
+            SET leader_signed_at = NOW(),
+                leader_signed_by = CAST(:uid AS uuid),
+                leader_signer_name = :sname,
+                leader_signature_file_id = CAST(:fid AS uuid),
+                status = 'COMPLETED',
+                update_at = NOW()
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+              AND leader_signed_at IS NULL
+              AND status IN ('READY_TO_EXECUTE', 'IN_PROGRESS', 'COMPLETED')
+            RETURNING 1
+            """,
+            {
+                "wo_id": str(work_order_id),
+                "uid": str(signer_user_id),
+                "sname": signer_name,
+                "fid": str(signature_file_id) if signature_file_id else None,
+            },
+        )
+        return bool(found)
+
     async def sign_bast(
         self,
         work_order_id: UUID | str,
         signer_name: str,
         signature_file_id: UUID | str | None,
         verify_hash: str,
-    ) -> None:
-        await self.execute(
+    ) -> bool:
+        """Persetujuan final PM/OM (langkah 2). Hanya setelah ketua tim menandatangani dan status COMPLETED.
+        Mengesahkan BAST (status BAST_SIGNED). False bila syarat tak terpenuhi (diperiksa ulang di SQL)."""
+        found = await self.scalar(
             """
             UPDATE client_work_orders
             SET status = 'BAST_SIGNED',
@@ -579,7 +682,9 @@ class WorkOrderRepository(BaseRepository):
                 bast_signature_file_id = CAST(:fid AS uuid),
                 verify_hash = :vhash,
                 update_at = NOW()
-            WHERE work_order_id = CAST(:wo_id AS uuid)
+            WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL
+              AND leader_signed_at IS NOT NULL AND status = 'COMPLETED'
+            RETURNING 1
             """,
             {
                 "wo_id": str(work_order_id),
@@ -588,6 +693,7 @@ class WorkOrderRepository(BaseRepository):
                 "vhash": verify_hash,
             },
         )
+        return bool(found)
 
     async def insert_signature_file(
         self,

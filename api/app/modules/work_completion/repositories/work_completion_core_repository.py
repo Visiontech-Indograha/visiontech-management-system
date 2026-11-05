@@ -453,8 +453,10 @@ class WorkCompletionCoreRepository(BaseRepository):
         )
         return str(res)
 
-    async def update_completion(self, completion_id: UUID | str, data: dict[str, Any]) -> None:
-        """Memperbarui rincian order proyek."""
+    async def update_completion(self, completion_id: UUID | str, data: dict[str, Any],
+                                *, expected_status: str | None = None) -> int:
+        """Memperbarui rincian order proyek. `expected_status` (compare-and-set): UPDATE hanya berlaku bila status
+        saat itu masih sama. Kembalian = jumlah baris yang berubah (0 = sudah diubah pihak lain atau dihapus)."""
         updates = ["update_at = NOW()"]
         params: dict[str, Any] = {"id": str(completion_id)}
 
@@ -468,12 +470,20 @@ class WorkCompletionCoreRepository(BaseRepository):
                 updates.append(f"{k} = :{k}")
                 params[k] = data[k]
 
+        guard = ""
+        if expected_status is not None:
+            guard = " AND order_status = :expected"
+            params["expected"] = expected_status
         set_clause = ", ".join(updates)
-        sql = f"UPDATE work_completion SET {set_clause} WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL"
-        await self.execute(sql, params)
+        sql = (f"UPDATE work_completion SET {set_clause} "
+               f"WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL{guard}")
+        result = await self.execute(sql, params)
+        return int(result.rowcount or 0)
 
-    async def update_status(self, completion_id: UUID | str, status: str, notes: str | None = None) -> None:
-        """Memperbarui status order (PM override)."""
+    async def update_status(self, completion_id: UUID | str, status: str, notes: str | None = None,
+                            *, expected: str) -> int:
+        """Memperbarui status order (PM override), hanya bila status saat itu masih `expected` (compare-and-set).
+        Kembalian = jumlah baris yang berubah; 0 berarti status sudah diubah pihak lain."""
         sql = """
             UPDATE work_completion
             SET order_status = CAST(:status AS varchar),
@@ -484,9 +494,29 @@ class WorkCompletionCoreRepository(BaseRepository):
                     ELSE summary_notes
                 END,
                 update_at = NOW()
-            WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
+            WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL AND order_status = :expected
         """
-        await self.execute(sql, {"id": str(completion_id), "status": status, "notes": notes})
+        result = await self.execute(
+            sql, {"id": str(completion_id), "status": status, "notes": notes, "expected": expected})
+        return int(result.rowcount or 0)
+
+    async def log_status_mundur(
+        self, *, actor_user_id: str, actor_role: str, completion_id: UUID | str, dari: str, ke: str,
+        notes: str | None,
+    ) -> None:
+        """Jejak audit perpindahan status order yang memundurkan (app_activity_logs, action ORDER_STATUS_MUNDUR)."""
+        await self.execute(
+            """
+            INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                                           changed_diff)
+            VALUES (CAST(:uid AS uuid), :role, 'web_react', 'ORDER_STATUS_MUNDUR', 'work_completion',
+                    CAST(:id AS uuid), CAST(:diff AS jsonb))
+            """,
+            {
+                "uid": actor_user_id, "role": actor_role[:30], "id": str(completion_id),
+                "diff": json.dumps({"dari": dari, "ke": ke, "catatan": notes}, default=str),
+            },
+        )
 
     async def delete_completion(self, completion_id: UUID | str) -> None:
         """Soft delete order proyek klien."""

@@ -23,6 +23,6 @@ describe("Rekap absensi", () => {
   it("kosong", async () => {
     mockApi((c) => (c.url === "/recaps/attendance" ? { data: { month: "2026-10", employees: [] } } : undefined));
     renderRoute("/attendance-recap", { role: "field" });
-    expect(await screen.findByText("Belum ada catatan kehadiran pada bulan ini.")).toBeInTheDocument();
+    expect(await screen.findByText("Belum ada data kehadiran untuk bulan ini. Pilih bulan lain di kolom Bulan.")).toBeInTheDocument();
   });
 });

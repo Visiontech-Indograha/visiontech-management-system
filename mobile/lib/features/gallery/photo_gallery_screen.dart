@@ -179,7 +179,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
           if (!widget.selectMode)
             IconButton(
               key: const Key('gallery-team-logo'),
-              tooltip: 'Logo tim',
+              tooltip: 'Atur logo tim (tampil di foto)',
               icon: const Icon(Icons.groups_2_outlined),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const TeamLogoScreen()),

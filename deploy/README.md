@@ -12,7 +12,7 @@ Log build **lengkap** selalu terlampir. Pesan memakai embed Discord (kolom, taut
 
 Server (`~/deploy/vms-mvp`): `autodeploy.sh` dijalankan cron tiap menit (dengan kunci `flock`).
 Urutan: checkout → `docker compose build` → backup DB (14 terakhir disimpan di `backups/`) →
-`alembic upgrade head` (Master Schema V2) → `up -d --force-recreate` → **cek siap pakai**. `--force-recreate`
+`alembic upgrade head` (Master Schema V2) → `up -d --force-recreate` → **cek siap pakai**. Backup DB menyimpan 7 dump terakhir (`backup.sh`, `retention`). `--force-recreate`
 memastikan kontainer memakai ID image hasil build terbaru meskipun commit hanya mengubah dokumentasi.
 
 Sumber build dikunci ke branch **`prod`**, bukan `main` dan bukan tag:
@@ -52,12 +52,20 @@ Rinciannya ada di kolom **Tahapan** pada pesan ✅.
 
 ## Memasang perubahan skrip ini ke server
 
-`autodeploy.sh` di server adalah **salinan**, dan tidak ikut ter-update oleh deploy. Setelah skrip
-ini berubah di `prod`, salin manual lalu buat cadangan lebih dulu:
+`autodeploy.sh` di server **memperbarui dirinya sendiri** dari `origin/$BRANCH` (bagian "Perbarui diri sendiri"
+di skrip, pada setiap jalannya bila isinya berbeda dan sintaksnya valid). Versi sebelumnya disimpan di
+`$BASE/autodeploy.sh.sebelum`, dan catatannya di `logs/self-update.log`. Jadi perubahan `autodeploy.sh` di branch
+deploy ikut berlaku otomatis.
+
+Salin manual hanya bila self-update tidak bisa jalan (misalnya `src/` belum ada atau sintaks salah). Sebelum itu,
+cadangkan dulu:
 
 ```bash
 cd ~/deploy/vms-mvp && cp autodeploy.sh autodeploy.sh.bak-$(date +%Y%m%d) && cp src/deploy/autodeploy.sh . && bash -n autodeploy.sh
 ```
+
+Skrip lain di `deploy/` (`pasang-*.sh`, `pakai-peran-runtime.sh`, dan seterusnya) TIDAK diperbarui otomatis. Jalankan
+ulang dari komputer pemilik bila diperlukan.
 
 ## Lain-lain
 
@@ -99,6 +107,11 @@ dan `https://portal.visiontechindo.com` — bukan alamat Tailscale, agar terbuka
 `ssh ageng@192.168.88.160 "bash -s" < deploy/setel-url-verifikasi.sh` (salinan api.env dibuat; salinan rollback
 `api.env.sebelum-vms_api.*` ikut disamakan). Keduanya dibuat ulang setiap dokumen dibuka.
 
+## Cadangan terpisah per lingkungan (opsional)
+`VMS_BACKUP_DIR` (folder) dan `VMS_BACKUP_NAME` (awalan nama berkas) di `deploy.env` memisahkan cadangan prod dan beta;
+tanpa keduanya perilaku lama (`backups/`, nama DB, 7 berkas). Langkah aman: `deploy/PANDUAN-PISAH-CADANGAN.md`.
+Tes logika: `bash scripts/uji-backup-retensi.sh`.
+
 ## Uji pulih cadangan (P9-5)
 `ssh ageng@192.168.88.160 "bash -s" < deploy/uji-pulih-cadangan.sh` — membuat cadangan baru lewat `backup.sh`,
 mengunduh salinan MinIO-nya (SHA-256 harus sama), memulihkannya ke Postgres SEMENTARA (citra sama, tanpa jaringan),
@@ -122,8 +135,10 @@ uji nyata web + APK beta dari `apk.yml`) → PR `beta` → `prod` (satu persetuj
 - `deploy/backup-offsite.sh`: salinan backup ke mesin lain via rsync + SSH (butuh `offsite.env`).
 - `deploy/hardening-server.sh --cek|--ya`: SSH, firewall, fail2ban, pembaruan otomatis (perlu sudo, dijalankan pemilik).
 - Anti-loop: deploy yang gagal untuk commit yang sama baru dicoba lagi setelah `VMS_DEPLOY_RETRY_AFTER` detik (bawaan 900);
-  penanda `.last-failed`. Salin `autodeploy.sh` terbaru ke server (lihat bagian "Memasang perubahan skrip").
-- Panduan operasional harian: [`docs/RUNBOOK-PRODUKSI.md`](../docs/RUNBOOK-PRODUKSI.md).
+  penanda `.last-failed`. Self-update `autodeploy.sh` lihat bagian "Memasang perubahan skrip".
+- Beta (`deploy/beta/`): API dan web beta HANYA tailnet (Tailscale Serve, bukan Funnel). Data beta berasal dari
+  `db/07_master_seed_v2.sql` (sintetis), bukan dari prod. Langkah pemilik dan rollback: `deploy/RUNBOOK-beta-aman.md`.
+- Panduan operasional harian: [`docs/RUNBOOK-PRODUKSI.md`](../docs/RUNBOOK-PRODUKSI.md) (berkas ini belum ada di repo).
 
 ## Citra via GHCR (opsional, mengurangi beban build di server)
 Workflow `.github/workflows/images.yml` membangun `api` dan `web` di runner GitHub saat `prod` berubah dan mendorongnya ke

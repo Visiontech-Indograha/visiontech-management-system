@@ -9,16 +9,16 @@ const labels = (permissions: readonly string[]) => visibleNav(permissions).map((
 
 describe("menu berdasarkan izin API", () => {
   it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
-    expect(labels([])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat"]);
-    expect(labels(["view:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat", "Direktori"]);
+    expect(labels([])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat"]);
+    expect(labels(["view:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat", "Direktori"]);
     // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat"]);
-    expect(labels(["view:documents"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat", "Berkas saya"]);
-    expect(labels(["view:audit"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Tugas Klien (WO)", "Jadwal harian", "Alokasi mingguan", "Klien", "Absensi", "Cuti & Izin", "Rekap bulanan", "Rekap lembur", "Kendaraan & alat", "Jenis pekerjaan"]);
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat"]);
+    expect(labels(["view:documents"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat", "Berkas saya"]);
+    expect(labels(["view:audit"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat", "Audit log"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Tugas Klien (WO)", "Jadwal harian", "Alokasi mingguan", "Klien", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan & alat", "Jenis pekerjaan"]);
     // R-33: lokasi kerja dikelola PM (proyek) & Finance (kantor) lewat manage:sites.
-    expect(labels(["manage:sites"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat", "Lokasi kerja"]);
-    expect(labels(["review:overtime"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Rekap lembur", "Kendaraan & alat"]);
+    expect(labels(["manage:sites"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat", "Lokasi kerja"]);
+    expect(labels(["review:overtime"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan & alat"]);
   });
 
   it("izin mock sama dengan peta peran API", () => {
@@ -33,7 +33,7 @@ describe("menu berdasarkan izin API", () => {
     }
     expect(labels(MOCK_PERMISSIONS.FINANCE)).not.toContain("Audit log");
     expect(labels(MOCK_PERMISSIONS.OPS)).toContain("Audit log");
-    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Kendaraan & alat", "Berkas saya", "Direktori"]);
+    expect(labels(MOCK_PERMISSIONS.field)).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti & Izin", "Rekap bulanan", "Lembur", "Kendaraan & alat", "Berkas saya", "Direktori"]);
   });
 
   it("shell memakai permissions[] dari /auth/me untuk menyaring menu", () => {

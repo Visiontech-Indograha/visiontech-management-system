@@ -255,7 +255,8 @@ class PlanItemService:
             raise _state("Hanya pekerjaan yang belum selesai dan belum diajukan yang bisa dipindah hari.")
         if data.completed_qty >= item.target_qty:
             raise ValidationError("Jumlah selesai sudah mencapai target — tandai selesai, tidak perlu pindah hari.")
-        await self.repo.request_rollover(item_id, data.delay_reason.strip(), data.completed_qty)
+        if not await self.repo.request_rollover(item_id, data.delay_reason.strip(), data.completed_qty, item.status):
+            raise _state("Status pekerjaan sudah berubah; muat ulang lalu coba lagi.")
         return await self.repo.get(item_id)
 
     async def decide_rollover(self, user: CurrentUser, item_id: UUID, data: RolloverDecision) -> Any:
@@ -271,7 +272,8 @@ class PlanItemService:
                 raise _state("Pekerjaan ini tidak sedang menunggu keputusan pindah hari.")
             log = {"decision": "REJECTED", "note": (data.note or "").strip() or None,
                    "delay_reason": item.delay_reason, "from_daily_plan_id": str(item.daily_plan_id)}
-            await self.repo.reject_rollover(item_id, user.employee_id)
+            if not await self.repo.reject_rollover(item_id, user.employee_id, locked.status):
+                raise _state("Status pekerjaan sudah berubah; muat ulang lalu coba lagi.")
             await self.repo.log_decision(user.user_id, user.role, item_id, log)
             return await self.repo.get(item_id)
 
@@ -313,7 +315,9 @@ class PlanItemService:
         if work_date < jakarta_now().date():
             raise ValidationError("Tanggal tujuan tidak boleh lampau.")
 
-        new_item = await self.repo.shift(item_id, target_id, user.employee_id)
+        new_item = await self.repo.shift(item_id, target_id, user.employee_id, locked.status)
+        if new_item is None:
+            raise _state("Status pekerjaan sudah berubah; muat ulang lalu coba lagi.")
         relinked = await self.repo.relink_dependents(item_id, new_item)
 
         log = {

@@ -526,7 +526,7 @@ export function WorkOrderSurveyReviewModal({
                       className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-primary shrink-0" />
-                      <TextBlock as="span" className="truncate">BAST (.pdf)</TextBlock>
+                      <TextBlock as="span" className="truncate">Surat serah terima (.pdf)</TextBlock>
                     </ActionButton>
                     <ActionButton
                       type="button"
@@ -536,7 +536,7 @@ export function WorkOrderSurveyReviewModal({
                       className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-blue-500 shrink-0" />
-                      <TextBlock as="span" className="truncate">BAST (.docx)</TextBlock>
+                      <TextBlock as="span" className="truncate">Surat serah terima (.docx)</TextBlock>
                     </ActionButton>
                     <ActionButton
                       type="button"
@@ -546,7 +546,7 @@ export function WorkOrderSurveyReviewModal({
                       className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-amber-500 shrink-0" />
-                      <TextBlock as="span" className="truncate">Survei (.docx)</TextBlock>
+                      <TextBlock as="span" className="truncate">Laporan survei (.docx)</TextBlock>
                     </ActionButton>
                     <ActionButton
                       type="button"
@@ -566,7 +566,7 @@ export function WorkOrderSurveyReviewModal({
                       className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-emerald-500 shrink-0" />
-                      <TextBlock as="span" className="truncate">BoQ (.xlsx)</TextBlock>
+                      <TextBlock as="span" className="truncate">Daftar material (.xlsx)</TextBlock>
                     </ActionButton>
                     <ActionButton
                       type="button"
@@ -589,7 +589,7 @@ export function WorkOrderSurveyReviewModal({
                         <FileCheck2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <div>
                           <TextBlock className="font-bold text-emerald-700 dark:text-emerald-300">
-                            Persetujuan Hasil Survei
+                            Persetujuan hasil survei
                           </TextBlock>
                           <div className="text-[11px] text-muted-foreground mt-0.5">
                             <TextBlock as="span">
@@ -613,7 +613,7 @@ export function WorkOrderSurveyReviewModal({
                         ) : (
                           <div className="flex items-center justify-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4" />
-                            <TextBlock as="span">Setujui Survei & Kunci Tugas</TextBlock>
+                            <TextBlock as="span">Setujui hasil survei & kunci tugas</TextBlock>
                           </div>
                         )}
                       </ActionButton>

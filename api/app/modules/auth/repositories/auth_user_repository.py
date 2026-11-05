@@ -7,6 +7,7 @@ Organisasi pengguna = kantor karyawannya (`employee.office_id`); akun tanpa kary
 from typing import Any
 from uuid import UUID
 
+from app.core.config import settings
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
@@ -65,7 +66,18 @@ class AuthUserRepository(BaseRepository):
         return row is not None
 
     async def find_identity(self, user_id: UUID | str) -> Any:
-        """Status aktif & peran akun — dibaca ulang dari DB pada setiap permintaan (bukan dari klaim token)."""
+        """Status aktif & peran akun — dibaca ulang dari DB pada setiap permintaan (bukan dari klaim token).
+        Dengan ROLE_ASSIGNMENT_ENABLED, peran utama diikuti peran tambahan aktif (ADR 0002); peran utama tetap
+        urutan pertama. Penugasan di kantor yang sudah dihapus diabaikan."""
+        roles_sql = "ARRAY[u.system_role::text]"
+        if settings.ROLE_ASSIGNMENT_ENABLED:
+            roles_sql = """ARRAY[u.system_role::text] || COALESCE((
+                    SELECT array_agg(DISTINCT a.role::text ORDER BY a.role::text)
+                    FROM user_role_assignment a
+                    WHERE a.user_id = u.user_id AND a.delete_at IS NULL AND a.role <> u.system_role
+                      AND (a.office_id IS NULL OR EXISTS (
+                           SELECT 1 FROM office ao WHERE ao.office_id = a.office_id AND ao.delete_at IS NULL))
+                ), ARRAY[]::text[])"""
         return await self.fetchone(
             f"""
             SELECT
@@ -75,12 +87,28 @@ class AuthUserRepository(BaseRepository):
                 u.email,
                 u.is_active,
                 COALESCE(e.office_id, {_MAIN_OFFICE}) AS organization_id,
-                ARRAY[u.system_role::text] AS roles
+                {roles_sql} AS roles
             FROM users u
             LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
             WHERE u.user_id = CAST(:id AS uuid) AND u.delete_at IS NULL
             """,
             {"id": user_id},
+        )
+
+    async def role_scopes(self, user_id: UUID | str) -> list[Any]:
+        """Peran tambahan aktif (penugasan MANUAL) beserta kantornya, untuk profil (/auth/me). NULL = semua kantor."""
+        return list(
+            await self.fetchall(
+                """
+                SELECT a.role::text AS role, a.office_id, o.name AS office_name
+                FROM user_role_assignment a
+                LEFT JOIN office o ON o.office_id = a.office_id
+                WHERE a.user_id = CAST(:id AS uuid) AND a.delete_at IS NULL AND a.source = 'MANUAL'
+                  AND (a.office_id IS NULL OR o.delete_at IS NULL)
+                ORDER BY a.role::text, o.name
+                """,
+                {"id": str(user_id)},
+            )
         )
 
     async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
@@ -264,6 +292,14 @@ class AuthUserRepository(BaseRepository):
             "UPDATE users SET is_active = :a, update_at = now() "
             "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
             {"a": active, "id": user_id},
+        )
+
+    async def set_login(self, user_id: UUID | str, login: str) -> None:
+        """Ganti email login akun. Username tidak diubah: login dicari lewat email atau username."""
+        await self.execute(
+            "UPDATE users SET email = :login, update_at = now() "
+            "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"login": login, "id": str(user_id)},
         )
 
 

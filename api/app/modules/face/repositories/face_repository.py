@@ -40,6 +40,18 @@ class FaceRepository(BaseRepository):
             {"uid": str(user_id)},
         )
 
+    async def employee_face_row(self, employee_id: UUID | str) -> Any:
+        """Karyawan (belum dihapus) beserta peran akunnya dan wajah terdaftar; untuk status oleh HR/admin."""
+        return await self.fetchone(
+            """
+            SELECT e.employee_id, u.system_role::text AS role, e.face_embedding
+            FROM employee e
+            LEFT JOIN users u ON u.employee_id = e.employee_id AND u.delete_at IS NULL
+            WHERE e.employee_id = CAST(:emp AS uuid) AND e.delete_at IS NULL
+            """,
+            {"emp": str(employee_id)},
+        )
+
     async def embedding_of(self, employee_id: UUID | str) -> Any:
         return await self.scalar(
             "SELECT face_embedding FROM employee WHERE employee_id = CAST(:emp AS uuid) AND delete_at IS NULL",
@@ -71,6 +83,16 @@ class FaceRepository(BaseRepository):
             {"emp": str(employee_id)},
         )
         return cleared is not None
+
+    async def self_reset_within_day(self, employee_id: UUID | str) -> bool:
+        """Apakah karyawan ini sudah menghapus wajahnya sendiri dalam 24 jam terakhir."""
+        found = await self.scalar(
+            "SELECT 1 FROM public.app_activity_logs "
+            "WHERE action = 'FACE_SELF_RESET' AND entity_id = CAST(:emp AS uuid) "
+            "AND created_at >= now() - interval '1 day' LIMIT 1",
+            {"emp": str(employee_id)},
+        )
+        return found is not None
 
     async def file_key(self, file_id: UUID | str) -> str | None:
         key: str | None = await self.scalar(

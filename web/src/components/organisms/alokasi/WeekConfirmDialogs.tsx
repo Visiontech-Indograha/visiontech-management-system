@@ -5,6 +5,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { copyWeekTargets, summarizeBulk, type StandbyGroup, type WeeklyMatrix } from "@/lib/alokasi";
 import { errorMessage } from "@/lib/errors";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { useBulkStandby, useCopyPlan } from "@/services/alokasiService";
 
 /** "Siaga hari kosong": konfirmasi lalu POST bulk-standby per divisi (sel yang sudah terisi dilewati API). */
@@ -16,17 +17,19 @@ export function StandbyConfirmDialog({ groups, cellCount, onClose }: {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const standby = useBulkStandby();
+  const idem = useIdempotencyKey(JSON.stringify(groups));
   const confirm = async () => {
     setError(null);
     setBusy(true);
     let created = 0;
     let skipped = 0;
     try {
-      for (const g of groups) {
-        const s = summarizeBulk(await standby.mutateAsync(g));
+      for (const [i, g] of groups.entries()) {
+        const s = summarizeBulk(await standby.mutateAsync({ ...g, idempotencyKey: idem.keyFor(i) }));
         created += s.created;
         skipped += s.skipped;
       }
+      idem.renew();
       toast.success(`${created} siaga dibuat${skipped ? `, ${skipped} dilewati` : ""}.`);
       onClose();
     } catch (err) {

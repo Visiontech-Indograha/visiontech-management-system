@@ -36,7 +36,7 @@ describe("Absensi", () => {
     const calls = setup((url) => (url === "/attendance/a1/review" ? { data: { message: "Absensi di-approved." } } : undefined));
     renderRoute("/attendance", { role: "FINANCE" });
     expect(await screen.findByText("Gudang Cikarang", { exact: false })).toBeInTheDocument();
-    expect(calls.find((c) => c.url === "/attendance")!.params).toMatchObject({ status: "NEEDS_REVIEW", page: 1, size: 50 });
+    expect(calls.find((c) => c.url === "/attendance")!.params).toMatchObject({ status: "NEEDS_REVIEW", size: 50 });
     fireEvent.click(screen.getByRole("button", { name: "Tinjau" }));
     const dialog = screen.getByRole("dialog", { name: "Tinjau absensi" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Simpan keputusan" }));

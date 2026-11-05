@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 
@@ -484,6 +485,8 @@ class _RequestDialog extends ConsumerStatefulWidget {
 
 class _RequestDialogState extends ConsumerState<_RequestDialog> {
   late final _note = TextEditingController(text: widget.initialNote);
+  // Satu niat pengajuan: percobaan ulang memakai kunci yang sama (lihat PengajuanIdempotency).
+  final _idem = PengajuanIdempotency();
   DateTimeRange? _range;
   bool _busy = false;
   String? _error;
@@ -532,6 +535,7 @@ class _RequestDialogState extends ConsumerState<_RequestDialog> {
             start: _iso(_range!.start),
             end: _iso(_range!.end),
             note: _note.text.trim(),
+            idem: _idem,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

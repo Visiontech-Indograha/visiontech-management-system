@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +22,7 @@ import 'sessions_screen.dart';
 const _roleLabel = {
   'ADMIN': 'Admin',
   'HR': 'HR',
-  'PM': 'Project Manager',
+  'PM': 'Atasan',
   'FINANCE': 'Finance',
   'ASSET': 'Petugas aset',
   'OPS': 'Operasional',
@@ -150,6 +151,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) setState(() => _faceError = apiErrorMessage(e));
     } finally {
       if (mounted) setState(() => _faceLoading = false);
+    }
+  }
+
+  /// Hapus pendaftaran wajah sendiri (mis. ganti HP/wajah) setelah konfirmasi.
+  Future<void> _hapusWajahSaya() async {
+    final yakin = await _konfirmasi(
+      judul: 'Hapus pendaftaran wajah Anda?',
+      isi:
+          'Hapus wajah hanya bisa dilakukan sekali sehari. '
+          'Setelah dihapus, absensi memakai pengenalan wajah tidak aktif sampai Anda mendaftarkan wajah lagi. '
+          'Tindakan ini dicatat di log aktivitas.',
+      tombol: 'Ya, hapus',
+    );
+    if (!yakin || !mounted) return;
+    setState(() => _isEnrolling = true);
+    try {
+      await ref.read(syncEngineProvider).api.deleteOwnFaceEnrollment();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pendaftaran wajah Anda sudah dihapus.')),
+      );
+      await _loadFaceState();
+    } catch (e) {
+      if (mounted) {
+        // Server membalas 429 bila wajah sudah dihapus hari ini.
+        final batasHarian = e is DioException && e.response?.statusCode == 429;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Text(
+              batasHarian
+                  ? 'Wajah hanya bisa dihapus sekali sehari. Coba lagi besok, atau minta bantuan HR.'
+                  : apiErrorMessage(e),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isEnrolling = false);
     }
   }
 
@@ -485,7 +525,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ),
                   ),
                 ),
-                const SectionTitle('Biometrik Wajah (Face API)'),
+                const SectionTitle('Pengenalan wajah'),
                 FadeSlideIn(
                   index: 1,
                   child: SurfaceCard(
@@ -551,15 +591,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                         const SizedBox(height: 12),
                         if (_faceStatus?['enrolled'] == true)
-                          Text(
-                            'Perlu daftar ulang (ganti wajah/HP)? Minta HR mengatur ulang pendaftaran wajah Anda.',
-                            style: VmsTextStyles.caption.copyWith(
-                              color: VmsColors.neutral500,
+                          OutlinedButton.icon(
+                            key: const Key('profil-hapus-wajah'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Accent.rose.strong,
+                              minimumSize: const Size.fromHeight(48),
                             ),
+                            onPressed: _isEnrolling || _faceLoading
+                                ? null
+                                : _hapusWajahSaya,
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: const Text('Hapus pendaftaran wajah saya'),
                           )
                         else if (_faceStatus?['required'] == true)
                           PrimaryAction(
-                            label: 'Daftarkan Wajah (4 Foto)',
+                            label: 'Daftarkan wajah Anda',
                             icon: Icons.camera_alt_rounded,
                             busy: _isEnrolling,
                             onTap: _isEnrolling || _faceLoading

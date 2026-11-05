@@ -69,14 +69,14 @@ void main() {
   testWidgets('label berubah setelah aplikasi kembali aktif (resumed)', (tester) async {
     final fake = _FakeApi();
     await _pump(tester, fake);
-    expect(find.text('Menunggu PM'), findsOneWidget);
+    expect(find.text('Menunggu atasan'), findsOneWidget);
 
     fake.status = 'APPROVED_BY_PM';
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
 
-    expect(find.text('Menunggu PM'), findsNothing);
-    expect(find.text('Disetujui PM, menunggu HR'), findsOneWidget);
+    expect(find.text('Menunggu atasan'), findsNothing);
+    expect(find.text('Sudah disetujui atasan, menunggu HR'), findsOneWidget);
   });
 
   testWidgets('label berubah saat peristiwa waktu nyata masuk', (tester) async {
@@ -87,8 +87,8 @@ void main() {
     container.read(liveEventTickProvider.notifier).bump();
     await tester.pumpAndSettle();
 
-    expect(find.text('Menunggu PM'), findsNothing);
-    expect(find.text('Disetujui PM, menunggu HR'), findsOneWidget);
+    expect(find.text('Menunggu atasan'), findsNothing);
+    expect(find.text('Sudah disetujui atasan, menunggu HR'), findsOneWidget);
   });
 
   testWidgets('tarik untuk segarkan memuat ulang daftar', (tester) async {
@@ -98,7 +98,7 @@ void main() {
     await tester.drag(find.byType(ListView), const Offset(0, 300));
     await tester.pumpAndSettle();
 
-    expect(find.text('Menunggu PM'), findsNothing);
+    expect(find.text('Menunggu atasan'), findsNothing);
   });
 
   testWidgets('layar cuti ketua/anggota tidak menampilkan tombol persetujuan', (tester) async {

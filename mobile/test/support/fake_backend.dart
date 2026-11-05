@@ -39,6 +39,9 @@ class FakeBackend extends Interceptor {
   final Map<String, FakeRoute> routes = {};
   final List<RequestOptions> requests = [];
 
+  /// Header respons per akhiran path (mis. `X-Next-Cursor`).
+  final Map<String, Map<String, String>> responseHeaders = {};
+
   /// Body setiap `POST /sync/operations` yang diterima, sesuai urutan.
   List<Map<String, dynamic>> get syncBatches => [
     for (final r in requests)
@@ -84,11 +87,19 @@ class FakeBackend extends Interceptor {
       return;
     }
     try {
+      final data = route(options);
+      final h = Headers();
+      responseHeaders.forEach((k, v) {
+        if (options.path.endsWith(k)) {
+          v.forEach(h.set);
+        }
+      });
       handler.resolve(
         Response(
           requestOptions: options,
           statusCode: 200,
-          data: route(options),
+          data: data,
+          headers: h,
         ),
       );
     } on DioException catch (e) {

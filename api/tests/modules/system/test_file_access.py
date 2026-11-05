@@ -66,7 +66,8 @@ def test_daily_plan_attachment_follows_plan_visibility(client, world, other_worl
     attached = client.put(f"/work-plans/daily/{plan_id}/attachments", headers=world.headers(client, "pm"),
                           json={"file_ids": [file_id]})
     assert attached.status_code == 200, attached.text
-    _expect(client, world, file_id, allowed={"pm", "leader", "member", "hr"}, denied=set())
+    # HR/GA tidak membuka detail rencana kerja (termasuk lampirannya) — hanya logistik aset & lembur.
+    _expect(client, world, file_id, allowed={"pm", "leader", "member"}, denied={"hr"})
     assert _status(client, other_world, "member", file_id) == 404
 
 

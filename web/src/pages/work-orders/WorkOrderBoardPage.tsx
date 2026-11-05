@@ -2,9 +2,14 @@ import { useState } from "react";
 import { WorkOrdersTemplate } from "@/components/templates/work-orders/WorkOrdersTemplate";
 import { useWorkOrders, type WorkOrder } from "@/services/workOrderService";
 import { useDivisions } from "@/services/employeeService";
+import { useSession } from "@/stores/sessionStore";
+import { divisionScopeIds } from "@/lib/divisionScope";
 
 export function WorkOrderBoardPage() {
-  const [selectedDivisionId, setSelectedDivisionId] = useState<string>("");
+  const { me } = useSession();
+  // Filter default untuk PM = divisinya sendiri; OM/SA mulai dari semua divisi.
+  const scopeIds = divisionScopeIds(me);
+  const [selectedDivisionId, setSelectedDivisionId] = useState<string>(scopeIds?.[0] ?? "");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Modals state
@@ -13,7 +18,8 @@ export function WorkOrderBoardPage() {
   const [reviewWoId, setReviewWoId] = useState<string | null>(null);
   const [bastTargetWo, setBastTargetWo] = useState<WorkOrder | null>(null);
 
-  const { data: divisions = [] } = useDivisions();
+  const { data: allDivisions = [] } = useDivisions();
+  const divisions = scopeIds ? allDivisions.filter((d) => scopeIds.includes(d.id)) : allDivisions;
   const {
     data: workOrders = [],
     isLoading,

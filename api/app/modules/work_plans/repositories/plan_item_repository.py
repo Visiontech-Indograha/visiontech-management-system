@@ -285,34 +285,43 @@ class PlanItemRepository(BaseRepository):
             "SELECT COUNT(*) FROM file_object WHERE id = ANY(CAST(:ids AS uuid[]))", {"ids": list(set(file_ids))}
         ) or 0)
 
-    async def request_rollover(self, item_id: UUID | str, reason: str, completed: Decimal) -> None:
-        await self.execute(
+    async def request_rollover(self, item_id: UUID | str, reason: str, completed: Decimal, expected: str) -> int:
+        """Ajukan pindah hari hanya bila status item masih `expected` (compare-and-set). Kembalian = baris berubah."""
+        result = await self.execute(
             """
             UPDATE work_plan_item SET status = 'PENDING_ROLLOVER', rollover_approval_status = 'WAITING_PM',
                    delay_reason = :reason, completed_qty = :done_qty,
                    progress_percent = LEAST(100, ROUND(:done_qty / NULLIF(target_qty, 0) * 100, 2)), update_at = now()
-            WHERE item_id = CAST(:id AS uuid)
+            WHERE item_id = CAST(:id AS uuid) AND status = :expected AND delete_at IS NULL
             """,
-            {"id": str(item_id), "reason": reason, "done_qty": completed},
+            {"id": str(item_id), "reason": reason, "done_qty": completed, "expected": expected},
         )
+        return int(result.rowcount or 0)
 
-    async def reject_rollover(self, item_id: UUID | str, pm_id: str | None) -> None:
-        await self.execute(
+    async def reject_rollover(self, item_id: UUID | str, pm_id: str | None, expected: str) -> int:
+        """Tolak pindah hari hanya bila status item masih `expected`. Kembalian = baris berubah."""
+        result = await self.execute(
             "UPDATE work_plan_item SET status = CASE WHEN completed_qty > 0 THEN 'IN_PROGRESS' ELSE 'TODO' END, "
             "rollover_approval_status = 'REJECTED_BY_PM', approved_by_pm_id = CAST(:pm AS uuid), update_at = now() "
-            "WHERE item_id = CAST(:id AS uuid)",
-            {"id": str(item_id), "pm": pm_id},
+            "WHERE item_id = CAST(:id AS uuid) AND status = :expected AND delete_at IS NULL",
+            {"id": str(item_id), "pm": pm_id, "expected": expected},
         )
+        return int(result.rowcount or 0)
 
-    async def shift(self, item_id: UUID | str, target_daily_id: UUID | str, pm_id: str | None) -> UUID:
-        """Item asal → SHIFTED_DAY; item baru di jadwal tujuan membawa sisa volume (origin_item_id = asal).
+    async def shift(
+        self, item_id: UUID | str, target_daily_id: UUID | str, pm_id: str | None, expected: str
+    ) -> UUID | None:
+        """Item asal -> SHIFTED_DAY (hanya bila status masih `expected`; None bila sudah berubah); item baru di
+        jadwal tujuan membawa sisa volume (origin_item_id = asal).
         Prasyarat & penugasan ikut; foto realisasi & alasan tetap di item asal."""
-        await self.execute(
+        moved = await self.execute(
             "UPDATE work_plan_item SET status = 'SHIFTED_DAY', rollover_approval_status = 'APPROVED_BY_PM', "
             "approved_by_pm_id = CAST(:pm AS uuid), shifted_to_daily_id = CAST(:target AS uuid), update_at = now() "
-            "WHERE item_id = CAST(:id AS uuid)",
-            {"id": str(item_id), "target": str(target_daily_id), "pm": pm_id},
+            "WHERE item_id = CAST(:id AS uuid) AND status = :expected AND delete_at IS NULL",
+            {"id": str(item_id), "target": str(target_daily_id), "pm": pm_id, "expected": expected},
         )
+        if not moved.rowcount:
+            return None
         new_id: UUID = await self.scalar(
             """
             INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,

@@ -13,7 +13,7 @@ Expand-only: hanya menambah indeks, tanpa mengubah data atau constraint.
   dan `om_approval_status = 'PENDING_OM'`) serta rentang tanggal di `monitoring_repository`.
 
 Revision ID: v2_0027
-Revises: v2_0025
+Revises: v2_0026
 """
 
 from collections.abc import Sequence

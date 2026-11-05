@@ -9,6 +9,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Paket kecil API
+- OM (Operational Manager) kini memegang izin `export:attendance`; ekspor CSV memuat semua kantor. Dampak: MINOR.
+- Pengembalian aset memakai UPDATE bersyarat (409 INVALID_STATE bila sudah berubah).
+- Tes penjaga bentuk respons `/version` dan `/app/android/update`; rapikan komentar migrasi v2_0027 dan dokumen OFFSET.
+
 ## [1.6.0] - 2026-11-05
 
 ### Gabungan perbaikan audit dan minggu 4

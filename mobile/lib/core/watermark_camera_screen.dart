@@ -469,17 +469,25 @@ class _WatermarkCameraScreenState extends State<WatermarkCameraScreen>
                         children: [
                           Text(
                             widget.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
+                              height: 1.3,
                             ),
                           ),
+                          // Jarak tegas agar petunjuk tidak menumpuk di bawah judul
+                          const SizedBox(height: 6),
                           Text(
                             widget.hint,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11.5,
+                              height: 1.35,
                             ),
                           ),
                         ],

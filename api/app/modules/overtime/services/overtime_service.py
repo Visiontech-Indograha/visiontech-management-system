@@ -92,16 +92,26 @@ class OvertimeService:
         )
         return await self.repo.get(overtime_id)
 
-    async def list_overtimes(self, user: CurrentUser, daily_plan_id: UUID | None = None) -> Sequence[Any]:
+    async def list_overtimes(
+        self,
+        user: CurrentUser,
+        daily_plan_id: UUID | None = None,
+        *,
+        after: tuple[Any, ...] | None = None,
+        limit: int | None = None,
+        status: str | None = None,
+        q: str | None = None,
+    ) -> Sequence[Any]:
+        """Cakupan akses sama untuk kedua mode; `after` != None = keyset (limit baris, filter di SQL)."""
         if daily_plan_id:
-            await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
-            return await self.repo.list_by_plan(daily_plan_id)
+            await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
+            return await self.repo.list_by_plan(daily_plan_id, after, limit, status, q)
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
-            return await self.repo.list_all_active(None)
+            return await self.repo.list_all_active(None, after, limit, status, q)
         if user.has_role("PROJECT_MANAGER") and user.employee_id:
-            return await self.repo.list_all_active(user.employee_id)
+            return await self.repo.list_all_active(user.employee_id, after, limit, status, q)
         if user.employee_id:
-            return await self.repo.list_by_employee(user.employee_id)
+            return await self.repo.list_by_employee(user.employee_id, after, limit, status, q)
         return []
 
     async def with_review_flags(self, user: CurrentUser, rows: Sequence[Any]) -> list[dict[str, Any]]:
@@ -125,7 +135,7 @@ class OvertimeService:
         return out
 
     async def list_by_plan(self, user: CurrentUser, daily_plan_id: UUID) -> Sequence[Any]:
-        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.VIEW)
+        await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
         return await self.repo.list_by_plan(daily_plan_id)
 
     async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:

@@ -49,3 +49,8 @@ export type OvertimeAction = "approve" | "reject";
 export function overtimeActions(status: string, canReview: boolean): OvertimeAction[] {
   return canReview && status === "PENDING_PM" ? ["approve", "reject"] : [];
 }
+
+/** Peran lapangan (sama dengan FIELD_ROLES di API). Hanya ketua/anggota tim jadwal yang boleh mengajukan lembur
+ * (check_daily_access TEAM); peran lain ditolak API, jadi tombolnya disembunyikan. */
+export const FIELD_ROLES = ["EMPLOYEE", "TEAM_LEADER"] as const;
+export const canApplyOvertime = (role?: string | null) => FIELD_ROLES.some((r) => r === role);

@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from datetime import date, time, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,8 +42,10 @@ from app.modules.work_plans.services.plan_item_service import PlanItemService
 from app.shared.access.access_service import (
     DailyAccess,
     DailyNeed,
+    access_from_standing,
     check_daily_access,
     check_division_manager,
+    daily_standings,
     is_admin,
     require_daily_status,
 )
@@ -56,6 +58,21 @@ FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 
 BACKDATE_DAYS = 7
 DELETABLE = ("DRAFT", "SUBMITTED", "APPROVED")  # APPROVED = belum dimulai (ONGOING belum)
+
+# Nama status untuk pesan galat (Bahasa Indonesia sederhana, tanpa kode enum).
+PLAN_STATUS_ID = {
+    "DRAFT": "Draf", "SUBMITTED": "Diajukan", "APPROVED": "Disetujui",
+    "ONGOING": "Berjalan", "COMPLETED": "Selesai",
+}
+
+
+def _status_conflict(status: str) -> AppError:
+    label = PLAN_STATUS_ID.get(status, status)
+    return AppError(
+        "INVALID_STATE",
+        f"Jadwal ini sekarang berstatus {label}, jadi tindakan ini tidak bisa dilakukan. Muat ulang halaman.",
+        status=409,
+    )
 
 
 def _week(day: date) -> tuple[date, date]:
@@ -84,8 +101,8 @@ class DailyPlanService:
 
     @staticmethod
     def _manager_scope(user: CurrentUser) -> str | None:
-        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN/HR (semua)."""
-        if is_admin(user) or user.has_role("ADMIN_HR_GA"):
+        """employee_id PM/OM yang dibatasi ke divisinya; None = SUPER_ADMIN (semua). HR/GA tidak melihat rencana."""
+        if is_admin(user):
             return None
         return user.employee_id or "00000000-0000-0000-0000-000000000000"
 
@@ -135,10 +152,15 @@ class DailyPlanService:
         if scope is None:
             raise NotFoundError("Order Proyek Klien")
         rows = await self.repo.plans_of_order(completion_id)
+        # Kedudukan semua jadwal dibaca sekali (bukan satu kueri per baris); aturannya sama dengan check_daily_access.
+        standing = await daily_standings(self.db, [row.daily_plan_id for row in rows], user.employee_id)
         visible = []
         for row in rows:
             try:
-                await check_daily_access(self.db, row.daily_plan_id, user, DailyNeed.VIEW)
+                row_standing = standing.get(str(row.daily_plan_id))
+                if row_standing is None:
+                    raise NotFoundError("Jadwal harian")
+                access_from_standing(row_standing, user, DailyNeed.VIEW)
                 visible.append(row)
             except (NotFoundError, AppError):
                 continue
@@ -300,13 +322,16 @@ class DailyPlanService:
         return await self.repo.attachment_ids(daily_plan_id)
 
     # ── Alokasi massal & siaga ─────────────────────────────────────────────────
-    async def _bulk_cell_problem(self, data: DailyBulkIn, team_id: UUID, work_date: date) -> tuple[str, str] | None:
-        """Alasan sel dilewati (kode, pesan) atau None bila sel bisa dibuat. Tidak melempar galat per sel."""
-        if not await self.repo.team_of_division(team_id, data.division_id):
+    @staticmethod
+    def _bulk_cell_problem(in_division: set[str], taken: set[tuple[str, date]], team_id: UUID,
+                           work_date: date) -> tuple[str, str] | None:
+        """Alasan sel dilewati (kode, pesan) atau None bila sel bisa dibuat. Tidak melempar galat per sel.
+        `in_division` dan `taken` dibaca sekali untuk seluruh permintaan (lihat bulk_create)."""
+        if str(team_id) not in in_division:
             return "TEAM_BUKAN_DIVISI", "Tim tidak ditemukan, nonaktif, atau bukan milik divisi ini."
         if work_date < jakarta_now().date():
             return "TANGGAL_LAMPAU", "Tanggal sudah lewat; alokasi hanya untuk hari ini atau mendatang."
-        if await self.repo.team_day_taken(team_id, work_date):
+        if (str(team_id), work_date) in taken:
             return "TEAM_DAY_TAKEN", "Tim ini sudah punya jadwal pada tanggal tersebut."
         return None
 
@@ -314,48 +339,74 @@ class DailyPlanService:
         """Membuat jadwal untuk setiap pasangan (tim, tanggal) dalam satu transaksi permintaan.
 
         Sel yang tidak memenuhi aturan dilaporkan sebagai SKIPPED dan tidak menggagalkan sel lain. Seluruh sel
-        ditulis dalam satu sesi, jadi galat tak terduga di tengah jalan membatalkan permintaan secara utuh."""
+        ditulis dalam satu sesi, jadi galat tak terduga di tengah jalan membatalkan permintaan secara utuh.
+
+        Jumlah kueri tetap (tidak tumbuh dengan jumlah sel): data tim, cuti ketua, dan bentrok aset dibaca per jenis
+        dengan `IN`/`unnest`, keputusan per sel dibuat di memori, lalu satu INSERT dan (bila disetujui) satu UPDATE."""
         await check_division_manager(self.db, data.division_id, user)
         if not user.employee_id:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
+        team_ids = list(dict.fromkeys(data.team_ids))
+        work_dates = sorted(set(data.work_dates))
+        team_keys = [str(t) for t in team_ids]
+        in_division = await self.repo.bulk_teams_in_division(team_keys, data.division_id)
+        taken = await self.repo.bulk_team_days_taken(team_keys, work_dates)
+        leaders = await self.repo.bulk_team_leaders(team_keys)
+        leader_ids = sorted(set(leaders.values()))
+        on_leave = await self.repo.bulk_leaves_on(leader_ids, work_dates) if leader_ids else set()
+        # Kunci (jenis aset, id aset, tanggal) -> nama tim pemegang (None = peminjaman tanpa jadwal).
+        holders: dict[tuple[str, str, date], str | None] = {}
+        for asset_type in sorted({a.asset_type for a in data.assets}):
+            ids = sorted({str(a.asset_id) for a in data.assets if a.asset_type == asset_type})
+            for (asset_id, day), team_name in (await self.repo.bulk_asset_holders(asset_type, ids, work_dates)).items():
+                holders[(asset_type, asset_id, day)] = team_name
         cells: list[DailyBulkCellOut] = []
-        leaders = {team_id: await self.repo.team_leader(team_id) for team_id in dict.fromkeys(data.team_ids)}
-        for team_id in dict.fromkeys(data.team_ids):
-            for work_date in sorted(set(data.work_dates)):
-                problem = await self._bulk_cell_problem(data, team_id, work_date)
+        new_cells: list[tuple[str, str, date]] = []
+        for team_id in team_ids:
+            for work_date in work_dates:
+                problem = self._bulk_cell_problem(in_division, taken, team_id, work_date)
                 if problem:
                     cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="SKIPPED",
                                                   reason=problem[0], message=problem[1]))
                     continue
                 # Peringatan hanya memberi tahu; sel tetap dibuat.
-                warnings = await self._cell_warnings(leaders.get(team_id), work_date, data.assets)
-                new_id = await self.repo.insert({
-                    "division_id": str(data.division_id), "team_id": str(team_id), "project_id": None,
-                    "work_date": work_date, "site_name": data.site_name.strip() if data.site_name else None,
-                    "site_lat": data.site_lat, "site_lng": data.site_lng,
-                    "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
-                    "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
-                    "created_by_id": user.employee_id,
-                })
-                if data.target == "APPROVED":
-                    await self.repo.set_status(new_id, "APPROVED", approver=user.employee_id)
+                warnings = self._cell_warnings(leaders.get(str(team_id)), work_date, data.assets, on_leave, holders)
+                new_id = uuid4()
+                new_cells.append((str(new_id), str(team_id), work_date))
                 cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="CREATED",
                                               daily_plan_id=new_id, warnings=warnings))
+        if new_cells:
+            await self.repo.bulk_insert_plans(new_cells, {
+                "division_id": str(data.division_id), "site_name": data.site_name.strip() if data.site_name else None,
+                "site_lat": data.site_lat, "site_lng": data.site_lng,
+                "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
+                "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
+                "created_by_id": user.employee_id,
+            })
+            marked = await self.repo.bulk_mark_approved([c[0] for c in new_cells], user.employee_id) \
+                if data.target == "APPROVED" else len(new_cells)
+            if marked != len(new_cells):
+                raise AppError("INVALID_STATE", "Status jadwal sudah berubah; muat ulang lalu coba lagi.", status=409)
         created = sum(1 for c in cells if c.status == "CREATED")
         return DailyBulkOut(created=created, skipped=len(cells) - created, cells=cells)
 
-    async def _cell_warnings(self, leader_id: str | None, work_date: date,
-                             assets: list[DailyBulkAsset]) -> list[DailyBulkWarning]:
-        """Peringatan satu sel: ketua cuti pada tanggal itu; aset yang dipinjam pada tanggal itu (atau tanpa jadwal)."""
+    @staticmethod
+    def _cell_warnings(leader_id: str | None, work_date: date, assets: list[DailyBulkAsset],
+                       on_leave: set[tuple[str, date]],
+                       holders: dict[tuple[str, str, date], str | None]) -> list[DailyBulkWarning]:
+        """Peringatan satu sel: ketua cuti pada tanggal itu; aset yang dipinjam pada tanggal itu (atau tanpa jadwal).
+        Membaca data yang sudah dikumpulkan sekali per permintaan (`on_leave`, `holders`)."""
         warnings: list[DailyBulkWarning] = []
-        if leader_id and await self.repo.leader_on_leave(leader_id, work_date):
+        if leader_id and (leader_id, work_date) in on_leave:
             warnings.append(DailyBulkWarning(code="LEADER_CUTI", message="Ketua tim sedang cuti pada tanggal ini."))
         for asset in assets:
-            loan = await self.repo.asset_loan_conflict(asset.asset_type, asset.asset_id, work_date)
-            if loan is not None:
-                holder = f"tim {loan.team_name}" if loan.team_name else "peminjaman tanpa jadwal"
-                warnings.append(DailyBulkWarning(code="ASET_BENTROK",
-                                                 message=f"Aset sedang dipinjam ({holder}) pada tanggal ini."))
+            key = (asset.asset_type, str(asset.asset_id), work_date)
+            if key not in holders:
+                continue
+            team_name = holders[key]
+            holder = f"tim {team_name}" if team_name else "peminjaman tanpa jadwal"
+            warnings.append(DailyBulkWarning(code="ASET_BENTROK",
+                                             message=f"Aset sedang dipinjam ({holder}) pada tanggal ini."))
         return warnings
 
     # ── Matriks mingguan ───────────────────────────────────────────────────────
@@ -441,6 +492,24 @@ class DailyPlanService:
         return await self.repo.get(daily_plan_id)
 
     # ── Status ────────────────────────────────────────────────────────────────
+    async def _lock_status(self, daily_plan_id: UUID | str, allowed: tuple[str, ...]) -> str:
+        """Kunci baris jadwal dan pastikan statusnya (yang sudah terkunci, bukan snapshot awal) termasuk `allowed`."""
+        current = await self.repo.lock_status(daily_plan_id)
+        if current is None:
+            raise NotFoundError("Jadwal harian")
+        if current not in allowed:
+            raise _status_conflict(current)
+        return current
+
+    async def _set_status_guarded(self, daily_plan_id: UUID | str, status: str, allowed: tuple[str, ...],
+                                  **fields: Any) -> None:
+        """Pindah status hanya jika masih dari `allowed`. Baris tidak berubah = status sudah diganti aksi lain."""
+        if await self.repo.set_status(daily_plan_id, status, allowed=allowed, **fields) == 0:
+            current = await self.repo.lock_status(daily_plan_id)
+            if current is None:
+                raise NotFoundError("Jadwal harian")
+            raise _status_conflict(current)
+
     async def _require_items_unless_standby(self, access: DailyAccess, daily_plan_id: UUID | str) -> None:
         """Jadwal STANDBY (tim siaga) boleh diajukan/disetujui tanpa item; jadwal WORK wajib berisi pekerjaan."""
         if access.plan.kind == "STANDBY":
@@ -454,25 +523,28 @@ class DailyPlanService:
     async def submit(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
         require_daily_status(access, "DRAFT")
+        # Kunci lalu periksa ulang: pengajuan bersamaan berurutan, yang kedua melihat SUBMITTED dan dapat 409.
+        await self._lock_status(daily_plan_id, ("DRAFT",))
         await self._require_items_unless_standby(access, daily_plan_id)
-        await self.repo.set_status(daily_plan_id, "SUBMITTED")
+        await self._set_status_guarded(daily_plan_id, "SUBMITTED", ("DRAFT",))
         await NotificationService(self.db).daily_submitted(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 
     async def approve(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
-        require_daily_status(access, *EDITABLE)
+        # Kunci baris dulu: dua persetujuan bersamaan berurutan, yang kedua melihat APPROVED dan dapat 409.
+        current = await self._lock_status(daily_plan_id, EDITABLE)
         work_date = access.plan.work_date
         today = jakarta_now().date()
         if work_date < today - timedelta(days=BACKDATE_DAYS):
             raise ValidationError(f"Jadwal lebih dari {BACKDATE_DAYS} hari yang lalu tidak dapat disetujui.")
         await self._require_items_unless_standby(access, daily_plan_id)
-        one_step = access.plan.status == "DRAFT"
+        one_step = current == "DRAFT"
         if one_step:
             # PM/OM menyetujui draf miliknya dalam satu langkah (submit+approve atomik); jejak keduanya dicatat.
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "SUBMITTED",
                                       {"via": "ONE_STEP_APPROVE"})
-        await self.repo.set_status(daily_plan_id, "APPROVED", approver=user.employee_id)
+        await self._set_status_guarded(daily_plan_id, "APPROVED", EDITABLE, approver=user.employee_id)
         if one_step:
             await self.repo.log_audit(user.user_id, user.role or "", daily_plan_id, "APPROVED",
                                       {"via": "ONE_STEP_APPROVE", "from": "DRAFT"})
@@ -494,15 +566,18 @@ class DailyPlanService:
         return {"approved": approved, "skipped": skipped}
 
     async def reject(self, user: CurrentUser, daily_plan_id: UUID, reason: str) -> Any:
-        access = await self.access(user, daily_plan_id, DailyNeed.MANAGE)
-        require_daily_status(access, "SUBMITTED", "APPROVED")
-        await self.repo.set_status(daily_plan_id, "DRAFT", rejection_reason=reason.strip())
+        await self.access(user, daily_plan_id, DailyNeed.MANAGE)
+        # Kunci baris: tolak yang tertunda di belakang persetujuan/mulai tidak menimpa status yang sudah baru.
+        await self._lock_status(daily_plan_id, ("SUBMITTED", "APPROVED"))
+        await self._set_status_guarded(daily_plan_id, "DRAFT", ("SUBMITTED", "APPROVED"),
+                                       rejection_reason=reason.strip())
         await NotificationService(self.db).daily_rejected(daily_plan_id, reason.strip())
         return await self.repo.get(daily_plan_id)
 
     async def start(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
         access = await self.access(user, daily_plan_id, DailyNeed.LEADER)
         require_daily_status(access, "APPROVED")
+        await self._lock_status(daily_plan_id, ("APPROVED",))
         if access.plan.work_date > jakarta_now().date():
             raise ValidationError("Jadwal baru bisa dimulai pada tanggalnya.")
         if not await self.repo.leader_checked_in(daily_plan_id, jakarta_now().date()):
@@ -511,7 +586,7 @@ class DailyPlanService:
                 "Ketua tim harus absen masuk hari ini sebelum jadwal dimulai.",
                 status=409,
             )
-        await self.repo.set_status(daily_plan_id, "ONGOING")
+        await self._set_status_guarded(daily_plan_id, "ONGOING", ("APPROVED",))
         return await self.repo.get(daily_plan_id)
 
     async def complete(self, user: CurrentUser, daily_plan_id: UUID) -> Any:
@@ -519,6 +594,7 @@ class DailyPlanService:
         if not (access.is_leader or access.manages):
             raise AppError("FORBIDDEN", "Hanya ketua tim atau PM/OM divisi yang dapat menutup jadwal.", status=403)
         require_daily_status(access, "ONGOING")
+        await self._lock_status(daily_plan_id, ("ONGOING",))
         if await self.repo.has_open_correction(daily_plan_id):
             raise AppError(
                 "CORRECTION_OPEN",
@@ -546,7 +622,7 @@ class DailyPlanService:
                     status=409,
                 )
             await self.repo.cancel_unfinished_items(daily_plan_id)
-        await self.repo.set_status(daily_plan_id, "COMPLETED")
+        await self._set_status_guarded(daily_plan_id, "COMPLETED", ("ONGOING",))
         await self.repo.release_plan_assets(daily_plan_id)
         return await self.repo.get(daily_plan_id)
 

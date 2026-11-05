@@ -56,8 +56,8 @@ class WorkOrderController:
             for r in rows
         ]
 
-    async def get_work_order(self, work_order_id: UUID) -> WorkOrderDetailOut:
-        data = await self.service.get_work_order(work_order_id)
+    async def get_work_order(self, current_user: CurrentUser, work_order_id: UUID) -> WorkOrderDetailOut:
+        data = await self.service.get_work_order(work_order_id, current_user)
         return WorkOrderDetailOut(**data)
 
     async def create_work_order(
@@ -99,7 +99,7 @@ class WorkOrderController:
         photo_slots_snapshot: list[dict[str, Any]] | None = None,
     ) -> dict[str, str]:
         await self.service.update_item_progress(
-            item_id, completed_qty, status, photo_slots_snapshot
+            item_id, completed_qty, status, photo_slots_snapshot, current_user
         )
         return {"message": "Progres item berhasil diperbarui."}
 
@@ -109,7 +109,7 @@ class WorkOrderController:
         bom_id: UUID,
         actual_qty: Decimal,
     ) -> dict[str, str]:
-        await self.service.update_bom_actual(bom_id, actual_qty)
+        await self.service.update_bom_actual(bom_id, actual_qty, current_user)
         return {"message": "Realisasi BOM berhasil diperbarui."}
 
     async def export_document(

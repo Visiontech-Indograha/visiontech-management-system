@@ -111,6 +111,20 @@ def _sync_conn():
     )
 
 
+@contextlib.contextmanager
+def db_exclusive(key: int) -> Iterator[None]:
+    """Serialkan tes lintas worker xdist yang menghitung data global (tanggal tetap, employee_no tetap) dengan
+    advisory lock Postgres. Penanda `xdist_group` terbukti tidak mengelompokkan tes di lingkungan ini."""
+    conn = _sync_conn()
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_lock(%s)", (key,))
+        yield
+    finally:
+        conn.close()  # menutup sesi melepas lock
+
+
 _SYNC_CONN = None   # satu koneksi per proses (tiap worker xdist punya sendiri): DB uji di server jauh
 
 

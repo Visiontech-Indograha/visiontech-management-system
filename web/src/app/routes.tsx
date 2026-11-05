@@ -24,6 +24,7 @@ import {
   MessPage,
   MyDocumentsPage,
   OffboardingPage,
+  OvertimePage,
   OvertimeRecapPage,
   SitesPage,
   TeamsPage,
@@ -36,6 +37,7 @@ import {
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
+import { RouteErrorPage } from "@/pages/system/RouteErrorPage";
 
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
@@ -55,6 +57,7 @@ const PAGES: Record<string, ReactNode> = {
   "/attendance": <AttendancePage />,
   "/leaves": <LeavesPage />,
   "/attendance-recap": <AttendanceRecapPage />,
+  "/overtime": <OvertimePage />,
   "/overtime-recap": <OvertimeRecapPage />,
   "/safety-campaigns": <HseCampaignsPage />,
 };
@@ -63,6 +66,7 @@ const PAGES: Record<string, ReactNode> = {
 export const routes: RouteObject[] = [
   {
     element: <TitleLayout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: "/login", element: <LoginPage /> },
       { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
@@ -114,6 +118,7 @@ export const routes: RouteObject[] = [
               // Alias bahasa Indonesia
               { path: "/inventory", element: <Navigate to="/assets" replace /> },
               { path: "/presensi", element: <Navigate to="/attendance" replace /> },
+              { path: "/hse", element: <Navigate to="/safety-campaigns" replace /> },
               { path: "/finances", element: <Navigate to="/alokasi-mingguan" replace /> },
               {
                 path: "/directory/:id",

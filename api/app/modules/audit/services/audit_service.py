@@ -46,6 +46,32 @@ class AuditService:
         ]
         return AuditEventListResponse(items=items, total=total, page=page, size=size)
 
+    async def list_events_keyset(
+        self,
+        org_id: UUID | str,
+        size: int,
+        entity_type: str | None,
+        after: tuple[Any, ...],
+        q: str | None = None,
+        date_from: Any = None,
+        date_to: Any = None,
+    ) -> list[AuditEventResponse]:
+        """Mode keyset: `size+1` baris (tanpa COUNT/OFFSET); pemanggil memotong dan mengisi `X-Next-Cursor`."""
+        rows = await self.repo.list_page(org_id, entity_type, size + 1, 0, q, date_from, date_to, after)
+        return [
+            AuditEventResponse(
+                id=r.id,
+                occurred_at=r.occurred_at,
+                actor_label=r.actor_label,
+                action=r.action,
+                entity_type=r.entity_type,
+                entity_id=r.entity_id,
+                detail=r.detail,
+                changes=r.changes,
+            )
+            for r in rows
+        ]
+
     async def list_backups(self) -> list[dict[str, Any]]:
         """Daftar riwayat arsip backup basis data dan berkas."""
         rows = await self.repo.list_backups()

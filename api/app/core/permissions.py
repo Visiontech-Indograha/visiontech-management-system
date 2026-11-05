@@ -61,7 +61,7 @@ class Permission(StrEnum):
     # Absensi & lembur — cakupan per absen dicek di service/CRUD (R-33, menggantikan R-10)
     VIEW_ALL_ATTENDANCE = "view:all_attendance"  # Finance & OPS melihat semua absensi
     REVIEW_ATTENDANCE = "review:attendance"  # PM → bawahan lapangan, Finance → kantor non-Finance, OPS → Finance
-    EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance
+    EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance, OM (semua kantor), Super Admin
     REVIEW_OVERTIME = "review:overtime"
 
     # Master kantor (office) & divisi operasional (division) — Milestone 2 (docs/36)
@@ -141,13 +141,15 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
+        P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE,
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
-    # HR melihat absensi seluruh karyawan (keputusan pemilik HR), tanpa wewenang mengekspor/meninjau.
+    # HR melihat absensi karyawan KANTORNYA SENDIRI saja (keputusan pemilik 2026-11-05; cakupan di SQL lewat
+    # shared/access/office_scope.py), tanpa wewenang mengekspor/meninjau. SA dan OM melihat semua kantor.
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,

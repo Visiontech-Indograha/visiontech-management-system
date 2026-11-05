@@ -22,21 +22,21 @@ function parseBody(data: unknown): unknown {
   return JSON.parse(data as string);
 }
 
-export type Handler = (config: InternalAxiosRequestConfig) => { status?: number; data?: unknown } | undefined;
+export type Handler = (config: InternalAxiosRequestConfig) => { status?: number; data?: unknown; headers?: Record<string, string> } | undefined;
 
 /** Ganti adapter axios dengan handler in-memory. Handler mengembalikan undefined → 404 uniform. */
 export function mockApi(handler: Handler) {
-  const calls: { method: string; url: string; data: unknown; params: unknown }[] = [];
+  const calls: { method: string; url: string; data: unknown; params: unknown; headers?: unknown }[] = [];
   api.defaults.adapter = ((config: InternalAxiosRequestConfig) => {
     const method = (config.method ?? "get").toLowerCase();
     const url = String(config.url);
-    calls.push({ method, url, data: parseBody(config.data), params: config.params });
+    calls.push({ method, url, data: parseBody(config.data), params: config.params, headers: config.headers?.toJSON?.() });
     const out = handler(config) ?? {
       status: 404,
       data: { error: { code: "NOT_FOUND", message: "Data tidak ditemukan.", details: {} } },
     };
     const status = out.status ?? 200;
-    const response = { data: out.data, status, statusText: "", headers: {}, config } as AxiosResponse;
+    const response = { data: out.data, status, statusText: "", headers: out.headers ?? {}, config } as AxiosResponse;
     return status < 400
       ? Promise.resolve(response)
       : Promise.reject(new axios.AxiosError("err", String(status), config, null, response));

@@ -191,11 +191,13 @@ class LeaveRepository(BaseRepository):
         reviewer_id: UUID | str,
         is_pm: bool,
         note: str | None,
-    ) -> None:
-        """Persetujuan atau penolakan cuti oleh PM atau HR."""
+        expected: str,
+    ) -> int:
+        """Persetujuan atau penolakan cuti oleh PM atau HR, hanya bila status masih `expected`
+        (compare-and-set). Kembalian = baris berubah."""
         pm_col = "reviewed_by_pm_id = CAST(:rev AS uuid)," if is_pm else ""
         hr_col = "reviewed_by_hr_id = CAST(:rev AS uuid)," if not is_pm else ""
-        await self.execute(
+        result = await self.execute(
             f"""
             UPDATE leave_request
             SET status = CAST(:st AS approval_status_enum),
@@ -205,20 +207,24 @@ class LeaveRepository(BaseRepository):
                 rejection_note = :note,
                 update_at = now()
             WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
+              AND status = CAST(:expected AS approval_status_enum)
             """,
-            {"id": str(leave_id), "st": status, "rev": str(reviewer_id), "note": note},
+            {"id": str(leave_id), "st": status, "rev": str(reviewer_id), "note": note, "expected": expected},
         )
+        return int(result.rowcount or 0)
 
-    async def cancel_leave(self, leave_id: UUID | str, note: str | None) -> None:
-        """Pembatalan cuti (oleh pemohon, HR, atau OM) beserta alasannya."""
-        await self.execute(
+    async def cancel_leave(self, leave_id: UUID | str, note: str | None, expected: str) -> int:
+        """Pembatalan cuti (oleh pemohon, HR, atau OM) beserta alasannya, hanya bila status masih `expected`."""
+        result = await self.execute(
             """
             UPDATE leave_request
             SET status = CAST('CANCELLED' AS approval_status_enum), cancel_note = :note, update_at = now()
             WHERE leave_id = CAST(:id AS uuid) AND delete_at IS NULL
+              AND status = CAST(:expected AS approval_status_enum)
             """,
-            {"id": str(leave_id), "note": note},
+            {"id": str(leave_id), "note": note, "expected": expected},
         )
+        return int(result.rowcount or 0)
 
     async def schedule_conflicts(
         self, employee_ids: list[str], start_date: date, end_date: date

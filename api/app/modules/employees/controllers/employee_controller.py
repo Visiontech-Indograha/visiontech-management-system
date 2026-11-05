@@ -29,15 +29,14 @@ class EmployeeController:
     def __init__(self, employee_service: EmployeeService = Depends(get_employee_service)) -> None:
         self.service = employee_service
 
-    async def list(self, *, page: int, size: int, status: str | None, division_id: UUID | None,
+    async def list(self, *, user: CurrentUser, page: int, size: int, status: str | None, division_id: UUID | None,
                    office_id: UUID | None, position_id: UUID | None, q: str | None) -> EmployeeListResponse:
         rows, total = await self.service.list(page=page, size=size, status=status, division_id=division_id,
-                                              office_id=office_id, position_id=position_id, q=q)
-        return EmployeeListResponse(items=[EmployeeOut(**dict(r._mapping)) for r in rows], total=total, page=page,
-                                    size=size)
+                                              office_id=office_id, position_id=position_id, q=q, user=user)
+        return EmployeeListResponse(items=[EmployeeOut(**r) for r in rows], total=total, page=page, size=size)
 
-    async def detail(self, employee_id: UUID) -> EmployeeDetail:
-        return EmployeeDetail(**await self.service.detail(employee_id))
+    async def detail(self, user: CurrentUser, employee_id: UUID) -> EmployeeDetail:
+        return EmployeeDetail(**await self.service.detail(employee_id, user))
 
     async def next_no(self) -> NextEmployeeNo:
         return NextEmployeeNo(employee_no=await self.service.next_employee_no())

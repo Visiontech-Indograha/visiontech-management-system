@@ -18,6 +18,8 @@ services:
     restart: unless-stopped
     logging: *log
   face:
-    mem_limit: 768m
+    # 1200m = nilai yang sudah dipasang pasang-face-service.sh (prod) dan deploy/beta/compose.yml (beta).
+    # Pengukuran 2026-10-28: face prod 482 MB. Turunkan ke 768m hanya setelah `docker stats` di bawah beban wajah (pemilik).
+    mem_limit: 1200m
     restart: unless-stopped
     logging: *log

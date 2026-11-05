@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from app.core.errors import NotFoundError, ValidationError
+from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.permissions import Permission, SystemRole
 from app.core.security import CurrentUser
 from app.modules.documents.repositories.document_repository import DocumentRepository
@@ -70,8 +70,9 @@ class DocumentService:
 
     async def deactivate(self, user: CurrentUser, emp_id: UUID, doc_id: UUID) -> Any:
         await self._reachable(user, emp_id)
-        await self._doc(emp_id, doc_id)
-        await self.repo.deactivate(doc_id)
+        doc = await self._doc(emp_id, doc_id)
+        if not await self.repo.deactivate(doc_id, doc.status):
+            raise AppError("INVALID_STATE", "Status dokumen sudah berubah; muat ulang lalu coba lagi.", status=409)
         return await self.repo.get(doc_id, emp_id)
 
     async def delete(self, user: CurrentUser, emp_id: UUID, doc_id: UUID) -> None:

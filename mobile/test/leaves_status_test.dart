@@ -3,7 +3,7 @@ import 'package:vms_mobile/features/leaves/leaves_screen.dart';
 
 void main() {
   test('label status cuti', () {
-    expect(leaveStatusLabel('PENDING'), 'Menunggu PM');
+    expect(leaveStatusLabel('PENDING'), 'Menunggu atasan');
     expect(leaveStatusLabel('APPROVED_BY_HR'), 'Disetujui');
     expect(leaveStatusLabel('CANCELLED'), 'Dibatalkan');
   });

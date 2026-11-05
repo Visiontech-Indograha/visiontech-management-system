@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { toast } from "sonner";
 import { SelectField, TextField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
@@ -35,6 +36,7 @@ export function AssetLendDialog({ kind, assetId, assetName, onClose, preset }: {
   const plans = useDailyPlans({ start: workDate, end: workDate });
   const availability = useAssetAvailability(workDate, teamId || undefined);
   const [formError, setFormError] = useState<string | null>(null);
+  const idem = useIdempotencyKey(JSON.stringify({ kind, assetId, employeeId, workDate, teamId, dailyPlanId }));
   const busy = lend.isPending || upload.isPending;
 
   const row = availability.data?.find((r) => r.asset_id === assetId);
@@ -55,12 +57,16 @@ export function AssetLendDialog({ kind, assetId, assetName, onClose, preset }: {
         handover_file_id = (await upload.mutateAsync(body)).file_id;
       }
       await lend.mutateAsync({
-        asset_type: kind,
-        ...(kind === "TOOL" ? { tool_id: assetId } : { vehicle_id: assetId }),
-        employee_id: employeeId,
-        handover_file_id,
-        ...(dailyPlanId ? { daily_plan_id: dailyPlanId } : {}),
+        body: {
+          asset_type: kind,
+          ...(kind === "TOOL" ? { tool_id: assetId } : { vehicle_id: assetId }),
+          employee_id: employeeId,
+          handover_file_id,
+          ...(dailyPlanId ? { daily_plan_id: dailyPlanId } : {}),
+        },
+        idempotencyKey: idem.key,
       });
+      idem.renew();
       toast.success(`${assetName} diserahkan.`);
       onClose();
     } catch (err) {

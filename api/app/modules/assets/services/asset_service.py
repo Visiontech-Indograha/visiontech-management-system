@@ -41,6 +41,7 @@ from app.modules.assets.schemas.asset_schema import (
 )
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.access_service import DailyNeed, check_daily_access
+from app.shared.access.scope_rules import asset_viewer, vehicle_visible
 
 LICENCES = {
     "Motorcycle": ({"SIM_C"}, "SIM C"),
@@ -48,6 +49,10 @@ LICENCES = {
     "Truck": ({"SIM_A", "SIM_B1", "SIM_B2"}, "SIM A atau SIM B"),
 }
 _LABEL = {"TOOL": "Alat", "VEHICLE": "Kendaraan"}
+
+
+def _status_changed(asset_type: str) -> AppError:
+    return AppError("INVALID_STATE", f"Status {_LABEL[asset_type].lower()} sudah berubah; muat ulang.", status=409)
 
 
 def _in_use(asset_type: str) -> AppError:
@@ -84,8 +89,10 @@ class AssetService:
             raise ValidationError("Divisi tidak ditemukan atau sudah nonaktif.")
 
     # ── Alat ───────────────────────────────────────────────────────────────────
-    async def list_tools(self, office_id: UUID | None, status: str | None) -> list[Any]:
-        return await self.repo.list_tools(office_id, status)
+    async def list_tools(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser | None = None
+    ) -> list[Any]:
+        return await self.repo.list_tools(office_id, status, viewer=asset_viewer(user) if user else None)
 
     async def _tool(self, tool_id: UUID) -> Any:
         tool = await self.repo.get_tool(tool_id)
@@ -131,8 +138,10 @@ class AssetService:
         return await self.repo.get_tool(tool_id)
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
-    async def list_vehicles(self, office_id: UUID | None, status: str | None) -> list[Any]:
-        return await self.repo.list_vehicles(office_id, status)
+    async def list_vehicles(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser | None = None
+    ) -> list[Any]:
+        return await self.repo.list_vehicles(office_id, status, viewer=asset_viewer(user) if user else None)
 
     async def _vehicle(self, vehicle_id: UUID) -> Any:
         vehicle = await self.repo.get_vehicle(vehicle_id)
@@ -168,11 +177,13 @@ class AssetService:
 
     # ── Status & arsip ────────────────────────────────────────────────────────
     async def set_status(self, asset_type: str, asset_id: UUID, status: str) -> Any:
-        if await self.repo.lock_asset(asset_type, asset_id) is None:
+        asset = await self.repo.lock_asset(asset_type, asset_id)
+        if asset is None:
             raise NotFoundError(_LABEL[asset_type])
         if await self.repo.has_open_loan(asset_type, asset_id):
             raise _in_use(asset_type)
-        await self.repo.set_status(asset_type, asset_id, status)
+        if not await self.repo.set_status(asset_type, asset_id, status, expected=asset.status):
+            raise _status_changed(asset_type)
         return await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
 
     async def delete(self, asset_type: str, asset_id: UUID) -> None:
@@ -183,7 +194,13 @@ class AssetService:
         await self.repo.archive(asset_type, asset_id)
 
     # ── Berkas & inspeksi kendaraan ───────────────────────────────────────────
-    async def vehicle_files(self, vehicle_id: UUID) -> list[Any]:
+    async def _vehicle_in_scope(self, vehicle_id: UUID, user: CurrentUser | None) -> None:
+        """Kendaraan di luar cakupan pengguna → 404 (seperti tidak ada)."""
+        if user is not None and not await vehicle_visible(self.repo.db, user, vehicle_id):
+            raise NotFoundError("Kendaraan")
+
+    async def vehicle_files(self, vehicle_id: UUID, user: CurrentUser | None = None) -> list[Any]:
+        await self._vehicle_in_scope(vehicle_id, user)
         await self._vehicle(vehicle_id)
         return await self.repo.vehicle_files(vehicle_id)
 
@@ -194,7 +211,8 @@ class AssetService:
         await self.repo.insert_vehicle_file(vehicle_id, data.type, path, data.active_at, data.expired_at)
         return await self.repo.vehicle_files(vehicle_id)
 
-    async def inspections(self, vehicle_id: UUID) -> list[Any]:
+    async def inspections(self, vehicle_id: UUID, user: CurrentUser | None = None) -> list[Any]:
+        await self._vehicle_in_scope(vehicle_id, user)
         await self._vehicle(vehicle_id)
         return await self.repo.inspections(vehicle_id)
 
@@ -210,9 +228,10 @@ class AssetService:
         return await self.repo.inspections(vehicle_id)
 
     # ── Peminjaman ────────────────────────────────────────────────────────────
-    async def availability(self, work_date: date, team_id: UUID | None) -> list[dict[str, Any]]:
-        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana."""
-        rows = await self.repo.availability(work_date)
+    async def availability(self, work_date: date, team_id: UUID | None,
+                           user: CurrentUser | None = None) -> list[dict[str, Any]]:
+        """Ketersediaan alat & kendaraan pada tanggal jadwal: tersedia, atau dipakai tim mana (sesuai cakupan)."""
+        rows = await self.repo.availability(work_date, viewer=asset_viewer(user) if user else None)
         names = await self.repo.team_names([r.team_id for r in rows])
         out: list[dict[str, Any]] = []
         for r in rows:
@@ -245,7 +264,7 @@ class AssetService:
         if own is None:
             return []
         if daily_plan_id:
-            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)
+            await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.LOGISTICS)
             plan = await self.repo.plan_for_loan(daily_plan_id, own)
             if plan is not None and (plan.on_team or (Permission.VIEW_TEAMS.value in perms and plan.manages)):
                 return await self.repo.loans(open_only=open_only, employee_id=employee_id,
@@ -312,7 +331,8 @@ class AssetService:
             data.asset_type, asset_id, data.employee_id, data.daily_plan_id, status,
             await self._path(data.handover_file_id, "foto serah terima"),
         )
-        await self.repo.set_status(data.asset_type, asset_id, status)
+        if not await self.repo.set_status(data.asset_type, asset_id, status, expected=asset.status):
+            raise _status_changed(data.asset_type)
         return await self.repo.get_loan(assignment_id)
 
     async def return_loan(self, assignment_id: UUID, condition: str) -> Any:
@@ -321,7 +341,8 @@ class AssetService:
             if await self.repo.get_loan(assignment_id) is None:
                 raise NotFoundError("Peminjaman aset")
             raise AppError("ALREADY_RETURNED", "Aset ini sudah dikembalikan.", status=409)
-        await self.repo.close_loan(assignment_id, condition)
+        if not await self.repo.close_loan(assignment_id, condition):
+            raise AppError("INVALID_STATE", "Status peminjaman sudah berubah. Muat ulang lalu coba lagi.", status=409)
         await self.repo.set_status(loan.asset_type, loan.asset_id, condition)
         done = await self.repo.get_loan(assignment_id)
         await self._notify().notify_employees(
@@ -372,7 +393,8 @@ class AssetService:
             raise ForbiddenError("Hanya pemohon yang dapat membatalkan pengajuannya.")
         if req.status != "PENDING":
             raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
-        await self.repo.set_request_status(request_id, "CANCELLED", None, None)
+        if not await self.repo.set_request_status(request_id, "CANCELLED", None, None):
+            raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
         req = await self.repo.get_request(request_id)
         await self._notify().notify_roles(
             ["ADMIN_HR_GA"], "ASSET_REQUEST_CANCELLED",
@@ -397,7 +419,8 @@ class AssetService:
                 employee_id=req.employee_id,
             ))
             assignment_id = loan.assignment_id
-        await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id)
+        if not await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id):
+            raise AppError("ALREADY_DECIDED", "Pengajuan ini sudah diputuskan.", status=409)
         result = await self.repo.get_request(request_id)
         verdict = "disetujui, silakan ambil aset" if data.decision == "APPROVED" else "ditolak"
         await self._notify().notify_employees(

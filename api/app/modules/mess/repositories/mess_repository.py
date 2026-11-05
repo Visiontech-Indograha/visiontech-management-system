@@ -203,22 +203,28 @@ class MessRepository(BaseRepository):
 
     async def decide(
         self, mess_stay_id: UUID | str, status: str, user_id: str, note: str | None, at: datetime
-    ) -> None:
-        await self.execute(
+    ) -> bool:
+        """Setujui/tolak hanya bila masih REQUESTED (kondisi di UPDATE). False = sudah diputuskan lain."""
+        updated = await self.scalar(
             """
             UPDATE company_mess_stay SET status = :status, decided_by_user_id = CAST(:uid AS uuid),
                 decision_note = :note, decided_at = :at, update_at = now()
-            WHERE mess_stay_id = CAST(:id AS uuid) AND delete_at IS NULL
+            WHERE mess_stay_id = CAST(:id AS uuid) AND status = 'REQUESTED' AND delete_at IS NULL
+            RETURNING mess_stay_id
             """,
             {"id": str(mess_stay_id), "status": status, "uid": user_id, "note": note, "at": at},
         )
+        return updated is not None
 
-    async def set_status(self, mess_stay_id: UUID | str, status: str) -> None:
-        await self.execute(
+    async def set_status(self, mess_stay_id: UUID | str, status: str, allowed: tuple[str, ...]) -> bool:
+        """Ubah status hanya bila status saat ini termasuk `allowed`. False = status sudah berubah."""
+        updated = await self.scalar(
             "UPDATE company_mess_stay SET status = :status, update_at = now() "
-            "WHERE mess_stay_id = CAST(:id AS uuid) AND delete_at IS NULL",
-            {"id": str(mess_stay_id), "status": status},
+            "WHERE mess_stay_id = CAST(:id AS uuid) AND status = ANY(:allowed) AND delete_at IS NULL "
+            "RETURNING mess_stay_id",
+            {"id": str(mess_stay_id), "status": status, "allowed": list(allowed)},
         )
+        return updated is not None
 
     async def set_end_date(self, mess_stay_id: UUID | str, end: date) -> None:
         await self.execute(

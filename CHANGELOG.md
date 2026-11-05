@@ -9,8 +9,45 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
-### Ditambahkan
+### Ditambahkan (deploy)
 - deploy: cadangan DB bisa dipisah per lingkungan lewat `VMS_BACKUP_DIR` dan `VMS_BACKUP_NAME` (opsional, bawaan tidak berubah; retensi per awalan, berkas nama lama tetap dihitung). Panduan `deploy/PANDUAN-PISAH-CADANGAN.md`, tes `scripts/uji-backup-retensi.sh`.
+
+### Paket kecil API
+- OM (Operational Manager) kini memegang izin `export:attendance`; ekspor CSV memuat semua kantor. Dampak: MINOR.
+- Pengembalian aset memakai UPDATE bersyarat (409 INVALID_STATE bila sudah berubah).
+- Tes penjaga bentuk respons `/version` dan `/app/android/update`; rapikan komentar migrasi v2_0027 dan dokumen OFFSET.
+
+### Basis data
+- Tabel `user_role_assignment` (peran ganda dan penugasan kantor, ADR 0002 fase 1) lewat migrasi v2_0029, hanya tahap expand (tabel, indeks, isi awal dari `users.system_role` dan `employee.office_id`); kolom lama tidak berubah dan akses tidak berubah. Bukti paritas: `scripts/paritas-penugasan.sql`.
+
+## [1.6.0] - 2026-11-05
+
+### Gabungan perbaikan audit dan minggu 4
+- Kunci idempotensi (Idempotency-Key) untuk peminjaman aset dan mess; web ikut mengirim kunci. Dampak: MINOR.
+- Daftar dengan penomoran keyset (kursor) untuk absensi, lembur, dan audit; tanpa parameter perilaku lama tetap. Indeks pendukung ditambah lewat migrasi v2_0028.
+- Perubahan status memakai pengecekan status saat UPDATE (CAS) pada dokumen, aset, offboarding, rencana harian, koreksi, dan rollover agar tidak balapan.
+- Batas input lembur disamakan di OpenAPI, web, dan HP.
+- Daftar yang terpotong diperbaiki; peta transisi status order dicatat di ADR 0001.
+- Server beta memakai daftar putih yang lebih aman; image MinIO dipin.
+- Tes yang kadang gagal (flaky) di xdist dirapikan; audit minggu 1-3 didokumentasikan.
+
+### Diubah
+- Cakupan kantor absensi (keputusan pemilik 2026-11-05): Superadmin dan OM melihat absensi semua kantor; Admin HR/GA dan Finance hanya kantor sendiri (gabungan dengan jabatan OM divisi bila ada). Berlaku untuk daftar `/attendance` (termasuk keyset), rekap, ekspor, uang makan, dan akses swafoto. Dampak: PATCH.
+- `/health` publik hanya mengembalikan `{"status":"ok"}` (field `version` dihapus agar versi tidak bocor tanpa login). Dampak: PATCH.
+
+### Ditambahkan
+- **Kendali admin akun karyawan** (HR/admin dengan izin kelola pengguna; hapus permanen khusus SUPER_ADMIN), di kartu akun dan detail karyawan:
+  - Daftar perangkat yang masuk per akun, cabut satu perangkat, keluarkan semua perangkat, dan kosongkan slot perangkat (API `GET /employees/{id}/account/sessions`, `POST …/sessions/{session_id}/revoke`, `POST …/sessions/revoke-all`, `POST …/device-slots/reset`).
+  - Buka kunci akun yang terkunci karena gagal masuk berulang (`POST …/account/unlock`).
+  - Ganti email login akun dengan validasi unik; perangkat yang masuk dikeluarkan (`POST …/account/login`).
+  - Status pengenalan wajah karyawan dan tombol atur ulang wajah (`GET /face/enrollments/{id}/status`; reset memakai `DELETE /face/enrollments/{id}` yang kini tercatat di audit).
+  - Setiap aksi di atas tercatat di riwayat aktivitas (audit).
+- Layar login web: petunjuk untuk akun lapangan yang mencoba masuk lewat web, dan dialog langkah-langkah bila akun sudah mencapai batas 4 perangkat.
+
+### Diubah
+- Zona berbahaya di kartu akun dan arsip karyawan: hapus akun login dan hapus permanen karyawan dipisah dari tombol aman, dengan dialog yang menyebut dampaknya. Tombol hapus hanya tampil untuk SUPER_ADMIN.
+- Teks "Pengenalan Wajah" di halaman Akun dibuat lebih sederhana (nama model teknis tidak lagi ditampilkan; akun kantor tidak lagi dianggap "belum terdaftar").
+- Pesan batas perangkat (`MAX_DEVICES_REACHED`) menyebut menu "Akun & keamanan" sesuai nama di aplikasi.
 
 ## [1.5.0] - 2026-10-30
 

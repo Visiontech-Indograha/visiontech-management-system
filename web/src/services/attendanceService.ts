@@ -1,4 +1,5 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useKeysetList } from "@/hooks/useKeysetList";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -14,7 +15,6 @@ export interface AttendanceFilters {
   to: string;
   /** Cari nama/NIP (awalan). */
   q: string;
-  page: number;
   /** mine = absensi pribadi, team = absensi anggota/umum, kosong = bawaan lama (tanpa pemisahan). */
   scope: "mine" | "team" | "";
 }
@@ -22,23 +22,19 @@ export interface AttendanceFilters {
 /** GET /attendance — cakupan data ditentukan API (R-33); data lama tetap tampil saat berpindah halaman. */
 export function useAttendance(f: AttendanceFilters) {
   const q = useDebouncedValue(f.q.trim(), 300);
-  return useQuery({
-    queryKey: ["attendance", { ...f, q }],
-    queryFn: async () =>
-      (
-        await api.get<AttendanceList>("/attendance", {
-          params: {
-            page: f.page,
-            size: PAGE_SIZE,
-            ...(f.scope ? { scope: f.scope } : {}),
-            ...(f.status ? { status: f.status } : {}),
-            ...(f.from ? { from: f.from } : {}),
-            ...(f.to ? { to: f.to } : {}),
-            ...(q ? { q } : {}),
-          },
-        })
-      ).data,
-    placeholderData: keepPreviousData,
+  return useKeysetList<AttendanceList, AttendanceList>({
+    key: ["attendance", "list"],
+    url: "/attendance",
+    params: {
+      size: PAGE_SIZE,
+      scope: f.scope || undefined,
+      status: f.status || undefined,
+      from: f.from || undefined,
+      to: f.to || undefined,
+      q: q || undefined,
+    },
+    // Ringkasan hari ini (today, laporan tertunda, dll.) diambil dari halaman pertama.
+    merge: (pages) => ({ ...pages[0], items: pages.flatMap((p) => p.items) }),
   });
 }
 

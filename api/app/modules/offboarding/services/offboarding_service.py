@@ -52,27 +52,30 @@ class OffboardingService:
         )
         return [str(r.division_id) for r in rows] or ["00000000-0000-0000-0000-000000000000"]
 
-    async def _my_offices(self, user: CurrentUser) -> list[str] | None:
-        """None = semua kantor. HR (bukan SA/OM) dibatasi ke kantor jangkauannya bila ROLE_ASSIGNMENT_ENABLED."""
-        restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_OFFBOARDING,
-                                               ("SUPER_ADMIN", "OPERATIONAL_MANAGER"))
+    async def _my_offices(self, user: CurrentUser,
+                          perm: Permission = Permission.VIEW_OFFBOARDING) -> list[str] | None:
+        """None = semua kantor. Cakupan per izin yang diperiksa rute (ADR 0002): VIEW_OFFBOARDING juga dibawa OM
+        (OM+HR = semua kantor); MANAGE_OFFBOARDING hanya HR (OM+HR dibatasi ke kantor tugas HR)."""
+        restriction = await office_restriction(self.repo.db, user, perm, division_roles=("PROJECT_MANAGER",))
         return None if restriction is None else offices_param(restriction)
 
     async def list_all(self, user: CurrentUser, status: str | None) -> list[Any]:
         return await self.repo.list_all(status=status, division_ids=await self._my_divisions(user),
                                         offices=await self._my_offices(user))
 
-    async def _visible(self, user: CurrentUser, offboarding_id: UUID, *, for_update: bool = False) -> Any:
+    async def _visible(self, user: CurrentUser, offboarding_id: UUID, *, for_update: bool = False,
+                       perm: Permission = Permission.VIEW_OFFBOARDING) -> Any:
         record = await self.repo.get(offboarding_id, for_update=for_update)
         divisions = await self._my_divisions(user)
         if record is None or (divisions is not None and str(record.division_id) not in divisions):
             raise NotFoundError("Data proses keluar")
-        await self._ensure_employee(user, record.employee_id)
+        await self._ensure_employee(user, record.employee_id, perm)
         return record
 
-    async def _ensure_employee(self, user: CurrentUser, employee_id: UUID | str) -> None:
-        if await self._my_offices(user) is not None:
-            await ensure_employee_in_scope(self.repo.db, user, Permission.MANAGE_OFFBOARDING, employee_id,
+    async def _ensure_employee(self, user: CurrentUser, employee_id: UUID | str,
+                               perm: Permission = Permission.VIEW_OFFBOARDING) -> None:
+        if await self._my_offices(user, perm) is not None:
+            await ensure_employee_in_scope(self.repo.db, user, perm, employee_id,
                                            "Data proses keluar")
 
     async def detail(self, user: CurrentUser, offboarding_id: UUID) -> dict[str, Any]:
@@ -87,7 +90,7 @@ class OffboardingService:
     # ── Proses ───────────────────────────────────────────────────────────────
     async def create(self, data: OffboardingCreate, user: CurrentUser | None = None) -> dict[str, Any]:
         if user is not None:
-            await self._ensure_employee(user, data.employee_id)
+            await self._ensure_employee(user, data.employee_id, Permission.MANAGE_OFFBOARDING)
         employee = await self.repo.employee_for_offboarding(data.employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
@@ -121,7 +124,7 @@ class OffboardingService:
             raise NotFoundError("Item clearance")
         offboarding = await self.repo.get(item.offboarding_id)
         if offboarding is not None:
-            await self._ensure_employee(user, offboarding.employee_id)
+            await self._ensure_employee(user, offboarding.employee_id, Permission.MANAGE_OFFBOARDING)
         if item.status not in CLEARANCE_OPEN:
             raise AppError("INVALID_STATE", "Proses keluar ini tidak lagi menerima pemeriksaan barang.", status=409)
         if item.verified_at is not None:
@@ -140,7 +143,7 @@ class OffboardingService:
         return await self.detail(user, item.offboarding_id)
 
     async def approve(self, user: CurrentUser, offboarding_id: UUID, approval_type: str) -> dict[str, Any]:
-        record = await self._visible(user, offboarding_id, for_update=True)
+        record = await self._visible(user, offboarding_id, for_update=True, perm=Permission.VIEW_OFFBOARDING)
         if record.status not in ("SUBMITTED", "APPROVED") or not record.is_all_assets_returned:
             raise AppError("CLEARANCE_INCOMPLETE",
                            "Persetujuan baru bisa setelah semua barang pinjaman diverifikasi.", status=409)
@@ -180,7 +183,7 @@ class OffboardingService:
         return done
 
     async def cancel(self, user: CurrentUser, offboarding_id: UUID, reason: str) -> None:
-        record = await self._visible(user, offboarding_id, for_update=True)
+        record = await self._visible(user, offboarding_id, for_update=True, perm=Permission.MANAGE_OFFBOARDING)
         if record.status == "COMPLETED":
             raise AppError("INVALID_STATE", "Proses keluar yang sudah selesai tidak bisa dibatalkan.", status=409)
         await self.repo.cancel(offboarding_id, record.employee_id, reason.strip())

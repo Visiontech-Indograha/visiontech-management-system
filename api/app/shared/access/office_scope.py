@@ -67,16 +67,19 @@ def carrier_roles(user: CurrentUser, perm: Permission) -> frozenset[str]:
 
 
 async def office_restriction(db: AsyncSession, user: CurrentUser, perm: Permission,
-                             wide_roles: tuple[str, ...] = ()) -> frozenset[str] | None:
+                             wide_roles: tuple[str, ...] = (),
+                             division_roles: tuple[str, ...] = ()) -> frozenset[str] | None:
     """Kantor yang boleh dijangkau pengguna lewat izin `perm`.
 
     None = tanpa batas kantor: flag `ROLE_ASSIGNMENT_ENABLED` mati (perilaku lama PERSIS), pengguna tidak memegang
     izin itu, atau ada peran pembawa izin di luar HR/Finance (SA, OM, ADMIN lama).
+    `division_roles`: peran yang ikut membawa izin tetapi cakupannya diatur sendiri (mis. PM per divisi); tidak
+    dihitung sebagai pembawa pelebar, jadi HR yang juga PM tetap dibatasi kantor pada alur HR.
     Selain itu: kantor sendiri (`employee.office_id`) + kantor penugasan aktif untuk peran HR/Finance pembawa izin.
     """
     if not settings.ROLE_ASSIGNMENT_ENABLED or perm.value not in user.permissions or user.has_role(*wide_roles):
         return None
-    carriers = carrier_roles(user, perm)
+    carriers = carrier_roles(user, perm) - frozenset(division_roles)
     if not carriers or not carriers <= OFFICE_BOUND_ROLES:
         return None
     rows = await BaseRepository(db).fetchall(

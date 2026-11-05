@@ -47,3 +47,35 @@ Semua pemeriksaan lain memakai `has_role(...)` (daftar `roles` = utama + tambaha
 ## Catatan
 - Pembatasan diterapkan di service/dependency, bukan RLS. PM yang juga HR dibatasi pada alur mess/offboarding sebagai HR (konservatif).
 - Tes: `api/tests/modules/role_assignments/test_hr_office_scope.py`.
+
+## Hasil audit OM+HR per izin (QA P3-1)
+
+Aturan (ADR 0002): cakupan dihitung PER IZIN yang diperiksa rute. Izin yang tidak dibawa OM = OM+HR dibatasi ke
+kantor tugas HR; izin yang juga dibawa OM = OM+HR semua kantor. `office_restriction` sudah menghitung ini dari
+pembawa izin; yang menyimpang adalah pemanggil yang menambah `wide_roles=("SUPER_ADMIN","OPERATIONAL_MANAGER")` atau
+selalu memakai satu izin (`MANAGE_*`) untuk semua rute, sehingga OM+HR melebar pada rute `MANAGE_*`.
+
+| Endpoint | Izin di rute | Dibawa OM | OM+HR sebelum | OM+HR seharusnya / sekarang |
+|---|---|---|---|---|
+| `PUT /employees/{id}`, alamat, arsip, pulihkan, `POST /employees` | `manage:users` | tidak | kantor tugas HR | sama (sudah benar) |
+| `/employees/{id}/account/*`, `/face/enrollments/*` | `manage:users` | tidak | kantor tugas HR | sama (sudah benar) |
+| `GET /employees` kolom sensitif | peran SA/OM atau `manage:users` | OM ya (lewat peran) | semua kantor | sama: OM membawa hak lihat sensitif, jadi semua kantor (HR tunggal tetap dibatasi) |
+| `/employees/{id}/documents*`, `/documents/expiring` | `manage:employee_documents` | tidak | kantor tugas HR | sama (sudah benar) |
+| `GET /mess`, `GET /mess/{id}` | `view:mess` | ya | semua kantor | semua kantor (benar); tetap dibatasi untuk HR tunggal/dua kantor |
+| `POST /mess`, `PUT/DELETE /mess/{id}` | `manage:mess` | tidak | SEMUA kantor (salah) | DIPERBAIKI: kantor tugas HR (404 di luar) |
+| `POST /mess/{id}/decision` | `review:mess` | ya | semua kantor | semua kantor (benar) |
+| `POST /mess/{id}/cancel`, `/end` | peran (HR/OM/SA atau pemilik) | ya (peran OM) | semua kantor | semua kantor (benar) |
+| `GET /offboarding`, `/pkwt-expiring`, `GET /{id}`, `POST /{id}/approve` | `view:offboarding` | ya | semua kantor | semua kantor (benar) |
+| `POST /offboarding`, verifikasi item, `POST /{id}/cancel` | `manage:offboarding` | tidak | SEMUA kantor (salah) | DIPERBAIKI: kantor tugas HR (404 di luar) |
+| `PUT/DELETE /offices/{id}` | `manage:sites` | ya | semua kantor | semua kantor (benar) |
+| `GET /overtime`, `POST /overtime/{id}/review` | `review:overtime` | ya | semua kantor | semua kantor (benar) |
+| Cuti `GET/POST /leaves*`, review | peran (PM/HR/OM/SA), tanpa izin | ya (peran OM berwenang meninjau semua kantor) | semua kantor | semua kantor (benar). Bukan temuan: otoritas datang dari peran OM. HR tanpa OM dibatasi |
+| `GET /home/summary` | hitungan lewat service mess/offboarding | mengikuti service | hitungan mess/offboarding semua kantor | hitungan memakai izin lihat (OM+HR semua kantor); HR tunggal tetap dibatasi |
+
+Perubahan kode: `MessService` dan `OffboardingService` menerima izin per operasi (lihat/tinjau = `view:*`/`review:*`,
+kelola = `manage:*`); `wide_roles` OM dihapus di sana. `office_restriction` mendapat `division_roles`
+(PM tidak dihitung pembawa pelebar, agar PM+HR tetap dibatasi pada alur HR seperti sebelumnya). Flag mati = perilaku
+lama persis.
+
+Tes matriks (OM+HR, HR dua kantor, HR tunggal, OM tunggal; flag mati = paritas):
+`api/tests/modules/role_assignments/test_om_hr_scope_matrix.py`.

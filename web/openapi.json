@@ -10353,6 +10353,25 @@
     ],
     "parameters": [
      {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      },
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama."
+     },
+     {
       "name": "page",
       "in": "query",
       "required": false,
@@ -13201,6 +13220,25 @@
     ],
     "parameters": [
      {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      },
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama."
+     },
+     {
       "name": "employee_id",
       "in": "query",
       "required": false,
@@ -16031,7 +16069,7 @@
      "Overtime"
     ],
     "summary": "List Overtime",
-    "description": "Daftar lembur untuk satu jadwal harian.",
+    "description": "Daftar lembur untuk satu jadwal harian.\n\nMode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;\n`q` = awalan nama karyawan, `status` disaring di SQL.",
     "operationId": "list_overtime_api_v1_overtime_get",
     "security": [
      {
@@ -16039,6 +16077,25 @@
      }
     ],
     "parameters": [
+     {
+      "name": "cursor",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 300
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      },
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama."
+     },
      {
       "name": "status",
       "in": "query",

@@ -4417,6 +4417,9 @@ export interface paths {
         /**
          * List Overtime
          * @description Daftar lembur untuk satu jadwal harian.
+         *
+         *     Mode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;
+         *     `q` = awalan nama karyawan, `status` disaring di SQL.
          */
         get: operations["list_overtime_api_v1_overtime_get"];
         put?: never;
@@ -17493,6 +17496,8 @@ export interface operations {
     get_audit_events_api_v1_audit_events_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 page?: number;
                 size?: number;
                 entity_type?: string | null;
@@ -19061,6 +19066,8 @@ export interface operations {
     list_attendance_api_v1_attendance_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 employee_id?: string | null;
                 from?: string | null;
                 to?: string | null;
@@ -20549,6 +20556,8 @@ export interface operations {
     list_overtime_api_v1_overtime_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 /** @description Filter status lembur */
                 status?: string | null;
                 /** @description ID jadwal harian */

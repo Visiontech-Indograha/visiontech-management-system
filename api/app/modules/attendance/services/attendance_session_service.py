@@ -638,6 +638,7 @@ class AttendanceSessionService:
         size: int,
         scope: str = "all",
         q: str | None = None,
+        after: tuple[Any, ...] | None = None,
     ) -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
@@ -656,8 +657,9 @@ class AttendanceSessionService:
             status=status,
             scope=scope,
             q=q,
-            limit=size,
+            limit=size + 1 if after is not None else size,
             offset=(page - 1) * size,
+            after=after,
         )
 
     async def day_hints(self, org_id: str, employee_id: str | None) -> tuple[Any, Any, int, Any]:

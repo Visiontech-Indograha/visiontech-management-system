@@ -9,6 +9,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Ditambahkan (deploy)
+- deploy: cadangan DB bisa dipisah per lingkungan lewat `VMS_BACKUP_DIR` dan `VMS_BACKUP_NAME` (opsional, bawaan tidak berubah; retensi per awalan, berkas nama lama tetap dihitung). Panduan `deploy/PANDUAN-PISAH-CADANGAN.md`, tes `scripts/uji-backup-retensi.sh`.
+
 ### Paket kecil API
 - OM (Operational Manager) kini memegang izin `export:attendance`; ekspor CSV memuat semua kantor. Dampak: MINOR.
 - Pengembalian aset memakai UPDATE bersyarat (409 INVALID_STATE bila sudah berubah).

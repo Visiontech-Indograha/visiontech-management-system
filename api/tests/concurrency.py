@@ -17,11 +17,14 @@ import pytest
 from tests.conftest import _sync_conn, sync_query
 
 
-def tunggu_terkunci(batas: int = 200) -> None:
-    """Tunggu sampai ada sesi yang menunggu kunci baris (permintaan sudah masuk antrean)."""
+def tunggu_terkunci(penahan_pid: int, batas: int = 200) -> None:
+    """Tunggu sampai ada sesi yang diblokir OLEH koneksi penahan (`penahan_pid`), yaitu permintaan tes ini
+    sudah masuk antrean kunci. Disaring per pid: tes konkurensi lain (worker xdist lain di DB yang sama)
+    tidak ikut terhitung."""
     for _ in range(batas):
         if sync_query("SELECT count(*) FROM pg_stat_activity "
-                      "WHERE wait_event_type = 'Lock' AND datname = current_database()")[0][0] > 0:
+                      "WHERE wait_event_type = 'Lock' AND datname = current_database() "
+                      "AND %s = ANY(pg_blocking_pids(pid))", (penahan_pid,))[0][0] > 0:
             return
         time.sleep(0.05)
     pytest.fail("Permintaan tidak menunggu kunci baris; kunci (FOR UPDATE / UPDATE bersyarat) belum berjalan")
@@ -46,10 +49,12 @@ def tahan_lalu_ubah(sql: str, params: tuple, aksi: Callable[[], Any]) -> Any:
     conn.autocommit = False
     try:
         with conn.cursor() as cur:
+            cur.execute("SELECT pg_backend_pid()")
+            penahan_pid = cur.fetchone()[0]
             cur.execute(sql, params)
         with ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(aksi)
-            tunggu_terkunci()
+            tunggu_terkunci(penahan_pid)
             conn.commit()
             return future.result(timeout=30)
     finally:

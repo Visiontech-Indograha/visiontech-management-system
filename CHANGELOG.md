@@ -9,6 +9,8 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+- Basis data: tabel `user_role_assignment` (peran ganda dan penugasan kantor, ADR 0002 fase 1) lewat migrasi v2_0029, hanya tahap expand (tabel, indeks, isi awal dari `users.system_role` dan `employee.office_id`); kolom lama tidak berubah dan akses tidak berubah. Bukti paritas: `scripts/paritas-penugasan.sql`.
+
 ## [1.6.0] - 2026-11-05
 
 ### Gabungan perbaikan audit dan minggu 4

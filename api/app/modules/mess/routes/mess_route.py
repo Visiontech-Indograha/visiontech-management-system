@@ -135,9 +135,15 @@ async def create_stay(
     data: MessStayCreate,
     current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
-) -> MessStayOut:
-    """HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui."""
-    return await controller.handle_create_stay(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> MessStayOut | Response:
+    """HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
+    Mendukung Idempotency-Key (opsional)."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_create_stay(current_user, data)
+    return await idem.simpan(hasil, 201)
 
 
 @router.post("/{mess_stay_id}/decision", response_model=MessStayOut)

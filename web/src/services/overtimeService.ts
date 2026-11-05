@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { idempotencyHeaders } from "@/lib/idempotency";
 import type { components } from "@/lib/apiTypes";
 
 export type Overtime = components["schemas"]["OvertimeResponse"];
@@ -10,8 +11,11 @@ export async function listPlanOvertime(planId: string): Promise<Overtime[]> {
 }
 
 /** POST /overtime — ajukan lembur (tanggal dicatat server). */
-export async function createOvertime(body: components["schemas"]["OvertimeCreate"]): Promise<Overtime> {
-  return (await api.post<Overtime>("/overtime", body)).data;
+export async function createOvertime(
+  body: components["schemas"]["OvertimeCreate"],
+  idempotencyKey?: string,
+): Promise<Overtime> {
+  return (await api.post<Overtime>("/overtime", body, { headers: idempotencyHeaders(idempotencyKey) })).data;
 }
 
 /** POST /overtime/{id}/review — PM menyetujui/menolak lembur. */

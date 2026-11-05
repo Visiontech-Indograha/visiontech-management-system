@@ -9,6 +9,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { uploadFiles } from "@/services/uploadService";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
 import { useSession } from "@/stores/sessionStore";
 
@@ -55,6 +56,8 @@ export function LeaveApplyDialog({
   const startDate = useWatch({ control, name: "start_date" });
   const endDate = useWatch({ control, name: "end_date" });
   const leaveType = useWatch({ control, name: "leave_type" });
+  const allValues = useWatch({ control });
+  const idem = useIdempotencyKey(JSON.stringify([allValues, attachmentFile?.name, attachmentFile?.size]));
 
   const onSubmit = async (values: LeaveCreateInput) => {
     setFormError(null);
@@ -84,7 +87,9 @@ export function LeaveApplyDialog({
         end_date: values.end_date,
         reason: values.reason.trim(),
         attachment_file_id,
+        idempotencyKey: idem.key,
       });
+      idem.renew();
       toast.success("Permohonan cuti / izin berhasil diajukan dan menunggu persetujuan.");
       onClose();
     } catch (err) {

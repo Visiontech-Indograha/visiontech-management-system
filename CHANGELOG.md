@@ -9,6 +9,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Ditambahkan
+- deploy: cadangan DB bisa dipisah per lingkungan lewat `VMS_BACKUP_DIR` dan `VMS_BACKUP_NAME` (opsional, bawaan tidak berubah; retensi per awalan, berkas nama lama tetap dihitung). Panduan `deploy/PANDUAN-PISAH-CADANGAN.md`, tes `scripts/uji-backup-retensi.sh`.
+
 ## [1.5.0] - 2026-10-30
 
 Rilis gabungan dari `development` sejak 1.4.0 (PR #209–#254). Tidak ada perubahan skema API yang merusak; klien lama (APK lapangan) tetap berjalan.

@@ -26,7 +26,10 @@ source "$BASE/notify.env"
 WEBHOOK_DEPLOY="${DISCORD_WEBHOOK_DEPLOY:-}"
 WEBHOOK_BUILD="${DISCORD_WEBHOOK_BUILD:-${DISCORD_WEBHOOK_DIGEST:-${DISCORD_WEBHOOK_4:-}}}"
 
-LOGDIR="$BASE/logs"; mkdir -p "$LOGDIR" backups
+LOGDIR="$BASE/logs"; mkdir -p "$LOGDIR" "${VMS_BACKUP_DIR:-backups}"
+# Teruskan pengaturan cadangan terpisah ke backup.sh (opsional; backup.sh juga membaca deploy.env sendiri).
+[ -n "${VMS_BACKUP_DIR:-}" ] && export VMS_BACKUP_DIR
+[ -n "${VMS_BACKUP_NAME:-}" ] && export VMS_BACKUP_NAME
 LAST_FILE="$BASE/.last-deployed"
 
 REPO="${VMS_DEPLOY_REPO:-git@github-vms:Visiontech-Indograha/visiontech-management-system.git}"

@@ -9,6 +9,8 @@ set -uo pipefail
 
 BASE="${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}"
 cd "$BASE" || { echo "healthcheck: $BASE tidak ada" >&2; exit 1; }
+BK=$(grep -E '^VMS_BACKUP_DIR=' deploy.env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '"')
+BK="${VMS_BACKUP_DIR:-${BK:-backups}}"
 [ -f notify.env ] && . ./notify.env
 HOOK="${DISCORD_WEBHOOK_ALERT:-${DISCORD_WEBHOOK_DEPLOY:-}}"
 API_PORT="${API_PORT:-8000}"
@@ -58,7 +60,7 @@ fi
 
 # 5. Umur backup: lokal dan luar-server (offsite) harus < 26 jam.
 age_h() { [ -e "$1" ] && echo $(( ( $(date +%s) - $(stat -c %Y "$1") ) / 3600 )) || echo 9999; }
-newest=$(ls -1t backups/*.dump 2>/dev/null | head -n 1)
+newest=$(ls -1t "$BK"/*.dump 2>/dev/null | head -n 1)
 [ -n "$newest" ] && [ "$(age_h "$newest")" -lt 26 ] || add "backup lokal terakhir lebih dari 26 jam"
 if [ -f offsite.env ]; then
   [ "$(age_h .offsite.ok)" -lt 26 ] || add "backup luar-server terakhir lebih dari 26 jam"

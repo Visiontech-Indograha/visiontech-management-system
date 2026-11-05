@@ -128,6 +128,15 @@ describe("aturan peran dan tampilan peran efektif", () => {
     expect(roleAddBlocker({ ...base, primaryRole: "SUPER_ADMIN" })).toMatch(/Super Admin/);
     expect(roleAddBlocker({ ...base, extraCount: 2 })).toMatch(/Paling banyak 2/);
   });
+  it("HR dua kantor: kantor beda boleh, kantor sama ditolak, OM dobel ditolak, HR+Finance tetap ditolak", () => {
+    const hr = { role: "ADMIN_HR_GA", primaryRole: "EMPLOYEE", held: ["EMPLOYEE", "ADMIN_HR_GA"], extraCount: 1, isSelf: false };
+    const scopes = [{ role: "ADMIN_HR_GA", office_id: "A" }];
+    expect(roleAddBlocker({ ...hr, scopes, officeId: "B" })).toBeNull();
+    expect(roleAddBlocker({ ...hr, scopes, officeId: "A" })).toMatch(/kantor yang sama/);
+    const om = { ...hr, role: "OPERATIONAL_MANAGER", held: ["EMPLOYEE", "OPERATIONAL_MANAGER"] };
+    expect(roleAddBlocker({ ...om, scopes: [{ role: "OPERATIONAL_MANAGER", office_id: null }] })).toMatch(/kantor yang sama/);
+    expect(roleAddBlocker({ ...hr, role: "FINANCE", scopes, officeId: "B" })).toMatch(/HR dan Finance/);
+  });
   it("tanpa role_scopes tampilan lama tak berubah", () => {
     expect(roleScopeLines({})).toEqual([]);
     expect(roleScopeLines({ role_scopes: [] })).toEqual([]);

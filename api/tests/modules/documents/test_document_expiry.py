@@ -6,10 +6,20 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+import pytest
+
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db, sync_query
+from tests.conftest import World, db_exclusive, requires_db, sync_query
 
 pytestmark = requires_db
+
+
+@pytest.fixture(autouse=True)
+def _serial_expiry():
+    """Cron kedaluwarsa menonaktifkan SEMUA dokumen lewat tanggal (global): tanpa serialisasi, tes cron di worker lain
+    menonaktifkan dokumen 'kedaluwarsa' milik tes daftar yang sedang berjalan."""
+    with db_exclusive(727303):
+        yield
 
 
 def _document(world: World, days_from_today: int, doc_type: str) -> str:

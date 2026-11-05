@@ -168,9 +168,11 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Uang makan (absensi sah)',
-                      style: VmsTextStyles.bodySm,
+                    Expanded(
+                      child: Text(
+                        'Uang makan (hanya absensi yang sah: dalam lokasi kerja atau sudah disetujui atasan)',
+                        style: VmsTextStyles.bodySm,
+                      ),
                     ),
                     Text(
                       _rupiah.format(

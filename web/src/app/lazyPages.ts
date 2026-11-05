@@ -12,6 +12,7 @@ export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) =
 export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
 export const AllocationPage = lazy(() => import("@/pages/alokasi/AllocationPage").then((m) => ({ default: m.AllocationPage })));
 export const AttendanceRecapPage = lazy(() => import("@/pages/monitoring/AttendanceRecapPage").then((m) => ({ default: m.AttendanceRecapPage })));
+export const OvertimePage = lazy(() => import("@/pages/overtime/OvertimePage").then((m) => ({ default: m.OvertimePage })));
 export const OvertimeRecapPage = lazy(() => import("@/pages/monitoring/OvertimeRecapPage").then((m) => ({ default: m.OvertimeRecapPage })));
 export const AccountPage = lazy(() => import("@/pages/account/AccountPage").then((m) => ({ default: m.AccountPage })));
 

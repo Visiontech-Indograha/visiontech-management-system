@@ -38,12 +38,14 @@ class AppError(Exception):
         status: int = 400,
         details: dict[str, Any] | None = None,
         persist: bool = False,
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.code = code
         self.message = message
         self.status = status
         self.details = details or {}
         self.persist = persist
+        self.headers = headers or {}
         super().__init__(message)
 
 
@@ -116,15 +118,22 @@ def trigger_rule_error(exc: BaseException) -> AppError | None:
 
 
 # ── FastAPI exception handler ──────────────────────────────────────────────────
-def _error_response(status: int, code: str, message: str, details: dict[str, Any] | None = None) -> JSONResponse:
+def _error_response(
+    status: int,
+    code: str,
+    message: str,
+    details: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
+) -> JSONResponse:
     return JSONResponse(
         status_code=status,
         content={"error": {"code": code, "message": message, "details": details or {}}},
+        headers=headers,
     )
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    return _error_response(exc.status, exc.code, exc.message, exc.details)
+    return _error_response(exc.status, exc.code, exc.message, exc.details, exc.headers)
 
 
 # Kode & pesan bawaan per status HTTP (dok 05 §2). Pesan untuk orang lapangan, bukan programmer.

@@ -5,11 +5,12 @@ import { LoginForm } from "@/components/organisms/auth/LoginForm";
 import type { LoginValues } from "@/schemas/loginSchema";
 
 /** Kerangka login: panel merek (desktop) + kartu login + tautan unduh aplikasi Android. */
-export function LoginTemplate({ admin, form, onSubmit, formError, lockSeconds }: {
+export function LoginTemplate({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds }: {
   admin: boolean;
   form: UseFormReturn<LoginValues>;
   onSubmit: () => void;
   formError: string | null;
+  formErrorCode?: string | null;
   lockSeconds: number;
 }) {
   return (
@@ -18,7 +19,14 @@ export function LoginTemplate({ admin, form, onSubmit, formError, lockSeconds }:
       <LoginBrandPanel />
 
       <section className="flex flex-col items-center justify-center gap-4 px-4 py-10">
-        <LoginForm admin={admin} form={form} onSubmit={onSubmit} formError={formError} lockSeconds={lockSeconds} />
+        <LoginForm
+          admin={admin}
+          form={form}
+          onSubmit={onSubmit}
+          formError={formError}
+          formErrorCode={formErrorCode}
+          lockSeconds={lockSeconds}
+        />
         <AndroidAppLink />
       </section>
     </main>

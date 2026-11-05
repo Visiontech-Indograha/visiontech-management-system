@@ -105,9 +105,9 @@ class SurveyService:
         if any(str(p.work_type_id) not in by_type for p in points):
             # Titik lama (dibuat sebelum ada jenis titik) tetap memakai slot & katalog work type tugas survei.
             by_type[str(task.work_type_id)] = await self._type_entry(task.work_type_id, task.work_type_name, None)
-        slot_name: dict[str, str] = {}
-        for wt in {str(p.work_type_id) for p in points} | set(by_type) | {str(task.work_type_id)}:
-            slot_name.update(await self.repo.slot_names(wt))  # termasuk slot lama yang diarsipkan
+        # Termasuk slot lama yang diarsipkan; satu kueri untuk seluruh jenis pekerjaan.
+        slot_name = await self.repo.slot_names(sorted({str(p.work_type_id) for p in points} | set(by_type)
+                                                      | {str(task.work_type_id)}))
         lines = await self.repo.lines([str(p.point_id) for p in points] + [str(task.item_id)])
         by_item: dict[str, list[Any]] = {}
         for line in lines:
@@ -387,20 +387,20 @@ class SurveyService:
                 needs.setdefault(str(ln.point_id), []).append(ln.name)
             elif ln.category == "MATERIAL":
                 materials.setdefault(str(ln.point_id), []).append(label)
-        created: list[UUID] = []
+        # Urutan per titik tetap: persiapan (bila ada kebutuhan), lalu pemasangan. Ditulis dalam satu INSERT.
+        new_rows: list[tuple[Any, str, Any, str | None]] = []
         for p in chosen:
             pid = str(p.point_id)
             if data.preparation_work_type_id and needs.get(pid):
-                created.append(await self.repo.insert_follow_up(
-                    target.daily_plan_id, task.completion_id, data.preparation_work_type_id, "PREPARATION", p,
-                    "Kebutuhan: " + ", ".join(needs[pid])))
+                new_rows.append((data.preparation_work_type_id, "PREPARATION", p,
+                                 "Kebutuhan: " + ", ".join(needs[pid])))
             note = "\n".join(filter(None, [
                 ("Material: " + "; ".join(materials[pid])) if materials.get(pid) else None,
                 ("Kebutuhan: " + ", ".join(needs[pid])) if needs.get(pid) else None,
                 p.notes,
             ]))
-            created.append(await self.repo.insert_follow_up(
-                target.daily_plan_id, task.completion_id, install[pid], data.task_phase, p, note[:4000] or None))
+            new_rows.append((install[pid], data.task_phase, p, note[:4000] or None))
+        created: list[UUID] = await self.repo.insert_follow_ups(target.daily_plan_id, task.completion_id, new_rows)
         await self.repo.log(user.user_id, user.role or "", task_id, "SURVEY_PLANNED",
                             {"daily_plan_id": str(target.daily_plan_id), "items": len(created)})
         return target.daily_plan_id, created

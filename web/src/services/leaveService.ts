@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { idempotencyHeaders } from "@/lib/idempotency";
 import { getPaged, type Paged } from "@/lib/paged";
 
 export interface LeaveRequest {
@@ -76,8 +77,10 @@ export async function getLeave(leaveId: string): Promise<LeaveRequest> {
   return (await api.get<LeaveRequest>(`/leaves/${leaveId}`)).data;
 }
 
-export async function applyLeave(body: LeaveCreateInput): Promise<LeaveRequest> {
-  return (await api.post<LeaveRequest>("/leaves", body)).data;
+export async function applyLeave(
+  { idempotencyKey, ...body }: LeaveCreateInput & { idempotencyKey?: string },
+): Promise<LeaveRequest> {
+  return (await api.post<LeaveRequest>("/leaves", body, { headers: idempotencyHeaders(idempotencyKey) })).data;
 }
 
 export async function reviewLeave(leaveId: string, body: LeaveReviewInput): Promise<LeaveRequest> {
@@ -92,11 +95,12 @@ export async function getLeaveBalance(employeeId: string, year = new Date().getF
   return (await api.get<LeaveBalance>(`/leaves/balances/${employeeId}`, { params: { year } })).data;
 }
 
-export const useLeaves = (params?: LeaveListParams) =>
+export const useLeaves = (params?: LeaveListParams, opts?: { enabled?: boolean }) =>
   useQuery({
     queryKey: ["leaves", params],
     queryFn: () => listLeaves(params),
     placeholderData: (prev) => prev,
+    enabled: opts?.enabled ?? true,
   });
 
 export const useLeaveBalance = (employeeId: string, year = new Date().getFullYear()) =>

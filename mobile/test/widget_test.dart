@@ -39,5 +39,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('admin@lokal.test'), findsOneWidget);
+    // Kolom yang difokus menjadwalkan gulir otomatis (350 dtk + animasi 250 dtk); habiskan agar tidak bocor.
+    await tester.pump(const Duration(milliseconds: 700));
   });
+
 }

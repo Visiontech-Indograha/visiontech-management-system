@@ -36,6 +36,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# CHANGELOG lokal: tidak di-commit (sering konflik tiap PR); catatan rilis otomatis dari PR
+CHANGELOG.md
+
 # Pytest
 .pytest_cache/
 htmlcov/
@@ -107,7 +110,10 @@ ehthumbs_vista.db
 
 # AI agent config & scratch
 .agents/
-.claude/
+# Konfigurasi lokal Claude diabaikan; skill dan definisi agen proyek DIBAGIKAN lewat git.
+.claude/*
+!.claude/skills/
+!.claude/agents/
 .hermes/
 .cursor/
 .windsurf/
@@ -118,6 +124,10 @@ skills-lock.json
 MEMORY.md
 memory.md
 CLAUDE.md
+!web/CLAUDE.md
+!mobile/CLAUDE.md
+!api/CLAUDE.md
+!db/CLAUDE.md
 *.agent.md
 
 !web/src/lib/
@@ -172,3 +182,4 @@ scripts/akun-uji-lokal.txt
 postman/fixtures/*.pdf
 postman/fixtures/*.jpg
 postman/fixtures/*.jpeg
+.playwright-mcp

@@ -23,14 +23,6 @@ final _date = DateFormat('d MMM yyyy', 'id_ID');
 
 String _fmt(dynamic iso) => iso == null ? '-' : _date.format(DateTime.parse(iso as String));
 
-/// Label status lembur untuk karyawan.
-String overtimeStatusLabel(String status) => switch (status) {
-  'PENDING' => 'Menunggu persetujuan',
-  'APPROVED' => 'Disetujui',
-  'REJECTED' => 'Ditolak',
-  _ => status,
-};
-
 /// Label status dokumen pribadi menurut masa berlakunya.
 /// Nama jenis dokumen yang ramah dibaca (sama dengan web); jenis lain ditampilkan apa adanya.
 String documentTypeLabel(String type) => switch (type) {
@@ -178,37 +170,6 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
 String _employeeId(WidgetRef ref) {
   final s = ref.read(authControllerProvider);
   return s is AuthAuthenticated ? s.user.employeeId : '';
-}
-
-/// Riwayat dan status pengajuan lembur milik sendiri.
-class OvertimeHistoryScreen extends StatelessWidget {
-  const OvertimeHistoryScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => _ListScreen(
-    title: 'Riwayat Lembur',
-    emptyTitle: 'Belum ada lembur',
-    emptyIcon: Icons.more_time_rounded,
-    empty: 'Belum ada pengajuan lembur.',
-    load: (ref) => ref.read(syncEngineProvider).api.myOvertime(),
-    builder: (o) => SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${_fmt(o['work_date'])} · ${o['hours']} jam',
-            style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(o['reason'] as String? ?? '', style: VmsTextStyles.bodySm),
-          const SizedBox(height: 8),
-          Chip(label: Text(overtimeStatusLabel(o['status'] as String))),
-          if ((o['review_note'] as String?)?.isNotEmpty == true)
-            Text('Catatan: ${o['review_note']}', style: VmsTextStyles.bodySm),
-        ],
-      ),
-    ),
-  );
 }
 
 /// Ikon, label, dan ekstensi berkas dari tipe MIME asli (dipakai ikon & pratinjau dokumen).

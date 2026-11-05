@@ -50,8 +50,8 @@ class DocumentController:
         await self.document_service.delete(current_user, emp_id, doc_id)
         return {"message": "Dokumen dihapus."}
 
-    async def handle_get_expiring(self, urgency: str | None) -> ExpiringDocumentList:
-        rows = await self.document_service.expiring(urgency)
+    async def handle_get_expiring(self, user: CurrentUser, urgency: str | None) -> ExpiringDocumentList:
+        rows = await self.document_service.expiring(user, urgency)
         return ExpiringDocumentList(items=[ExpiringDocumentResponse(**r._mapping) for r in rows])
 
     async def handle_cron_expire(self) -> dict[str, object]:

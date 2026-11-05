@@ -25,6 +25,7 @@ from app.modules.offboarding.routes import router as offboarding_router
 from app.modules.offices.routes import router as offices_router
 from app.modules.overtime.routes import overtime_recaps_router, overtime_router
 from app.modules.projects.routes import router as projects_router
+from app.modules.role_assignments.routes import router as role_assignments_router
 from app.modules.system.routes import (
     app_releases_router,
     dev_clock_router,
@@ -51,6 +52,7 @@ from app.modules.work_types.routes import router as work_types_router
 api_router = APIRouter()
 
 api_router.include_router(clients_router)
+api_router.include_router(role_assignments_router)
 api_router.include_router(work_orders_router)
 api_router.include_router(projects_router)
 api_router.include_router(job_positions_router)

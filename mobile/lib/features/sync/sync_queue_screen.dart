@@ -141,8 +141,10 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
                     )
                   else
                     Text(
-                      'Data di bawah ini dibuat di HP dan belum sampai ke server. '
-                      'Yang bertanda "berhenti dicoba" butuh keputusan Anda.',
+                      'Sinkronisasi data: data yang dibuat di HP dikirim ke server otomatis saat ada sinyal.\n'
+                      'Data tertunda: belum sampai ke server. Tunggu sinyal, tidak perlu tindakan.\n'
+                      'Perlu tindakan (berhenti dicoba): server menolak data ini. Ketuk Coba lagi, '
+                      'atau hapus bila sudah tidak diperlukan.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   const SizedBox(height: 12),

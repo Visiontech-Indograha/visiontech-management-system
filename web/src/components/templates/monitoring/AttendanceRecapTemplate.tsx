@@ -15,7 +15,7 @@ export function AttendanceRecapTemplate({ month, onMonthChange, recap }: {
   return (
     <PageTemplate title="Rekap bulanan">
       <div className="md:max-w-xs">
-        <MonthFilterField value={month || recap.data?.month || ""} onChange={onMonthChange} hint="Kosong = bulan berjalan." />
+        <MonthFilterField value={month || recap.data?.month || ""} onChange={onMonthChange} hint="Kosong = bulan ini. Belum ada data? Pilih bulan lain." />
       </div>
       <AttendanceRecapSummary recap={recap} />
       {records.length > 0 && <AttendanceRecordHistory records={records} />}

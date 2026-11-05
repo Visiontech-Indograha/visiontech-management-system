@@ -14,6 +14,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.access.scope_rules import asset_visible_sql, tool_scope_sql, vehicle_scope_sql
 
 _WIB_TODAY = "(now() AT TIME ZONE 'Asia/Jakarta')::date"
 
@@ -164,15 +165,19 @@ class AssetRepository(BaseRepository):
         )
 
     # ── Alat ───────────────────────────────────────────────────────────────────
-    async def list_tools(self, office_id: UUID | None, status: str | None) -> list[Any]:
+    async def list_tools(self, office_id: UUID | None, status: str | None,
+                         viewer: dict[str, Any] | None = None) -> list[Any]:
+        """`viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
+        visible = asset_visible_sql("t.division_id", "t.office_id", "loan.holder_employee_id")
+        scope = "" if viewer is None else f" AND {visible}"
         return list(await self.fetchall(
-            _TOOL_SELECT + """
+            _TOOL_SELECT + f"""
             WHERE t.delete_at IS NULL
               AND (CAST(:office AS uuid) IS NULL OR t.office_id = CAST(:office AS uuid))
-              AND (CAST(:status AS text) IS NULL OR t.status::text = :status)
+              AND (CAST(:status AS text) IS NULL OR t.status::text = :status){scope}
             ORDER BY t.category, t.name
             """,
-            {"office": str(office_id) if office_id else None, "status": status},
+            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {})},
         ))
 
     async def get_tool(self, tool_id: UUID | str) -> Any:
@@ -219,15 +224,19 @@ class AssetRepository(BaseRepository):
         )
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
-    async def list_vehicles(self, office_id: UUID | None, status: str | None) -> list[Any]:
+    async def list_vehicles(self, office_id: UUID | None, status: str | None,
+                            viewer: dict[str, Any] | None = None) -> list[Any]:
+        """`viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
+        visible = asset_visible_sql("v.division_id", "v.office_id", "loan.holder_employee_id")
+        scope = "" if viewer is None else f" AND {visible}"
         return list(await self.fetchall(
-            _VEHICLE_SELECT + """
+            _VEHICLE_SELECT + f"""
             WHERE v.delete_at IS NULL
               AND (CAST(:office AS uuid) IS NULL OR v.office_id = CAST(:office AS uuid))
-              AND (CAST(:status AS text) IS NULL OR v.status::text = :status)
+              AND (CAST(:status AS text) IS NULL OR v.status::text = :status){scope}
             ORDER BY v.vehicle_type, v.name
             """,
-            {"office": str(office_id) if office_id else None, "status": status},
+            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {})},
         ))
 
     async def get_vehicle(self, vehicle_id: UUID | str) -> Any:
@@ -284,13 +293,22 @@ class AssetRepository(BaseRepository):
             {"id": str(asset_id)},
         )
 
-    async def set_status(self, asset_type: str, asset_id: UUID | str, status: str) -> None:
+    async def set_status(
+        self, asset_type: str, asset_id: UUID | str, status: str, *, expected: str | None = None
+    ) -> int:
+        """Ubah status aset. Bila `expected` diisi, UPDATE hanya berlaku jika status saat itu sama
+        (compare-and-set). Kembalian = jumlah baris berubah."""
         table, col = ("tool", "tool_id") if asset_type == "TOOL" else ("vehicle", "vehicle_id")
-        await self.execute(
+        guard = " AND status = CAST(:expected AS asset_status_enum)" if expected is not None else ""
+        params: dict[str, Any] = {"id": str(asset_id), "status": status.lower()}
+        if expected is not None:
+            params["expected"] = expected.lower()
+        result = await self.execute(
             f"UPDATE {table} SET status = CAST(:status AS asset_status_enum), update_at = now() "
-            f"WHERE {col} = CAST(:id AS uuid)",
-            {"id": str(asset_id), "status": status.lower()},
+            f"WHERE {col} = CAST(:id AS uuid)" + guard,
+            params,
         )
+        return int(result.rowcount or 0)
 
     async def has_open_loan(self, asset_type: str, asset_id: UUID | str) -> bool:
         col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
@@ -319,10 +337,13 @@ class AssetRepository(BaseRepository):
             {"id": str(asset_id), "date": work_date},
         )
 
-    async def availability(self, work_date: date) -> list[Any]:
-        """Setiap alat & kendaraan aktif beserta tim pemakai pada `work_date` (NULL bila tidak dipakai tanggal itu)."""
+    async def availability(self, work_date: date, viewer: dict[str, Any] | None = None) -> list[Any]:
+        """Setiap alat & kendaraan aktif beserta tim pemakai pada `work_date` (NULL bila tidak dipakai tanggal itu).
+        `viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
+        tool_scope = "" if viewer is None else f" AND {tool_scope_sql('t')}"
+        vehicle_scope = "" if viewer is None else f" AND {vehicle_scope_sql('v')}"
         return list(await self.fetchall(
-            """
+            f"""
             SELECT 'TOOL' AS asset_type, t.tool_id AS asset_id, t.name AS asset_name, t.status::text AS status,
                    (SELECT wpd.team_id FROM asset_assignment aa
                       JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
@@ -330,7 +351,7 @@ class AssetRepository(BaseRepository):
                       AND wpd.work_date = CAST(:date AS date)
                     ORDER BY aa.loaned_at DESC LIMIT 1) AS team_id
             FROM tool t
-            WHERE t.delete_at IS NULL
+            WHERE t.delete_at IS NULL{tool_scope}
             UNION ALL
             SELECT 'VEHICLE', v.vehicle_id, v.name, v.status::text,
                    (SELECT wpd.team_id FROM asset_assignment aa
@@ -339,10 +360,10 @@ class AssetRepository(BaseRepository):
                       AND wpd.work_date = CAST(:date AS date)
                     ORDER BY aa.loaned_at DESC LIMIT 1)
             FROM vehicle v
-            WHERE v.delete_at IS NULL
+            WHERE v.delete_at IS NULL{vehicle_scope}
             ORDER BY 3
             """,
-            {"date": work_date},
+            {"date": work_date, **(viewer or {})},
         ))
 
     async def team_office(self, team_id: UUID | str) -> Any:
@@ -487,12 +508,14 @@ class AssetRepository(BaseRepository):
         )
         return assignment_id
 
-    async def close_loan(self, assignment_id: UUID | str, condition: str) -> None:
-        await self.execute(
+    async def close_loan(self, assignment_id: UUID | str, condition: str) -> bool:
+        """UPDATE bersyarat (CAS): hanya menutup peminjaman yang masih terbuka; False bila sudah ditutup pihak lain."""
+        result = await self.execute(
             "UPDATE asset_assignment SET returned_at = now(), assignment_status = CAST(:c AS asset_status_enum), "
-            "update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
+            "update_at = now() WHERE assignment_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL",
             {"id": str(assignment_id), "c": condition.lower()},
         )
+        return bool(result.rowcount)
 
     # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────
     async def insert_request(
@@ -545,14 +568,16 @@ class AssetRepository(BaseRepository):
     async def set_request_status(
         self, request_id: UUID | str, status: str, reviewer: str | None, note: str | None,
         assignment_id: UUID | str | None = None,
-    ) -> None:
-        await self.execute(
+    ) -> int:
+        """Putuskan/batalkan pengajuan hanya bila masih PENDING (compare-and-set). Kembalian = baris berubah."""
+        result = await self.execute(
             "UPDATE asset_loan_request SET status = :st, reviewed_by_id = CAST(:rev AS uuid), reviewed_at = now(), "
             "review_note = :note, assignment_id = CAST(:asg AS uuid), update_at = now() "
-            "WHERE request_id = CAST(:id AS uuid)",
+            "WHERE request_id = CAST(:id AS uuid) AND status = 'PENDING'",
             {"id": str(request_id), "st": status, "rev": reviewer, "note": note,
              "asg": str(assignment_id) if assignment_id else None},
         )
+        return int(result.rowcount or 0)
 
     async def request_return(
         self, assignment_id: UUID | str, condition: str, note: str | None, photo_path: str

@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.repository import BaseRepository, escape_like, safe_columns
 
 _SELECT = """
@@ -23,8 +24,9 @@ class ClientRepository(BaseRepository):
               AND (CAST(:q AS varchar) IS NULL OR c.name ILIKE '%' || CAST(:q AS varchar) || '%'
                    OR c.client_code ILIKE '%' || CAST(:q AS varchar) || '%')
             ORDER BY c.name
+            LIMIT :cap
             """,
-            {"q": escape_like(q), "active": active_only},
+            {"q": escape_like(q), "active": active_only, "cap": MAX_ROWS_UNPAGED},
         ))
 
     async def get(self, client_id: UUID | str) -> Any:

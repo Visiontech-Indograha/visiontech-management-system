@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/root_navigator.dart';
 import '../features/assets/assets_screen.dart';
 import '../features/attendance/attendance_screen.dart';
 import '../features/attendance/recap_screen.dart';
@@ -12,6 +13,7 @@ import '../features/auth/login_screen.dart';
 import '../features/gallery/photo_gallery_screen.dart';
 import '../features/leaves/leaves_screen.dart';
 import '../features/mess/mess_screen.dart';
+import '../features/overtime/overtime_screen.dart';
 import '../features/plans/daily_plans_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/records/my_records_screens.dart';
@@ -52,6 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     refreshListenable: refreshNotifier,
     errorBuilder: vmsNotFoundScreen,
@@ -97,7 +100,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AssetsScreen(),
       ),
       GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
-      GoRoute(path: '/overtime', builder: (context, state) => const OvertimeHistoryScreen()),
+      GoRoute(path: '/overtime', builder: (context, state) => const OvertimeScreen()),
       GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),
       GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       StatefulShellRoute.indexedStack(

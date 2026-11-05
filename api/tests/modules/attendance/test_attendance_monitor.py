@@ -12,10 +12,17 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.modules.attendance.services import attendance_monitor_service as monitor
-from tests.conftest import login_headers, requires_db, sync_query
+from tests.conftest import db_exclusive, login_headers, requires_db, sync_query
 
-# Tes ini menghitung absensi tanggal tetap lintas kantor + memakai employee_no "UJI-001": satu worker saja (xdist).
-pytestmark = [requires_db, pytest.mark.xdist_group("attendance_monitor")]
+# Menghitung absensi tanggal tetap lintas kantor + employee_no "UJI-001": diserialkan lewat advisory lock DB.
+pytestmark = [requires_db]
+
+
+@pytest.fixture(autouse=True)
+def _serial_monitor():
+    with db_exclusive(727301):
+        yield
+
 
 WIB = ZoneInfo("Asia/Jakarta")
 EMPLOYEE_NAME = "Rusyidi Siregar Uji"

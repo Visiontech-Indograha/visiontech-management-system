@@ -82,7 +82,7 @@ class HomeService:
             out.overtime_to_review = sum(1 for r in rows if r.status == "PENDING_PM")
 
         if Permission.REVIEW_MESS.value in perms:
-            out.mess_to_review = len(await self.mess.list_stays(None, None, None, "REQUESTED"))
+            out.mess_to_review = len(await self.mess.list_stays(None, None, None, "REQUESTED", user))
 
         if Permission.MANAGE_ASSETS.value in perms:
             out.loan_requests_to_review = len(await self.assets.requests(user, status="PENDING"))

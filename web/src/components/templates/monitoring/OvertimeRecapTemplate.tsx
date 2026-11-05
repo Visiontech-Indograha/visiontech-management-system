@@ -2,12 +2,14 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { MonthFilterField } from "@/components/organisms/monitoring/MonthFilterField";
 import { OvertimeRecapList } from "@/components/organisms/monitoring/OvertimeRecapList";
 import { OvertimeReviewList } from "@/components/organisms/monitoring/OvertimeReviewList";
+import type { KeysetMore } from "@/hooks/useKeysetList";
 import type { Overtime } from "@/services/overtimeService";
 import type { OvertimeRecapRow } from "@/services/monitoringService";
 import { PageTemplate } from "../PageTemplate";
 
 /** Kerangka "Rekap lembur": antrean tinjau lembur, saringan bulan, dan daftar rekap. */
-export function OvertimeRecapTemplate({ month, onMonthChange, recap, pending }: {
+export function OvertimeRecapTemplate({ month, onMonthChange, recap, pending, more }: {
+  more: KeysetMore;
   month: string;
   onMonthChange: (month: string) => void;
   recap: UseQueryResult<OvertimeRecapRow[]>;
@@ -15,7 +17,7 @@ export function OvertimeRecapTemplate({ month, onMonthChange, recap, pending }: 
 }) {
   return (
     <PageTemplate title="Rekap lembur">
-      <OvertimeReviewList query={pending} />
+      <OvertimeReviewList query={pending} more={more} />
       <div className="md:max-w-xs">
         <MonthFilterField value={month} onChange={onMonthChange} hint="Kosong = semua bulan." />
       </div>

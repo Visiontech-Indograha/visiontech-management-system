@@ -24,6 +24,7 @@ from app.core.time import jakarta_now
 from app.modules.assets.services.asset_service import AssetService
 from app.modules.offboarding.repositories.offboarding_repository import OffboardingRepository
 from app.modules.offboarding.schemas.offboarding_schema import ClearanceItemVerify, OffboardingCreate
+from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
 ASSET_STATUS = {"GOOD": "ready", "DAMAGED": "damaged", "LOST": "lost"}
 CLEARANCE_OPEN = ("CLEARANCE_PENDING", "SUBMITTED")
@@ -51,15 +52,31 @@ class OffboardingService:
         )
         return [str(r.division_id) for r in rows] or ["00000000-0000-0000-0000-000000000000"]
 
-    async def list_all(self, user: CurrentUser, status: str | None) -> list[Any]:
-        return await self.repo.list_all(status=status, division_ids=await self._my_divisions(user))
+    async def _my_offices(self, user: CurrentUser,
+                          perm: Permission = Permission.VIEW_OFFBOARDING) -> list[str] | None:
+        """None = semua kantor. Cakupan per izin yang diperiksa rute (ADR 0002): VIEW_OFFBOARDING juga dibawa OM
+        (OM+HR = semua kantor); MANAGE_OFFBOARDING hanya HR (OM+HR dibatasi ke kantor tugas HR)."""
+        restriction = await office_restriction(self.repo.db, user, perm, division_roles=("PROJECT_MANAGER",))
+        return None if restriction is None else offices_param(restriction)
 
-    async def _visible(self, user: CurrentUser, offboarding_id: UUID, *, for_update: bool = False) -> Any:
+    async def list_all(self, user: CurrentUser, status: str | None) -> list[Any]:
+        return await self.repo.list_all(status=status, division_ids=await self._my_divisions(user),
+                                        offices=await self._my_offices(user))
+
+    async def _visible(self, user: CurrentUser, offboarding_id: UUID, *, for_update: bool = False,
+                       perm: Permission = Permission.VIEW_OFFBOARDING) -> Any:
         record = await self.repo.get(offboarding_id, for_update=for_update)
         divisions = await self._my_divisions(user)
         if record is None or (divisions is not None and str(record.division_id) not in divisions):
             raise NotFoundError("Data proses keluar")
+        await self._ensure_employee(user, record.employee_id, perm)
         return record
+
+    async def _ensure_employee(self, user: CurrentUser, employee_id: UUID | str,
+                               perm: Permission = Permission.VIEW_OFFBOARDING) -> None:
+        if await self._my_offices(user, perm) is not None:
+            await ensure_employee_in_scope(self.repo.db, user, perm, employee_id,
+                                           "Data proses keluar")
 
     async def detail(self, user: CurrentUser, offboarding_id: UUID) -> dict[str, Any]:
         record = await self._visible(user, offboarding_id)
@@ -68,10 +85,12 @@ class OffboardingService:
 
     async def pkwt_expiring(self, user: CurrentUser, days: int) -> list[Any]:
         until = jakarta_now().date() + timedelta(days=days)
-        return await self.repo.pkwt_expiring(until, await self._my_divisions(user))
+        return await self.repo.pkwt_expiring(until, await self._my_divisions(user), await self._my_offices(user))
 
     # ── Proses ───────────────────────────────────────────────────────────────
-    async def create(self, data: OffboardingCreate) -> dict[str, Any]:
+    async def create(self, data: OffboardingCreate, user: CurrentUser | None = None) -> dict[str, Any]:
+        if user is not None:
+            await self._ensure_employee(user, data.employee_id, Permission.MANAGE_OFFBOARDING)
         employee = await self.repo.employee_for_offboarding(data.employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
@@ -92,6 +111,9 @@ class OffboardingService:
             raise AppError("HANDOVER_REQUIRED", f"Serahterimakan jabatan dulu: {held}.", status=409)
         offboarding_id = await self.repo.create(employee_id=data.employee_id, reason=data.reason_type.value,
                                                 effective_date=effective, notes=(data.notes or "").strip() or None)
+        if offboarding_id is None:
+            raise AppError("ALREADY_OFFBOARDING", "Karyawan ini sudah dalam proses keluar atau sudah keluar.",
+                           status=409)
         record = await self.repo.get(offboarding_id)
         return {**dict(record._mapping), "clearance_items": [dict(i._mapping) for i in
                                                               await self.repo.items(offboarding_id)]}
@@ -100,6 +122,9 @@ class OffboardingService:
         item = await self.repo.item_for_update(clearance_item_id)
         if item is None:
             raise NotFoundError("Item clearance")
+        offboarding = await self.repo.get(item.offboarding_id)
+        if offboarding is not None:
+            await self._ensure_employee(user, offboarding.employee_id, Permission.MANAGE_OFFBOARDING)
         if item.status not in CLEARANCE_OPEN:
             raise AppError("INVALID_STATE", "Proses keluar ini tidak lagi menerima pemeriksaan barang.", status=409)
         if item.verified_at is not None:
@@ -118,7 +143,7 @@ class OffboardingService:
         return await self.detail(user, item.offboarding_id)
 
     async def approve(self, user: CurrentUser, offboarding_id: UUID, approval_type: str) -> dict[str, Any]:
-        record = await self._visible(user, offboarding_id, for_update=True)
+        record = await self._visible(user, offboarding_id, for_update=True, perm=Permission.VIEW_OFFBOARDING)
         if record.status not in ("SUBMITTED", "APPROVED") or not record.is_all_assets_returned:
             raise AppError("CLEARANCE_INCOMPLETE",
                            "Persetujuan baru bisa setelah semua barang pinjaman diverifikasi.", status=409)
@@ -143,19 +168,22 @@ class OffboardingService:
                 raise AppError("ALREADY_APPROVED", "HR sudah menyetujui.", status=409)
         await self.repo.approve(offboarding_id, as_pm=as_pm, approver_id=user.employee_id)
         updated = await self.repo.get(offboarding_id)
-        if updated.status == "APPROVED" and updated.effective_date <= jakarta_now().date():
-            await self.repo.finalize(offboarding_id, updated.employee_id)
+        due = updated.status == "APPROVED" and updated.effective_date <= jakarta_now().date()
+        if due and not await self.repo.finalize(offboarding_id, updated.employee_id):
+            raise AppError("INVALID_STATE", "Status proses keluar sudah berubah; muat ulang.", status=409)
         return await self.detail(user, offboarding_id)
 
     async def complete_due(self) -> int:
         """Penjadwal: selesaikan offboarding yang sudah disetujui dan tanggal efektifnya tiba."""
         due = await self.repo.due_for_completion(jakarta_now().date())
+        done = 0
         for row in due:
-            await self.repo.finalize(row.offboarding_id, row.employee_id)
-        return len(due)
+            if await self.repo.finalize(row.offboarding_id, row.employee_id):
+                done += 1
+        return done
 
     async def cancel(self, user: CurrentUser, offboarding_id: UUID, reason: str) -> None:
-        record = await self._visible(user, offboarding_id, for_update=True)
+        record = await self._visible(user, offboarding_id, for_update=True, perm=Permission.MANAGE_OFFBOARDING)
         if record.status == "COMPLETED":
             raise AppError("INVALID_STATE", "Proses keluar yang sudah selesai tidak bisa dibatalkan.", status=409)
         await self.repo.cancel(offboarding_id, record.employee_id, reason.strip())

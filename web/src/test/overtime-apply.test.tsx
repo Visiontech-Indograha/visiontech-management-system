@@ -7,12 +7,13 @@ const row = {
   id: "o1", daily_plan_id: "p1", employee_id: "e-lead", employee_name: "Sari", work_date: "2026-10-05",
   hours: 2, reason: "Kejar target", status: "PENDING_PM", can_review: false, created_at: "2026-10-05T10:00:00Z",
 };
+const fieldMe = { ...mockMe("field"), role: "EMPLOYEE" } as never;
 const plan = { daily_plan_id: "p1", team_name: "Tim A", work_date: "2026-10-05", status: "ONGOING" };
 
 describe("Lembur saya", () => {
   it("menampilkan daftar dengan status", async () => {
     mockApi((c) => (c.url === "/overtime" ? { data: [row] } : undefined));
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     expect(await screen.findByText("Alasan: Kejar target")).toBeInTheDocument();
     expect(screen.getByText("Menunggu PM")).toBeInTheDocument();
   });
@@ -33,13 +34,13 @@ describe("Lembur saya", () => {
 
   it("kosong", async () => {
     mockApi((c) => (c.url === "/overtime" ? { data: [] } : undefined));
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     expect(await screen.findByText("Belum ada pengajuan lembur.")).toBeInTheDocument();
   });
 
   it("galat memuat", async () => {
     mockApi((c) => (c.url === "/overtime" ? { status: 500, data: {} } : undefined));
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     expect(await screen.findByText("Daftar lembur tidak dapat dimuat.")).toBeInTheDocument();
   });
 
@@ -50,7 +51,7 @@ describe("Lembur saya", () => {
       if (c.url === "/overtime") return { data: [] };
       return undefined;
     });
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     fireEvent.click(await screen.findByRole("button", { name: /Ajukan lembur/ }));
     await screen.findByLabelText("Jadwal kerja");
     fireEvent.change(screen.getByLabelText("Jadwal kerja"), { target: { value: "p1" } });
@@ -69,7 +70,7 @@ describe("Lembur saya", () => {
       if (c.url === "/overtime") return { data: [] };
       return undefined;
     });
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     fireEvent.click(await screen.findByRole("button", { name: /Ajukan lembur/ }));
     await screen.findByLabelText("Jadwal kerja");
     fireEvent.change(screen.getByLabelText("Jadwal kerja"), { target: { value: "p1" } });
@@ -88,7 +89,7 @@ describe("Lembur saya", () => {
       if (c.url === "/overtime") return { data: [] };
       return undefined;
     });
-    renderRoute("/overtime", { role: "field" });
+    renderRoute("/overtime", { me: fieldMe });
     fireEvent.click(await screen.findByRole("button", { name: /Ajukan lembur/ }));
     await screen.findByLabelText("Jadwal kerja");
     fireEvent.change(screen.getByLabelText("Jadwal kerja"), { target: { value: "p1" } });

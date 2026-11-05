@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { OvertimeTemplate } from "@/components/templates/overtime/OvertimeTemplate";
+import { canApplyOvertime } from "@/lib/aksiPeran";
 import { useSession } from "@/stores/sessionStore";
 import { useMyOvertime, useOvertimePending } from "@/services/overtimeService";
 
@@ -16,6 +17,7 @@ export function OvertimePage() {
       mine={mine}
       pending={pending}
       canReview={canReview}
+      canApply={canApplyOvertime(me?.role)}
       applying={applying}
       onApply={() => setApplying(true)}
       onCloseApply={() => setApplying(false)}

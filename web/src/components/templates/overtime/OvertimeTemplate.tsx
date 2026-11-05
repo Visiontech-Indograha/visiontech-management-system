@@ -7,16 +7,17 @@ import type { Overtime } from "@/services/overtimeService";
 import { PageTemplate } from "../PageTemplate";
 
 /** Kerangka "Lembur": ajukan, daftar sendiri, dan (bila berhak) antrean keputusan. */
-export function OvertimeTemplate({ mine, pending, canReview, applying, onApply, onCloseApply }: {
+export function OvertimeTemplate({ mine, pending, canReview, canApply, applying, onApply, onCloseApply }: {
   mine: UseQueryResult<Overtime[]>;
   pending: UseQueryResult<Overtime[]>;
   canReview: boolean;
+  canApply: boolean;
   applying: boolean;
   onApply: () => void;
   onCloseApply: () => void;
 }) {
   return (
-    <PageTemplate title="Lembur" description="Ajukan lembur dan pantau statusnya." action={<OvertimeApplyButton onApply={onApply} />}>
+    <PageTemplate title="Lembur" description="Ajukan lembur dan pantau statusnya." action={canApply ? <OvertimeApplyButton onApply={onApply} /> : undefined}>
       {canReview && <OvertimeReviewList query={pending} />}
       <OvertimeList query={mine} titled={canReview} />
       {applying && <OvertimeApplyDialog onClose={onCloseApply} />}

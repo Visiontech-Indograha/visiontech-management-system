@@ -383,8 +383,10 @@ class DailyPlanService:
                 "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
                 "created_by_id": user.employee_id,
             })
-            if data.target == "APPROVED":
-                await self.repo.bulk_mark_approved([c[0] for c in new_cells], user.employee_id)
+            marked = await self.repo.bulk_mark_approved([c[0] for c in new_cells], user.employee_id) \
+                if data.target == "APPROVED" else len(new_cells)
+            if marked != len(new_cells):
+                raise AppError("INVALID_STATE", "Status jadwal sudah berubah; muat ulang lalu coba lagi.", status=409)
         created = sum(1 for c in cells if c.status == "CREATED")
         return DailyBulkOut(created=created, skipped=len(cells) - created, cells=cells)
 

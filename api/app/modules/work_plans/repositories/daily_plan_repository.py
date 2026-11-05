@@ -330,14 +330,16 @@ class DailyPlanRepository(BaseRepository):
              "is_out_of_town": fields["is_out_of_town"], "created_by_id": fields["created_by_id"]},
         )
 
-    async def bulk_mark_approved(self, daily_plan_ids: list[str], approver: str | None) -> None:
-        """Setujui sekaligus jadwal yang baru dibuat (versi set dari `set_status(..., 'APPROVED')`)."""
-        await self.execute(
+    async def bulk_mark_approved(self, daily_plan_ids: list[str], approver: str | None) -> int:
+        """Setujui sekaligus jadwal yang baru dibuat (versi set dari `set_status(..., 'APPROVED')`).
+        Hanya baris yang masih DRAFT (compare-and-set); kembalian = jumlah baris berubah."""
+        result = await self.execute(
             "UPDATE work_plan_daily SET status = 'APPROVED', approved_by_pm_id = CAST(:approver AS uuid), "
             "approved_at = now(), update_at = now() "
-            "WHERE daily_plan_id = ANY(CAST(:ids AS uuid[])) AND delete_at IS NULL",
+            "WHERE daily_plan_id = ANY(CAST(:ids AS uuid[])) AND delete_at IS NULL AND status = 'DRAFT'",
             {"ids": daily_plan_ids, "approver": approver},
         )
+        return int(result.rowcount or 0)
 
     async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
         """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""

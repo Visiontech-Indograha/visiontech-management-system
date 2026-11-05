@@ -89,9 +89,12 @@ class DailyCorrectionRepository(BaseRepository):
             {"id": str(daily_plan_id)},
         ))
 
-    async def set_plan_status(self, daily_plan_id: UUID | str, status: str) -> None:
-        await self.execute(
+    async def set_plan_status(self, daily_plan_id: UUID | str, status: str, expected: str) -> int:
+        """Ubah status jadwal hanya bila masih `expected` (compare-and-set). Kembalian = baris berubah."""
+        result = await self.execute(
             "UPDATE work_plan_daily SET status = CAST(:st AS varchar), update_at = now() "
-            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL",
-            {"id": str(daily_plan_id), "st": status},
+            "WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status = CAST(:expected AS varchar)",
+            {"id": str(daily_plan_id), "st": status, "expected": expected},
         )
+        return int(result.rowcount or 0)

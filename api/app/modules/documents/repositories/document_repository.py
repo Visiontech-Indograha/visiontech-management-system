@@ -119,12 +119,16 @@ class DocumentRepository(BaseRepository):
         )
         return doc_id
 
-    async def deactivate(self, doc_id: UUID | str) -> None:
-        await self.execute(
+    async def deactivate(self, doc_id: UUID | str, expected: str) -> int:
+        """Nonaktifkan dokumen hanya bila status saat UPDATE masih `expected` (compare-and-set).
+        Kembalian = jumlah baris berubah; 0 berarti status sudah diubah pihak lain."""
+        result = await self.execute(
             "UPDATE employee_file SET status = 'not_active', update_at = now() "
-            "WHERE employee_file_id = CAST(:id AS uuid) AND delete_at IS NULL",
-            {"id": str(doc_id)},
+            "WHERE employee_file_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "AND status::text = :expected",
+            {"id": str(doc_id), "expected": expected},
         )
+        return int(result.rowcount or 0)
 
     async def archive(self, doc_id: UUID | str) -> None:
         """Soft delete — untuk dokumen yang salah unggah."""

@@ -21,6 +21,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - Tes yang kadang gagal (flaky) di xdist dirapikan; audit minggu 1-3 didokumentasikan.
 
 ### Diubah
+- Cakupan kantor absensi (keputusan pemilik 2026-11-05): Superadmin dan OM melihat absensi semua kantor; Admin HR/GA dan Finance hanya kantor sendiri (gabungan dengan jabatan OM divisi bila ada). Berlaku untuk daftar `/attendance` (termasuk keyset), rekap, ekspor, uang makan, dan akses swafoto. Dampak: PATCH.
 - `/health` publik hanya mengembalikan `{"status":"ok"}` (field `version` dihapus agar versi tidak bocor tanpa login). Dampak: PATCH.
 
 ### Ditambahkan

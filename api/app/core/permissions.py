@@ -147,7 +147,8 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.VIEW_TIMELINE, P.REVIEW_ATTENDANCE,
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
-    # HR melihat absensi seluruh karyawan (keputusan pemilik HR), tanpa wewenang mengekspor/meninjau.
+    # HR melihat absensi karyawan KANTORNYA SENDIRI saja (keputusan pemilik 2026-11-05; cakupan di SQL lewat
+    # shared/access/office_scope.py), tanpa wewenang mengekspor/meninjau. SA dan OM melihat semua kantor.
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,

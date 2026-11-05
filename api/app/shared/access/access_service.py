@@ -143,7 +143,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     if row.personal_document and (row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in perms):
         return row
     # Swafoto: pemilik; pemegang VIEW_ALL (OM, Finance, OPS); atau PM yang memimpin divisi karyawan itu.
-    if row.selfie and (row.own_selfie or Permission.VIEW_ALL_ATTENDANCE.value in perms
+    if row.selfie and (row.own_selfie or (Permission.VIEW_ALL_ATTENDANCE.value in perms and row.selfie_office)
                        or (Permission.REVIEW_ATTENDANCE.value in perms and row.selfie_pm)):
         return row
     for daily_plan_id in row.daily_plan_ids or []:

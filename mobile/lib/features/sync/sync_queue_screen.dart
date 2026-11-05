@@ -61,7 +61,7 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
     } else if (still.deadLetter) {
       showVmsToast(
         context,
-        'Masih ditolak server: ${still.lastError ?? 'alasan tidak diketahui'}. Entri tetap di antrian.',
+        'Masih ditolak server: ${still.lastError ?? 'alasan tidak diketahui'}. Data tetap menunggu.',
         error: true,
       );
     } else {
@@ -79,7 +79,7 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
     final yes = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus dari antrian?'),
+        title: const Text('Hapus dari antrean?'),
         content: Text(
           '$what akan dibuang permanen dari HP dan TIDAK akan pernah terkirim ke server. '
           'Lakukan ini hanya kalau Anda memang tidak butuh data tersebut.',
@@ -123,7 +123,7 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
   Widget build(BuildContext context) {
     final total = _operations.length + _photos.length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Antrian Sinkronisasi')),
+      appBar: AppBar(title: const Text('Data menunggu terkirim')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -136,7 +136,7 @@ class _SyncQueueScreenState extends ConsumerState<SyncQueueScreen> {
                       child: ListTile(
                         leading: Icon(Icons.check_circle_outline),
                         title: Text('Semua data sudah terkirim'),
-                        subtitle: Text('Tidak ada yang menunggu di antrian.'),
+                        subtitle: Text('Tidak ada data yang menunggu terkirim.'),
                       ),
                     )
                   else

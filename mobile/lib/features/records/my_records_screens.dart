@@ -61,10 +61,14 @@ class _ListScreen extends ConsumerStatefulWidget {
     required this.load,
     required this.builder,
     this.action,
+    this.emptyTitle = 'Belum ada data',
+    this.emptyIcon = Icons.inbox_rounded,
   });
 
   final String title;
   final String empty;
+  final String emptyTitle;
+  final IconData emptyIcon;
   final Future<List<Map<String, dynamic>>> Function(WidgetRef ref) load;
   final Widget Function(Map<String, dynamic> item) builder;
 
@@ -133,7 +137,11 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
                 child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
             if (!_loading && _error == null && _items.isEmpty)
-              Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(widget.empty))),
+              EmptyState(
+                icon: widget.emptyIcon,
+                title: widget.emptyTitle,
+                message: widget.empty,
+              ),
             if (_items.length > 3) VmsSearchBar(query: _query, hint: 'Cari...'),
             ListenableBuilder(
               listenable: _query,
@@ -183,6 +191,8 @@ class DocumentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ListScreen(
     title: 'Dokumen Saya',
+    emptyTitle: 'Belum ada dokumen',
+    emptyIcon: Icons.badge_rounded,
     empty: 'Belum ada dokumen yang tercatat. Ketuk "Unggah dokumen" untuk menambahkan.',
     load: (ref) => ref.read(syncEngineProvider).api.myDocuments(_employeeId(ref)),
     action: (context, reload) => Padding(

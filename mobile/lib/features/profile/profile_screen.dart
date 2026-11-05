@@ -300,10 +300,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       setState(() {
         _syncResultMessage = summary.hasErrors
             ? 'Sync selesai dengan sebagian gagal:\n${[...summary.pushErrors, ...summary.pullErrors].join('\n')}'
-            : 'Sinkronisasi berhasil.';
+            : 'Data berhasil dikirim.';
       });
     } catch (e) {
-      setState(() => _syncResultMessage = 'Sinkronisasi gagal: $e');
+      setState(() => _syncResultMessage = 'Data belum terkirim: $e');
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
@@ -450,7 +450,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                   ],
                 ),
-                const SectionTitle('Sinkronisasi data'),
+                const SectionTitle('Kirim ulang data'),
                 FadeSlideIn(
                   child: SurfaceCard(
                     child: Column(
@@ -459,21 +459,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Row(
                           children: [
                             _stat(
-                              'Data tertunda',
+                              'Menunggu terkirim',
                               _pendingOperationCount,
                               Accent.blue,
                               Icons.cloud_upload_rounded,
                             ),
                             const SizedBox(width: 8),
                             _stat(
-                              'Foto tertunda',
+                              'Foto menunggu',
                               _pendingPhotoCount,
                               Accent.teal,
                               Icons.photo_rounded,
                             ),
                             const SizedBox(width: 8),
                             _stat(
-                              'Perlu tindakan',
+                              'Perlu dicek',
                               _deadLetterCount,
                               _deadLetterCount > 0 ? Accent.rose : Accent.slate,
                               Icons.report_rounded,
@@ -495,7 +495,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             text: _syncResultMessage!,
                             accent:
                                 _syncResultMessage!.startsWith(
-                                  'Sinkronisasi berhasil',
+                                  'Data berhasil dikirim',
                                 )
                                 ? Accent.emerald
                                 : Accent.amber,
@@ -503,7 +503,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                         const SizedBox(height: 12),
                         PrimaryAction(
-                          label: 'Sinkronkan sekarang',
+                          label: 'Kirim ulang sekarang',
                           icon: Icons.sync_rounded,
                           busy: _isSyncing,
                           onTap: _syncNow,
@@ -519,7 +519,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             await _loadSyncInfo();
                           },
                           icon: const Icon(Icons.list_alt_rounded),
-                          label: const Text('Lihat antrean sinkronisasi'),
+                          label: const Text('Lihat data menunggu terkirim'),
                         ),
                       ],
                     ),
@@ -577,7 +577,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Pencocokan biometrik wajah dilakukan di server secara aman untuk memverifikasi absensi masuk dan pulang.',
+                          'Pencocokan wajah dilakukan di server secara aman untuk memverifikasi absensi masuk dan pulang.',
                           style: VmsTextStyles.bodySm.copyWith(
                             color: VmsColors.neutral500,
                           ),

@@ -26,11 +26,11 @@ export type Handler = (config: InternalAxiosRequestConfig) => { status?: number;
 
 /** Ganti adapter axios dengan handler in-memory. Handler mengembalikan undefined → 404 uniform. */
 export function mockApi(handler: Handler) {
-  const calls: { method: string; url: string; data: unknown; params: unknown }[] = [];
+  const calls: { method: string; url: string; data: unknown; params: unknown; headers?: unknown }[] = [];
   api.defaults.adapter = ((config: InternalAxiosRequestConfig) => {
     const method = (config.method ?? "get").toLowerCase();
     const url = String(config.url);
-    calls.push({ method, url, data: parseBody(config.data), params: config.params });
+    calls.push({ method, url, data: parseBody(config.data), params: config.params, headers: config.headers?.toJSON?.() });
     const out = handler(config) ?? {
       status: 404,
       data: { error: { code: "NOT_FOUND", message: "Data tidak ditemukan.", details: {} } },

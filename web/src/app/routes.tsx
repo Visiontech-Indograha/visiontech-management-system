@@ -24,6 +24,7 @@ import {
   MessPage,
   MyDocumentsPage,
   OffboardingPage,
+  OvertimePage,
   OvertimeRecapPage,
   SitesPage,
   TeamsPage,
@@ -56,6 +57,7 @@ const PAGES: Record<string, ReactNode> = {
   "/attendance": <AttendancePage />,
   "/leaves": <LeavesPage />,
   "/attendance-recap": <AttendanceRecapPage />,
+  "/overtime": <OvertimePage />,
   "/overtime-recap": <OvertimeRecapPage />,
   "/safety-campaigns": <HseCampaignsPage />,
 };

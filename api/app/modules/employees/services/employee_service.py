@@ -10,18 +10,35 @@ Karyawan V2 (Milestone 10).
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.hard_delete import write_delete_audit
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.storage import delete_object
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
+from app.shared.access.office_scope import ensure_office_in_scope
+from app.shared.access.scope_rules import employee_params_scoped, sees_sensitive_employee_fields
 
 ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
 RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
+
+# Kolom sensitif: hanya HR/OM/SA, PM yang menjangkau karyawan itu, dan pemiliknya.
+_SENSITIVE_FIELDS = ("phone_number", "email", "city", "pkwt_end_date", "system_role", "account_active")
+
+
+def _shape(row: Mapping[str, Any]) -> dict[str, Any]:
+    """Baris karyawan siap dipakai skema: `sensitive_ok` dibuang, kolom sensitif dikosongkan bila tak berhak."""
+    data = dict(row)
+    sensitive_ok = bool(data.pop("sensitive_ok", True))
+    if not sensitive_ok:
+        for key in _SENSITIVE_FIELDS:
+            data[key] = None
+    return data
 
 
 class EmployeeService:
@@ -29,20 +46,32 @@ class EmployeeService:
         self.repo = repo
 
     async def list(self, *, page: int, size: int, status: str | None, division_id: UUID | None,
-                   office_id: UUID | None, position_id: UUID | None, q: str | None) -> tuple[list[Any], int]:
+                   office_id: UUID | None, position_id: UUID | None, q: str | None,
+                   user: CurrentUser | None = None) -> tuple[list[dict[str, Any]], int]:
+        """Direktori sesuai cakupan pengguna: SA/OM/HR/Finance/HSE/aset semua; PM jangkauannya; lainnya
+        dirinya, sesama divisi, dan sesama tim. Kolom sensitif dikosongkan bila tidak berhak."""
+        if user is not None and not sees_sensitive_employee_fields(user) and status not in (None, "all", "active"):
+            raise ForbiddenError("Filter status kepegawaian hanya untuk HR/OM.")
+        scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
         filters = {"status": status, "division_id": division_id, "office_id": office_id,
                    "position_id": position_id, "q": (q or "").strip() or None}
-        return await self.repo.page(size, (page - 1) * size, **filters), await self.repo.count(**filters)
+        rows = await self.repo.page(size, (page - 1) * size, scope=scope, **filters)
+        total = await self.repo.count(scope=scope, **filters)
+        return [_shape(r._mapping) for r in rows], total
 
-    async def get(self, employee_id: UUID) -> Any:
-        row = await self.repo.get(employee_id)
+    async def get(self, employee_id: UUID, user: CurrentUser | None = None) -> Any:
+        scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
+        row = await self.repo.get(employee_id, scope)
         if row is None:
             raise NotFoundError("Karyawan")
         return row
 
-    async def detail(self, employee_id: UUID) -> dict[str, Any]:
-        row = await self.get(employee_id)
-        return {**dict(row._mapping), "addresses": [dict(a._mapping) for a in await self.repo.addresses(employee_id)]}
+    async def detail(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
+        row = await self.get(employee_id, user)
+        data = dict(row._mapping)
+        sensitive_ok = bool(data.get("sensitive_ok", True))
+        addresses = [dict(a._mapping) for a in await self.repo.addresses(employee_id)] if sensitive_ok else []
+        return {**_shape(row._mapping), "addresses": addresses}
 
     async def _validate(self, fields: dict[str, Any], current: Any = None) -> dict[str, Any]:
         """Periksa referensi & ubah photo_file_id → photo_path; kembalikan kolom siap simpan."""
@@ -95,7 +124,9 @@ class EmployeeService:
         highest = max(int(m.group(2)) for m in parsed if m.group(1) == prefix)
         return f"{prefix}{highest + 1:0{len(digits)}d}"
 
-    async def create(self, data: EmployeeCreate) -> dict[str, Any]:
+    async def create(self, data: EmployeeCreate, user: CurrentUser | None = None) -> dict[str, Any]:
+        if user is not None:  # HR/Finance: karyawan baru hanya di kantor jangkauannya (ADR 0002)
+            await ensure_office_in_scope(self.repo.db, user, Permission.MANAGE_USERS, data.office_id, "Kantor")
         fields = await self._validate(data.model_dump(exclude={"address"}))
         fields.setdefault("photo_path", None)
         employee_id = await self.repo.insert(fields)
@@ -103,8 +134,11 @@ class EmployeeService:
             await self.repo.add_address(employee_id, data.address.model_dump())
         return await self.detail(employee_id)
 
-    async def update(self, employee_id: UUID, data: EmployeeUpdate) -> dict[str, Any]:
+    async def update(self, employee_id: UUID, data: EmployeeUpdate,
+                     user: CurrentUser | None = None) -> dict[str, Any]:
         current = await self.get(employee_id)
+        if user is not None and data.office_id is not None:  # pindah kantor hanya ke kantor jangkauan (ADR 0002)
+            await ensure_office_in_scope(self.repo.db, user, Permission.MANAGE_USERS, data.office_id, "Kantor")
         if current.archived:
             raise AppError("INVALID_STATE", "Karyawan diarsipkan; batalkan arsip dulu.", status=409)
         fields = data.model_dump(exclude_unset=True)

@@ -80,7 +80,7 @@ async def create_offboarding(
     controller: OffboardingController = Depends(),
 ) -> OffboardingDetail:
     """HR memulai offboarding: pinjaman aset yang belum kembali otomatis menjadi item clearance."""
-    return await controller.create(data)
+    return await controller.create(data, current_user)
 
 
 @router.post("/clearance-items/{clearance_item_id}/verify", response_model=OffboardingDetail)

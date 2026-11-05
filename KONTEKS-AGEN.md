@@ -1,6 +1,6 @@
 # Konteks untuk agen AI
 
-Repo ini adalah **VMS lama (v1.5.0, masih produksi)**. Aturan kerja, perintah, dan alur ada di `CLAUDE.md` (lokal) dan `README`/`CHANGELOG.md`.
+Repo ini adalah **VMS lama (v1.5.0, masih produksi)**. Aturan kerja, perintah, dan alur ada di `CLAUDE.md` (lokal) dan `README`. CHANGELOG.md bersifat lokal dan tidak di-commit; catatan rilis dibuat otomatis dari judul/deskripsi PR (rilis.yml --generate-notes).
 
 ## Gambaran singkat
 - API FastAPI (`api/`, struktur berlapis), web React+Vite+TS (`web/`), mobile Flutter (`mobile/`), layanan wajah (`face-service/`), DB PostgreSQL 18 (`db/06–08`, Alembic `api/alembic_v2/`), deploy (`deploy/`, `scripts/`).

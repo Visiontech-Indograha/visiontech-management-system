@@ -6,6 +6,7 @@ import '../../core/error_message.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
@@ -492,6 +493,8 @@ class _AssetDetailDialog extends ConsumerStatefulWidget {
 
 class _AssetDetailDialogState extends ConsumerState<_AssetDetailDialog> {
   final _purpose = TextEditingController();
+  // Satu niat pengajuan: percobaan ulang memakai kunci yang sama (lihat PengajuanIdempotency).
+  final _idem = PengajuanIdempotency();
   bool _busy = false;
   String? _error;
 
@@ -524,6 +527,7 @@ class _AssetDetailDialogState extends ConsumerState<_AssetDetailDialog> {
             assetType: widget.kind == 'tools' ? 'TOOL' : 'VEHICLE',
             assetId: id,
             purpose: _purpose.text.trim(),
+            idem: _idem,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

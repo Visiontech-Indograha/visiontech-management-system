@@ -13,6 +13,7 @@ from fastapi.responses import Response as RawResponse
 from app.api.deps import get_current_user, require_permission
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
+from app.core.rate_limit import GROUP_UPLOAD, rate_limit
 from app.core.security import CurrentUser
 from app.core.time import utcnow
 from app.modules.teams.controllers.team_controller import TeamController
@@ -140,7 +141,7 @@ async def remove_member(
     return await controller.handle_remove_member(current_user, team_id, employee_id)
 
 
-@router.put("/{team_id}/logo", response_model=TeamLogoOut)
+@router.put("/{team_id}/logo", response_model=TeamLogoOut, dependencies=[Depends(rate_limit(GROUP_UPLOAD))])
 async def set_team_logo(
     team_id: UUID,
     file: UploadFile = File(...),

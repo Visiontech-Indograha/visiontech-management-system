@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import CRUDBase
+from app.shared.access.office_scope import attendance_office_scope
 from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
 from app.shared.attendance_sql import EFFECTIVE_CITY_ZONE_A, IS_LATE_A
 
@@ -76,7 +77,7 @@ class CRUDMonitoring(CRUDBase):
             WHERE a.delete_at IS NULL
               AND a.attendance_date >= :starts AND a.attendance_date < :ends
               AND (
-                  CAST(:scope AS text) = 'all'
+                  (CAST(:scope AS text) = 'all' AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')})
                   OR (CAST(:scope AS text) = 'subordinates' AND {_SUBORDINATES})
                   OR (
                       CAST(:scope AS text) = 'own'
@@ -122,7 +123,7 @@ class CRUDMonitoring(CRUDBase):
             WHERE a.delete_at IS NULL
               AND a.attendance_date >= :starts AND a.attendance_date < :ends
               AND (
-                  CAST(:scope AS text) = 'all'
+                  (CAST(:scope AS text) = 'all' AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')})
                   OR (CAST(:scope AS text) = 'subordinates' AND {_SUBORDINATES})
                   OR (
                       CAST(:scope AS text) = 'own'

@@ -14,6 +14,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now, utcnow
 from app.modules.mess.repositories.mess_repository import MessRepository
@@ -26,6 +27,7 @@ from app.modules.mess.schemas.mess_schema import (
     MessStayUpdate,
 )
 from app.modules.notifications.services.notification_service import NotificationService
+from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
 ORG_WIDE_ROLES = ("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
 MANAGER_ROLES = ("ADMIN_HR_GA", "SUPER_ADMIN")
@@ -68,15 +70,31 @@ class MessService:
         await self.repo.archive_place(mess_id)
 
     # --- hunian ----------------------------------------------------------------------------------------------------
-    async def list_stays(
-        self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None
-    ) -> list[Any]:
-        return await self.repo.list_stays(employee_id, start, end, status)
+    async def _offices(self, user: CurrentUser | None, perm: Permission = Permission.VIEW_MESS) -> list[str] | None:
+        """None = semua kantor. Cakupan dihitung per izin yang diperiksa rute (ADR 0002): izin yang juga dibawa OM
+        (lihat/tinjau) = semua kantor bagi OM+HR; izin yang hanya dibawa HR (kelola) dibatasi ke kantor tugas HR."""
+        if user is None:
+            return None
+        restriction = await office_restriction(self.db, user, perm, division_roles=("PROJECT_MANAGER",))
+        return None if restriction is None else offices_param(restriction)
 
-    async def get_stay(self, mess_stay_id: UUID) -> Any:
+    async def _ensure_employee(self, user: CurrentUser | None, employee_id: UUID | str,
+                               perm: Permission = Permission.VIEW_MESS) -> None:
+        if user is not None and await self._offices(user, perm) is not None:
+            await ensure_employee_in_scope(self.db, user, perm, employee_id, "Hunian mess")
+
+    async def list_stays(
+        self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None,
+        user: CurrentUser | None = None,
+    ) -> list[Any]:
+        return await self.repo.list_stays(employee_id, start, end, status, await self._offices(user))
+
+    async def get_stay(self, mess_stay_id: UUID, user: CurrentUser | None = None,
+                       perm: Permission = Permission.VIEW_MESS) -> Any:
         stay = await self.repo.get(mess_stay_id)
         if stay is None:
             raise NotFoundError("Hunian mess")
+        await self._ensure_employee(user, stay.employee_id, perm)
         return stay
 
     async def _check_period(self, employee_id: UUID | str, start: date, end: date,
@@ -105,6 +123,7 @@ class MessService:
 
     async def create_stay(self, user: CurrentUser, data: MessStayCreate) -> Any:
         """Pencatatan langsung HR/GA: langsung disetujui."""
+        await self._ensure_employee(user, data.employee_id, Permission.MANAGE_MESS)
         if not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan atau tidak aktif.")
         place = await self.get_place(data.mess_id)
@@ -159,7 +178,7 @@ class MessService:
         return False
 
     async def decide(self, user: CurrentUser, mess_stay_id: UUID, data: MessDecision) -> Any:
-        stay = await self.get_stay(mess_stay_id)
+        stay = await self.get_stay(mess_stay_id, user, Permission.REVIEW_MESS)
         if str(user.employee_id) == str(stay.employee_id):
             raise ForbiddenError("Pemohon tidak dapat memutuskan pengajuannya sendiri.")
         if not await self._can_decide(user, stay.employee_id):
@@ -175,7 +194,9 @@ class MessService:
                 await self._check_capacity(place, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
             await self._check_period(stay.employee_id, stay.stay_start_date, stay.stay_end_date, exclude=mess_stay_id)
         status = "APPROVED" if data.approve else "REJECTED"
-        await self.repo.decide(mess_stay_id, status, user.user_id, note, utcnow())
+        # Kondisi status ada di UPDATE: dua peninjau bersamaan tidak sama-sama lolos.
+        if not await self.repo.decide(mess_stay_id, status, user.user_id, note, utcnow()):
+            raise AppError("MESS_ALREADY_DECIDED", "Pengajuan ini sudah diputuskan atau dibatalkan.", status=409)
         notifier = NotificationService(self.db)
         who = await notifier.employee_name(user.employee_id) if user.employee_id else None
         await notifier.notify_employees(
@@ -192,7 +213,7 @@ class MessService:
 
     async def cancel(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
         """Pemohon membatalkan pengajuan (atau hunian yang belum dimulai); HR/GA boleh membatalkan siapa pun."""
-        stay = await self.get_stay(mess_stay_id)
+        stay = await self.get_stay(mess_stay_id, user)
         if not (self._is_owner(user, stay) or user.has_role(*MANAGER_ROLES)):
             raise ForbiddenError("Hanya pemohon atau HR/GA yang dapat membatalkan hunian ini.")
         not_started = stay.stay_start_date > jakarta_now().date()
@@ -200,7 +221,8 @@ class MessService:
         if not cancellable:
             raise AppError("MESS_NOT_CANCELLABLE", "Hunian yang sudah berjalan tidak dapat dibatalkan; pakai "
                            "\"Selesai inap\".", status=409)
-        await self.repo.set_status(mess_stay_id, "CANCELLED")
+        if not await self.repo.set_status(mess_stay_id, "CANCELLED", allowed=("REQUESTED", "APPROVED")):
+            raise AppError("MESS_NOT_CANCELLABLE", "Status pengajuan sudah berubah; muat ulang.", status=409)
         if stay.status == "APPROVED" and not self._is_owner(user, stay):
             await NotificationService(self.db).notify_employees(
                 [stay.employee_id], "MESS_CANCELLED", f"Hunian di {stay.mess_name} dibatalkan",
@@ -210,7 +232,7 @@ class MessService:
 
     async def end_stay(self, user: CurrentUser, mess_stay_id: UUID) -> Any:
         """Selesai inap: tanggal selesai dimajukan ke hari ini (riwayat tetap ada)."""
-        stay = await self.get_stay(mess_stay_id)
+        stay = await self.get_stay(mess_stay_id, user)
         if not (self._is_owner(user, stay) or user.has_role(*MANAGER_ROLES)):
             raise ForbiddenError("Hanya penghuni atau HR/GA yang dapat menyelesaikan hunian ini.")
         today = jakarta_now().date()
@@ -219,8 +241,8 @@ class MessService:
         await self.repo.set_end_date(mess_stay_id, today)
         return await self.repo.get(mess_stay_id)
 
-    async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate) -> Any:
-        stay = await self.get_stay(mess_stay_id)
+    async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate, user: CurrentUser | None = None) -> Any:
+        stay = await self.get_stay(mess_stay_id, user, Permission.MANAGE_MESS)
         start = data.stay_start_date or stay.stay_start_date
         end = data.stay_end_date or stay.stay_end_date
         await self._check_period(stay.employee_id, start, end, exclude=mess_stay_id)
@@ -229,6 +251,6 @@ class MessService:
         await self.repo.update_dates(mess_stay_id, data.stay_start_date, data.stay_end_date)
         return await self.repo.get(mess_stay_id)
 
-    async def delete_stay(self, mess_stay_id: UUID) -> None:
-        await self.get_stay(mess_stay_id)
+    async def delete_stay(self, mess_stay_id: UUID, user: CurrentUser | None = None) -> None:
+        await self.get_stay(mess_stay_id, user, Permission.MANAGE_MESS)
         await self.repo.archive(mess_stay_id)

@@ -9,9 +9,9 @@ from __future__ import annotations
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import daily_access, get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, daily_access, get_current_user, idempotency_guard, require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.work_plans.controllers.daily_plan_controller import DailyPlanController
@@ -118,16 +118,28 @@ async def create_daily_plan(data: DailyPlanCreate, current_user: CurrentUser = _
 
 @router.post("/daily/bulk", response_model=DailyBulkOut)
 async def bulk_create_daily(data: DailyBulkIn, current_user: CurrentUser = _PLANNER,
-                            controller: DailyPlanController = Depends()) -> DailyBulkOut:
-    """Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain."""
-    return await controller.handle_bulk_create(current_user, data)
+                            controller: DailyPlanController = Depends(),
+                            idem: IdempotencyGuard = Depends(idempotency_guard)) -> DailyBulkOut | Response:
+    """Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+    Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_bulk_create(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_200_OK)
 
 
 @router.post("/daily/bulk-standby", response_model=DailyBulkOut)
 async def bulk_standby_daily(data: DailyBulkStandbyIn, current_user: CurrentUser = _PLANNER,
-                             controller: DailyPlanController = Depends()) -> DailyBulkOut:
-    """Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui)."""
-    return await controller.handle_bulk_standby(current_user, data)
+                             controller: DailyPlanController = Depends(),
+                             idem: IdempotencyGuard = Depends(idempotency_guard)) -> DailyBulkOut | Response:
+    """Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+    Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_bulk_standby(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_200_OK)
 
 
 @router.post("/daily/{daily_plan_id}/activate", response_model=DailyPlanOut)

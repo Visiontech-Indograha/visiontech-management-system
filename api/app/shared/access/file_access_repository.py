@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.access.office_scope import attendance_office_scope
 from app.shared.access.pm_reach import pm_reaches_employee
 
 
@@ -21,14 +22,24 @@ class FileAccessRepository(BaseRepository):
         return await self.fetchone(
             f"""
             SELECT f.id, f.storage_key, f.mime_type, f.file_name, f.uploaded_by,
+                   -- contoh/petunjuk kerja (image_requirement): semua pengguna yang login
                    (EXISTS (SELECT 1 FROM image_requirement ir
-                           WHERE ir.path_image IN (f.storage_key, f.id::text) AND ir.delete_at IS NULL)
-                    OR EXISTS (SELECT 1 FROM tool t WHERE t.photo_path = f.storage_key AND t.delete_at IS NULL)
+                           WHERE ir.path_image IN (f.storage_key, f.id::text)
+                             AND ir.delete_at IS NULL)
+                    -- foto carousel kampanye K3 yang sedang aktif: dilihat semua pengguna yang login
+                    OR EXISTS (SELECT 1 FROM hse_campaigns hc
+                           WHERE hc.media_paths ? f.id::text
+                             AND hc.is_active = TRUE AND hc.delete_at IS NULL)
+                   ) AS public_in_org,
+                   -- foto/berkas aset: dibatasi cakupan aset (asset_file_visible di access_service)
+                   (EXISTS (SELECT 1 FROM tool t WHERE t.photo_path = f.storage_key AND t.delete_at IS NULL)
                     OR EXISTS (SELECT 1 FROM vehicle v WHERE v.photo_path = f.storage_key AND v.delete_at IS NULL)
                     OR EXISTS (SELECT 1 FROM vehicle_file vf WHERE vf.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM vehicle_inspection vi WHERE vi.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM asset_assignment aa WHERE aa.handover_photo_path = f.storage_key)
-                   ) AS public_in_org,
+                   ) AS asset_file,
+                   (SELECT pe.employee_id FROM employee pe WHERE pe.profile_photo_path = f.storage_key LIMIT 1)
+                       AS profile_owner,
                    EXISTS (SELECT 1 FROM employee e WHERE e.profile_photo_path = f.storage_key) AS profile_photo,
                    EXISTS (SELECT 1 FROM employee e WHERE e.profile_photo_path = f.storage_key
                            AND e.employee_id = CAST(:emp AS uuid)) AS own_profile,
@@ -41,6 +52,9 @@ class FileAccessRepository(BaseRepository):
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND {pm_reaches_employee('CAST(:emp AS uuid)', 'a.employee_id')}) AS selfie_pm,
+                   EXISTS (SELECT 1 FROM attendance a JOIN employee se ON se.employee_id = a.employee_id
+                           WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
+                           AND {attendance_office_scope('CAST(:emp AS uuid)', 'se.office_id')}) AS selfie_office,
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND a.employee_id = CAST(:emp AS uuid)) AS own_selfie,

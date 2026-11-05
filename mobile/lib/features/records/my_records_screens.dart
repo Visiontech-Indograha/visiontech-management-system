@@ -23,14 +23,6 @@ final _date = DateFormat('d MMM yyyy', 'id_ID');
 
 String _fmt(dynamic iso) => iso == null ? '-' : _date.format(DateTime.parse(iso as String));
 
-/// Label status lembur untuk karyawan.
-String overtimeStatusLabel(String status) => switch (status) {
-  'PENDING' => 'Menunggu persetujuan',
-  'APPROVED' => 'Disetujui',
-  'REJECTED' => 'Ditolak',
-  _ => status,
-};
-
 /// Label status dokumen pribadi menurut masa berlakunya.
 /// Nama jenis dokumen yang ramah dibaca (sama dengan web); jenis lain ditampilkan apa adanya.
 String documentTypeLabel(String type) => switch (type) {
@@ -69,10 +61,14 @@ class _ListScreen extends ConsumerStatefulWidget {
     required this.load,
     required this.builder,
     this.action,
+    this.emptyTitle = 'Belum ada data',
+    this.emptyIcon = Icons.inbox_rounded,
   });
 
   final String title;
   final String empty;
+  final String emptyTitle;
+  final IconData emptyIcon;
   final Future<List<Map<String, dynamic>>> Function(WidgetRef ref) load;
   final Widget Function(Map<String, dynamic> item) builder;
 
@@ -141,7 +137,11 @@ class _ListScreenState extends ConsumerState<_ListScreen> {
                 child: Text(_error!, style: const TextStyle(color: Colors.red)),
               ),
             if (!_loading && _error == null && _items.isEmpty)
-              Padding(padding: const EdgeInsets.all(32), child: Center(child: Text(widget.empty))),
+              EmptyState(
+                icon: widget.emptyIcon,
+                title: widget.emptyTitle,
+                message: widget.empty,
+              ),
             if (_items.length > 3) VmsSearchBar(query: _query, hint: 'Cari...'),
             ListenableBuilder(
               listenable: _query,
@@ -172,35 +172,6 @@ String _employeeId(WidgetRef ref) {
   return s is AuthAuthenticated ? s.user.employeeId : '';
 }
 
-/// Riwayat dan status pengajuan lembur milik sendiri.
-class OvertimeHistoryScreen extends StatelessWidget {
-  const OvertimeHistoryScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => _ListScreen(
-    title: 'Riwayat Lembur',
-    empty: 'Belum ada pengajuan lembur.',
-    load: (ref) => ref.read(syncEngineProvider).api.myOvertime(),
-    builder: (o) => SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${_fmt(o['work_date'])} · ${o['hours']} jam',
-            style: VmsTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Text(o['reason'] as String? ?? '', style: VmsTextStyles.bodySm),
-          const SizedBox(height: 8),
-          Chip(label: Text(overtimeStatusLabel(o['status'] as String))),
-          if ((o['review_note'] as String?)?.isNotEmpty == true)
-            Text('Catatan: ${o['review_note']}', style: VmsTextStyles.bodySm),
-        ],
-      ),
-    ),
-  );
-}
-
 /// Ikon, label, dan ekstensi berkas dari tipe MIME asli (dipakai ikon & pratinjau dokumen).
 ({IconData icon, String label, String ext}) documentFileKind(String? mime) => switch (mime) {
   'application/pdf' => (icon: Icons.picture_as_pdf_rounded, label: 'PDF', ext: 'pdf'),
@@ -220,6 +191,8 @@ class DocumentsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _ListScreen(
     title: 'Dokumen Saya',
+    emptyTitle: 'Belum ada dokumen',
+    emptyIcon: Icons.badge_rounded,
     empty: 'Belum ada dokumen yang tercatat. Ketuk "Unggah dokumen" untuk menambahkan.',
     load: (ref) => ref.read(syncEngineProvider).api.myDocuments(_employeeId(ref)),
     action: (context, reload) => Padding(

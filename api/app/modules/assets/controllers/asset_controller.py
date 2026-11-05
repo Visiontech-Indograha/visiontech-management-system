@@ -43,52 +43,62 @@ class AssetController:
         self.service = asset_service
 
     # Alat
-    async def handle_list_tools(self, office_id: UUID | None, status: str | None) -> list[ToolOut]:
-        return [ToolOut(**r._mapping) for r in await self.service.list_tools(office_id, status)]
+    async def handle_list_tools(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser
+    ) -> list[ToolOut]:
+        return [ToolOut(**r._mapping) for r in await self.service.list_tools(office_id, status, user)]
 
-    async def handle_create_tool(self, data: ToolCreate) -> ToolOut:
-        return ToolOut(**(await self.service.create_tool(data))._mapping)
+    async def handle_create_tool(self, data: ToolCreate, user: CurrentUser | None = None) -> ToolOut:
+        return ToolOut(**(await self.service.create_tool(data, user))._mapping)
 
-    async def handle_update_tool(self, tool_id: UUID, data: ToolUpdate) -> ToolOut:
-        return ToolOut(**(await self.service.update_tool(tool_id, data))._mapping)
+    async def handle_update_tool(self, tool_id: UUID, data: ToolUpdate, user: CurrentUser | None = None) -> ToolOut:
+        return ToolOut(**(await self.service.update_tool(tool_id, data, user))._mapping)
 
-    async def handle_tool_status(self, tool_id: UUID, status: str) -> ToolOut:
-        return ToolOut(**(await self.service.set_status("TOOL", tool_id, status))._mapping)
+    async def handle_tool_status(self, tool_id: UUID, status: str, user: CurrentUser | None = None) -> ToolOut:
+        return ToolOut(**(await self.service.set_status("TOOL", tool_id, status, user))._mapping)
 
     # Kendaraan
-    async def handle_list_vehicles(self, office_id: UUID | None, status: str | None) -> list[VehicleOut]:
-        return [VehicleOut(**r._mapping) for r in await self.service.list_vehicles(office_id, status)]
+    async def handle_list_vehicles(
+        self, office_id: UUID | None, status: str | None, user: CurrentUser
+    ) -> list[VehicleOut]:
+        return [VehicleOut(**r._mapping) for r in await self.service.list_vehicles(office_id, status, user)]
 
-    async def handle_create_vehicle(self, data: VehicleCreate) -> VehicleOut:
-        return VehicleOut(**(await self.service.create_vehicle(data))._mapping)
+    async def handle_create_vehicle(self, data: VehicleCreate, user: CurrentUser | None = None) -> VehicleOut:
+        return VehicleOut(**(await self.service.create_vehicle(data, user))._mapping)
 
-    async def handle_update_vehicle(self, vehicle_id: UUID, data: VehicleUpdate) -> VehicleOut:
-        return VehicleOut(**(await self.service.update_vehicle(vehicle_id, data))._mapping)
+    async def handle_update_vehicle(
+        self, vehicle_id: UUID, data: VehicleUpdate, user: CurrentUser | None = None
+    ) -> VehicleOut:
+        return VehicleOut(**(await self.service.update_vehicle(vehicle_id, data, user))._mapping)
 
-    async def handle_vehicle_status(self, vehicle_id: UUID, status: str) -> VehicleOut:
-        return VehicleOut(**(await self.service.set_status("VEHICLE", vehicle_id, status))._mapping)
+    async def handle_vehicle_status(self, vehicle_id: UUID, status: str, user: CurrentUser | None = None) -> VehicleOut:
+        return VehicleOut(**(await self.service.set_status("VEHICLE", vehicle_id, status, user))._mapping)
 
-    async def handle_delete(self, asset_type: str, asset_id: UUID) -> dict[str, str]:
-        await self.service.delete(asset_type, asset_id)
+    async def handle_delete(self, asset_type: str, asset_id: UUID, user: CurrentUser | None = None) -> dict[str, str]:
+        await self.service.delete(asset_type, asset_id, user)
         return {"message": "Aset dihapus."}
 
     # Berkas & inspeksi kendaraan
-    async def handle_vehicle_files(self, vehicle_id: UUID) -> list[VehicleFileOut]:
-        return [VehicleFileOut(**r._mapping) for r in await self.service.vehicle_files(vehicle_id)]
+    async def handle_vehicle_files(self, user: CurrentUser, vehicle_id: UUID) -> list[VehicleFileOut]:
+        return [VehicleFileOut(**r._mapping) for r in await self.service.vehicle_files(vehicle_id, user)]
 
-    async def handle_add_vehicle_file(self, vehicle_id: UUID, data: VehicleFileCreate) -> list[VehicleFileOut]:
-        return [VehicleFileOut(**r._mapping) for r in await self.service.add_vehicle_file(vehicle_id, data)]
+    async def handle_add_vehicle_file(
+        self, vehicle_id: UUID, data: VehicleFileCreate, user: CurrentUser | None = None
+    ) -> list[VehicleFileOut]:
+        return [VehicleFileOut(**r._mapping) for r in await self.service.add_vehicle_file(vehicle_id, data, user)]
 
-    async def handle_inspections(self, vehicle_id: UUID) -> list[InspectionOut]:
-        return [InspectionOut(**r._mapping) for r in await self.service.inspections(vehicle_id)]
+    async def handle_inspections(self, user: CurrentUser, vehicle_id: UUID) -> list[InspectionOut]:
+        return [InspectionOut(**r._mapping) for r in await self.service.inspections(vehicle_id, user)]
 
     async def handle_add_inspection(
         self, user: CurrentUser, vehicle_id: UUID, data: InspectionCreate
     ) -> list[InspectionOut]:
         return [InspectionOut(**r._mapping) for r in await self.service.add_inspection(user, vehicle_id, data)]
 
-    async def handle_availability(self, work_date: _date, team_id: UUID | None) -> list[AssetAvailabilityOut]:
-        return [AssetAvailabilityOut(**r) for r in await self.service.availability(work_date, team_id)]
+    async def handle_availability(
+        self, work_date: _date, team_id: UUID | None, user: CurrentUser
+    ) -> list[AssetAvailabilityOut]:
+        return [AssetAvailabilityOut(**r) for r in await self.service.availability(work_date, team_id, user)]
 
     # Peminjaman
     async def handle_loans(
@@ -98,11 +108,11 @@ class AssetController:
                                         daily_plan_id=daily_plan_id)
         return [LoanOut(**r._mapping) for r in rows]
 
-    async def handle_lend(self, data: LoanCreate) -> LoanOut:
-        return LoanOut(**(await self.service.lend(data))._mapping)
+    async def handle_lend(self, data: LoanCreate, user: CurrentUser | None = None) -> LoanOut:
+        return LoanOut(**(await self.service.lend(data, user))._mapping)
 
-    async def handle_return(self, assignment_id: UUID, condition: str) -> LoanOut:
-        return LoanOut(**(await self.service.return_loan(assignment_id, condition))._mapping)
+    async def handle_return(self, assignment_id: UUID, condition: str, user: CurrentUser | None = None) -> LoanOut:
+        return LoanOut(**(await self.service.return_loan(assignment_id, condition, user))._mapping)
 
     # Pengajuan pinjam & pengembalian
     async def handle_request_loan(self, user: CurrentUser, data: LoanRequestCreate) -> LoanRequestOut:

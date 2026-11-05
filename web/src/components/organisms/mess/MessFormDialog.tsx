@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -79,6 +80,9 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
     },
   });
 
+  const allValues = useWatch({ control });
+  const idem = useIdempotencyKey(JSON.stringify(allValues));
+
   const employeeList = employeesQuery.data?.items ?? [];
   const placeList = places.data ?? [];
   const teams = useTeams();
@@ -100,7 +104,8 @@ export function MessFormDialog({ onClose }: { onClose: () => void }) {
   const onSubmit = async (values: MessValues) => {
     setFormError(null);
     try {
-      await create.mutateAsync({ ...values, team_id: values.team_id || null });
+      await create.mutateAsync({ body: { ...values, team_id: values.team_id || null }, idempotencyKey: idem.key });
+      idem.renew();
       toast.success("Hunian mess berhasil dicatat.");
       onClose();
     } catch (err) {

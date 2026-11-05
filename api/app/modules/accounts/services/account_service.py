@@ -7,6 +7,7 @@ sekali dan tidak pernah disimpan selain hash argon2.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import string
 from types import SimpleNamespace
@@ -114,9 +115,8 @@ class AccountService:
             raise AppError("LOGIN_TAKEN", "Email login sudah dipakai akun lain.", status=409)
 
         password = temporary_password()
-        row = await self.users.create_for_employee(
-            org_id, employee_id, login, hash_password(password), system_role
-        )
+        password_hash = await asyncio.to_thread(hash_password, password)
+        row = await self.users.create_for_employee(org_id, employee_id, login, password_hash, system_role)
         await write_delete_audit(
             self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
             entity_type="users", entity_id=row.id, action="ACCOUNT_CREATE",
@@ -166,7 +166,8 @@ class AccountService:
         """
         account = await self._account(employee_id, org_id)
         password = temporary_password()
-        await self.users.update_password_hash(account.id, hash_password(password))
+        password_hash = await asyncio.to_thread(hash_password, password)
+        await self.users.update_password_hash(account.id, password_hash)
         # Menghentikan paksa (revoke) semua sesi terbuka agar pemilik tidak menggunakan sesi yang rentan (compromised).
         await self.sessions.revoke_all_for_user(account.id, "PASSWORD_RESET")
         # Reset oleh HR/admin sekaligus membuka kunci kegagalan login.
@@ -210,4 +211,61 @@ class AccountService:
         if not active:
             # Mencabut semua sesi terbuka sebagai konsekuensi keamanan penonaktifan akun.
             await self.sessions.revoke_all_for_user(account.id, "ACCOUNT_DEACTIVATED")
+        return await self._with_login_state(await self.users.account_of_employee(employee_id))
+
+    # ── Kendali admin: sesi perangkat, buka kunci, ganti email login, hapus akun ──────────────────
+
+    async def _audit(self, actor: CurrentUser, account: Any, action: str, detail: dict[str, Any]) -> None:
+        await write_delete_audit(
+            self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
+            entity_type="users", entity_id=account.id, action=action, detail=detail,
+        )
+
+    async def sessions_of(self, employee_id: Any, org_id: str) -> list[Any]:
+        """Sesi perangkat aktif milik akun karyawan (dilihat HR/admin)."""
+        account = await self._account(employee_id, org_id)
+        return await self.sessions.list_active(account.id)
+
+    async def revoke_session(self, employee_id: Any, actor: CurrentUser, session_id: Any) -> None:
+        """Cabut satu sesi perangkat milik akun ini. Sesi milik akun lain → 404."""
+        account = await self._account(employee_id, actor.organization_id)
+        if not await self.sessions.revoke_session(str(account.id), str(session_id), "ADMIN_REVOKE"):
+            raise NotFoundError("Sesi")
+        await self._audit(
+            actor, account, "SESSION_REVOKE", {"employee_id": str(employee_id), "session_id": str(session_id)}
+        )
+
+    async def revoke_all_sessions(self, employee_id: Any, actor: CurrentUser, action: str) -> int:
+        """Paksa keluar semua perangkat akun. `action` membedakan jejak audit: paksa keluar vs reset slot perangkat."""
+        account = await self._account(employee_id, actor.organization_id)
+        revoked = await self.sessions.revoke_all_for_user(account.id, action)
+        await self._audit(actor, account, action, {"employee_id": str(employee_id), "revoked": revoked})
+        return revoked
+
+    async def unlock(self, employee_id: Any, actor: CurrentUser) -> Any:
+        """Buka kunci akun yang terkunci karena gagal masuk berulang. Riwayat gagal masuk dianggap selesai."""
+        account = await self._account(employee_id, actor.organization_id)
+        await self.sessions.record_login_attempt(
+            str(account.login), None, True, "ADMIN_UNLOCK", user_id=account.id, action="LOGIN_UNLOCKED"
+        )
+        await self._audit(actor, account, "ACCOUNT_UNLOCK", {"employee_id": str(employee_id)})
+        return await self._with_login_state(await self.users.account_of_employee(employee_id))
+
+    async def change_login(self, employee_id: Any, actor: CurrentUser, login: str) -> Any:
+        """
+        Ganti email login akun. Email harus unik di seluruh sistem; sesi lama dicabut agar kredensial lama
+        tidak lagi dipakai. Email yang sama dengan sekarang tidak mengubah apa pun.
+        """
+        account = await self._account(employee_id, actor.organization_id)
+        old = str(account.login)
+        if login == old:
+            return await self._with_login_state(account)
+        if await self.users.login_taken(actor.organization_id, login):
+            raise AppError("LOGIN_TAKEN", "Email login sudah dipakai akun lain.", status=409)
+        await self.users.set_login(account.id, login)
+        revoked = await self.sessions.revoke_all_for_user(account.id, "LOGIN_CHANGED")
+        await self._audit(
+            actor, account, "ACCOUNT_LOGIN_CHANGE",
+            {"employee_id": str(employee_id), "from": old, "to": login, "revoked": revoked},
+        )
         return await self._with_login_state(await self.users.account_of_employee(employee_id))

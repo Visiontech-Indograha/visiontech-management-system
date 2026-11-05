@@ -8,6 +8,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.2.
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends
@@ -44,9 +45,21 @@ class OvertimeController:
         row = await self.overtime_service.report(current_user, data.daily_plan_id, data.hours, data.reason)
         return OvertimeResponse(**row._mapping)
 
-    async def handle_list(self, current_user: CurrentUser, daily_plan_id: UUID | None = None) -> list[OvertimeResponse]:
-        """Mengambil daftar lembur untuk satu work plan atau rekap lembur pengguna aktif."""
-        rows = await self.overtime_service.list_overtimes(current_user, daily_plan_id)
+    async def handle_list(
+        self,
+        current_user: CurrentUser,
+        daily_plan_id: UUID | None = None,
+        *,
+        after: tuple[Any, ...] | None = None,
+        limit: int | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        mine: bool = False,
+    ) -> list[OvertimeResponse]:
+        """Mengambil daftar lembur untuk satu work plan atau rekap lembur pengguna aktif (keyset bila `after`)."""
+        rows = await self.overtime_service.list_overtimes(
+            current_user, daily_plan_id, after=after, limit=limit, status=status, q=q, mine=mine
+        )
         flagged = await self.overtime_service.with_review_flags(current_user, rows)
         return [OvertimeResponse(**m) for m in flagged]
 

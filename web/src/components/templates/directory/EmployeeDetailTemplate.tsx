@@ -4,10 +4,12 @@ import { EmployeeAddressesPanel } from "@/components/organisms/directory/Employe
 import { EmployeeActions } from "@/components/organisms/directory/EmployeeActions";
 import { EmployeeArchivePanel } from "@/components/organisms/directory/EmployeeArchivePanel";
 import { EmployeeDetailSkeleton } from "@/components/organisms/directory/EmployeeDetailSkeleton";
+import { EmployeeFaceCard } from "@/components/organisms/directory/EmployeeFaceCard";
 import { EmployeeOffboardDialog } from "@/components/organisms/directory/EmployeeOffboardDialog";
 import { EmployeeLoadError } from "@/components/organisms/directory/EmployeeLoadError";
 import { EmployeeProfileCard } from "@/components/organisms/directory/EmployeeProfileCard";
 import { EmployeeProfileDialog } from "@/components/organisms/directory/EmployeeProfileDialog";
+import { RoleAssignmentsPanel } from "@/components/organisms/directory/RoleAssignmentsPanel";
 import type { Employee } from "@/services/employeeService";
 import { PageTemplate } from "../PageTemplate";
 
@@ -51,6 +53,8 @@ export function EmployeeDetailTemplate(props: {
         <EmployeeAddressesPanel employeeId={e.employee_id} addresses={e.addresses ?? []} canEdit={canEdit} />
       )}
       {canEdit && <AccountCard employee={e} />}
+      {canEdit && <RoleAssignmentsPanel employee={e} />}
+      {canEdit && <EmployeeFaceCard employee={e} />}
       {canEdit && e.offboarding_status === "offboarded" && <EmployeeArchivePanel employee={e} />}
       {canManageDocs && <DocumentsPanel employeeId={e.employee_id} canManage />}
       {editing && <EmployeeProfileDialog employee={e} onClose={props.onCloseEdit} />}

@@ -10,8 +10,12 @@ from uuid import UUID
 
 from app.core.hard_delete import purge_row
 from app.core.repository import BaseRepository, escape_like
+from app.shared.access.scope_rules import employee_sensitive_sql, employee_visible_sql
 
-_SELECT = """
+# Cakupan default = tanpa pembatasan (pemanggil internal). Pengguna biasa memakai `employee_params(user)`.
+UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "sens_offices": [], "viewer_emp": None, "pm": False}
+
+_SELECT = f"""
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
            e.division_id, d.name AS division_name, e.position_id, jp.code AS position_code, jp.name AS position_name,
            (e.join_date AT TIME ZONE 'Asia/Jakarta')::date AS join_date,
@@ -22,7 +26,8 @@ _SELECT = """
            u.user_id, u.email, u.system_role::text AS system_role, u.is_active AS account_active,
            (SELECT a.city FROM address a WHERE a.employee_id = e.employee_id AND a.delete_at IS NULL
             ORDER BY a.create_at LIMIT 1) AS city,
-           e.create_at, e.update_at
+           e.create_at, e.update_at,
+           {employee_sensitive_sql("e.employee_id")} AS sensitive_ok
     FROM employee e
     JOIN office o ON o.office_id = e.office_id
     LEFT JOIN division d ON d.division_id = e.division_id
@@ -38,6 +43,7 @@ _FILTER = """
       AND (CAST(:pos AS uuid) IS NULL OR e.position_id = CAST(:pos AS uuid))
       AND (CAST(:q AS varchar) IS NULL OR e.full_name ILIKE '%' || CAST(:q AS varchar) || '%'
            OR e.employee_no ILIKE '%' || CAST(:q AS varchar) || '%' OR u.email ILIKE '%' || CAST(:q AS varchar) || '%')
+      AND (CAST(:dir_all AS boolean) OR """ + employee_visible_sql("e.employee_id") + """)
 """
 _UUIDS = ("office_id", "division_id", "position_id")
 
@@ -64,25 +70,30 @@ class EmployeeRepository(BaseRepository):
         )
 
     def _params(self, *, status: str | None, division_id: UUID | None, office_id: UUID | None,
-                position_id: UUID | None, q: str | None) -> dict[str, Any]:
+                position_id: UUID | None, q: str | None, scope: dict[str, Any] | None = None) -> dict[str, Any]:
         return {"status": status, "div": str(division_id) if division_id else None,
                 "office": str(office_id) if office_id else None, "pos": str(position_id) if position_id else None,
-                "q": escape_like(q)}
+                "q": escape_like(q), **(scope or UNSCOPED)}
 
-    async def count(self, **filters: Any) -> int:
+    async def count(self, scope: dict[str, Any] | None = None, **filters: Any) -> int:
         n = await self.scalar(
             "SELECT COUNT(*) FROM employee e LEFT JOIN users u ON u.employee_id = e.employee_id "
-            "AND u.delete_at IS NULL" + _FILTER, self._params(**filters))
+            "AND u.delete_at IS NULL" + _FILTER, self._params(scope=scope, **filters))
         return int(n or 0)
 
-    async def page(self, limit: int, offset: int, **filters: Any) -> list[Any]:
+    async def page(self, limit: int, offset: int, scope: dict[str, Any] | None = None, **filters: Any) -> list[Any]:
         return list(await self.fetchall(
             _SELECT + _FILTER + " ORDER BY e.full_name LIMIT :limit OFFSET :offset",
-            {**self._params(**filters), "limit": limit, "offset": offset},
+            {**self._params(scope=scope, **filters), "limit": limit, "offset": offset},
         ))
 
-    async def get(self, employee_id: UUID | str) -> Any:
-        return await self.fetchone(_SELECT + " WHERE e.employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
+    async def get(self, employee_id: UUID | str, scope: dict[str, Any] | None = None) -> Any:
+        """Karyawan satu baris; di luar cakupan `scope` → None (pemanggil mengubahnya menjadi 404)."""
+        return await self.fetchone(
+            _SELECT + " WHERE e.employee_id = CAST(:id AS uuid) AND (CAST(:dir_all AS boolean) OR "
+            + employee_visible_sql("e.employee_id") + ")",
+            {"id": str(employee_id), **(scope or UNSCOPED)},
+        )
 
     async def addresses(self, employee_id: UUID | str) -> list[Any]:
         return list(await self.fetchall(

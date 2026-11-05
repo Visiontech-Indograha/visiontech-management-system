@@ -9,7 +9,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
+from app.core.keyset import cursor_query, finish_page, parse_cursor
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -28,23 +29,41 @@ async def report_overtime(
     data: OvertimeCreate,
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
-) -> OvertimeResponse:
-    """Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim)."""
-    return await controller.handle_report(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> OvertimeResponse | Response:
+    """Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_report(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.get("", response_model=list[OvertimeResponse])
 async def list_overtime(
     response: Response,
     params: ListParams = Depends(),
+    cursor: str | None = cursor_query(),
     status: str | None = Query(None, max_length=30, description="Filter status lembur"),
     daily_plan_id: UUID | None = Query(None, description="ID jadwal harian"),
     work_plan_id: UUID | None = Query(None, description="Alias daily_plan_id"),
+    mine: bool = Query(False, description="true = hanya lembur milik pemanggil (hanya mempersempit cakupan)"),
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
 ) -> list[OvertimeResponse]:
-    """Daftar lembur untuk satu jadwal harian."""
-    rows = await controller.handle_list(current_user, daily_plan_id or work_plan_id)
+    """Daftar lembur untuk satu jadwal harian.
+
+    Mode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;
+    `q` = awalan nama karyawan, `status` disaring di SQL.
+    """
+    after = parse_cursor(cursor, ("datetime", "uuid"))
+    if after is not None:
+        found = await controller.handle_list(
+            current_user, daily_plan_id or work_plan_id, after=after, limit=params.size + 1, status=status, q=params.q,
+            mine=mine,
+        )
+        return finish_page(found, params.size, response, lambda r: (r.created_at, r.id))
+    rows = await controller.handle_list(current_user, daily_plan_id or work_plan_id, mine=mine)
     return list(
         apply_list(
             rows,

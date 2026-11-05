@@ -88,11 +88,18 @@ def _null_pool() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def _main_office() -> None:
     # Absen V2 butuh satu kantor utama (zona kota & uang makan); DB uji kosong belum punya.
+    # Akar galat massal di putaran pertama pada DB baru: fixture sesi ini jalan di SETIAP worker xdist. Pada DB tanpa
+    # kantor utama, semua worker lolos pemeriksaan "belum ada" lalu menyisipkan bersamaan; yang kalah kena
+    # UniqueViolation (uq_single_main_office) dan seluruh tesnya ERROR. Kini: ON CONFLICT DO NOTHING (yang kalah
+    # tidak perlu menyisipkan) + verifikasi akhir, sehingga kegagalan nyata tetap tampak.
     if not _DB_OK or sync_query("SELECT 1 FROM office WHERE is_main_office AND delete_at IS NULL"):
         return
     sync_query(
         "INSERT INTO office (name, address, latitude, longitude, is_main_office) "
-        "VALUES ('Kantor utama uji', 'Jl. Uji No. 1', -6.2000000, 106.8000000, TRUE) RETURNING office_id")
+        "VALUES ('Kantor utama uji', 'Jl. Uji No. 1', -6.2000000, 106.8000000, TRUE) "
+        "ON CONFLICT DO NOTHING")
+    if not sync_query("SELECT 1 FROM office WHERE is_main_office AND delete_at IS NULL"):
+        raise RuntimeError("Kantor utama uji tidak dapat dibuat (ada kantor utama yang sudah dihapus?).")
 
 
 @functools.cache
@@ -109,6 +116,20 @@ def _sync_conn():
         # DB uji ada di server (Tailscale): jaringan putus → gagal cepat, bukan menggantung berjam-jam.
         connect_timeout=15, keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=3,
     )
+
+
+@contextlib.contextmanager
+def db_exclusive(key: int) -> Iterator[None]:
+    """Serialkan tes lintas worker xdist yang menghitung data global (tanggal tetap, employee_no tetap) dengan
+    advisory lock Postgres. Penanda `xdist_group` terbukti tidak mengelompokkan tes di lingkungan ini."""
+    conn = _sync_conn()
+    conn.autocommit = True
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_lock(%s)", (key,))
+        yield
+    finally:
+        conn.close()  # menutup sesi melepas lock
 
 
 _SYNC_CONN = None   # satu koneksi per proses (tiap worker xdist punya sendiri): DB uji di server jauh

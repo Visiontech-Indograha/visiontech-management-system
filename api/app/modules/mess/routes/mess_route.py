@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
 from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -109,9 +109,15 @@ async def request_stay(
     data: MessStayRequest,
     current_user: CurrentUser = Depends(get_current_user),
     controller: MessController = Depends(),
-) -> MessStayOut:
-    """Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR."""
-    return await controller.handle_request_stay(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> MessStayOut | Response:
+    """Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+    Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_request_stay(current_user, data)
+    return await idem.simpan(hasil, 201)
 
 
 @router.get("/{mess_stay_id}", response_model=MessStayOut)
@@ -129,9 +135,15 @@ async def create_stay(
     data: MessStayCreate,
     current_user: CurrentUser = _MANAGE,
     controller: MessController = Depends(),
-) -> MessStayOut:
-    """HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui."""
-    return await controller.handle_create_stay(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> MessStayOut | Response:
+    """HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
+    Mendukung Idempotency-Key (opsional)."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_create_stay(current_user, data)
+    return await idem.simpan(hasil, 201)
 
 
 @router.post("/{mess_stay_id}/decision", response_model=MessStayOut)

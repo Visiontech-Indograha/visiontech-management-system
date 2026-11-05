@@ -378,7 +378,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                 ),
               ),
               VmsTextField(
-                maxLength: 500,
+                maxLength: 1000,
                 controller: reason,
                 decoration: const InputDecoration(labelText: 'Alasan'),
               ),
@@ -394,7 +394,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     if (ok != true) return;
     final h = num.tryParse(hours.text.replaceAll(',', '.'));
     if (h == null) return _snack('Isi jam lembur dengan angka.');
-    if (h <= 0 || h > 12) return _snack('Jam lembur harus antara 0.5 hingga 12 jam.');
+    if (h <= 0 || h > 12) return _snack('Jam lembur harus lebih dari 0 dan paling banyak 12 jam.');
     if (reason.text.trim().length < 3) return _snack('Alasan lembur minimal 3 karakter.');
     // Lewat antrean sinkronisasi: tanpa sinyal, pengajuan tersimpan dan dikirim otomatis saat online.
     setState(() => _busy = true);

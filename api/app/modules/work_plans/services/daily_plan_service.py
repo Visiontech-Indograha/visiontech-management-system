@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from datetime import date, time, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,8 +42,10 @@ from app.modules.work_plans.services.plan_item_service import PlanItemService
 from app.shared.access.access_service import (
     DailyAccess,
     DailyNeed,
+    access_from_standing,
     check_daily_access,
     check_division_manager,
+    daily_standings,
     is_admin,
     require_daily_status,
 )
@@ -150,10 +152,15 @@ class DailyPlanService:
         if scope is None:
             raise NotFoundError("Order Proyek Klien")
         rows = await self.repo.plans_of_order(completion_id)
+        # Kedudukan semua jadwal dibaca sekali (bukan satu kueri per baris); aturannya sama dengan check_daily_access.
+        standing = await daily_standings(self.db, [row.daily_plan_id for row in rows], user.employee_id)
         visible = []
         for row in rows:
             try:
-                await check_daily_access(self.db, row.daily_plan_id, user, DailyNeed.VIEW)
+                row_standing = standing.get(str(row.daily_plan_id))
+                if row_standing is None:
+                    raise NotFoundError("Jadwal harian")
+                access_from_standing(row_standing, user, DailyNeed.VIEW)
                 visible.append(row)
             except (NotFoundError, AppError):
                 continue
@@ -315,13 +322,16 @@ class DailyPlanService:
         return await self.repo.attachment_ids(daily_plan_id)
 
     # ── Alokasi massal & siaga ─────────────────────────────────────────────────
-    async def _bulk_cell_problem(self, data: DailyBulkIn, team_id: UUID, work_date: date) -> tuple[str, str] | None:
-        """Alasan sel dilewati (kode, pesan) atau None bila sel bisa dibuat. Tidak melempar galat per sel."""
-        if not await self.repo.team_of_division(team_id, data.division_id):
+    @staticmethod
+    def _bulk_cell_problem(in_division: set[str], taken: set[tuple[str, date]], team_id: UUID,
+                           work_date: date) -> tuple[str, str] | None:
+        """Alasan sel dilewati (kode, pesan) atau None bila sel bisa dibuat. Tidak melempar galat per sel.
+        `in_division` dan `taken` dibaca sekali untuk seluruh permintaan (lihat bulk_create)."""
+        if str(team_id) not in in_division:
             return "TEAM_BUKAN_DIVISI", "Tim tidak ditemukan, nonaktif, atau bukan milik divisi ini."
         if work_date < jakarta_now().date():
             return "TANGGAL_LAMPAU", "Tanggal sudah lewat; alokasi hanya untuk hari ini atau mendatang."
-        if await self.repo.team_day_taken(team_id, work_date):
+        if (str(team_id), work_date) in taken:
             return "TEAM_DAY_TAKEN", "Tim ini sudah punya jadwal pada tanggal tersebut."
         return None
 
@@ -329,48 +339,72 @@ class DailyPlanService:
         """Membuat jadwal untuk setiap pasangan (tim, tanggal) dalam satu transaksi permintaan.
 
         Sel yang tidak memenuhi aturan dilaporkan sebagai SKIPPED dan tidak menggagalkan sel lain. Seluruh sel
-        ditulis dalam satu sesi, jadi galat tak terduga di tengah jalan membatalkan permintaan secara utuh."""
+        ditulis dalam satu sesi, jadi galat tak terduga di tengah jalan membatalkan permintaan secara utuh.
+
+        Jumlah kueri tetap (tidak tumbuh dengan jumlah sel): data tim, cuti ketua, dan bentrok aset dibaca per jenis
+        dengan `IN`/`unnest`, keputusan per sel dibuat di memori, lalu satu INSERT dan (bila disetujui) satu UPDATE."""
         await check_division_manager(self.db, data.division_id, user)
         if not user.employee_id:
             raise ValidationError("Akun ini belum terhubung ke data karyawan; jadwal butuh pembuat yang tercatat.")
+        team_ids = list(dict.fromkeys(data.team_ids))
+        work_dates = sorted(set(data.work_dates))
+        team_keys = [str(t) for t in team_ids]
+        in_division = await self.repo.bulk_teams_in_division(team_keys, data.division_id)
+        taken = await self.repo.bulk_team_days_taken(team_keys, work_dates)
+        leaders = await self.repo.bulk_team_leaders(team_keys)
+        leader_ids = sorted(set(leaders.values()))
+        on_leave = await self.repo.bulk_leaves_on(leader_ids, work_dates) if leader_ids else set()
+        # Kunci (jenis aset, id aset, tanggal) -> nama tim pemegang (None = peminjaman tanpa jadwal).
+        holders: dict[tuple[str, str, date], str | None] = {}
+        for asset_type in sorted({a.asset_type for a in data.assets}):
+            ids = sorted({str(a.asset_id) for a in data.assets if a.asset_type == asset_type})
+            for (asset_id, day), team_name in (await self.repo.bulk_asset_holders(asset_type, ids, work_dates)).items():
+                holders[(asset_type, asset_id, day)] = team_name
         cells: list[DailyBulkCellOut] = []
-        leaders = {team_id: await self.repo.team_leader(team_id) for team_id in dict.fromkeys(data.team_ids)}
-        for team_id in dict.fromkeys(data.team_ids):
-            for work_date in sorted(set(data.work_dates)):
-                problem = await self._bulk_cell_problem(data, team_id, work_date)
+        new_cells: list[tuple[str, str, date]] = []
+        for team_id in team_ids:
+            for work_date in work_dates:
+                problem = self._bulk_cell_problem(in_division, taken, team_id, work_date)
                 if problem:
                     cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="SKIPPED",
                                                   reason=problem[0], message=problem[1]))
                     continue
                 # Peringatan hanya memberi tahu; sel tetap dibuat.
-                warnings = await self._cell_warnings(leaders.get(team_id), work_date, data.assets)
-                new_id = await self.repo.insert({
-                    "division_id": str(data.division_id), "team_id": str(team_id), "project_id": None,
-                    "work_date": work_date, "site_name": data.site_name.strip() if data.site_name else None,
-                    "site_lat": data.site_lat, "site_lng": data.site_lng,
-                    "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
-                    "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
-                    "created_by_id": user.employee_id,
-                })
-                if data.target == "APPROVED":
-                    await self.repo.set_status(new_id, "APPROVED", approver=user.employee_id)
+                warnings = self._cell_warnings(leaders.get(str(team_id)), work_date, data.assets, on_leave, holders)
+                new_id = uuid4()
+                new_cells.append((str(new_id), str(team_id), work_date))
                 cells.append(DailyBulkCellOut(team_id=team_id, work_date=work_date, status="CREATED",
                                               daily_plan_id=new_id, warnings=warnings))
+        if new_cells:
+            await self.repo.bulk_insert_plans(new_cells, {
+                "division_id": str(data.division_id), "site_name": data.site_name.strip() if data.site_name else None,
+                "site_lat": data.site_lat, "site_lng": data.site_lng,
+                "attendance_radius_m": data.attendance_radius_m, "clock_in_time": time(7, 0),
+                "clock_out_time": time(16, 0), "kind": data.kind, "is_out_of_town": data.is_out_of_town,
+                "created_by_id": user.employee_id,
+            })
+            if data.target == "APPROVED":
+                await self.repo.bulk_mark_approved([c[0] for c in new_cells], user.employee_id)
         created = sum(1 for c in cells if c.status == "CREATED")
         return DailyBulkOut(created=created, skipped=len(cells) - created, cells=cells)
 
-    async def _cell_warnings(self, leader_id: str | None, work_date: date,
-                             assets: list[DailyBulkAsset]) -> list[DailyBulkWarning]:
-        """Peringatan satu sel: ketua cuti pada tanggal itu; aset yang dipinjam pada tanggal itu (atau tanpa jadwal)."""
+    @staticmethod
+    def _cell_warnings(leader_id: str | None, work_date: date, assets: list[DailyBulkAsset],
+                       on_leave: set[tuple[str, date]],
+                       holders: dict[tuple[str, str, date], str | None]) -> list[DailyBulkWarning]:
+        """Peringatan satu sel: ketua cuti pada tanggal itu; aset yang dipinjam pada tanggal itu (atau tanpa jadwal).
+        Membaca data yang sudah dikumpulkan sekali per permintaan (`on_leave`, `holders`)."""
         warnings: list[DailyBulkWarning] = []
-        if leader_id and await self.repo.leader_on_leave(leader_id, work_date):
+        if leader_id and (leader_id, work_date) in on_leave:
             warnings.append(DailyBulkWarning(code="LEADER_CUTI", message="Ketua tim sedang cuti pada tanggal ini."))
         for asset in assets:
-            loan = await self.repo.asset_loan_conflict(asset.asset_type, asset.asset_id, work_date)
-            if loan is not None:
-                holder = f"tim {loan.team_name}" if loan.team_name else "peminjaman tanpa jadwal"
-                warnings.append(DailyBulkWarning(code="ASET_BENTROK",
-                                                 message=f"Aset sedang dipinjam ({holder}) pada tanggal ini."))
+            key = (asset.asset_type, str(asset.asset_id), work_date)
+            if key not in holders:
+                continue
+            team_name = holders[key]
+            holder = f"tim {team_name}" if team_name else "peminjaman tanpa jadwal"
+            warnings.append(DailyBulkWarning(code="ASET_BENTROK",
+                                             message=f"Aset sedang dipinjam ({holder}) pada tanggal ini."))
         return warnings
 
     # ── Matriks mingguan ───────────────────────────────────────────────────────

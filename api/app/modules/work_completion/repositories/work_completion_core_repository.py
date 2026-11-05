@@ -500,6 +500,24 @@ class WorkCompletionCoreRepository(BaseRepository):
             sql, {"id": str(completion_id), "status": status, "notes": notes, "expected": expected})
         return int(result.rowcount or 0)
 
+    async def log_status_mundur(
+        self, *, actor_user_id: str, actor_role: str, completion_id: UUID | str, dari: str, ke: str,
+        notes: str | None,
+    ) -> None:
+        """Jejak audit perpindahan status order yang memundurkan (app_activity_logs, action ORDER_STATUS_MUNDUR)."""
+        await self.execute(
+            """
+            INSERT INTO app_activity_logs (actor_user_id, actor_role, platform, action, entity_table, entity_id,
+                                           changed_diff)
+            VALUES (CAST(:uid AS uuid), :role, 'web_react', 'ORDER_STATUS_MUNDUR', 'work_completion',
+                    CAST(:id AS uuid), CAST(:diff AS jsonb))
+            """,
+            {
+                "uid": actor_user_id, "role": actor_role[:30], "id": str(completion_id),
+                "diff": json.dumps({"dari": dari, "ke": ke, "catatan": notes}, default=str),
+            },
+        )
+
     async def delete_completion(self, completion_id: UUID | str) -> None:
         """Soft delete order proyek klien."""
         sql = """

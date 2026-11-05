@@ -1479,6 +1479,13 @@
       ],
       "title": "Division Id"
      },
+     "effective_roles": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Effective Roles",
+      "type": "array"
+     },
      "email": {
       "title": "Email",
       "type": "string"
@@ -1540,6 +1547,13 @@
      "role": {
       "title": "Role",
       "type": "string"
+     },
+     "role_scopes": {
+      "items": {
+       "$ref": "#/components/schemas/RoleScopeOut"
+      },
+      "title": "Role Scopes",
+      "type": "array"
      },
      "user_id": {
       "title": "User Id",
@@ -12987,6 +13001,137 @@
      "is_approved"
     ],
     "title": "ReviewRequest",
+    "type": "object"
+   },
+   "RoleAssignmentCreate": {
+    "description": "Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).",
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "role": {
+      "enum": [
+       "ADMIN_HR_GA",
+       "FINANCE",
+       "OPERATIONAL_MANAGER"
+      ],
+      "title": "Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "role"
+    ],
+    "title": "RoleAssignmentCreate",
+    "type": "object"
+   },
+   "RoleAssignmentOut": {
+    "properties": {
+     "assignment_id": {
+      "format": "uuid",
+      "title": "Assignment Id",
+      "type": "string"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "office_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
+     "role": {
+      "title": "Role",
+      "type": "string"
+     },
+     "source": {
+      "title": "Source",
+      "type": "string"
+     },
+     "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "assignment_id",
+     "user_id",
+     "role",
+     "source",
+     "created_at"
+    ],
+    "title": "RoleAssignmentOut",
+    "type": "object"
+   },
+   "RoleScopeOut": {
+    "description": "Satu peran efektif beserta kantornya (ADR 0002). `office_id` kosong = semua kantor / kantor sendiri.",
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
+     "primary": {
+      "default": false,
+      "title": "Primary",
+      "type": "boolean"
+     },
+     "role": {
+      "title": "Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "role"
+    ],
+    "title": "RoleScopeOut",
     "type": "object"
    },
    "RolloverDecision": {
@@ -30306,6 +30451,245 @@
     "summary": "Remove Member",
     "tags": [
      "Teams"
+    ]
+   }
+  },
+  "/api/v1/users/{user_id}/role-assignments": {
+   "get": {
+    "description": "Penugasan peran aktif milik satu akun.",
+    "operationId": "list_role_assignments_api_v1_users__user_id__role_assignments_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/RoleAssignmentOut"
+         },
+         "title": "Response List Role Assignments Api V1 Users  User Id  Role Assignments Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Role Assignments",
+    "tags": [
+     "Role Assignments"
+    ]
+   },
+   "post": {
+    "description": "Tambah peran tambahan (maks 2). Mendukung Idempotency-Key (opsional).",
+    "operationId": "add_role_assignment_api_v1_users__user_id__role_assignments_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RoleAssignmentCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RoleAssignmentOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Add Role Assignment",
+    "tags": [
+     "Role Assignments"
+    ]
+   }
+  },
+  "/api/v1/users/{user_id}/role-assignments/{assignment_id}": {
+   "delete": {
+    "description": "Cabut penugasan (soft delete). Berlaku seketika pada token yang sama.",
+    "operationId": "revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "assignment_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Assignment Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke Role Assignment",
+    "tags": [
+     "Role Assignments"
     ]
    }
   },

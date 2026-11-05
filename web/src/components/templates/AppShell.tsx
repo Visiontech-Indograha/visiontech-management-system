@@ -3,6 +3,7 @@ import { Suspense, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/stores/sessionStore";
+import { roleScopeLines } from "@/lib/roleAssignments";
 import { useLiveEvents } from "@/hooks/useLiveEvents";
 import { useHomeSummary } from "@/services/homeService";
 import { ROLE_LABEL } from "@/lib/types";
@@ -55,7 +56,7 @@ export function AppShell() {
         />
         <SidebarNav items={items} badges={badges} collapsed={collapsed} onNavigate={() => setDrawerOpen(false)} />
         {me && (
-          <SidebarProfile email={me.email} name={me.full_name} photoFileId={me.photo_file_id} roleLabel={roleLabel} collapsed={collapsed} onLogout={() => void logout()} />
+          <SidebarProfile email={me.email} name={me.full_name} photoFileId={me.photo_file_id} roleLabel={roleLabel} scopeLines={roleScopeLines(me)} collapsed={collapsed} onLogout={() => void logout()} />
         )}
       </aside>
 

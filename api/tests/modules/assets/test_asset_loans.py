@@ -115,3 +115,21 @@ def test_field_staff_only_see_own_loans(client, world: World):
 def test_wrong_asset_field_is_rejected(client, world: World):
     tool_id = create_tool(client, world).json()["tool_id"]
     assert _lend(client, world, asset_type="VEHICLE", tool_id=tool_id).status_code == 422
+
+
+def test_return_race_does_not_overwrite_concurrent_return(client, world: World):
+    """Pengembalian yang tertahan kunci baris tidak menimpa pengembalian lain (409, kondisi pertama bertahan)."""
+    from tests.concurrency import tahan_lalu_ubah
+
+    tool_id = create_tool(client, world).json()["tool_id"]
+    loan_id = _lend(client, world, asset_type="TOOL", tool_id=tool_id).json()["assignment_id"]
+    hasil = tahan_lalu_ubah(
+        "UPDATE asset_assignment SET returned_at = now(), assignment_status = 'damaged' WHERE assignment_id = %s",
+        (loan_id,),
+        lambda: client.post(f"/assets/loans/{loan_id}/return", headers=world.headers(client, "hr"), json={}),
+    )
+    assert hasil.status_code == 409, hasil.text
+    assert hasil.json()["error"]["code"] in {"ALREADY_RETURNED", "INVALID_STATE"}
+    status = sync_query(
+        "SELECT assignment_status::text FROM asset_assignment WHERE assignment_id = %s", (loan_id,))[0][0]
+    assert status == "damaged"

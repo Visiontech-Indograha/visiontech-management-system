@@ -341,7 +341,8 @@ class AssetService:
             if await self.repo.get_loan(assignment_id) is None:
                 raise NotFoundError("Peminjaman aset")
             raise AppError("ALREADY_RETURNED", "Aset ini sudah dikembalikan.", status=409)
-        await self.repo.close_loan(assignment_id, condition)
+        if not await self.repo.close_loan(assignment_id, condition):
+            raise AppError("INVALID_STATE", "Status peminjaman sudah berubah. Muat ulang lalu coba lagi.", status=409)
         await self.repo.set_status(loan.asset_type, loan.asset_id, condition)
         done = await self.repo.get_loan(assignment_id)
         await self._notify().notify_employees(

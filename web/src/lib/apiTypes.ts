@@ -161,6 +161,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{user_id}/role-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Role Assignments
+         * @description Penugasan peran aktif milik satu akun.
+         */
+        get: operations["list_role_assignments_api_v1_users__user_id__role_assignments_get"];
+        put?: never;
+        /**
+         * Add Role Assignment
+         * @description Tambah peran tambahan (maks 2). Mendukung Idempotency-Key (opsional).
+         */
+        post: operations["add_role_assignment_api_v1_users__user_id__role_assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/role-assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Role Assignment
+         * @description Cabut penugasan (soft delete). Berlaku seketika pada token yang sama.
+         */
+        delete: operations["revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-orders": {
         parameters: {
             query?: never;
@@ -5364,6 +5408,10 @@ export interface components {
             photo_file_id?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Effective Roles */
+            effective_roles?: string[];
+            /** Role Scopes */
+            role_scopes?: components["schemas"]["RoleScopeOut"][];
         };
         /** AvailableMemberOut */
         AvailableMemberOut: {
@@ -9699,6 +9747,62 @@ export interface components {
             note?: string | null;
         };
         /**
+         * RoleAssignmentCreate
+         * @description Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).
+         */
+        RoleAssignmentCreate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER";
+            /** Office Id */
+            office_id?: string | null;
+        };
+        /** RoleAssignmentOut */
+        RoleAssignmentOut: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Role */
+            role: string;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * RoleScopeOut
+         * @description Satu peran efektif beserta kantornya (ADR 0002). `office_id` kosong = semua kantor / kantor sendiri.
+         */
+        RoleScopeOut: {
+            /** Role */
+            role: string;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
+            /**
+             * Primary
+             * @default false
+             */
+            primary: boolean;
+        };
+        /**
          * RolloverDecision
          * @description PM: setujui ke jadwal yang ada (`target_daily_plan_id`) atau tanggal baru (`target_date`), atau tolak.
          */
@@ -11964,6 +12068,112 @@ export interface operations {
                         [key: string]: string;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_role_assignments_api_v1_users__user_id__role_assignments_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_role_assignment_api_v1_users__user_id__role_assignments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

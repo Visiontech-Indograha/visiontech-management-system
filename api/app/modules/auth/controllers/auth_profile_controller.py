@@ -17,6 +17,7 @@ from app.modules.auth.schemas.auth_profile_schema import (
     AuthChangePasswordRequestSchema,
     AuthUserMeResponseSchema,
     ManagedDivisionOut,
+    RoleScopeOut,
 )
 from app.modules.auth.services.auth_flow_service import AuthFlowService
 
@@ -35,7 +36,11 @@ class AuthProfileController:
         # Foto profil karyawan: /auth/me hanya mengembalikan id berkasnya; URL
         # bertanda tangan diambil klien lewat GET /files/{id}/url.
         photo_file_id = await self.flow_service.profile_photo_file_id(current_user.user_id)
+        extra = await self.flow_service.role_scopes(current_user.user_id)
+        scopes = [RoleScopeOut(role=res.role, primary=True), *extra]
         return AuthUserMeResponseSchema(
+            effective_roles=list(dict.fromkeys(s.role for s in scopes)),
+            role_scopes=scopes if extra else [],
             photo_file_id=photo_file_id,
             full_name=await self.flow_service.full_name(current_user.user_id),
             user_id=res.user_id,

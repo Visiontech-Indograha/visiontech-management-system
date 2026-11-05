@@ -1,6 +1,7 @@
 import { useSession } from "@/stores/sessionStore";
 import { AccountTemplate } from "@/components/templates/account/AccountTemplate";
 import { ROLE_LABEL } from "@/lib/types";
+import { roleScopeLines } from "@/lib/roleAssignments";
 
 
 /**
@@ -9,5 +10,5 @@ import { ROLE_LABEL } from "@/lib/types";
  */
 export function AccountPage() {
   const { me } = useSession();
-  return <AccountTemplate email={me?.email} roleLabel={me ? (ROLE_LABEL[me.role] ?? me.role) : ""} />;
+  return <AccountTemplate email={me?.email} roleLabel={me ? (ROLE_LABEL[me.role] ?? me.role) : ""} scopeLines={roleScopeLines(me)} />;
 }

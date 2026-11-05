@@ -5,6 +5,7 @@ services:
   db:
     image: vms-db:18
     container_name: vms_db_beta
+    mem_limit: 256m                  # batas host bersama prod (RUNBOOK-beta-aman.md)
     restart: always
     env_file: ./infra.env            # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
     volumes:
@@ -19,10 +20,10 @@ services:
       betanet:
         aliases: [db]
   minio:
-    # TODO pin: ganti dengan quay.io/minio/minio@sha256:<DIGEST> (langkah: deploy/MINIO-PIN.md).
-    # Digest belum diverifikasi dari server, jadi tag lama dipertahankan sampai pemilik mengisinya.
-    image: quay.io/minio/minio:latest
+    # Tag lama: quay.io/minio/minio:latest (dipin ke digest 2026-11-05, lihat deploy/MINIO-PIN.md)
+    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     container_name: vms_minio_beta
+    mem_limit: 384m
     restart: always
     command: server /data --console-address ":9001"
     env_file: ./infra.env            # MINIO_ROOT_USER, MINIO_ROOT_PASSWORD

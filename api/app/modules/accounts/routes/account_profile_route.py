@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.api.deps import require_permission
+from app.api.deps import require_permission, require_permission_for_employee
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.accounts.controllers.account_profile_controller import AccountProfileController
@@ -25,7 +25,7 @@ from app.modules.auth.schemas.auth_session_schema import AuthSessionResponseSche
 
 router = APIRouter(prefix="/employees/{emp_id}/account", tags=["Employee Account"])
 
-_manager = Depends(require_permission(Permission.MANAGE_USERS))
+_manager = Depends(require_permission_for_employee(Permission.MANAGE_USERS, "emp_id"))
 _delete_any = Depends(require_permission(Permission.DELETE_ANY))
 
 

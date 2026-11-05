@@ -8,7 +8,8 @@ import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { UserAvatar } from "@/components/organisms/UserAvatar";
 
 /** Kartu pengguna di dasar rail kiri + tautan "Akun & keamanan" + tombol keluar. */
-export function SidebarProfile({ email, name, photoFileId, roleLabel, collapsed, onLogout }: {
+export function SidebarProfile({ email, name, photoFileId, roleLabel, scopeLines = [], collapsed, onLogout }: {
+  scopeLines?: string[];
   email: string;
   name?: string | null;
   photoFileId?: string | null;
@@ -24,6 +25,9 @@ export function SidebarProfile({ email, name, photoFileId, roleLabel, collapsed,
         <div className={clsx("min-w-0 flex-1", collapsed && "md:sr-only")}>
           <TextBlock className="truncate text-sm font-semibold text-ink">{name || email}</TextBlock>
           <TextBlock className="text-xs text-mist">{roleLabel}</TextBlock>
+          {scopeLines.map((l) => (
+            <TextBlock key={l} className="text-xs text-mist">{l}</TextBlock>
+          ))}
         </div>
       </div>
       <MenuLink

@@ -23,7 +23,7 @@ async def get_expiring_documents(
     controller: DocumentController = Depends(),
 ) -> ExpiringDocumentList:
     """Dokumen berlaku yang sudah lewat (EXPIRED), ≤7 hari (CRITICAL), atau ≤30 hari (WARNING)."""
-    return await controller.handle_get_expiring(urgency)
+    return await controller.handle_get_expiring(current_user, urgency)
 
 
 @router.post("/cron/expire-documents")

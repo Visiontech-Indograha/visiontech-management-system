@@ -508,12 +508,14 @@ class AssetRepository(BaseRepository):
         )
         return assignment_id
 
-    async def close_loan(self, assignment_id: UUID | str, condition: str) -> None:
-        await self.execute(
+    async def close_loan(self, assignment_id: UUID | str, condition: str) -> bool:
+        """UPDATE bersyarat (CAS): hanya menutup peminjaman yang masih terbuka; False bila sudah ditutup pihak lain."""
+        result = await self.execute(
             "UPDATE asset_assignment SET returned_at = now(), assignment_status = CAST(:c AS asset_status_enum), "
-            "update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
+            "update_at = now() WHERE assignment_id = CAST(:id AS uuid) AND returned_at IS NULL AND delete_at IS NULL",
             {"id": str(assignment_id), "c": condition.lower()},
         )
+        return bool(result.rowcount)
 
     # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────
     async def insert_request(

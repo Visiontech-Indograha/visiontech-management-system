@@ -67,7 +67,7 @@ Pakai satu ukuran: biaya per permintaan = jumlah kueri x biaya tiap kueri, denga
 
 Aturan desain:
 - Kueri per permintaan harus konstan terhadap n. Gunakan JOIN atau `IN (...)` untuk batch, bukan kueri per baris.
-- Daftar wajib `LIMIT`/`OFFSET` di SQL (bukan di Python). Untuk tabel besar, pertimbangkan keyset pagination.
+- Daftar wajib `LIMIT` di SQL (bukan di Python). Daftar baru memakai keyset `(created_at, id)`; `OFFSET` baru dilarang.
 - Indeks untuk kolom filter dan urutan yang sering dipakai. Dokumentasikan rencana `EXPLAIN ANALYZE` untuk endpoint yang disentuh.
 - Tabel log bertumbuh linear. Partisi bulanan sudah ada (riset `01` F-10 dan ringkasan `vms-next`); pastikan kueri memakai kolom partisi.
 - Pekerjaan CPU berat (hash sandi, pembuatan dokumen): jalankan di threadpool (`run_in_threadpool`) atau keluarkan dari jalur permintaan.

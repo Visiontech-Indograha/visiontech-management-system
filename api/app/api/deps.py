@@ -29,6 +29,7 @@ from app.database.session import AsyncSessionLocal, set_request_context, unit_of
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
 from app.shared import idempotency_repository as repo
 from app.shared.access.access_service import DailyAccess, DailyNeed, check_daily_access
+from app.shared.access.office_scope import ensure_employee_in_scope, ensure_office_in_scope
 
 logger = logging.getLogger(__name__)
 # Keamanan dengan skema Bearer token
@@ -192,6 +193,50 @@ def require_permission(
             return current_user
         if required_permission.value not in current_user.permissions:
             raise AppError("FORBIDDEN", "Anda tidak memiliki akses untuk tindakan ini.", status=403)
+        return current_user
+    return permission_checker
+
+
+def require_permission_for_employee(
+    required_permission: Permission, param: str = "employee_id",
+) -> Callable[..., Coroutine[Any, Any, CurrentUser]]:
+    """`require_permission` + pembatasan kantor HR/Finance (ADR 0002): karyawan target pada parameter jalur `param`
+    harus berkantor di jangkauan izin; di luar itu 404. Flag peran-ganda mati = sama persis dengan require_permission."""
+    guard = require_permission(required_permission)
+
+    async def permission_checker(
+        request: Request,
+        current_user: CurrentUser = Depends(guard),
+        db: AsyncSession = Depends(get_db_with_user),
+    ) -> CurrentUser:
+        raw = request.path_params.get(param)
+        try:
+            target = UUID(str(raw)) if raw else None
+        except ValueError:
+            target = None
+        await ensure_employee_in_scope(db, current_user, required_permission, target)
+        return current_user
+    return permission_checker
+
+
+def require_permission_for_office(
+    required_permission: Permission, param: str = "office_id",
+) -> Callable[..., Coroutine[Any, Any, CurrentUser]]:
+    """Seperti `require_permission_for_employee`, untuk kantor pada parameter jalur `param` (404 di luar jangkauan)."""
+    guard = require_permission(required_permission)
+
+    async def permission_checker(
+        request: Request,
+        current_user: CurrentUser = Depends(guard),
+        db: AsyncSession = Depends(get_db_with_user),
+    ) -> CurrentUser:
+        raw = request.path_params.get(param)
+        try:
+            target = UUID(str(raw)) if raw else None
+        except ValueError:
+            target = None
+        if target is not None:
+            await ensure_office_in_scope(db, current_user, required_permission, target, "Kantor")
         return current_user
     return permission_checker
 

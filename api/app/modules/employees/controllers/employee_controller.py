@@ -41,11 +41,11 @@ class EmployeeController:
     async def next_no(self) -> NextEmployeeNo:
         return NextEmployeeNo(employee_no=await self.service.next_employee_no())
 
-    async def create(self, data: EmployeeCreate) -> EmployeeDetail:
-        return EmployeeDetail(**await self.service.create(data))
+    async def create(self, data: EmployeeCreate, user: CurrentUser | None = None) -> EmployeeDetail:
+        return EmployeeDetail(**await self.service.create(data, user))
 
-    async def update(self, employee_id: UUID, data: EmployeeUpdate) -> EmployeeDetail:
-        return EmployeeDetail(**await self.service.update(employee_id, data))
+    async def update(self, employee_id: UUID, data: EmployeeUpdate, user: CurrentUser | None = None) -> EmployeeDetail:
+        return EmployeeDetail(**await self.service.update(employee_id, data, user))
 
     async def set_my_photo(self, user: CurrentUser, data: MyPhotoIn) -> MyPhotoOut:
         return MyPhotoOut(photo_file_id=await self.service.set_own_photo(user, data.file_id))

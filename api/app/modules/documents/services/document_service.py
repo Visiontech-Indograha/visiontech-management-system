@@ -19,6 +19,7 @@ from app.core.permissions import Permission, SystemRole
 from app.core.security import CurrentUser
 from app.modules.documents.repositories.document_repository import DocumentRepository
 from app.modules.documents.schemas.document_schema import EmployeeDocumentCreate
+from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
 NOT_FOUND = "Dokumen"
 FILE_NOT_OWNED = "Berkas tidak ditemukan atau bukan milik Anda. Unggah ulang berkasnya."
@@ -34,6 +35,8 @@ class DocumentService:
         if not await self.repo.employee_exists(emp_id):
             raise NotFoundError("Karyawan")
         if Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in user.permissions:
+            # HR/Finance bukan OM/SA: hanya karyawan di kantor jangkauannya (ADR 0002); flag mati = tanpa batas.
+            await ensure_employee_in_scope(self.repo.db, user, Permission.MANAGE_EMPLOYEE_DOCUMENTS, emp_id)
             return
         if await self.repo.employee_of_user(user.user_id) != str(emp_id):
             raise NotFoundError("Karyawan")
@@ -80,8 +83,9 @@ class DocumentService:
         await self._doc(emp_id, doc_id)
         await self.repo.archive(doc_id)
 
-    async def expiring(self, urgency: str | None) -> list[Any]:
-        return await self.repo.expiring(urgency)
+    async def expiring(self, user: CurrentUser, urgency: str | None) -> list[Any]:
+        restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_EMPLOYEE_DOCUMENTS)
+        return await self.repo.expiring(urgency, None if restriction is None else offices_param(restriction))
 
     async def expire_overdue(self) -> int:
         return await self.repo.expire_overdue()

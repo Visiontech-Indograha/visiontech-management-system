@@ -94,6 +94,7 @@ async def test_work_order_detail_for_full_scope_role_is_unrestricted():
 class _FakeEmployeeRepo:
     def __init__(self, row: Any = None) -> None:
         self.row = row
+        self.db: Any = None   # flag peran-ganda mati: cakupan kantor tidak menyentuh DB
         self.page_scopes: list[Any] = []
         self.addresses_called = False
 

@@ -61,12 +61,14 @@ class Permission(StrEnum):
     # Absensi & lembur — cakupan per absen dicek di service/CRUD (R-33, menggantikan R-10)
     VIEW_ALL_ATTENDANCE = "view:all_attendance"  # Finance & OPS melihat semua absensi
     REVIEW_ATTENDANCE = "review:attendance"  # PM → bawahan lapangan, Finance → kantor non-Finance, OPS → Finance
-    EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance
+    EXPORT_ATTENDANCE = "export:attendance"  # ekspor CSV — Finance, OM (semua kantor), Super Admin
     REVIEW_OVERTIME = "review:overtime"
 
     # Master kantor (office) & divisi operasional (division) — Milestone 2 (docs/36)
     MANAGE_SITES = "manage:sites"
     MANAGE_DIVISIONS = "manage:divisions"
+    # Penugasan peran ganda (ADR 0002): hanya SUPER_ADMIN
+    MANAGE_ROLE_ASSIGNMENTS = "manage:role_assignments"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -113,7 +115,7 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY},
+    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS},
     RoleCode.OPS: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
@@ -141,6 +143,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
+        P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({

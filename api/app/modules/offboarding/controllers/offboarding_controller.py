@@ -31,8 +31,8 @@ class OffboardingController:
     async def detail(self, user: CurrentUser, offboarding_id: UUID) -> OffboardingDetail:
         return OffboardingDetail(**await self.service.detail(user, offboarding_id))
 
-    async def create(self, data: OffboardingCreate) -> OffboardingDetail:
-        return OffboardingDetail(**await self.service.create(data))
+    async def create(self, data: OffboardingCreate, user: CurrentUser | None = None) -> OffboardingDetail:
+        return OffboardingDetail(**await self.service.create(data, user))
 
     async def verify_item(self, user: CurrentUser, item_id: UUID, data: ClearanceItemVerify) -> OffboardingDetail:
         return OffboardingDetail(**await self.service.verify_item(user, item_id, data))

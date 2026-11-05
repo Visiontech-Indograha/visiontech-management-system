@@ -167,6 +167,9 @@ class Settings(BaseSettings):
     # set RATE_LIMIT_ENFORCE=true untuk menolak 429 + Retry-After. Limit = permintaan per menit per IP
     # dan per pengguna (pengguna = `sub` token sah; login/refresh hanya per IP).
     RATE_LIMIT_ENFORCE: bool = False
+    # Peran ganda (ADR 0002): bila true, izin dan cakupan kantor memakai union peran utama + penugasan aktif
+    # (tabel user_role_assignment). Bawaan MATI = perilaku lama persis (peran utama saja).
+    ROLE_ASSIGNMENT_ENABLED: bool = False
     RATE_LIMIT_AUTH_PER_MIN: int = 30
     RATE_LIMIT_FILE_URL_PER_MIN: int = 120
     RATE_LIMIT_UPLOAD_PER_MIN: int = 60

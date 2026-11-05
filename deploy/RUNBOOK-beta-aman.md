@@ -177,3 +177,9 @@ Catatan: langkah ini mengubah path, bukan data. Tidak ada perintah `volume prune
 2. Batas memori face: 1200m (sekarang) atau 768m. Pengukuran 482 MB (2026-10-28) belum mencakup beban puncak. Ukur `docker stats` dulu.
 3. Apakah `api.env` beta (disalin dari templat prod, hanya kunci koneksi yang diganti) masih memuat kunci lain dari prod (mis. webhook, SMTP). Periksa nama variabelnya saja.
 4. Akun seed `db/07` memakai `password_hash` yang sudah ada di repo. Pastikan hash itu bukan sandi yang dipakai di luar uji.
+
+## Batas memori kontainer beta
+Beta dan prod berbagi satu host 3,8 GB (swap sempat terpakai 83%). Tanpa batas, beban atau build beta menekan produksi. Batas Compose (`mem_limit`): api 512m, db 256m, minio 384m, web 64m (face 1200m sudah ada). Berkas: `deploy/beta/compose.yml` dan `deploy/beta/compose.infra.yml`.
+- Lihat pemakaian: `docker stats --no-stream vms_beta_api vms_beta_web vms_db_beta vms_minio_beta`.
+- Batas baru baru berlaku saat kontainer dibuat ulang pada deploy beta berikutnya (autodeploy); tidak ada yang diubah di server sekarang.
+- Bila kontainer sering mati OOM (`docker inspect -f '{{.State.OOMKilled}}' <nama>`), naikkan batas secara terukur, jangan dicabut.

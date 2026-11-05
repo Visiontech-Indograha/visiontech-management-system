@@ -70,17 +70,18 @@ class MessService:
         await self.repo.archive_place(mess_id)
 
     # --- hunian ----------------------------------------------------------------------------------------------------
-    async def _offices(self, user: CurrentUser | None) -> list[str] | None:
-        """None = semua kantor. HR (bukan SA/OM) dibatasi ke kantor jangkauannya bila ROLE_ASSIGNMENT_ENABLED."""
+    async def _offices(self, user: CurrentUser | None, perm: Permission = Permission.VIEW_MESS) -> list[str] | None:
+        """None = semua kantor. Cakupan dihitung per izin yang diperiksa rute (ADR 0002): izin yang juga dibawa OM
+        (lihat/tinjau) = semua kantor bagi OM+HR; izin yang hanya dibawa HR (kelola) dibatasi ke kantor tugas HR."""
         if user is None:
             return None
-        restriction = await office_restriction(self.db, user, Permission.MANAGE_MESS,
-                                               ("SUPER_ADMIN", "OPERATIONAL_MANAGER"))
+        restriction = await office_restriction(self.db, user, perm, division_roles=("PROJECT_MANAGER",))
         return None if restriction is None else offices_param(restriction)
 
-    async def _ensure_employee(self, user: CurrentUser | None, employee_id: UUID | str) -> None:
-        if user is not None and await self._offices(user) is not None:
-            await ensure_employee_in_scope(self.db, user, Permission.MANAGE_MESS, employee_id, "Hunian mess")
+    async def _ensure_employee(self, user: CurrentUser | None, employee_id: UUID | str,
+                               perm: Permission = Permission.VIEW_MESS) -> None:
+        if user is not None and await self._offices(user, perm) is not None:
+            await ensure_employee_in_scope(self.db, user, perm, employee_id, "Hunian mess")
 
     async def list_stays(
         self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None,
@@ -88,11 +89,12 @@ class MessService:
     ) -> list[Any]:
         return await self.repo.list_stays(employee_id, start, end, status, await self._offices(user))
 
-    async def get_stay(self, mess_stay_id: UUID, user: CurrentUser | None = None) -> Any:
+    async def get_stay(self, mess_stay_id: UUID, user: CurrentUser | None = None,
+                       perm: Permission = Permission.VIEW_MESS) -> Any:
         stay = await self.repo.get(mess_stay_id)
         if stay is None:
             raise NotFoundError("Hunian mess")
-        await self._ensure_employee(user, stay.employee_id)
+        await self._ensure_employee(user, stay.employee_id, perm)
         return stay
 
     async def _check_period(self, employee_id: UUID | str, start: date, end: date,
@@ -121,7 +123,7 @@ class MessService:
 
     async def create_stay(self, user: CurrentUser, data: MessStayCreate) -> Any:
         """Pencatatan langsung HR/GA: langsung disetujui."""
-        await self._ensure_employee(user, data.employee_id)
+        await self._ensure_employee(user, data.employee_id, Permission.MANAGE_MESS)
         if not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan atau tidak aktif.")
         place = await self.get_place(data.mess_id)
@@ -176,7 +178,7 @@ class MessService:
         return False
 
     async def decide(self, user: CurrentUser, mess_stay_id: UUID, data: MessDecision) -> Any:
-        stay = await self.get_stay(mess_stay_id, user)
+        stay = await self.get_stay(mess_stay_id, user, Permission.REVIEW_MESS)
         if str(user.employee_id) == str(stay.employee_id):
             raise ForbiddenError("Pemohon tidak dapat memutuskan pengajuannya sendiri.")
         if not await self._can_decide(user, stay.employee_id):
@@ -240,7 +242,7 @@ class MessService:
         return await self.repo.get(mess_stay_id)
 
     async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate, user: CurrentUser | None = None) -> Any:
-        stay = await self.get_stay(mess_stay_id, user)
+        stay = await self.get_stay(mess_stay_id, user, Permission.MANAGE_MESS)
         start = data.stay_start_date or stay.stay_start_date
         end = data.stay_end_date or stay.stay_end_date
         await self._check_period(stay.employee_id, start, end, exclude=mess_stay_id)
@@ -250,5 +252,5 @@ class MessService:
         return await self.repo.get(mess_stay_id)
 
     async def delete_stay(self, mess_stay_id: UUID, user: CurrentUser | None = None) -> None:
-        await self.get_stay(mess_stay_id, user)
+        await self.get_stay(mess_stay_id, user, Permission.MANAGE_MESS)
         await self.repo.archive(mess_stay_id)

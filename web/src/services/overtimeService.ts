@@ -51,10 +51,12 @@ export function useReviewOvertime() {
 }
 
 /** Lembur milik sendiri (API memfilter menurut akun: karyawan hanya miliknya). */
-export const useMyOvertime = () =>
+export const useMyOvertime = (employeeId?: string | null) =>
   useQuery({
     queryKey: ["overtime", "mine"],
     queryFn: async () => (await api.get<Overtime[]>("/overtime")).data,
+    // Peninjau menerima lembur banyak orang dari API; daftar ini hanya milik pengguna login.
+    select: (rows) => rows.filter((r) => r.employee_id === employeeId),
   });
 
 /** Ajukan lembur dengan kunci anti-ganda; menyegarkan semua daftar lembur. */

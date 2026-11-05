@@ -9,7 +9,7 @@ export function OvertimePage() {
   const canReview =
     (me?.permissions ?? []).includes("review:overtime") || ["PROJECT_MANAGER", "OPERATIONAL_MANAGER"].includes(me?.role ?? "");
   const [applying, setApplying] = useState(false);
-  const mine = useMyOvertime();
+  const mine = useMyOvertime(me?.employee_id);
   const pending = useOvertimePending();
   return (
     <OvertimeTemplate

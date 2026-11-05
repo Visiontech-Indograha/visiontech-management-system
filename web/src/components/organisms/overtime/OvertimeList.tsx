@@ -7,10 +7,16 @@ import { formatDate } from "@/lib/format";
 import type { Overtime } from "@/services/overtimeService";
 
 /** Daftar lembur sendiri dengan status. */
-export function OvertimeList({ query }: { query: UseQueryResult<Overtime[]> }) {
+export function OvertimeList({ query, titled = false }: { query: UseQueryResult<Overtime[]>; titled?: boolean }) {
   const rows = query.data ?? [];
   return (
-    <QueryState query={query} errorText="Daftar lembur tidak dapat dimuat." empty={rows.length === 0} emptyText="Belum ada pengajuan lembur.">
+    <section className="space-y-3">
+      {titled && (
+        <TextBlock as="h2" className="font-semibold text-ink">
+          Lembur saya
+        </TextBlock>
+      )}
+      <QueryState query={query} errorText="Daftar lembur tidak dapat dimuat." empty={rows.length === 0} emptyText="Belum ada pengajuan lembur.">
       <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {rows.map((r) => (
           <ListEntry key={r.id} className="space-y-2 rounded-panel border border-line bg-surface p-4 shadow-card">
@@ -26,6 +32,7 @@ export function OvertimeList({ query }: { query: UseQueryResult<Overtime[]> }) {
           </ListEntry>
         ))}
       </ListBlock>
-    </QueryState>
+      </QueryState>
+    </section>
   );
 }

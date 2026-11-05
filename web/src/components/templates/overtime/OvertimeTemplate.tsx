@@ -18,7 +18,7 @@ export function OvertimeTemplate({ mine, pending, canReview, applying, onApply, 
   return (
     <PageTemplate title="Lembur" description="Ajukan lembur dan pantau statusnya." action={<OvertimeApplyButton onApply={onApply} />}>
       {canReview && <OvertimeReviewList query={pending} />}
-      <OvertimeList query={mine} />
+      <OvertimeList query={mine} titled={canReview} />
       {applying && <OvertimeApplyDialog onClose={onCloseApply} />}
     </PageTemplate>
   );

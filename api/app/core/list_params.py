@@ -15,6 +15,9 @@ from fastapi import HTTPException, Query, Response
 
 MAX_PAGE_SIZE = 100
 TOTAL_HEADER = "X-Total-Count"
+# Batas atas baris untuk daftar tanpa paginasi (kontrak lama: semua baris). Hanya berlaku bila > 5000 baris
+# (riset 01 F-06). Dipakai sebagai `LIMIT :cap` di SQL; tidak mengubah hasil untuk data yang lebih kecil.
+MAX_ROWS_UNPAGED = 5000
 
 
 def check_date_range(

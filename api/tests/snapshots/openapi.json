@@ -28950,6 +28950,18 @@
       }
      },
      {
+      "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)",
+      "in": "query",
+      "name": "mine",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)",
+       "title": "Mine",
+       "type": "boolean"
+      }
+     },
+     {
       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
       "in": "query",
       "name": "q",

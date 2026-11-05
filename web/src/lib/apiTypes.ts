@@ -20782,6 +20782,8 @@ export interface operations {
                 daily_plan_id?: string | null;
                 /** @description Alias daily_plan_id */
                 work_plan_id?: string | null;
+                /** @description true = hanya lembur milik pemanggil (hanya mempersempit cakupan) */
+                mine?: boolean;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */

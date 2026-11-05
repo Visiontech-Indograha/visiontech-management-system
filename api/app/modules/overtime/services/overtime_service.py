@@ -111,15 +111,19 @@ class OvertimeService:
         limit: int | None = None,
         status: str | None = None,
         q: str | None = None,
+        mine: bool = False,
     ) -> Sequence[Any]:
         """Cakupan akses sama untuk kedua mode; `after` != None = keyset (limit baris, filter di SQL)."""
+        own = str(user.employee_id) if mine and user.employee_id else None
+        if mine and own is None:
+            return []  # mine hanya mempersempit; tanpa employee tidak ada lembur milik sendiri
         if daily_plan_id:
             await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
-            return await self.repo.list_by_plan(daily_plan_id, after, limit, status, q)
+            return await self.repo.list_by_plan(daily_plan_id, after, limit, status, q, mine=own)
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
-            return await self.repo.list_all_active(None, after, limit, status, q, await self._offices(user))
+            return await self.repo.list_all_active(None, after, limit, status, q, await self._offices(user), mine=own)
         if user.has_role("PROJECT_MANAGER") and user.employee_id:
-            return await self.repo.list_all_active(user.employee_id, after, limit, status, q)
+            return await self.repo.list_all_active(user.employee_id, after, limit, status, q, mine=own)
         if user.employee_id:
             return await self.repo.list_by_employee(user.employee_id, after, limit, status, q)
         return []

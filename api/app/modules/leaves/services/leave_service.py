@@ -160,13 +160,15 @@ class LeaveService:
                     details={"conflicts": conflicts},
                 )
 
-        await self.repo.update_review(
+        if not await self.repo.update_review(
             leave_id=leave_id,
             status=new_status,
             reviewer_id=user.employee_id,
             is_pm=is_pm,
             note=data.note.strip() if data.note else None,
-        )
+            expected=leave.status,
+        ):
+            raise AppError("INVALID_STATE", "Status cuti sudah berubah; muat ulang lalu coba lagi.", status=409)
 
         # Potong kuota cuti tahunan hanya saat disetujui pertama kali (mencegah double deduction)
         # Serta kembalikan saldo (refund) jika persetujuan awal PM kemudian ditolak oleh HR
@@ -225,7 +227,8 @@ class LeaveService:
             )
 
         reason = ((data.reason or "").strip() if data else "") or None
-        await self.repo.cancel_leave(leave_id, reason)
+        if not await self.repo.cancel_leave(leave_id, reason, leave.status):
+            raise AppError("NOT_CANCELLABLE", "Status cuti sudah berubah; muat ulang lalu coba lagi.", status=409)
         # Kuota tahunan sudah dipotong saat persetujuan pertama; kembalikan sesuai status sebelum dibatalkan
         if leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES:
             await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)

@@ -19,10 +19,11 @@ interface Values {
 }
 
 /** Dialog "Tambah peran": HR/Finance wajib pilih kantor, OM otomatis semua kantor. Kombinasi terlarang ditolak di layar. */
-export function RoleAssignmentAddDialog({ userId, primaryRole, held, extraCount, isSelf, onClose }: {
+export function RoleAssignmentAddDialog({ userId, primaryRole, held, scopes, extraCount, isSelf, onClose }: {
   userId: string;
   primaryRole?: string | null;
   held: string[];
+  scopes?: { role: string; office_id?: string | null }[];
   extraCount: number;
   isSelf: boolean;
   onClose: () => void;
@@ -40,12 +41,12 @@ export function RoleAssignmentAddDialog({ userId, primaryRole, held, extraCount,
   const values = useWatch({ control });
   const idem = useIdempotencyKey(JSON.stringify(values));
   const role = values.role ?? "";
-  const blocker = role ? roleAddBlocker({ role, primaryRole, held, extraCount, isSelf }) : null;
+  const blocker = role ? roleAddBlocker({ role, primaryRole, held, scopes, officeId: values.office_id, extraCount, isSelf }) : null;
 
   const onSubmit = async (v: Values) => {
     setFormError(null);
     if (!v.role) return setError("role", { message: "Pilih peran." });
-    const stop = roleAddBlocker({ role: v.role, primaryRole, held, extraCount, isSelf });
+    const stop = roleAddBlocker({ role: v.role, primaryRole, held, scopes, officeId: v.office_id, extraCount, isSelf });
     if (stop) return setFormError(stop);
     if (needsOffice(v.role) && !v.office_id) return setError("office_id", { message: "Pilih kantor." });
     try {

@@ -104,6 +104,7 @@ function PanelBody({ employee, myUserId }: { employee: Employee; myUserId?: stri
           userId={userId}
           primaryRole={primaryRole}
           held={held}
+          scopes={rows}
           extraCount={extras.length}
           isSelf={!!myUserId && myUserId === userId}
           onClose={() => setAdding(false)}

@@ -6,14 +6,16 @@ import { AttendanceList } from "@/components/organisms/attendance/AttendanceList
 import { AttendanceReviewDialog } from "@/components/organisms/attendance/AttendanceReviewDialog";
 import { AttendanceScopeTabs } from "@/components/organisms/attendance/AttendanceScopeTabs";
 import { OfficeCheckInCard } from "@/components/organisms/attendance/OfficeCheckInCard";
-import type { Attendance, AttendanceFilters, AttendanceList as AttendanceListData } from "@/services/attendanceService";
+import type { KeysetMore } from "@/hooks/useKeysetList";
+import type { Attendance,AttendanceFilters, AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { PageTemplate } from "../PageTemplate";
 
 type AttendanceDialog = { kind: "review" | "explain"; item: Attendance } | null;
 
 /** Kerangka "Absensi": absen kantor, tab jenis, saringan, daftar absensi, dialog tinjau/penjelasan. */
-export function AttendanceTemplate({ list, filters: f, onFilterChange: set, hasTeam, teamLabel, onScopeChange, meEmployeeId, canExport, open, onOpen, onClose }: {
+export function AttendanceTemplate({ list, more, filters: f, onFilterChange: set, hasTeam, teamLabel, onScopeChange, meEmployeeId, canExport, open, onOpen, onClose }: {
   list: UseQueryResult<AttendanceListData>;
+  more: KeysetMore;
   filters: AttendanceFilters;
   onFilterChange: (patch: Partial<AttendanceFilters>) => void;
   hasTeam: boolean;
@@ -37,7 +39,7 @@ export function AttendanceTemplate({ list, filters: f, onFilterChange: set, hasT
       )}
       <AttendanceFilter filters={f} onChange={set} />
       {canExport && <AttendanceExportPanel />}
-      <AttendanceList list={list} page={f.page} meEmployeeId={meEmployeeId} onPageChange={(page) => set({ page })} onOpen={onOpen} />
+      <AttendanceList list={list} more={more} meEmployeeId={meEmployeeId} onOpen={onOpen} />
 
       {open?.kind === "review" && <AttendanceReviewDialog item={open.item} onClose={onClose} />}
       {open?.kind === "explain" && <AttendanceExplainDialog item={open.item} onClose={onClose} />}

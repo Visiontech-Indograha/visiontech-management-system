@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useKeysetList } from "@/hooks/useKeysetList";
 import { api } from "@/lib/apiClient";
 import { idempotencyHeaders } from "@/lib/idempotency";
 import type { components } from "@/lib/apiTypes";
@@ -23,18 +24,15 @@ export async function reviewOvertime(id: string, body: components["schemas"]["Ov
   return (await api.post<Overtime>(`/overtime/${id}/review`, body)).data;
 }
 
-/** GET /overtime?status=PENDING_PM — lembur yang menunggu keputusan (API memfilter sesuai hak peninjau). */
-export async function listPendingOvertime(): Promise<Overtime[]> {
-  return (await api.get<Overtime[]>("/overtime", { params: { status: "PENDING_PM" } })).data;
-}
+const OT_SIZE = 20;
 
-const overtimeKey = (planId: string) => ["overtime", planId] as const;
-
-/** Antrean tinjau lembur. Prefix ["overtime"] ikut tersegarkan saat ada keputusan. */
+/** GET /overtime?status=PENDING_PM — antrean tinjau lembur (keyset; API memfilter sesuai hak peninjau). Prefix ["overtime"] ikut tersegarkan saat ada keputusan. */
 export const useOvertimePending = () =>
-  useQuery({
-    queryKey: ["overtime", "pending"],
-    queryFn: listPendingOvertime,
+  useKeysetList<Overtime[], Overtime[]>({
+    key: ["overtime", "pending"],
+    url: "/overtime",
+    params: { status: "PENDING_PM", size: OT_SIZE },
+    merge: (pages) => pages.flat(),
   });
 
 /** Setujui/tolak lembur; menyegarkan antrean, daftar lembur rencana, dan rekap. */
@@ -50,14 +48,16 @@ export function useReviewOvertime() {
   });
 }
 
-/** Lembur milik sendiri (API memfilter menurut akun: karyawan hanya miliknya). */
+/** Lembur milik sendiri (keyset; peninjau menerima lembur banyak orang sehingga disaring ke pengguna login). */
 export const useMyOvertime = (employeeId?: string | null) =>
-  useQuery({
-    queryKey: ["overtime", "mine"],
-    queryFn: async () => (await api.get<Overtime[]>("/overtime")).data,
-    // Peninjau menerima lembur banyak orang dari API; daftar ini hanya milik pengguna login.
-    select: (rows) => rows.filter((r) => r.employee_id === employeeId),
+  useKeysetList<Overtime[], Overtime[]>({
+    key: ["overtime", "mine"],
+    url: "/overtime",
+    params: { size: OT_SIZE },
+    merge: (pages) => pages.flat().filter((r) => r.employee_id === employeeId),
   });
+
+const overtimeKey = (planId: string) => ["overtime", planId] as const;
 
 /** Ajukan lembur dengan kunci anti-ganda; menyegarkan semua daftar lembur. */
 export function useCreateOvertime() {

@@ -28,7 +28,7 @@ describe("Audit log", () => {
     renderRoute("/audit-logs", { role: "ADMIN" });
     await screen.findByText("Belum ada catatan.");
     fireEvent.change(screen.getByLabelText("Filter entitas"), { target: { value: "work_plan" } });
-    await waitFor(() => expect(calls[calls.length - 1]?.params).toMatchObject({ entity_type: "work_plan", page: 1 }));
+    await waitFor(() => expect(calls[calls.length - 1]?.params).toMatchObject({ entity_type: "work_plan", cursor: "" }));
   });
 
   it("galat menampilkan tombol Coba lagi", async () => {

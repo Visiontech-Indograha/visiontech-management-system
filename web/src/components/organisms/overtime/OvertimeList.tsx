@@ -1,5 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { LoadMoreBar } from "@/components/organisms/LoadMoreBar";
+import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -7,7 +9,7 @@ import { formatDate } from "@/lib/format";
 import type { Overtime } from "@/services/overtimeService";
 
 /** Daftar lembur sendiri dengan status. */
-export function OvertimeList({ query, titled = false }: { query: UseQueryResult<Overtime[]>; titled?: boolean }) {
+export function OvertimeList({ query, more, titled = false }: { query: UseQueryResult<Overtime[]>; more: KeysetMore; titled?: boolean }) {
   const rows = query.data ?? [];
   return (
     <section className="space-y-3">
@@ -32,6 +34,7 @@ export function OvertimeList({ query, titled = false }: { query: UseQueryResult<
           </ListEntry>
         ))}
       </ListBlock>
+        <LoadMoreBar more={more} />
       </QueryState>
     </section>
   );

@@ -9,6 +9,9 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Diubah
+- `/health` publik hanya mengembalikan `{"status":"ok"}` (field `version` dihapus agar versi tidak bocor tanpa login). Dampak: PATCH.
+
 ### Ditambahkan
 - **Kendali admin akun karyawan** (HR/admin dengan izin kelola pengguna; hapus permanen khusus SUPER_ADMIN), di kartu akun dan detail karyawan:
   - Daftar perangkat yang masuk per akun, cabut satu perangkat, keluarkan semua perangkat, dan kosongkan slot perangkat (API `GET /employees/{id}/account/sessions`, `POST …/sessions/{session_id}/revoke`, `POST …/sessions/revoke-all`, `POST …/device-slots/reset`).

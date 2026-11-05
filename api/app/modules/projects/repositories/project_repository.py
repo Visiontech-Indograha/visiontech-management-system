@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.repository import BaseRepository, escape_like, safe_columns
 
 _SELECT = """
@@ -44,9 +45,11 @@ class ProjectRepository(BaseRepository):
               AND (CAST(:q AS varchar) IS NULL OR p.project_title ILIKE '%' || CAST(:q AS varchar) || '%'
                    OR p.spk_number ILIKE '%' || CAST(:q AS varchar) || '%')
             ORDER BY (p.status = 'ONGOING') DESC, p.start_date DESC
+            LIMIT :cap
             """,
             {"all": see_all, "emp": employee_id, "div": str(division_id) if division_id else None,
-             "client": str(client_id) if client_id else None, "status": status, "q": escape_like(q)},
+             "client": str(client_id) if client_id else None, "status": status, "q": escape_like(q),
+             "cap": MAX_ROWS_UNPAGED},
         ))
 
     async def get(self, project_id: UUID | str, *, see_all: bool = True, employee_id: str | None = None) -> Any:

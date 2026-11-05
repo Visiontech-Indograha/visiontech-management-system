@@ -9,7 +9,13 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
-- Basis data: tabel `user_role_assignment` (peran ganda dan penugasan kantor, ADR 0002 fase 1) lewat migrasi v2_0029, hanya tahap expand (tabel, indeks, isi awal dari `users.system_role` dan `employee.office_id`); kolom lama tidak berubah dan akses tidak berubah. Bukti paritas: `scripts/paritas-penugasan.sql`.
+### Paket kecil API
+- OM (Operational Manager) kini memegang izin `export:attendance`; ekspor CSV memuat semua kantor. Dampak: MINOR.
+- Pengembalian aset memakai UPDATE bersyarat (409 INVALID_STATE bila sudah berubah).
+- Tes penjaga bentuk respons `/version` dan `/app/android/update`; rapikan komentar migrasi v2_0027 dan dokumen OFFSET.
+
+### Basis data
+- Tabel `user_role_assignment` (peran ganda dan penugasan kantor, ADR 0002 fase 1) lewat migrasi v2_0029, hanya tahap expand (tabel, indeks, isi awal dari `users.system_role` dan `employee.office_id`); kolom lama tidak berubah dan akses tidak berubah. Bukti paritas: `scripts/paritas-penugasan.sql`.
 
 ## [1.6.0] - 2026-11-05
 

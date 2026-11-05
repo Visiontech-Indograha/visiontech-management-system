@@ -303,7 +303,7 @@ Biaya per permintaan = jumlah kueri x biaya per kueri; n = baris yang tersentuh.
 
 | Pola yang ada | Kompleksitas | Tindakan |
 |---|---|---|
-| `apply_list` memuat seluruh tabel lalu memotong di Python | O(N) per halaman | pindahkan `LIMIT`/`OFFSET` ke SQL; indeks |
+| `apply_list` memuat seluruh tabel lalu memotong di Python | O(N) per halaman | pindahkan `LIMIT` ke SQL dengan keyset (bukan `OFFSET` baru); indeks |
 | Daftar tanpa `LIMIT` (projects, clients, divisions, job_positions) | O(N) respons | tambahkan `ListParams` |
 | Bulk jadwal memakai kueri per sel | O(sel) kueri | batch dengan `IN` atau JOIN |
 | `COUNT(*)` per halaman log aktivitas | O(N) per halaman | hitung terpisah atau estimasi; indeks `created_at` |

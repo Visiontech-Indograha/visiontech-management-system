@@ -10859,6 +10859,8 @@
       "type": "string"
      },
      "hours": {
+      "exclusiveMinimum": 0.0,
+      "maximum": 12.0,
       "title": "Hours",
       "type": "number"
      },

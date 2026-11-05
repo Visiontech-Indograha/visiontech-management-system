@@ -47,6 +47,7 @@ async def list_overtime(
     status: str | None = Query(None, max_length=30, description="Filter status lembur"),
     daily_plan_id: UUID | None = Query(None, description="ID jadwal harian"),
     work_plan_id: UUID | None = Query(None, description="Alias daily_plan_id"),
+    mine: bool = Query(False, description="true = hanya lembur milik pemanggil (hanya mempersempit cakupan)"),
     current_user: CurrentUser = Depends(get_current_user),
     controller: OvertimeController = Depends(),
 ) -> list[OvertimeResponse]:
@@ -58,10 +59,11 @@ async def list_overtime(
     after = parse_cursor(cursor, ("datetime", "uuid"))
     if after is not None:
         found = await controller.handle_list(
-            current_user, daily_plan_id or work_plan_id, after=after, limit=params.size + 1, status=status, q=params.q
+            current_user, daily_plan_id or work_plan_id, after=after, limit=params.size + 1, status=status, q=params.q,
+            mine=mine,
         )
         return finish_page(found, params.size, response, lambda r: (r.created_at, r.id))
-    rows = await controller.handle_list(current_user, daily_plan_id or work_plan_id)
+    rows = await controller.handle_list(current_user, daily_plan_id or work_plan_id, mine=mine)
     return list(
         apply_list(
             rows,

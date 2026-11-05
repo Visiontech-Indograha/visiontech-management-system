@@ -81,17 +81,23 @@ class OvertimeRepository(BaseRepository):
 
     @staticmethod
     def _keyset(
-        after: tuple[Any, ...] | None, limit: int | None, status: str | None, q: str | None
+        after: tuple[Any, ...] | None, limit: int | None, status: str | None, q: str | None,
+        mine: str | None = None,
     ) -> tuple[str, str, dict[str, Any]]:
         """Potongan SQL mode keyset: (kondisi tambahan, ORDER/LIMIT, parameter).
 
         `after` None = perilaku lama (tanpa LIMIT). Urutan `create_at DESC, overtime_id DESC` memakai indeks
         `ix_overtime_*_created_keyset`; `q` = awalan nama karyawan.
         """
-        if after is None:
-            return "", "ORDER BY o.create_at DESC", {}
         cond = ""
-        params: dict[str, Any] = {"lim": limit}
+        params: dict[str, Any] = {}
+        if mine:
+            # Hanya mempersempit: di-AND dengan cakupan lain (indeks ix_overtime_employee_created_keyset).
+            cond += " AND o.employee_id = CAST(:mine AS uuid)"
+            params["mine"] = str(mine)
+        if after is None:
+            return cond, "ORDER BY o.create_at DESC", params
+        params["lim"] = limit
         if after:
             cond += " AND (o.create_at, o.overtime_id) < (CAST(:c_at AS timestamptz), CAST(:c_id AS uuid))"
             params["c_at"], params["c_id"] = after[0], str(after[1])
@@ -111,8 +117,9 @@ class OvertimeRepository(BaseRepository):
         status: str | None = None,
         q: str | None = None,
         offices: list[str] | None = None,
+        mine: str | None = None,
     ) -> Sequence[Any]:
-        cond, tail, extra = self._keyset(after, limit, status, q)
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         return await self.fetchall(
             f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
             f"WHERE o.daily_plan_id = CAST(:p AS uuid) AND o.delete_at IS NULL{cond} {tail}",
@@ -127,8 +134,9 @@ class OvertimeRepository(BaseRepository):
         status: str | None = None,
         q: str | None = None,
         offices: list[str] | None = None,
+        mine: str | None = None,
     ) -> Sequence[Any]:
-        cond, tail, extra = self._keyset(after, limit, status, q)
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         return await self.fetchall(
             f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
             f"WHERE o.employee_id = CAST(:emp AS uuid) AND o.delete_at IS NULL{cond} {tail}",
@@ -143,8 +151,9 @@ class OvertimeRepository(BaseRepository):
         status: str | None = None,
         q: str | None = None,
         offices: list[str] | None = None,
+        mine: str | None = None,
     ) -> Sequence[Any]:
-        cond, tail, extra = self._keyset(after, limit, status, q)
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         sql = f"""
             SELECT {_COLUMNS} FROM overtime o
             JOIN employee e ON e.employee_id = o.employee_id

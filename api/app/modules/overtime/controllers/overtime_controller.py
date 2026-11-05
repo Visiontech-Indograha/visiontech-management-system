@@ -54,10 +54,11 @@ class OvertimeController:
         limit: int | None = None,
         status: str | None = None,
         q: str | None = None,
+        mine: bool = False,
     ) -> list[OvertimeResponse]:
         """Mengambil daftar lembur untuk satu work plan atau rekap lembur pengguna aktif (keyset bila `after`)."""
         rows = await self.overtime_service.list_overtimes(
-            current_user, daily_plan_id, after=after, limit=limit, status=status, q=q
+            current_user, daily_plan_id, after=after, limit=limit, status=status, q=q, mine=mine
         )
         flagged = await self.overtime_service.with_review_flags(current_user, rows)
         return [OvertimeResponse(**m) for m in flagged]

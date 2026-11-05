@@ -12,16 +12,36 @@ cd "$BASE"
 [ -f deploy.env ] && . ./deploy.env
 DB_CONTAINER="${VMS_DB_CONTAINER:-vms_db_prod}"
 API_CONTAINER="${VMS_CONTAINER_PREFIX:-vms}_api"
-mkdir -p backups
 
+# Pisah per lingkungan (opsional; bawaan = perilaku lama). Lihat deploy/PANDUAN-PISAH-CADANGAN.md.
+#   VMS_BACKUP_DIR  : folder cadangan (bawaan "backups" di dalam BASE).
+#   VMS_BACKUP_NAME : awalan nama berkas, mis. prod / beta (bawaan = nama DB; retensi lama = semua *.dump).
+BKDIR="${VMS_BACKUP_DIR:-backups}"
+BKNAME="${VMS_BACKUP_NAME:-}"
+mkdir -p "$BKDIR"
+
+# Nama berkas: <awalan>-<label>-<stempel>.dump
+backup_file_name() { echo "$BKDIR/$1-$2-$(date +%Y%m%d-%H%M%S).dump"; }
+
+# Retensi: simpan 7 terbaru. Tanpa VMS_BACKUP_NAME = semua *.dump di folder (perilaku lama). Dengan awalan =
+# hanya berkas "<awalan>-*" dan berkas nama lama "<DB>-*" milik DB ini; berkas lingkungan lain tidak disentuh.
+backup_retention() {
+  local pat=("$BKDIR"/*.dump)
+  if [ -n "$BKNAME" ]; then
+    pat=("$BKDIR/$BKNAME"-*.dump)
+    [ -n "${DB:-}" ] && [ "$DB" != "$BKNAME" ] && pat+=("$BKDIR/$DB"-*.dump)
+  fi
+  ls -1t "${pat[@]}" 2>/dev/null | tail -n +8 | xargs -r rm -f || true
+}
 # Retensi WAJIB jalan walau unggah MinIO gagal: tanpa trap, `exit 4` di bawah melewati baris ini
 # dan dump menumpuk tanpa batas (insiden 2026-10-13: 12 dump @1.9 MB dalam 12 menit).
-retention() { ls -1t backups/*.dump 2>/dev/null | tail -n +8 | xargs -r rm -f || true; }
-trap retention EXIT
+# Untuk tes: VMS_BACKUP_SOURCE_ONLY=1 hanya memuat fungsi.
+[ "${VMS_BACKUP_SOURCE_ONLY:-}" = 1 ] && return 0
+trap backup_retention EXIT
 
 DB=$(grep -E '^DATABASE_URL=' api.env | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#')
 [ -n "$DB" ] || { echo "Nama DB tidak ditemukan di api.env" >&2; exit 2; }
-FILE="backups/$DB-$LABEL-$(date +%Y%m%d-%H%M%S).dump"
+FILE=$(backup_file_name "${BKNAME:-$DB}" "$LABEL")
 
 docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc" > "$FILE"
 [ -s "$FILE" ] || { echo "Backup kosong: $FILE" >&2; exit 3; }

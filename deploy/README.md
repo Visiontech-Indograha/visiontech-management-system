@@ -107,6 +107,11 @@ dan `https://portal.visiontechindo.com` — bukan alamat Tailscale, agar terbuka
 `ssh ageng@192.168.88.160 "bash -s" < deploy/setel-url-verifikasi.sh` (salinan api.env dibuat; salinan rollback
 `api.env.sebelum-vms_api.*` ikut disamakan). Keduanya dibuat ulang setiap dokumen dibuka.
 
+## Cadangan terpisah per lingkungan (opsional)
+`VMS_BACKUP_DIR` (folder) dan `VMS_BACKUP_NAME` (awalan nama berkas) di `deploy.env` memisahkan cadangan prod dan beta;
+tanpa keduanya perilaku lama (`backups/`, nama DB, 7 berkas). Langkah aman: `deploy/PANDUAN-PISAH-CADANGAN.md`.
+Tes logika: `bash scripts/uji-backup-retensi.sh`.
+
 ## Uji pulih cadangan (P9-5)
 `ssh ageng@192.168.88.160 "bash -s" < deploy/uji-pulih-cadangan.sh` — membuat cadangan baru lewat `backup.sh`,
 mengunduh salinan MinIO-nya (SHA-256 harus sama), memulihkannya ke Postgres SEMENTARA (citra sama, tanpa jaringan),

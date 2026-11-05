@@ -32,10 +32,25 @@ class _FakeApi implements VmsApi {
   DioException? reviewError;
   final List<Map<String, dynamic>> reviews = [];
 
+  /// Halaman keyset palsu: kursor -> (isi, kursor berikut).
+  Map<String, ({List<Map<String, dynamic>> items, String? next})> halaman = {};
+  DioException? cursorError;
+  final List<String> cursors = [];
+
   @override
-  Future<List<Map<String, dynamic>>> myOvertime() async {
+  Future<({List<Map<String, dynamic>> items, String? nextCursor})> myOvertime({
+    String cursor = '',
+  }) async {
+    cursors.add(cursor);
     if (muatError != null) throw muatError!;
-    return items;
+    if (cursor.isNotEmpty && cursorError != null) {
+      final e = cursorError!;
+      cursorError = null; // hanya sekali
+      throw e;
+    }
+    final h = halaman[cursor];
+    if (h != null) return (items: h.items, nextCursor: h.next);
+    return (items: items, nextCursor: null);
   }
 
   @override
@@ -109,6 +124,46 @@ void main() {
     await _pump(tester, fake);
     expect(find.textContaining('Tidak ada koneksi ke server'), findsOneWidget);
     expect(find.text('Coba lagi'), findsOneWidget);
+  });
+
+  testWidgets('keyset: halaman pertama kursor kosong, muat berikut menambah isi', (tester) async {
+    final fake = _FakeApi()
+      ..halaman = {
+        '': (items: [_lembur(id: 'a', nama: 'Ani')], next: 'c2'),
+        'c2': (items: [_lembur(id: 'b', nama: 'Bimo')], next: null),
+      };
+    await _pump(tester, fake);
+    expect(fake.cursors, ['']);
+    expect(find.text('Ani'), findsOneWidget);
+    expect(find.text('Bimo'), findsNothing);
+
+    await tester.tap(find.text('Muat lebih banyak'));
+    await tester.pumpAndSettle();
+    expect(fake.cursors, ['', 'c2']);
+    expect(find.text('Ani'), findsOneWidget);
+    expect(find.text('Bimo'), findsOneWidget);
+    expect(find.text('Muat lebih banyak'), findsNothing);
+  });
+
+  testWidgets('keyset: 422 pada kursor -> pesan sederhana dan muat ulang dari awal', (tester) async {
+    final fake = _FakeApi()
+      ..halaman = {
+        '': (items: [_lembur(id: 'a', nama: 'Ani')], next: 'c2'),
+      }
+      ..cursorError = DioException(
+        requestOptions: RequestOptions(path: '/api/v1/overtime'),
+        type: DioExceptionType.badResponse,
+        response: Response(requestOptions: RequestOptions(path: '/api/v1/overtime'), statusCode: 422),
+      );
+    await _pump(tester, fake);
+
+    await tester.tap(find.text('Muat lebih banyak'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('Daftar sudah berubah, jadi dimuat ulang dari awal.'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(fake.cursors, ['', 'c2', '']);
+    expect(find.text('Ani'), findsOneWidget);
   });
 
   testWidgets('pengaju melihat status sendiri tanpa tombol persetujuan', (tester) async {

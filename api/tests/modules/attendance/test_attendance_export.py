@@ -65,9 +65,18 @@ def test_admin_exports_in_local_time(client, world):
 
 
 def test_export_needs_export_permission(client, world):
-    for who in ("member", "hr", "pm"):
+    for who in ("member", "hr", "pm", "leader"):
         assert _export(client, world, who).status_code == 403, who
-    assert _export(client, world, "admin").status_code == 200
+    for who in ("admin", "ops"):   # SA dan OM (keputusan pemilik)
+        assert _export(client, world, who).status_code == 200, who
+
+
+def test_ops_export_covers_all_offices(client, world):
+    """OM melihat semua kantor: absensi karyawan kantor lain ikut dalam CSV."""
+    _check_in(client, world, "member")
+    nik = sync_query("SELECT employee_no FROM employee WHERE employee_id = %s", (world.employees["member"],))[0][0]
+    rows = list(csv.reader(io.StringIO(_export(client, world, "ops").text)))
+    assert any(r[1] == nik for r in rows[1:])
 
 
 def test_export_rejects_reversed_date_range(client, world):

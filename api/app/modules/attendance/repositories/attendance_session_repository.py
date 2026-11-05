@@ -807,8 +807,13 @@ class AttendanceSessionRepository(BaseRepository):
         offset: int,
         scope: str = "all",
         q: str | None = None,
+        after: tuple[Any, ...] | None = None,
     ) -> tuple[list[Any], int]:
-        """Mengambil daftar absensi berpaginasi dengan informasi can_review."""
+        """Mengambil daftar absensi berpaginasi dengan informasi can_review.
+
+        `after` (mode keyset): None = OFFSET lama (+ COUNT); `()` = halaman pertama; `(tanggal, jam_masuk, id)` =
+        setelah kursor. Mode keyset tanpa OFFSET/COUNT (total dikembalikan 0). Cakupan akses sama persis.
+        """
         status_filter = status
         # Normalize status filter jika berasal dari frontend ('NEEDS_REVIEW' -> 'PENDING_OM' atau mapping sebaliknya)
         params = {
@@ -876,7 +881,20 @@ class AttendanceSessionRepository(BaseRepository):
                 )
             )""",
         ]
+        keyset = after is not None
+        if after:
+            where_clauses.append(
+                "(a.attendance_date, a.clock_in_at, a.attendance_id) "
+                "< (CAST(:c_date AS date), CAST(:c_at AS timestamptz), CAST(:c_id AS uuid))"
+            )
+            params["c_date"], params["c_at"], params["c_id"] = after[0], after[1], str(after[2])
+        if keyset:
+            params.pop("offset")
         where_sql = " AND ".join(where_clauses)
+        if keyset:
+            order_tail = "ORDER BY a.attendance_date DESC, a.clock_in_at DESC, a.attendance_id DESC LIMIT :limit"
+        else:
+            order_tail = "ORDER BY a.attendance_date DESC, a.clock_in_at DESC LIMIT :limit OFFSET :offset"
 
         query = f"""
             SELECT a.attendance_id AS id,
@@ -949,8 +967,7 @@ class AttendanceSessionRepository(BaseRepository):
             LEFT JOIN office o ON o.office_id = a.office_id
             LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
             WHERE {where_sql}
-            ORDER BY a.attendance_date DESC, a.clock_in_at DESC
-            LIMIT :limit OFFSET :offset
+            {order_tail}
         """
         count_query = f"""
             SELECT count(*)
@@ -960,6 +977,8 @@ class AttendanceSessionRepository(BaseRepository):
         """
 
         rows = await self.fetchall(query, params)
+        if keyset:
+            return list(rows), 0
         total = await self.scalar(count_query, params)
         return list(rows), int(total or 0)
 

@@ -8,10 +8,11 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import PlainTextResponse
 
 from app.api.deps import get_current_user, require_permission
+from app.core.keyset import cursor_query, parse_cursor
 from app.core.list_params import check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -37,6 +38,8 @@ router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
 @router.get("", response_model=AttendanceListResponse)
 async def list_attendance(
+    response: Response,
+    cursor: str | None = cursor_query(),
     employee_id: UUID | None = None,
     date_from: date | None = Query(None, alias="from"),
     date_to: date | None = Query(None, alias="to"),
@@ -53,6 +56,8 @@ async def list_attendance(
     lainnya hanya milik sendiri. Filter `plan_id` di dok 05 belum didukung (dok 10 Bagian C).
     """
     check_date_range(date_from, date_to, start_name="from", end_name="to")
+    # `cursor` ada (boleh kosong) = mode keyset: tanpa total, lanjut lewat header X-Next-Cursor.
+    after = parse_cursor(cursor, ("date", "datetime", "uuid"))
     return await controller.handle_list_attendance(
         current_user,
         employee_id=employee_id,
@@ -63,6 +68,8 @@ async def list_attendance(
         page=page,
         size=size,
         q=q,
+        after=after,
+        response=response,
     )
 
 

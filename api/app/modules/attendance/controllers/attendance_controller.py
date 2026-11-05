@@ -11,8 +11,9 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Response
 
+from app.core.keyset import finish_page
 from app.core.permissions import Permission
 from app.core.security import CurrentUser, create_time_anchor
 from app.modules.attendance.dependencies import get_attendance_offline_service, get_attendance_session_service
@@ -67,8 +68,13 @@ class AttendanceController:
         page: int = 1,
         size: int = 50,
         q: str | None = None,
+        after: tuple[Any, ...] | None = None,
+        response: Response | None = None,
     ) -> AttendanceListResponse:
-        """Mengambil daftar riwayat absensi berdasarkan filter dan kewenangan pengguna."""
+        """Mengambil daftar riwayat absensi berdasarkan filter dan kewenangan pengguna.
+
+        `after` != None = mode keyset (ambil size+1, isi `X-Next-Cursor`, tanpa total).
+        """
         rows, total = await self.session_service.list_attendance(
             current_user.organization_id,
             current_user.user_id,
@@ -81,7 +87,10 @@ class AttendanceController:
             page=page,
             size=size,
             q=q,
+            after=after,
         )
+        if after is not None and response is not None:
+            rows = finish_page(rows, size, response, lambda r: (r.work_date, r.check_in_at, r.id))
         today, required_out, pending, pending_plan = await self.session_service.day_hints(
             current_user.organization_id, current_user.employee_id
         )

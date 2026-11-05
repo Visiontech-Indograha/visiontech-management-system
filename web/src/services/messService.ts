@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { idempotencyHeaders } from "@/lib/idempotency";
 
 export type MessStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "CANCELLED";
 
@@ -92,8 +93,8 @@ function useInvalidate() {
 export function useCreateMessStay() {
   const done = useInvalidate();
   return useMutation({
-    mutationFn: async (body: MessStayCreate) =>
-      (await api.post<MessStay>("/mess", body)).data,
+    mutationFn: async ({ body, idempotencyKey }: { body: MessStayCreate; idempotencyKey?: string }) =>
+      (await api.post<MessStay>("/mess", body, { headers: idempotencyHeaders(idempotencyKey) })).data,
     onSuccess: done,
   });
 }

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { idempotencyHeaders } from "@/lib/idempotency";
 import type { components } from "@/lib/apiTypes";
 
 type S = components["schemas"];
@@ -78,7 +79,10 @@ export const useAddVehicleFile = (vehicleId: string) =>
 
 /** Serah terima aset ke karyawan. */
 export const useLend = () =>
-  useAssetMutation(async (body: LoanCreate) => (await api.post<Loan>("/assets/loans", body)).data);
+  useAssetMutation(
+    async ({ body, idempotencyKey }: { body: LoanCreate; idempotencyKey?: string }) =>
+      (await api.post<Loan>("/assets/loans", body, { headers: idempotencyHeaders(idempotencyKey) })).data,
+  );
 
 export const useReturnLoan = () =>
   useAssetMutation(async ({ assignmentId, condition }: { assignmentId: string; condition: ReturnCondition }) =>

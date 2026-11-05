@@ -22,6 +22,7 @@ import 'package:vms_mobile/features/plans/daily_plans_screen.dart';
 import 'package:vms_mobile/features/plans/item_progress_screen.dart';
 import 'package:vms_mobile/features/sync/sync_queue_screen.dart';
 import 'package:vms_mobile/shared/app_frame.dart';
+import 'package:vms_mobile/shared/ui/vms_text_field.dart';
 import 'package:vms_mobile/shared/ui/vms_ui.dart';
 
 import 'support/fake_backend.dart';
@@ -502,6 +503,26 @@ void main() {
     };
 
     final reportOk = {'summary': 'Selesai galian', 'obstacles': '', 'submitted_at': '2026-10-21T03:00:00Z'};
+
+    testWidgets('form lembur: alasan boleh 1000 huruf dan pesan jam sesuai aturan API', (tester) async {
+      backend.routes['/work-plans/daily/a'] = (_) => planDetail('ONGOING');
+      backend.routes['/report'] = (o) => throw httpError(o, 404, {'error': {'code': 'NOT_FOUND', 'message': 'x'}});
+      backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
+      await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
+
+      await tester.scrollUntilVisible(find.text('Ajukan lembur'), 300, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Ajukan lembur'));
+      await settle(tester);
+
+      final alasan = find.widgetWithText(TextField, 'Alasan');
+      expect(tester.widget<VmsTextField>(find.ancestor(of: alasan, matching: find.byType(VmsTextField))).maxLength, 1000);
+
+      await tester.enterText(find.widgetWithText(TextField, 'Jam lembur (maks. 12)'), '0');
+      await tester.enterText(alasan, 'Alasan lembur');
+      await tester.tap(find.text('Kirim'));
+      await settle(tester);
+      expect(find.text('Jam lembur harus lebih dari 0 dan paling banyak 12 jam.'), findsOneWidget);
+    });
 
     void routeReport({bool exists = true}) {
       backend.routes['/report'] = (o) => exists

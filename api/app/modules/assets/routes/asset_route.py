@@ -206,10 +206,18 @@ async def list_loans(
 
 @router.post("/loans", response_model=LoanOut, status_code=status.HTTP_201_CREATED)
 async def lend_asset(
-    data: LoanCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
-) -> LoanOut:
-    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim)."""
-    return await controller.handle_lend(data)
+    data: LoanCreate,
+    current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> LoanOut | Response:
+    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+    Mendukung Idempotency-Key (opsional)."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_lend(data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.post("/loans/{assignment_id}/return", response_model=LoanOut)

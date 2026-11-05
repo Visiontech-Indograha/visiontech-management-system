@@ -76,7 +76,7 @@ Rincian dan contoh ada di `references/big-o-query-dan-pagination.md`.
 
 - **Locking yang sudah dipakai**: `FOR UPDATE` di ±12 titik, misalnya `asset_repository.py:292`, `auth_session_repository.py:175` (rotasi refresh), `plan_item_repository.py:69` (rollover). Pola ini sudah dikenal tim.
 - **TOCTOU sudah ditutup** (pola `UPDATE … WHERE status = ANY(:allowed)`, `RETURNING`, 0 baris = 409): jadwal harian (`daily_plan_repository.set_status`, PR #303/#308), order (`work_completion_core_repository.update_status`, `expected=`), keputusan mess dan batal mess, persetujuan dan pengiriman survei WO (`d05b3457`). Daftar sisa ada di deskripsi PR `chore/utang-api-kecil`.
-- **Idempotency**: hanya untuk sinkron offline lewat `client_op_id` (`attendance_offline_service.py:164-173`). Tidak ada `Idempotency-Key` pada endpoint online (0 kecocokan `idempotency` selain itu, sudah dihitung).
+- **Idempotency**: sinkron offline lewat `client_op_id` (`attendance_offline_service.py:164-173`); `Idempotency-Key` opsional (`idempotency_guard`) sudah dipasang di 8 endpoint (cuti, lembur, mess, pinjam aset, bulk jadwal harian). Hitung ulang dengan `grep -rn "Depends(idempotency_guard)" api/app/modules`.
 - **Target idempotensi** (ADR 0001 keputusan 7; `docs/06` Idempotensi): endpoint tulis terotentikasi wajib `Idempotency-Key`. Tabel `idempotency_keys` di PostgreSQL adalah sumber kebenaran, TTL 24 jam, disimpan dalam transaksi yang sama dengan aksinya. Redis `SET NX` hanya kunci cepat anti-balapan. Respons login dan refresh tidak disimpan. Key sama + body sama → kembalikan respons tersimpan (200), bukan 409 (koreksi riset 01 bagian 6). Key sama + body beda → 422. Permintaan masih berjalan → 409.
 
 ## 6. Keamanan dan otorisasi (ringkas)

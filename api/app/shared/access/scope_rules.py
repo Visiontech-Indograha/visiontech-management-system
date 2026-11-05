@@ -196,14 +196,25 @@ async def vehicle_visible(db: AsyncSession, user: CurrentUser, vehicle_id: UUID 
 async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUser) -> bool:
     """Berkas aset (foto alat/kendaraan, berkas & inspeksi kendaraan, foto serah terima) terlihat bila aset
     induknya terlihat oleh pengguna. Foto serah terima juga terlihat untuk pemegangnya sendiri."""
+    offices: list[str] | None = None
     if sees_all_assets(user):
-        return True
+        # pengelola aset dari HR dibatasi kantor jangkauannya (ADR 0002); SA/OM/ASSET/flag mati = semua
+        restriction = await office_restriction(db, user, Permission.MANAGE_ASSETS,
+                                               (SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER))
+        if restriction is None:
+            return True
+        offices = offices_param(restriction)
     tool_holder = open_holder_sql("tool_id", "t.tool_id")
     veh_holder = open_holder_sql("vehicle_id", "v.vehicle_id")
     tool_ok = asset_visible_sql("t.division_id", "t.office_id", tool_holder)
     veh_ok = asset_visible_sql("v.division_id", "v.office_id", veh_holder)
     tool_by_holder = asset_visible_sql("t.division_id", "t.office_id", "aa.employee_id")
     veh_by_holder = asset_visible_sql("v.division_id", "v.office_id", "aa.employee_id")
+    if offices is not None:
+        tool_ok = f"(t.office_id = ANY(CAST(:offices AS uuid[])) OR {tool_ok})"
+        veh_ok = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_ok})"
+        tool_by_holder = f"(t.office_id = ANY(CAST(:offices AS uuid[])) OR {tool_by_holder})"
+        veh_by_holder = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_by_holder})"
     row = await BaseRepository(db).scalar(
         f"""
         SELECT (
@@ -221,7 +232,7 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
                        WHERE aa.handover_photo_path = :key AND {veh_by_holder})
         )
         """,
-        {**viewer_params(user), "key": storage_key},
+        {**viewer_params(user), "key": storage_key, **({} if offices is None else {"offices": offices})},
     )
     return bool(row)
 

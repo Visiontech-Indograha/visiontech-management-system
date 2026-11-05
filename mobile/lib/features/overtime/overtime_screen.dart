@@ -8,6 +8,7 @@ import '../../core/api_client.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../data/vms_api.dart' show isCursorRejected, kPesanKursorBerubah;
 import '../../shared/ui/vms_ui.dart';
 
 final _tanggal = DateFormat('d MMM yyyy', 'id_ID');
@@ -47,6 +48,8 @@ class OvertimeScreen extends ConsumerStatefulWidget {
 class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
   List<Map<String, dynamic>> _items = [];
   bool _memuat = true;
+  String? _nextCursor;
+  bool _memuatLagi = false;
   String? _galatMuat;
   String? _galatKeputusan;
   final Set<String> _sedang = {};
@@ -63,10 +66,11 @@ class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
       _galatMuat = null;
     });
     try {
-      final items = await ref.read(syncEngineProvider).api.myOvertime();
+      final hal = await ref.read(syncEngineProvider).api.myOvertime();
       if (!mounted) return;
       setState(() {
-        _items = items;
+        _items = hal.items;
+        _nextCursor = hal.nextCursor;
         _memuat = false;
       });
     } catch (e) {
@@ -75,6 +79,33 @@ class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
         _galatMuat = apiErrorMessage(e, fallback: 'Riwayat lembur belum bisa dimuat.');
         _memuat = false;
       });
+    }
+  }
+
+  /// Muat halaman berikut (keyset). Kursor ditolak (422) = muat ulang dari awal.
+  Future<void> _muatLagi() async {
+    final cursor = _nextCursor;
+    if (cursor == null || _memuatLagi) return;
+    setState(() => _memuatLagi = true);
+    try {
+      final hal = await ref.read(syncEngineProvider).api.myOvertime(cursor: cursor);
+      if (!mounted) return;
+      setState(() {
+        _items = [..._items, ...hal.items];
+        _nextCursor = hal.nextCursor;
+        _memuatLagi = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _memuatLagi = false);
+      if (isCursorRejected(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kPesanKursorBerubah)));
+        await _muat();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e, fallback: 'Riwayat lembur belum bisa dimuat. Coba lagi.'))),
+        );
+      }
     }
   }
 
@@ -179,6 +210,17 @@ class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
         ),
       for (final o in _items)
         Padding(padding: const EdgeInsets.only(top: 12), child: _kartu(o)),
+      if (_nextCursor != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: _memuatLagi ? null : _muatLagi,
+              child: Text(_memuatLagi ? 'Memuat...' : 'Muat lebih banyak'),
+            ),
+          ),
+        ),
     ];
   }
 

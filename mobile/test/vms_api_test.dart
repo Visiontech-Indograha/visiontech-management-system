@@ -88,7 +88,45 @@ void main() {
       final rows = await api.myAttendance(employeeId: 'e1');
       expect(rows.items.single['id'], 'a1');
       expect(rows.today, '2026-09-28');
-      expect(last().queryParameters, {'employee_id': 'e1', 'size': 60});
+      expect(rows.nextCursor, isNull);
+      // Halaman pertama keyset: cursor kosong.
+      expect(last().queryParameters, {'employee_id': 'e1', 'cursor': '', 'size': 60});
+    });
+
+    test('absensi: muat berikut memakai X-Next-Cursor, 422 dikenali', () async {
+      backend.routes['/attendance'] = (o) {
+        if (o.queryParameters['cursor'] == 'rusak') {
+          throw httpError(o, 422, {'detail': 'cursor'});
+        }
+        return {'items': <Object>[]};
+      };
+      backend.responseHeaders['/attendance'] = {'x-next-cursor': 'abc'};
+      final p1 = await api.myAttendance(employeeId: '');
+      expect(p1.nextCursor, 'abc');
+      await api.myAttendance(employeeId: '', cursor: p1.nextCursor!);
+      expect(last().queryParameters['cursor'], 'abc');
+      expect(last().queryParameters.containsKey('employee_id'), isFalse);
+      try {
+        await api.myAttendance(employeeId: '', cursor: 'rusak');
+        fail('harus gagal');
+      } catch (e) {
+        expect(isCursorRejected(e), isTrue);
+      }
+    });
+
+    test('lembur: halaman pertama, muat berikut, tanpa total', () async {
+      backend.routes['/overtime'] = (_) => [
+        {'id': 'o1'},
+      ];
+      backend.responseHeaders['/overtime'] = {'x-next-cursor': 'c2'};
+      final p1 = await api.myOvertime();
+      expect(last().queryParameters, {'cursor': '', 'size': 30});
+      expect(p1.items.single['id'], 'o1');
+      expect(p1.nextCursor, 'c2');
+      backend.responseHeaders.clear();
+      final p2 = await api.myOvertime(cursor: p1.nextCursor!);
+      expect(last().queryParameters['cursor'], 'c2');
+      expect(p2.nextCursor, isNull);
     });
   });
 
@@ -110,7 +148,7 @@ void main() {
     expect((await api.dailyPlan('d1'))['daily_plan_id'], 'd1');
     expect((await api.dayItems('d1')).single['item_id'], 'i1');
     expect((await api.sites()).single['id'], 's1');
-    expect(await api.myOvertime(), isEmpty);
+    expect((await api.myOvertime()).items, isEmpty);
     expect(backend.requests.map((r) => r.method).toSet(), {'GET'});
   });
 

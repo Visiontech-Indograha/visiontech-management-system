@@ -7,6 +7,22 @@ import 'package:intl/intl.dart';
 import '../core/api_client.dart';
 import 'pengajuan_idempotency.dart';
 
+/// Ukuran halaman keyset (batas API: absensi maks 200, lembur maks 100).
+const kAttendancePageSize = 60;
+const kOvertimePageSize = 30;
+
+/// Pesan saat kursor ditolak server (422): daftar dimuat ulang dari awal.
+const kPesanKursorBerubah = 'Daftar sudah berubah, jadi dimuat ulang dari awal.';
+
+/// Kursor ditolak server (422) = daftar berubah; mulai lagi dari halaman pertama.
+bool isCursorRejected(Object e) =>
+    e is DioException && e.response?.statusCode == 422;
+
+String? _nextCursor(Response res) {
+  final v = res.headers.value('x-next-cursor');
+  return (v == null || v.isEmpty) ? null : v;
+}
+
 /// Panggilan REST MVP ke backend VMS (api/app/api/*). Bentuk data mengikuti
 /// OpenAPI backend apa adanya (Map JSON) supaya tidak ada lapisan model ganda.
 class VmsApi {
@@ -283,18 +299,21 @@ class VmsApi {
       String? requiredOutAt,
       int reportPendingCount,
       String? reportPendingPlanId,
+      String? nextCursor,
     })
   >
-  myAttendance({required String employeeId}) async {
+  myAttendance({required String employeeId, String cursor = ''}) async {
     final res = await _dio.get(
       '$_p/attendance',
       queryParameters: {
         if (employeeId.isNotEmpty) 'employee_id': employeeId,
-        'size': 60,
+        'cursor': cursor,
+        'size': kAttendancePageSize,
       },
     );
     final data = res.data as Map;
     return (
+      nextCursor: _nextCursor(res),
       items: _list(data['items']),
       today: data['today'] as String?,
       timeAnchor: data['time_anchor'] as String?,
@@ -648,8 +667,17 @@ class VmsApi {
   );
 
   // --- Lembur -------------------------------------------------------------
-  Future<List<Map<String, dynamic>>> myOvertime() async =>
-      _list((await _dio.get('$_p/overtime')).data);
+  /// Satu halaman riwayat lembur (keyset). [cursor] kosong = halaman pertama.
+  /// Tidak membaca total; lanjutan lewat `nextCursor` (header X-Next-Cursor).
+  Future<({List<Map<String, dynamic>> items, String? nextCursor})> myOvertime({
+    String cursor = '',
+  }) async {
+    final res = await _dio.get(
+      '$_p/overtime',
+      queryParameters: {'cursor': cursor, 'size': kOvertimePageSize},
+    );
+    return (items: _list(res.data), nextCursor: _nextCursor(res));
+  }
 
   /// Setujui (APPROVED) atau tolak (REJECTED) lembur tim. Online saja: keputusan tidak diantrikan offline.
   Future<Map<String, dynamic>> reviewOvertime({

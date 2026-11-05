@@ -45,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/attendance", label: "Absensi", icon: Clock, group: "Kehadiran & SDM" },
   { path: "/leaves", label: "Cuti & Izin", icon: CalendarDays, group: "Kehadiran & SDM" },
   { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran & SDM" },
+  { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran & SDM" },
   { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran & SDM" },
   // 3. Aset & Fasilitas
   { path: "/assets", label: "Kendaraan & alat", icon: Truck, group: "Aset & Fasilitas" },

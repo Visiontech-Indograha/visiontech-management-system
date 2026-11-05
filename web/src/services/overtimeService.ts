@@ -50,6 +50,26 @@ export function useReviewOvertime() {
   });
 }
 
+/** Lembur milik sendiri (API memfilter menurut akun: karyawan hanya miliknya). */
+export const useMyOvertime = () =>
+  useQuery({
+    queryKey: ["overtime", "mine"],
+    queryFn: async () => (await api.get<Overtime[]>("/overtime")).data,
+  });
+
+/** Ajukan lembur dengan kunci anti-ganda; menyegarkan semua daftar lembur. */
+export function useCreateOvertime() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ body, key }: { body: components["schemas"]["OvertimeCreate"]; key?: string }) =>
+      createOvertime(body, key),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["overtime"] });
+      await qc.invalidateQueries({ queryKey: ["overtime-recap"] });
+    },
+  });
+}
+
 /** Daftar lembur satu rencana kerja (TanStack Query). */
 export const useOvertime = (planId: string) =>
   useQuery({

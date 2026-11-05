@@ -67,6 +67,8 @@ class Permission(StrEnum):
     # Master kantor (office) & divisi operasional (division) — Milestone 2 (docs/36)
     MANAGE_SITES = "manage:sites"
     MANAGE_DIVISIONS = "manage:divisions"
+    # Penugasan peran ganda (ADR 0002): hanya SUPER_ADMIN
+    MANAGE_ROLE_ASSIGNMENTS = "manage:role_assignments"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -113,7 +115,7 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY},
+    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS},
     RoleCode.OPS: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,

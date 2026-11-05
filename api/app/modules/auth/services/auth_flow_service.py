@@ -7,9 +7,11 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.database.session import unit_of_work
 from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
+from app.modules.auth.schemas.auth_profile_schema import RoleScopeOut
 from app.modules.auth.schemas.auth_schema import SessionOut, UserMeResponse
 from app.modules.auth.services.auth_service import AuthService, ClientInfo, IssuedTokens
 
@@ -88,6 +90,17 @@ class AuthFlowService:
             managed_division_ids=profile.managed_division_ids,
             managed_divisions=profile.managed_divisions,
         )
+
+    async def role_scopes(self, user_id: str) -> list[RoleScopeOut]:
+        """Peran tambahan aktif + kantornya untuk profil (kosong bila ROLE_ASSIGNMENT_ENABLED mati)."""
+        if not settings.ROLE_ASSIGNMENT_ENABLED:
+            return []
+        return [
+            RoleScopeOut(
+                role=r.role, office_id=str(r.office_id) if r.office_id else None, office_name=r.office_name
+            )
+            for r in await self.users.role_scopes(user_id)
+        ]
 
     async def full_name(self, user_id: str) -> str | None:
         """Nama lengkap karyawan pemilik akun (None bila akun belum tertaut)."""

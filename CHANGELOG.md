@@ -9,6 +9,11 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### Peran ganda dan penugasan kantor, sisi API fase 1 (ADR 0002)
+- Flag `ROLE_ASSIGNMENT_ENABLED` (bawaan mati = perilaku lama persis). Bila hidup: izin = union peran utama + penugasan aktif, cakupan kantor absensi (`attendance_office_scope`) menambah penugasan HR/Finance per kantor dan penugasan OM = semua kantor. Dibaca dari DB tiap permintaan; token tidak berubah.
+- Izin baru `manage:role_assignments` (hanya SUPER_ADMIN) dan endpoint `GET/POST /users/{user_id}/role-assignments`, `DELETE /users/{user_id}/role-assignments/{assignment_id}` (maks 2 peran tambahan, SA tidak digabung, HR+Finance dilarang, tidak bisa mengubah diri sendiri, Idempotency-Key pada POST, masuk audit log).
+- `/auth/me`: field opsional baru `effective_roles` dan `role_scopes` (klien lama mengabaikan). Dampak: MINOR.
+
 ### Ditambahkan (deploy)
 - deploy: cadangan DB bisa dipisah per lingkungan lewat `VMS_BACKUP_DIR` dan `VMS_BACKUP_NAME` (opsional, bawaan tidak berubah; retensi per awalan, berkas nama lama tetap dihitung). Panduan `deploy/PANDUAN-PISAH-CADANGAN.md`, tes `scripts/uji-backup-retensi.sh`.
 

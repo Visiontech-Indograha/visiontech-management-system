@@ -6,6 +6,7 @@ Tanpa parameter perilaku lama tetap (semua baris), sehingga klien lama tidak ter
 """
 from __future__ import annotations
 
+import logging
 import unicodedata
 from collections.abc import Callable, Iterable, Sequence
 from datetime import date
@@ -18,6 +19,8 @@ TOTAL_HEADER = "X-Total-Count"
 # Batas atas baris untuk daftar tanpa paginasi (kontrak lama: semua baris). Hanya berlaku bila > 5000 baris
 # (riset 01 F-06). Dipakai sebagai `LIMIT :cap` di SQL; tidak mengubah hasil untuk data yang lebih kecil.
 MAX_ROWS_UNPAGED = 5000
+TRUNCATED_HEADER = "X-Result-Truncated"
+logger = logging.getLogger(__name__)
 
 
 def check_date_range(
@@ -59,12 +62,17 @@ def apply_list[T](
 ) -> Sequence[T]:
     """Saring (`q` + `extra`), potong halaman bila diminta, dan isi `X-Total-Count` (jumlah setelah filter)."""
     rows = list(items)
+    total_in = len(rows)
     if extra is not None:
         rows = [r for r in rows if extra(r)]
     if params.q:
         needle = _fold(params.q)
         rows = [r for r in rows if any(needle in _fold(v) for v in haystack(r))]
     response.headers[TOTAL_HEADER] = str(len(rows))
+    if not params.paged and total_in >= MAX_ROWS_UNPAGED:
+        # Repository memotong di MAX_ROWS_UNPAGED: beri tahu klien baru, klien lama mengabaikan header ini.
+        response.headers[TRUNCATED_HEADER] = "true"
+        logger.warning("Daftar tanpa paginasi terpotong di %d baris; gunakan page/size", MAX_ROWS_UNPAGED)
     if params.paged:
         start = (params.page - 1) * params.size
         rows = rows[start : start + params.size]

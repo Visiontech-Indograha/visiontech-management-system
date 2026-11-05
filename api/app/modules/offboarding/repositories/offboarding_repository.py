@@ -114,12 +114,13 @@ class OffboardingRepository(BaseRepository):
             {"oid": str(offboarding_id), "emp": str(employee_id)},
         )
         await self.refresh_clearance(offboarding_id)
-        await self.execute(
+        # Compare-and-set: None bila karyawan sudah tidak 'active'; pemanggil wajib membatalkan transaksi.
+        moved = await self.execute(
             "UPDATE employee SET offboarding_status = 'in_process', update_at = now() "
-            "WHERE employee_id = CAST(:emp AS uuid)",
+            "WHERE employee_id = CAST(:emp AS uuid) AND offboarding_status = 'active'",
             {"emp": str(employee_id)},
         )
-        return offboarding_id
+        return offboarding_id if moved.rowcount else None
 
     async def refresh_clearance(self, offboarding_id: UUID | str) -> None:
         """is_all_assets_returned & status mengikuti item yang belum diverifikasi (CLEARANCE_PENDING ↔ SUBMITTED)."""
@@ -195,15 +196,18 @@ class OffboardingRepository(BaseRepository):
             {"id": str(offboarding_id), "by": str(approver_id)},
         )
 
-    async def finalize(self, offboarding_id: UUID | str, employee_id: UUID | str) -> None:
+    async def finalize(self, offboarding_id: UUID | str, employee_id: UUID | str) -> bool:
         """COMPLETED: karyawan offboarded, keanggotaan tim berakhir, akun dinonaktifkan & semua sesi dicabut."""
         params = {"id": str(offboarding_id), "emp": str(employee_id)}
-        await self.execute(
+        # Compare-and-set: hanya dari APPROVED dan belum dibatalkan; False = sudah diubah pihak lain.
+        done = await self.execute(
             "UPDATE employee_offboarding SET status = 'COMPLETED', update_at = now() "
-            "WHERE offboarding_id = CAST(:id AS uuid)", params)
+            "WHERE offboarding_id = CAST(:id AS uuid) AND status = 'APPROVED' AND delete_at IS NULL", params)
+        if not done.rowcount:
+            return False
         await self.execute(
             "UPDATE employee SET offboarding_status = 'offboarded', update_at = now() "
-            "WHERE employee_id = CAST(:emp AS uuid)", params)
+            "WHERE employee_id = CAST(:emp AS uuid) AND offboarding_status = 'in_process'", params)
         await self.execute(
             "UPDATE member SET is_active = FALSE, update_at = now() "
             "WHERE employee_id = CAST(:emp AS uuid) AND is_active", params)
@@ -214,6 +218,7 @@ class OffboardingRepository(BaseRepository):
             """, params)
         await self.execute(
             "UPDATE users SET is_active = FALSE, update_at = now() WHERE employee_id = CAST(:emp AS uuid)", params)
+        return True
 
     async def due_for_completion(self, today: date) -> list[Any]:
         return list(await self.fetchall(

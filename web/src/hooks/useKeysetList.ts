@@ -4,6 +4,8 @@ import { api, ApiError } from "@/lib/apiClient";
 
 type Params = Record<string, string | number | boolean | undefined>;
 
+const KEYSET_STALE_MS = 5 * 60_000;
+
 export const CURSOR_NOTICE = "Daftar sudah berubah, jadi dimuat ulang dari awal.";
 
 /** Satu halaman keyset: isi respons + kursor halaman berikutnya (header `X-Next-Cursor`; tidak ada = halaman terakhir). */
@@ -46,6 +48,12 @@ export function useKeysetList<B, D>({ key, url, params, merge }: {
     queryFn: ({ pageParam }) => getKeysetPage<B>(url, params, pageParam),
     getNextPageParam: (last) => last.next ?? undefined,
     placeholderData: keepPreviousData,
+    // Muat ulang daftar infinite mengulang SEMUA halaman yang sudah dimuat (berurutan). Jangan lakukan itu
+    // diam-diam: tanpa ini, tiap mount/fokus/sambung ulang setelah 30 detik memanggil ulang N halaman.
+    // Perubahan data tetap sampai lewat invalidateQueries setelah simpan/putuskan.
+    staleTime: KEYSET_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   const id = JSON.stringify(fullKey);
 

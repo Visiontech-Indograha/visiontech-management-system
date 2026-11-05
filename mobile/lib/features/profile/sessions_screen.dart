@@ -129,7 +129,6 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                                 if (s['current'] == true)
                                   Text('Perangkat ini', style: VmsTextStyles.caption.copyWith(color: VmsColors.brand700, fontWeight: FontWeight.w700)),
                                 Text('Terakhir dipakai: ${_fmt(s['last_used_at'])}', style: VmsTextStyles.caption),
-                                if (s['ip_address'] != null) Text('Alamat: ${s['ip_address']}', style: VmsTextStyles.caption),
                               ],
                             ),
                           ),

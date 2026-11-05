@@ -15,6 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.errors import AppError, ValidationError
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_campaign_repository import HseCampaignRepository
@@ -178,7 +179,10 @@ class HseService:
         """
         user_uuid = UUID(str(current_user.user_id))
         system_role = str(current_user.role)
-        return await self.campaign_repo.get_active_popup_for_user(user_uuid, system_role)
+        # Flag hidup: peran efektif (utama + penugasan aktif) agar peran tambahan ikut melihat kampanye K3
+        # untuk perannya. Flag mati: hanya peran utama (persis lama).
+        roles = list(current_user.roles) if settings.ROLE_ASSIGNMENT_ENABLED else None
+        return await self.campaign_repo.get_active_popup_for_user(user_uuid, system_role, roles)
 
     async def acknowledge_campaign(
         self,

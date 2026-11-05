@@ -89,11 +89,6 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
     return Scaffold(
       appBar: VmsTopBar(
         onBack: () => context.pop(),
-        trailing: HeaderAction(
-          icon: Icons.more_time_rounded,
-          tooltip: 'Riwayat Lembur',
-          onTap: () => context.push('/overtime'),
-        ),
       ),
       body: RefreshIndicator(
         onRefresh: _load,

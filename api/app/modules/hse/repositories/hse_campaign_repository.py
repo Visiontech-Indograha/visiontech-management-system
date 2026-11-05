@@ -189,6 +189,7 @@ class HseCampaignRepository(BaseRepository):
         self,
         user_id: UUID,
         system_role: str,
+        roles: list[str] | None = None,
     ) -> dict[str, Any] | None:
         """
         Mencari kampanye K3 aktif hari ini yang belum dibaca (acknowledged) oleh pengguna.
@@ -199,7 +200,12 @@ class HseCampaignRepository(BaseRepository):
         - INDIVIDUAL: jika user_id ada dalam target_user_ids JSONB
         Popup tetap muncul sampai pengguna mengonfirmasi (acknowledgment); memuat ulang tidak menyelesaikannya.
         """
-        is_field = system_role in ("TEAM_LEADER", "EMPLOYEE")
+        # `roles` = peran efektif (utama + penugasan aktif, ADR 0002); None = hanya peran utama (perilaku lama).
+        # Peran lapangan -> kampanye FIELD, peran kantor -> OFFICE; orang berperan ganda melihat keduanya.
+        effective = roles if roles else [system_role]
+        field_roles = ("TEAM_LEADER", "EMPLOYEE")
+        is_field = any(r in field_roles for r in effective)
+        is_office = any(r not in field_roles for r in effective)
         query = """
             SELECT
                 c.campaign_id, c.title, c.summary, c.content_html, c.media_path, c.media_paths, c.media_captions,
@@ -212,7 +218,7 @@ class HseCampaignRepository(BaseRepository):
               AND (
                   c.target_audience = 'ALL'
                   OR (:is_field = TRUE AND c.target_audience = 'FIELD')
-                  OR (:is_field = FALSE AND c.target_audience = 'OFFICE')
+                  OR (:is_office = TRUE AND c.target_audience = 'OFFICE')
                   OR (
                       c.target_audience = 'INDIVIDUAL'
                       AND c.target_user_ids IS NOT NULL
@@ -232,6 +238,7 @@ class HseCampaignRepository(BaseRepository):
             "user_id": user_id,
             "user_id_str": str(user_id),
             "is_field": is_field,
+            "is_office": is_office,
         }
         row = await self.fetchone(query, params)
         return dict(row._mapping) if row else None

@@ -143,6 +143,15 @@ void main() {
     );
   });
 
+  testWidgets('daftar kosong: tampil kondisi kosong ramah dengan ikon dan judul', (tester) async {
+    docs.clear();
+    await show(tester, const DocumentsScreen());
+    expect(find.text('Belum ada dokumen'), findsOneWidget);
+    expect(find.textContaining('Ketuk "Unggah dokumen"'), findsOneWidget);
+    expect(find.byIcon(Icons.badge_rounded), findsOneWidget);
+    expect(find.byKey(const Key('dokumen-unggah')), findsOneWidget);
+  });
+
   testWidgets('unggah PDF: pilih jenis dan berkas, simpan, lalu daftar menyegarkan', (tester) async {
     documentPickOverride = (source) async {
       expect(source, DocumentPickSource.file);

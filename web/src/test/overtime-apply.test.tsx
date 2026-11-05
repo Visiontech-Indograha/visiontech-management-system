@@ -23,8 +23,8 @@ describe("Lembur saya", () => {
     const saya = { ...row, id: "o3", employee_id: "e1", reason: "Punya saya" };
     mockApi((c) => {
       if (c.url !== "/overtime") return undefined;
-      const p = c.params as { status?: string } | undefined;
-      return { data: p?.status === "PENDING_PM" ? [lain] : [lain, saya] };
+      const p = c.params as { status?: string; mine?: boolean } | undefined;
+      return { data: p?.status === "PENDING_PM" ? [lain] : p?.mine ? [saya] : [lain, saya] };
     });
     renderRoute("/overtime", { me: { ...mockMe("OPS"), employee_id: "e1" } as never });
     expect(await screen.findByText("Alasan: Punya saya")).toBeInTheDocument();

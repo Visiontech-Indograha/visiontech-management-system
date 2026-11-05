@@ -16433,6 +16433,18 @@
       "description": "Alias daily_plan_id"
      },
      {
+      "name": "mine",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)",
+       "default": false,
+       "title": "Mine"
+      },
+      "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)"
+     },
+     {
       "name": "q",
       "in": "query",
       "required": false,

@@ -28,7 +28,14 @@ Izin yang dibawa HR: `manage:users`, `verify:documents`, `manage:employee_docume
 | `POST/PUT/DELETE /offices` (`manage:sites`) | PUT/DELETE ya, POST tidak | PUT/DELETE ya | Finance hanya mengubah/menghapus kantor di jangkauannya; kantor baru belum punya kantor |
 | `GET /overtime`, rekap lembur, `POST /overtime/{id}/review` (`review:overtime`) | ya | ya | filter kantor + cek karyawan |
 | Cuti: `GET/POST /leaves*`, review, saldo (cek peran, bukan izin) | ya | ya | akses lewat peran HR dibatasi (`_hr_scope_ok`); jalur PM dan cuti sendiri tidak berubah |
-| `/assets/*` (`manage:assets`: alat, kendaraan, pinjaman, pengajuan) | ya (`tool/vehicle.office_id`) | TIDAK | predikat cakupan aset gabungan divisi/pemegang/kantor di ~20 rute; perlu PR sendiri agar tidak regresi |
+| `GET /assets/tools`, `/assets/vehicles`, `/assets/availability` | ya (`office_id`) | ya | filter `office_id` ditambahkan ke cakupan divisi/pemegang; OM+HR tetap membaca semua kantor |
+| `GET /assets/vehicles/{id}/files`, `/inspections`, berkas aset (`asset_file_visible`) | ya | ya | HR: kantor jangkauan atau kendaraan yang sedang dipegang; luar = 404 |
+| `POST/PUT/DELETE /assets/tools*`, `/assets/vehicles*`, `/status`, `POST /vehicles/{id}/files` | ya | ya | aset dan kantor tujuan harus di jangkauan; luar = 404; OM+HR hanya kantor tugas HR-nya |
+| `POST /assets/vehicles/{id}/inspections` | ya | ya | HR di luar kantor jangkauan hanya boleh bila pemegang kendaraan (jalur lama) |
+| `GET /assets/loans`, `GET /assets/loan-requests` (sisi pengelola) | ya | ya | filter kantor aset ATAU milik sendiri; cakupan karyawan/PM/tim tidak berubah |
+| `POST /assets/loans`, `/loans/{id}/return`, `/loan-requests/{id}/review` | ya | ya | aset/pinjaman/pengajuan di luar jangkauan = 404 |
+| `POST /assets/loan-requests`, `/cancel`, `/loans/{id}/return-request` | tidak (milik sendiri) | tidak perlu | karyawan atas dirinya sendiri; tidak diubah |
+| Notifikasi `ASSET_REQUESTED` (ke semua `ADMIN_HR_GA`) | tidak | TIDAK | belum dibatasi kantor; tindak lanjut |
 | `POST /attendance/{id}/review`, `GET /attendance/export` | ya | sudah (PR absensi) | memakai `attendance_office_scope` |
 | `GET /home/summary` | ya (hitungan) | sebagian | hitungan mess ikut dibatasi; hitungan aset/lembur mengikuti service asalnya |
 | `/users/{id}/role-assignments` | tidak | tidak | khusus SUPER_ADMIN |

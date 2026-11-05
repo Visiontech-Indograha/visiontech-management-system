@@ -75,7 +75,7 @@ async def create_tool(
     data: ToolCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> ToolOut:
     """Mendaftarkan alat baru (kode alat unik)."""
-    return await controller.handle_create_tool(data)
+    return await controller.handle_create_tool(data, current_user)
 
 
 @router.put("/tools/{tool_id}", response_model=ToolOut)
@@ -83,7 +83,7 @@ async def update_tool(
     tool_id: UUID, data: ToolUpdate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> ToolOut:
     """Mengubah data alat (sebagian)."""
-    return await controller.handle_update_tool(tool_id, data)
+    return await controller.handle_update_tool(tool_id, data, current_user)
 
 
 @router.post("/tools/{tool_id}/status", response_model=ToolOut)
@@ -92,7 +92,7 @@ async def set_tool_status(
     controller: AssetController = Depends(),
 ) -> ToolOut:
     """Menandai alat siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
-    return await controller.handle_tool_status(tool_id, data.status)
+    return await controller.handle_tool_status(tool_id, data.status, current_user)
 
 
 @router.delete("/tools/{tool_id}")
@@ -100,7 +100,7 @@ async def delete_tool(
     tool_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> dict[str, str]:
     """Menghapus (soft delete) alat yang tidak sedang dipinjam."""
-    return await controller.handle_delete("TOOL", tool_id)
+    return await controller.handle_delete("TOOL", tool_id, current_user)
 
 
 # ── Kendaraan ──────────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ async def create_vehicle(
     data: VehicleCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> VehicleOut:
     """Mendaftarkan kendaraan baru (nomor polisi unik)."""
-    return await controller.handle_create_vehicle(data)
+    return await controller.handle_create_vehicle(data, current_user)
 
 
 @router.put("/vehicles/{vehicle_id}", response_model=VehicleOut)
@@ -132,7 +132,7 @@ async def update_vehicle(
     controller: AssetController = Depends(),
 ) -> VehicleOut:
     """Mengubah data kendaraan (sebagian)."""
-    return await controller.handle_update_vehicle(vehicle_id, data)
+    return await controller.handle_update_vehicle(vehicle_id, data, current_user)
 
 
 @router.post("/vehicles/{vehicle_id}/status", response_model=VehicleOut)
@@ -141,7 +141,7 @@ async def set_vehicle_status(
     controller: AssetController = Depends(),
 ) -> VehicleOut:
     """Menandai kendaraan siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
-    return await controller.handle_vehicle_status(vehicle_id, data.status)
+    return await controller.handle_vehicle_status(vehicle_id, data.status, current_user)
 
 
 @router.delete("/vehicles/{vehicle_id}")
@@ -149,7 +149,7 @@ async def delete_vehicle(
     vehicle_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> dict[str, str]:
     """Menghapus (soft delete) kendaraan yang tidak sedang dipinjam."""
-    return await controller.handle_delete("VEHICLE", vehicle_id)
+    return await controller.handle_delete("VEHICLE", vehicle_id, current_user)
 
 
 @router.get("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut])
@@ -166,7 +166,7 @@ async def add_vehicle_file(
     controller: AssetController = Depends(),
 ) -> list[VehicleFileOut]:
     """Mencatat berkas kendaraan; berkas sejenis yang lama menjadi `extended`."""
-    return await controller.handle_add_vehicle_file(vehicle_id, data)
+    return await controller.handle_add_vehicle_file(vehicle_id, data, current_user)
 
 
 @router.get("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut])
@@ -216,7 +216,7 @@ async def lend_asset(
     tersimpan = idem.tersimpan()
     if tersimpan is not None:
         return tersimpan
-    hasil = await controller.handle_lend(data)
+    hasil = await controller.handle_lend(data, current_user)
     return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
@@ -226,7 +226,7 @@ async def return_asset(
     controller: AssetController = Depends(),
 ) -> LoanOut:
     """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
-    return await controller.handle_return(assignment_id, data.condition)
+    return await controller.handle_return(assignment_id, data.condition, current_user)
 
 
 # ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────

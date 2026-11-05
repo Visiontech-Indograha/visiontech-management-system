@@ -688,6 +688,8 @@ CREATE TABLE IF NOT EXISTS app_activity_logs_2026_11 PARTITION OF app_activity_l
 CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON app_activity_logs (entity_table, entity_id);
 -- Halaman audit: ORDER BY created_at DESC (migrasi v2_0027; indeks induk dibuat ke semua partisi)
 CREATE INDEX IF NOT EXISTS ix_app_activity_logs_created_log ON app_activity_logs (created_at DESC, log_id);
+-- Filter jenis entitas + urutan keyset (v2_0028)
+CREATE INDEX IF NOT EXISTS ix_app_activity_logs_entity_created_log ON app_activity_logs (entity_table, created_at DESC, log_id);
 
 -- 26. Tabel system_backup_registry (Pencatatan Backup 1 Bulan & 6 Bulan)
 CREATE TABLE IF NOT EXISTS system_backup_registry (
@@ -721,6 +723,9 @@ CREATE TABLE IF NOT EXISTS overtime (
 
 CREATE INDEX IF NOT EXISTS idx_overtime_daily_plan ON overtime (daily_plan_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
+-- Paginasi keyset create_at DESC, overtime_id DESC (v2_0028)
+CREATE INDEX IF NOT EXISTS ix_overtime_created_keyset ON overtime (create_at DESC, overtime_id DESC) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_overtime_employee_created_keyset ON overtime (employee_id, create_at DESC, overtime_id DESC) WHERE delete_at IS NULL;
 
 -- 28. Tabel file_object (metadata berkas MinIO; kolom *_path / path_file tabel lain = storage_key)
 CREATE TABLE IF NOT EXISTS file_object (

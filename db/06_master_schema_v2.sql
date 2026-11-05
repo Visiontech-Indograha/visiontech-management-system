@@ -686,6 +686,8 @@ CREATE TABLE IF NOT EXISTS app_activity_logs_2026_11 PARTITION OF app_activity_l
     FOR VALUES FROM ('2026-11-01 00:00:00+07') TO ('2026-12-01 00:00:00+07');
 
 CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON app_activity_logs (entity_table, entity_id);
+-- Halaman audit: ORDER BY created_at DESC (migrasi v2_0027; indeks induk dibuat ke semua partisi)
+CREATE INDEX IF NOT EXISTS ix_app_activity_logs_created_log ON app_activity_logs (created_at DESC, log_id);
 
 -- 26. Tabel system_backup_registry (Pencatatan Backup 1 Bulan & 6 Bulan)
 CREATE TABLE IF NOT EXISTS system_backup_registry (
@@ -785,6 +787,8 @@ CREATE INDEX IF NOT EXISTS idx_asset_assignment_employee ON asset_assignment (em
 CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance (employee_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_attendance_office ON attendance (office_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_attendance_daily_plan ON attendance (daily_plan_id) WHERE delete_at IS NULL;
+-- Pemantauan harian per tanggal (migrasi v2_0027, F-11)
+CREATE INDEX IF NOT EXISTS ix_attendance_date_status ON attendance (attendance_date, om_approval_status) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_completion_daily ON work_completion (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wt_default_materials_type ON work_type_default_materials (work_type_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wc_bom_completion ON work_completion_bom (completion_id) WHERE delete_at IS NULL;

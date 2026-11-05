@@ -2048,6 +2048,7 @@ export interface paths {
         /**
          * Create Stay
          * @description HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["create_stay_api_v1_mess_post"];
         delete?: never;
@@ -4275,6 +4276,7 @@ export interface paths {
         /**
          * Lend Asset
          * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["lend_asset_api_v1_assets_loans_post"];
         delete?: never;
@@ -15991,7 +15993,10 @@ export interface operations {
     create_stay_api_v1_mess_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20289,7 +20294,10 @@ export interface operations {
     lend_asset_api_v1_assets_loans_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

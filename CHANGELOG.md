@@ -9,6 +9,17 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-05
+
+### Gabungan perbaikan audit dan minggu 4
+- Kunci idempotensi (Idempotency-Key) untuk peminjaman aset dan mess; web ikut mengirim kunci. Dampak: MINOR.
+- Daftar dengan penomoran keyset (kursor) untuk absensi, lembur, dan audit; tanpa parameter perilaku lama tetap. Indeks pendukung ditambah lewat migrasi v2_0028.
+- Perubahan status memakai pengecekan status saat UPDATE (CAS) pada dokumen, aset, offboarding, rencana harian, koreksi, dan rollover agar tidak balapan.
+- Batas input lembur disamakan di OpenAPI, web, dan HP.
+- Daftar yang terpotong diperbaiki; peta transisi status order dicatat di ADR 0001.
+- Server beta memakai daftar putih yang lebih aman; image MinIO dipin.
+- Tes yang kadang gagal (flaky) di xdist dirapikan; audit minggu 1-3 didokumentasikan.
+
 ### Diubah
 - `/health` publik hanya mengembalikan `{"status":"ok"}` (field `version` dihapus agar versi tidak bocor tanpa login). Dampak: PATCH.
 

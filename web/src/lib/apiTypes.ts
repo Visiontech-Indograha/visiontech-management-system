@@ -828,6 +828,7 @@ export interface paths {
         /**
          * Bulk Create Daily
          * @description Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_create_daily_api_v1_work_plans_daily_bulk_post"];
         delete?: never;
@@ -848,6 +849,7 @@ export interface paths {
         /**
          * Bulk Standby Daily
          * @description Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post"];
         delete?: never;
@@ -2046,6 +2048,7 @@ export interface paths {
         /**
          * Create Stay
          * @description HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["create_stay_api_v1_mess_post"];
         delete?: never;
@@ -2086,6 +2089,7 @@ export interface paths {
         /**
          * Request Stay
          * @description Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["request_stay_api_v1_mess_requests_post"];
         delete?: never;
@@ -2197,7 +2201,7 @@ export interface paths {
         put?: never;
         /**
          * Apply Leave
-         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).
+         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key.
          */
         post: operations["apply_leave_api_v1_leaves_post"];
         delete?: never;
@@ -4272,6 +4276,7 @@ export interface paths {
         /**
          * Lend Asset
          * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["lend_asset_api_v1_assets_loans_post"];
         delete?: never;
@@ -4315,7 +4320,7 @@ export interface paths {
         put?: never;
         /**
          * Request Loan
-         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.
+         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key.
          */
         post: operations["request_loan_api_v1_assets_loan_requests_post"];
         delete?: never;
@@ -4414,12 +4419,15 @@ export interface paths {
         /**
          * List Overtime
          * @description Daftar lembur untuk satu jadwal harian.
+         *
+         *     Mode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;
+         *     `q` = awalan nama karyawan, `status` disaring di SQL.
          */
         get: operations["list_overtime_api_v1_overtime_get"];
         put?: never;
         /**
          * Report Overtime
-         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim).
+         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key.
          */
         post: operations["report_overtime_api_v1_overtime_post"];
         delete?: never;
@@ -13256,7 +13264,10 @@ export interface operations {
     bulk_create_daily_api_v1_work_plans_daily_bulk_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13289,7 +13300,10 @@ export interface operations {
     bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15979,7 +15993,10 @@ export interface operations {
     create_stay_api_v1_mess_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16048,7 +16065,10 @@ export interface operations {
     request_stay_api_v1_mess_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16325,7 +16345,10 @@ export interface operations {
     apply_leave_api_v1_leaves_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17478,6 +17501,8 @@ export interface operations {
     get_audit_events_api_v1_audit_events_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 page?: number;
                 size?: number;
                 entity_type?: string | null;
@@ -19046,6 +19071,8 @@ export interface operations {
     list_attendance_api_v1_attendance_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 employee_id?: string | null;
                 from?: string | null;
                 to?: string | null;
@@ -20267,7 +20294,10 @@ export interface operations {
     lend_asset_api_v1_assets_loans_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20366,7 +20396,10 @@ export interface operations {
     request_loan_api_v1_assets_loan_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20531,6 +20564,8 @@ export interface operations {
     list_overtime_api_v1_overtime_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 /** @description Filter status lembur */
                 status?: string | null;
                 /** @description ID jadwal harian */
@@ -20573,7 +20608,10 @@ export interface operations {
     report_overtime_api_v1_overtime_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

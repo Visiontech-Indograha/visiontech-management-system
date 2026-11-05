@@ -9,10 +9,7 @@ void main() {
     expect(documentTypeLabel('SURAT_TUGAS'), 'SURAT TUGAS');
   });
 
-  test('label status lembur dan dokumen', () {
-    expect(overtimeStatusLabel('PENDING'), 'Menunggu persetujuan');
-    expect(overtimeStatusLabel('APPROVED'), 'Disetujui');
-    expect(overtimeStatusLabel('REJECTED'), 'Ditolak');
+  test('label status dokumen', () {
     expect(documentStatusLabel('active'), 'Berlaku');
     expect(documentStatusLabel('expired'), 'Kedaluwarsa');
   });

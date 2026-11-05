@@ -10859,6 +10859,8 @@
       "type": "string"
      },
      "hours": {
+      "exclusiveMinimum": 0.0,
+      "maximum": 12.0,
       "title": "Hours",
       "type": "number"
      },
@@ -18414,7 +18416,7 @@
  },
  "info": {
   "title": "Visiontech VMS",
-  "version": "1.5.0"
+  "version": "1.6.0"
  },
  "openapi": "3.1.0",
  "paths": {
@@ -18694,8 +18696,28 @@
     ]
    },
    "post": {
-    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.",
+    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key.",
     "operationId": "request_loan_api_v1_assets_loan_requests_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -18993,8 +19015,28 @@
     ]
    },
    "post": {
-    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).",
+    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).\nMendukung Idempotency-Key (opsional).",
     "operationId": "lend_asset_api_v1_assets_loans_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -20104,6 +20146,25 @@
     "operationId": "list_attendance_api_v1_attendance_get",
     "parameters": [
      {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
+     {
       "in": "query",
       "name": "employee_id",
       "required": false,
@@ -20955,6 +21016,25 @@
     "description": "Mendapatkan daftar kejadian audit organisasi pengguna.",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "parameters": [
+     {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
      {
       "in": "query",
       "name": "page",
@@ -26350,8 +26430,28 @@
     ]
    },
    "post": {
-    "description": "Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).",
+    "description": "Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key.",
     "operationId": "apply_leave_api_v1_leaves_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -26933,8 +27033,28 @@
     ]
    },
    "post": {
-    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.",
+    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.\nMendukung Idempotency-Key (opsional).",
     "operationId": "create_stay_api_v1_mess_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -27339,8 +27459,28 @@
   },
   "/api/v1/mess/requests": {
    "post": {
-    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.",
+    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.\nMendukung Idempotency-Key.",
     "operationId": "request_stay_api_v1_mess_requests_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -28585,9 +28725,28 @@
   },
   "/api/v1/overtime": {
    "get": {
-    "description": "Daftar lembur untuk satu jadwal harian.",
+    "description": "Daftar lembur untuk satu jadwal harian.\n\nMode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;\n`q` = awalan nama karyawan, `status` disaring di SQL.",
     "operationId": "list_overtime_api_v1_overtime_get",
     "parameters": [
+     {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
      {
       "description": "Filter status lembur",
       "in": "query",
@@ -28742,8 +28901,28 @@
     ]
    },
    "post": {
-    "description": "Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim).",
+    "description": "Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key.",
     "operationId": "report_overtime_api_v1_overtime_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -32242,8 +32421,28 @@
   },
   "/api/v1/work-plans/daily/bulk": {
    "post": {
-    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.",
+    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.\nMendukung Idempotency-Key.",
     "operationId": "bulk_create_daily_api_v1_work_plans_daily_bulk_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -32289,8 +32488,28 @@
   },
   "/api/v1/work-plans/daily/bulk-standby": {
    "post": {
-    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).",
+    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).\nMendukung Idempotency-Key.",
     "operationId": "bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {

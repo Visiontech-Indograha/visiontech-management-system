@@ -7,6 +7,7 @@ Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 
 from fastapi import APIRouter, Depends, Request, Response
 
+from app.core.rate_limit import GROUP_AUTH, rate_limit
 from app.modules.auth.controllers.auth_login_controller import AuthLoginController
 from app.modules.auth.schemas.auth_login_request_schema import AuthLoginRequestSchema
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
@@ -15,7 +16,7 @@ from app.modules.auth.schemas.auth_profile_schema import AuthMessageResponseSche
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/login", response_model=AuthLoginResponseSchema)
+@router.post("/login", response_model=AuthLoginResponseSchema, dependencies=[Depends(rate_limit(GROUP_AUTH))])
 async def login(
     payload: AuthLoginRequestSchema,
     request: Request,
@@ -28,7 +29,7 @@ async def login(
     return await controller.handle_login(payload, request, response)
 
 
-@router.post("/refresh", response_model=AuthLoginResponseSchema)
+@router.post("/refresh", response_model=AuthLoginResponseSchema, dependencies=[Depends(rate_limit(GROUP_AUTH))])
 async def refresh_token(
     request: Request,
     response: Response,

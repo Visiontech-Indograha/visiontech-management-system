@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -286,6 +287,8 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
   DateTime? _start;
   DateTime? _end;
   final _reason = TextEditingController();
+  // Satu niat pengajuan: percobaan ulang memakai kunci yang sama (lihat PengajuanIdempotency).
+  final _idem = PengajuanIdempotency();
   bool _busy = false;
   String? _error;
 
@@ -363,6 +366,7 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
             startDate: _iso.format(_start!),
             endDate: _iso.format(_end!),
             reason: _reason.text.trim(),
+            idem: _idem,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

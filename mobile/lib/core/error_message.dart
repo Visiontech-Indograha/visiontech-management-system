@@ -17,6 +17,10 @@ String apiErrorMessage(Object error, {String? fallback}) {
   if (error is SyncRejectedException) return error.message;
 
   if (error is DioException) {
+    // Pengajuan yang sama masih diproses server: bukan gagal permanen, cukup coba lagi nanti.
+    if (apiErrorCode(error) == 'IDEMPOTENCY_SEDANG_DIPROSES') {
+      return 'Pengajuan ini masih diproses server. Coba lagi sebentar lagi; isian Anda tidak hilang.';
+    }
     final detail = _serverDetail(error);
     if (detail != null) return detail;
 

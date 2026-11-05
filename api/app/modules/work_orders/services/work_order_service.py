@@ -180,14 +180,16 @@ class WorkOrderService:
             raise AppError("INVALID_STATE", f"Laporan survei tidak dapat dikirim untuk status {wo.status}.", status=409)
 
         points_payload = [p.model_dump() for p in data.points]
-        await self.repo.submit_survey(
+        if not await self.repo.submit_survey(
             work_order_id=work_order_id,
             surveyor_team_id=wo.lead_team_id,
             narrative=data.narrative,
             format_type=data.format,
             points=points_payload,
             general_bom=data.general_bom,
-        )
+        ):
+            raise AppError("INVALID_STATE", "Status WO berubah; laporan survei tidak dapat dikirim. Muat ulang.",
+                           status=409)
         return await self.get_work_order(work_order_id)
 
     async def apply_survey(self, work_order_id: UUID | str, current_user: CurrentUser) -> Any:
@@ -209,7 +211,12 @@ class WorkOrderService:
                 status=409,
             )
 
-        await self.repo.apply_survey_to_items(work_order_id, current_user.user_id)
+        if not await self.repo.apply_survey_to_items(work_order_id, current_user.user_id):
+            raise AppError(
+                "INVALID_STATE",
+                "Survei sudah disetujui atau status WO berubah; muat ulang.",
+                status=409,
+            )
         return await self.get_work_order(work_order_id)
 
     async def update_item_progress(

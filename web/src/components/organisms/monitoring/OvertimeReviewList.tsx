@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextAreaField } from "@/components/molecules/Field";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { LoadMoreBar } from "@/components/organisms/LoadMoreBar";
+import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -14,7 +16,7 @@ import { type Overtime, useReviewOvertime } from "@/services/overtimeService";
 
 /** Antrean lembur yang menunggu keputusan. Tombol hanya bila API menandai `can_review` (PM/OM divisi jadwal atau admin).
  * Penolakan wajib beralasan. */
-export function OvertimeReviewList({ query }: { query: UseQueryResult<Overtime[]> }) {
+export function OvertimeReviewList({ query, more }: { query: UseQueryResult<Overtime[]>; more: KeysetMore }) {
   const review = useReviewOvertime();
   const [rejecting, setRejecting] = useState<Overtime | null>(null);
   const [note, setNote] = useState("");
@@ -99,6 +101,7 @@ export function OvertimeReviewList({ query }: { query: UseQueryResult<Overtime[]
             );
           })}
         </ListBlock>
+        <LoadMoreBar more={more} />
       </QueryState>
       {rejecting && (
         <VmsDialog

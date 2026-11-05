@@ -8,11 +8,11 @@ tanpa kunci atau kondisi status. Tes ini memastikan:
 from __future__ import annotations
 
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from tests.concurrency import tunggu_terkunci
 from tests.conftest import World, _sync_conn, requires_db, sync_query
 from tests.daily import add_item, make_daily_plan
 
@@ -21,16 +21,6 @@ pytestmark = [requires_db, pytest.mark.usefixtures("fake_storage")]
 
 def _status(plan: str) -> str:
     return sync_query("SELECT status FROM work_plan_daily WHERE daily_plan_id = %s", (plan,))[0][0]
-
-
-def _tunggu_terkunci(batas: int = 200) -> None:
-    """Tunggu sampai ada sesi yang menunggu kunci baris (permintaan tolak sudah masuk antrean)."""
-    for _ in range(batas):
-        if sync_query("SELECT count(*) FROM pg_stat_activity "
-                      "WHERE wait_event_type = 'Lock' AND datname = current_database()")[0][0] > 0:
-            return
-        time.sleep(0.05)
-    pytest.fail("Permintaan tolak tidak menunggu kunci baris; FOR UPDATE belum berjalan")
 
 
 def test_dua_setujui_bersamaan_hanya_satu_sukses(client, world: World):
@@ -61,11 +51,13 @@ def test_tolak_yang_menunggu_mulai_dapat_409_dan_tidak_menimpa(client, world: Wo
     conn.autocommit = False
     try:
         with conn.cursor() as cur:
+            cur.execute("SELECT pg_backend_pid()")
+            penahan_pid = cur.fetchone()[0]
             cur.execute("UPDATE work_plan_daily SET status = 'ONGOING' WHERE daily_plan_id = %s", (plan,))
         with ThreadPoolExecutor(max_workers=1) as pool:
             future = pool.submit(client.post, f"/work-plans/daily/{plan}/reject", headers=pm,
                                  json={"reason": "Alasan uji"})
-            _tunggu_terkunci()
+            tunggu_terkunci(penahan_pid)
             conn.commit()
             hasil = future.result(timeout=30)
     finally:

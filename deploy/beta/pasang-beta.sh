@@ -5,8 +5,8 @@
 #   ./pasang-beta.sh data      # (setelah deploy beta pertama) isi DB beta dengan data uji SINTETIS (db/07_master_seed_v2.sql)
 #   ./pasang-beta.sh berkas    # DINONAKTIFKAN: berkas prod (foto, dokumen) tidak boleh masuk beta
 #
-# Aturan: beta tidak membaca dump, DB, atau berkas prod. Hanya berkas konfigurasi non-rahasia dari api.env prod
-# yang dijadikan templat (kunci koneksi & rahasia diganti).
+# Aturan: beta tidak membaca dump, DB, atau berkas prod. Dari api.env prod hanya variabel non-rahasia pada DAFTAR PUTIH
+# yang disalin; semua rahasia (termasuk DOC_SIGNING_KEY_HEX) dibuat baru khusus beta.
 # Aman diulang: berkas rahasia yang sudah ada tidak ditimpa; DB beta tidak diisi ulang bila sudah berisi.
 set -euo pipefail
 
@@ -16,6 +16,18 @@ REPO="${VMS_DEPLOY_REPO:-git@github-vms:Visiontech-Indograha/visiontech-manageme
 BETA_URL="${VMS_BETA_URL:-https://visiontech-bar.tail827174.ts.net:10000}"
 rand() { python3 -c "import secrets; print(secrets.token_urlsafe($1))"; }
 val() { grep -E "^$1=" "$2" | head -1 | cut -d= -f2-; }
+
+# Gagal bila kunci rahasia beta sama dengan prod (tanpa mencetak nilainya).
+periksa_kunci_beda() {
+  local k bad=0 b p
+  for k in DOC_SIGNING_KEY_HEX JWT_PRIVATE_KEY_HEX FACE_SERVICE_TOKEN MINIO_SECRET_KEY; do
+    b=$(val "$k" "$BETA/api.env" || true); p=$(val "$k" "$PROD/api.env" || true)
+    if [ -z "$b" ] && [ "$k" = DOC_SIGNING_KEY_HEX ]; then echo "GAGAL: $k kosong di api.env beta" >&2; bad=1; fi
+    if [ -n "$b" ] && [ "$b" = "$p" ]; then echo "GAGAL: $k beta SAMA dengan prod; buat ulang api.env beta" >&2; bad=1; fi
+  done
+  [ "$bad" = 0 ] || exit 3
+  echo "pemeriksaan kunci: kunci beta berbeda dari prod"
+}
 
 siapkan() {
   mkdir -p "$BETA"/{backups,logs,rilis/android,keystore}
@@ -55,8 +67,12 @@ EOF
   if [ ! -f api.env ]; then
     umask 077
     face_token=$(rand 32)
-    # Template = api.env prod (pengaturan sama), lalu semua koneksi & rahasia diganti milik beta.
-    grep -vE "^(DATABASE_URL|MIGRATION_DATABASE_URL|MINIO_ENDPOINT|MINIO_ACCESS_KEY|MINIO_SECRET_KEY|MINIO_PUBLIC_URL|PUBLIC_VERIFY_URL|JWT_PRIVATE_KEY_HEX|JWT_KID|FACE_SERVICE_URL|FACE_SERVICE_TOKEN)=" "$PROD/api.env" > api.env
+    # DAFTAR PUTIH: hanya pengaturan non-rahasia ini yang disalin dari api.env prod. Selebihnya (JWT, DB, MinIO,
+    # SMTP, DOC_SIGNING_KEY_HEX, dst.) TIDAK ikut; menambah variabel baru = ubah daftar ini secara sadar.
+    : > api.env
+    for k in APP_ENV MINIO_SECURE FACE_ENROLLMENT_REQUIRED LOG_LEVEL TZ; do
+      grep -E "^${k}=" "$PROD/api.env" >> api.env || true
+    done
     cat >> api.env <<EOF
 DATABASE_URL=postgresql+asyncpg://vms_app:${pg_pw}@db:5432/vms_beta
 MIGRATION_DATABASE_URL=postgresql+asyncpg://vms_app:${pg_pw}@db:5432/vms_beta
@@ -67,6 +83,7 @@ MINIO_PUBLIC_URL=${BETA_URL}
 PUBLIC_VERIFY_URL=${BETA_URL}/verify
 JWT_PRIVATE_KEY_HEX=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 JWT_KID=jwt-beta-1
+DOC_SIGNING_KEY_HEX=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 FACE_SERVICE_URL=http://face:8001
 FACE_SERVICE_TOKEN=${face_token}
 EOF
@@ -75,6 +92,7 @@ EOF
   fi
   [ -f notify.env ] || cp "$PROD/notify.env" notify.env           # webhook Discord sama; judul ditandai [beta]
   [ -f keystore/key.properties ] || cp -a "$PROD/keystore/." keystore/   # kunci tanda tangan APK sama dengan prod
+  periksa_kunci_beda
   cat > deploy.env <<EOF
 VMS_ENV_NAME=beta
 VMS_DEPLOY_BRANCH=beta

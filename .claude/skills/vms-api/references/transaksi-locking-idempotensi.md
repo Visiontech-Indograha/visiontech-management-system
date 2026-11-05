@@ -35,7 +35,25 @@ WHERE daily_plan_id = CAST(:id AS uuid)
 RETURNING daily_plan_id;
 ```
 - `rowcount` 0 → 409 "status sudah berubah, muat ulang". Di bulk approve, 409 dihitung "dilewati", bukan galat (riset F-12).
-- Yang belum memakai pola ini: `set_status` di `daily_plan_repository.py:309-325` (approve/reject/submit) dan `update_status` di `work_completion_core_repository.py` (riset F-13).
+- Sudah memakai pola ini: `daily_plan_repository.set_status` (`allowed=`), `work_completion_core_repository.update_status` (`expected=`), `mess_repository.decide` dan `set_status`, `work_order_repository.apply_survey_to_items` dan `submit_survey`. Hasil `bool` dicek di service, lalu `AppError(..., status=409)`.
+
+Contoh untuk `mypy --strict` (`api/mypy.ini`), sesuai pola repository VMS:
+```python
+async def set_status(
+    self, plan_id: UUID | str, new_status: str, allowed: tuple[str, ...]
+) -> bool:
+    # UUID → str(...) (parameter SQL), tuple → list(...) (ANY), hasil scalar bertipe Any → cek `is not None`.
+    updated = await self.scalar(
+        """
+        UPDATE work_plan_daily SET status = :new_status, update_at = now()
+        WHERE daily_plan_id = CAST(:id AS uuid) AND status = ANY(:allowed) AND delete_at IS NULL
+        RETURNING daily_plan_id
+        """,
+        {"id": str(plan_id), "new_status": new_status, "allowed": list(allowed)},
+    )
+    return updated is not None
+```
+Parameter opsional (`X | None`) dikirim eksplisit: `str(x) if x is not None else None`. Kirim `str(...)` untuk UUID, seperti kode repository yang ada. `params` bertipe `dict[str, Any]`, jadi mypy tidak menangkap UUID mentah; pemeriksaan ini hanya lewat konvensi dan tes.
 
 ### 3.3 Optimistic lock (kolom version)
 PDF 3.3 baris 268-271. Tambah `version INT NOT NULL DEFAULT 1` lalu `WHERE version = :expected` dan `SET version = version + 1`. Berguna untuk form edit yang lama. VMS belum punya kolom version di tabel transaksi utama; tambahkan hanya bila ada konflik nyata.
@@ -52,7 +70,7 @@ Pola salah: baca status → cek di Python → UPDATE tanpa kondisi. Dua request 
 Klien dapat mengirim ulang (jaringan lambat, tombol ditekan dua kali, retry Dio). Tanpa idempotensi, dua pengajuan lembur, cuti, atau pinjaman aset tercipta. Unique index hanya mencegah sebagian kasus dan tidak mengembalikan respons yang sama (riset 01 T6).
 
 ### 4.2 Kondisi sekarang
-- 189 endpoint mutasi, 0 membaca `Idempotency-Key` (riset 01 F-03; verifikasi: `grep -rni idempotency api/app` hanya menemukan `attendance_offline_service.py:164-173` untuk `client_op_id`).
+- 189 endpoint mutasi; 8 di antaranya memakai `idempotency_guard` (opsional): `POST /leaves`, `POST /overtime`, `POST /mess`, `POST /mess/requests`, `POST /assets/loans`, `POST /assets/loan-requests`, dan dua bulk jadwal harian di `daily_plan_route.py`. Hitung ulang: `grep -rn "Depends(idempotency_guard)" api/app/modules`. Sinkron offline absensi tetap lewat `client_op_id` (`attendance_offline_service.py:164-173`).
 - Operasi offline: `client_op_id` dicek sebelum dijalankan dan hasil sebelumnya dikembalikan (`attendance_offline_service.py:173`).
 
 ### 4.3 Desain Target (ADR 0001 keputusan 7; `docs/06`)

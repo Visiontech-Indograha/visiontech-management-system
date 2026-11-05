@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.core.repository import BaseRepository
 
@@ -77,12 +77,15 @@ class SurveyRepository(BaseRepository):
             {"w": str(work_type_id)},
         ))
 
-    async def slot_names(self, work_type_id: UUID | str) -> dict[str, str]:
-        """Nama semua slot foto work type — termasuk yang sudah diarsipkan — agar foto lama tetap berlabel."""
+    async def slot_names(self, work_type_ids: list[str]) -> dict[str, str]:
+        """Nama semua slot foto beberapa work type sekaligus — termasuk yang sudah diarsipkan — agar foto lama tetap
+        berlabel. Satu kueri untuk seluruh jenis (bukan satu per jenis)."""
+        if not work_type_ids:
+            return {}
         rows = await self.fetchall(
             "SELECT CAST(image_requirement_id AS text) AS id, name FROM image_requirement "
-            "WHERE work_type_id = CAST(:w AS uuid)",
-            {"w": str(work_type_id)},
+            "WHERE work_type_id = ANY(CAST(:w AS uuid[]))",
+            {"w": work_type_ids},
         )
         return {r.id: r.name for r in rows}
 
@@ -331,24 +334,51 @@ class SurveyRepository(BaseRepository):
         )
         return str(div) if div else None
 
-    async def insert_follow_up(self, daily_plan_id: UUID | str, completion_id: UUID | str, work_type_id: UUID | str,
-                               phase: str, point: Any, notes: str | None) -> UUID:
-        item_id: UUID = await self.scalar(
+    async def insert_follow_ups(self, daily_plan_id: UUID | str, completion_id: UUID | str,
+                                follow_ups: list[tuple[UUID | str, str, Any, str | None]]) -> list[UUID]:
+        """Item lanjutan (persiapan/pemasangan) per titik dalam SATU INSERT. `follow_ups` = (work_type_id, fase,
+        titik, catatan) berurutan. Id dibangkitkan aplikasi (uuid4, sama dengan gen_random_uuid) agar kembalian
+        berurutan sama dengan masukan tanpa perlu RETURNING yang urutannya tak dijamin."""
+        if not follow_ups:
+            return []
+        ids: list[str] = []
+        work_types: list[str] = []
+        titles: list[str] = []
+        phases: list[str] = []
+        mains: list[bool] = []
+        points: list[str] = []
+        locs: list[str] = []
+        lats: list[Any] = []
+        lngs: list[Any] = []
+        notes: list[str | None] = []
+        for work_type_id, phase, point, note in follow_ups:
+            ids.append(str(uuid4()))
+            work_types.append(str(work_type_id))
+            titles.append(f"{'Persiapan' if phase == 'PREPARATION' else 'Pekerjaan'} — {point.name}"[:200])
+            phases.append(phase)
+            mains.append(phase in ("INSTALLATION", "REPLACEMENT", "MAINTENANCE"))
+            points.append(str(point.point_id))
+            locs.append(point.name[:150])
+            lats.append(point.site_lat)
+            lngs.append(point.site_lng)
+            notes.append(note)
+        await self.execute(
             """
-            INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
+            INSERT INTO work_plan_item (item_id, daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
                                         completion_id, depends_on_item_id, target_qty, completed_qty,
                                         progress_percent, status, location_name, site_lat, site_lng, notes)
-            VALUES (CAST(:daily AS uuid), CAST(:wt AS uuid), :title, :phase, :main, CAST(:order AS uuid),
-                    CAST(:point AS uuid), 1, 0, 0, 'TODO', :loc, CAST(:lat AS numeric), CAST(:lng AS numeric), :notes)
-            RETURNING item_id
+            SELECT r.item_id, CAST(:daily AS uuid), r.work_type_id, r.title, r.phase, r.main, CAST(:order AS uuid),
+                   r.point_id, 1, 0, 0, CAST('TODO' AS varchar), r.loc, r.lat, r.lng, r.notes
+            FROM unnest(CAST(:ids AS uuid[]), CAST(:wts AS uuid[]), CAST(:titles AS text[]), CAST(:phases AS text[]),
+                        CAST(:mains AS boolean[]), CAST(:points AS uuid[]), CAST(:locs AS text[]),
+                        CAST(:lats AS numeric[]), CAST(:lngs AS numeric[]), CAST(:notes AS text[]))
+                 AS r(item_id, work_type_id, title, phase, main, point_id, loc, lat, lng, notes)
             """,
-            {"daily": str(daily_plan_id), "wt": str(work_type_id), "phase": phase,
-             "title": f"{'Persiapan' if phase == 'PREPARATION' else 'Pekerjaan'} — {point.name}"[:200],
-             "main": phase in ("INSTALLATION", "REPLACEMENT", "MAINTENANCE"), "order": str(completion_id),
-             "point": str(point.point_id), "loc": point.name[:150], "lat": point.site_lat, "lng": point.site_lng,
-             "notes": notes},
+            {"daily": str(daily_plan_id), "order": str(completion_id), "ids": ids, "wts": work_types,
+             "titles": titles, "phases": phases, "mains": mains, "points": points, "locs": locs,
+             "lats": lats, "lngs": lngs, "notes": notes},
         )
-        return item_id
+        return [UUID(i) for i in ids]
 
     async def create_task(self, data: dict[str, Any]) -> UUID | None:
         """Buat tugas survei baru (work_plan_item SURVEY) dari order completion/revisi jika konteks tersedia."""

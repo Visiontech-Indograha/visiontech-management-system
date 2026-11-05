@@ -7,7 +7,7 @@ import { useSession } from "@/stores/sessionStore";
 
 const WORKSPACE_CLUSTERS: readonly (readonly string[])[] = [
   ["/work-orders", "/work-plans", "/alokasi-mingguan"],
-  ["/attendance", "/attendance-recap", "/overtime-recap", "/leaves"],
+  ["/attendance", "/attendance-recap", "/overtime", "/overtime-recap", "/leaves"],
   ["/clients", "/teams"],
   ["/directory", "/offboarding"],
 ];

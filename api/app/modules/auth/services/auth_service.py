@@ -6,6 +6,7 @@ Tidak menulis SQL (lewat crud) dan tidak tahu HTTP (cookie diurus router).
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
@@ -141,8 +142,10 @@ class AuthService:
         user = await self.users.find_by_login(login)
         # Selalu hitung argon2 — tanpa ini login tak terdaftar jauh lebih cepat & bisa ditebak (dok 08).
         # Melakukan hashing buatan (dummy_hash) jika akun tidak ditemukan agar waktu respons seragam.
+        # Argon2 CPU-bound: dijalankan di threadpool agar event loop tidak terblokir (F-17).
         stored_hash = user.password_hash if user and user.password_hash else _dummy_hash()
-        if not verify_password(password, stored_hash) or not user or not user.password_hash:
+        password_ok = await asyncio.to_thread(verify_password, password, stored_hash)
+        if not password_ok or not user or not user.password_hash:
             await self.sessions.record_login_attempt(
                 login, client.ip, False, "Invalid credentials",
                 user_id=user.id if user else None, role=user.role if user else None, platform=platform,
@@ -311,7 +314,9 @@ class AuthService:
         Mengubah kata sandi pengguna, mencabut semua sesi lainnya, lalu mengeluarkan sesi baru.
         """
         user = await self._user(user_id)
-        if not user.password_hash or not verify_password(current_password, user.password_hash):
+        if not user.password_hash or not await asyncio.to_thread(
+            verify_password, current_password, user.password_hash
+        ):
             raise AppError(
                 "VALIDATION_ERROR",
                 "Kata sandi saat ini salah.",
@@ -319,7 +324,8 @@ class AuthService:
                 details={"fields": {"current_password": "Kata sandi saat ini salah."}},
             )
 
-        await self.users.update_password_hash(user_id, hash_password(new_password))
+        new_hash = await asyncio.to_thread(hash_password, new_password)
+        await self.users.update_password_hash(user_id, new_hash)
         # Kata sandi berganti → semua perangkat lain keluar; perangkat ini mendapat sesi baru.
         await self.sessions.revoke_all_for_user(user_id, "Kata sandi diganti")
         return await self._start_session(user, client)

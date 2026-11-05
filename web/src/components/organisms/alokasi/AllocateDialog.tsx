@@ -22,6 +22,7 @@ import {
 } from "@/lib/alokasi";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
+import { useIdempotencyKey } from "@/lib/idempotency";
 import { addItemToPlan, useBulkAllocate, useOrderSchedule } from "@/services/alokasiService";
 import { useWorkTypes } from "@/services/workTypeService";
 
@@ -66,6 +67,7 @@ export function AllocateDialog({ divisionId, cells, teams, orders, today, onClos
   );
 
   const bulk = useBulkAllocate();
+  const idem = useIdempotencyKey(JSON.stringify([divisionId, teamIds, start, end, skipWeekend]));
   const schedule = useOrderSchedule(completionId);
   const types = useWorkTypes(false, divisionId).data?.filter((w) => w.kind !== "SURVEY_POINT") ?? [];
   const orderOptions = orders.filter((o) => !o.division_id || o.division_id === divisionId);
@@ -90,7 +92,8 @@ export function AllocateDialog({ divisionId, cells, teams, orders, today, onClos
     setError(null);
     setBusy(true);
     try {
-      const out = await bulk.mutateAsync({ division_id: divisionId, team_ids: teamIds, work_dates: dates });
+      const out = await bulk.mutateAsync({ division_id: divisionId, team_ids: teamIds, work_dates: dates, idempotencyKey: idem.key });
+      idem.renew();
       const rows: ResultRow[] = [];
       for (const cell of out.cells) {
         let itemError: string | null = null;

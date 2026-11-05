@@ -16,6 +16,12 @@ from app.core.config import Settings, encode_url_credentials, normalize_database
 _HOST = "vms_db_prod"
 
 
+@pytest.fixture(autouse=True)
+def _hermetic_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hermetik: variabel lingkungan mesin/CI (mis. MIGRATION_DATABASE_URL) tidak boleh mengubah hasil uji parse URL."""
+    monkeypatch.delenv("MIGRATION_DATABASE_URL", raising=False)
+
+
 def _url(password: str) -> str:
     return f"postgresql+asyncpg://vms_api:{password}@{_HOST}:5432/visiontech_db"
 

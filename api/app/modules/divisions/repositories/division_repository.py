@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.repository import BaseRepository
 
 _SELECT = """
@@ -36,7 +37,11 @@ class DivisionRepository(BaseRepository):
 
     async def list_for_org(self, org_id: UUID | str) -> list[Any]:
         """Semua divisi aktif."""
-        return list(await self.fetchall(f"{_SELECT} WHERE d.delete_at IS NULL ORDER BY d.name"))
+        return list(
+            await self.fetchall(
+                f"{_SELECT} WHERE d.delete_at IS NULL ORDER BY d.name LIMIT :cap", {"cap": MAX_ROWS_UNPAGED}
+            )
+        )
 
     async def get(self, division_id: UUID | str) -> Any:
         return await self.fetchone(

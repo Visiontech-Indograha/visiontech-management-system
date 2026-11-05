@@ -293,13 +293,22 @@ class AssetRepository(BaseRepository):
             {"id": str(asset_id)},
         )
 
-    async def set_status(self, asset_type: str, asset_id: UUID | str, status: str) -> None:
+    async def set_status(
+        self, asset_type: str, asset_id: UUID | str, status: str, *, expected: str | None = None
+    ) -> int:
+        """Ubah status aset. Bila `expected` diisi, UPDATE hanya berlaku jika status saat itu sama
+        (compare-and-set). Kembalian = jumlah baris berubah."""
         table, col = ("tool", "tool_id") if asset_type == "TOOL" else ("vehicle", "vehicle_id")
-        await self.execute(
+        guard = " AND status = CAST(:expected AS asset_status_enum)" if expected is not None else ""
+        params: dict[str, Any] = {"id": str(asset_id), "status": status.lower()}
+        if expected is not None:
+            params["expected"] = expected.lower()
+        result = await self.execute(
             f"UPDATE {table} SET status = CAST(:status AS asset_status_enum), update_at = now() "
-            f"WHERE {col} = CAST(:id AS uuid)",
-            {"id": str(asset_id), "status": status.lower()},
+            f"WHERE {col} = CAST(:id AS uuid)" + guard,
+            params,
         )
+        return int(result.rowcount or 0)
 
     async def has_open_loan(self, asset_type: str, asset_id: UUID | str) -> bool:
         col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
@@ -557,14 +566,16 @@ class AssetRepository(BaseRepository):
     async def set_request_status(
         self, request_id: UUID | str, status: str, reviewer: str | None, note: str | None,
         assignment_id: UUID | str | None = None,
-    ) -> None:
-        await self.execute(
+    ) -> int:
+        """Putuskan/batalkan pengajuan hanya bila masih PENDING (compare-and-set). Kembalian = baris berubah."""
+        result = await self.execute(
             "UPDATE asset_loan_request SET status = :st, reviewed_by_id = CAST(:rev AS uuid), reviewed_at = now(), "
             "review_note = :note, assignment_id = CAST(:asg AS uuid), update_at = now() "
-            "WHERE request_id = CAST(:id AS uuid)",
+            "WHERE request_id = CAST(:id AS uuid) AND status = 'PENDING'",
             {"id": str(request_id), "st": status, "rev": reviewer, "note": note,
              "asg": str(assignment_id) if assignment_id else None},
         )
+        return int(result.rowcount or 0)
 
     async def request_return(
         self, assignment_id: UUID | str, condition: str, note: str | None, photo_path: str

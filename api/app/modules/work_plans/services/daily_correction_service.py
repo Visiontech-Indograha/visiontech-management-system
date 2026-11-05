@@ -65,6 +65,10 @@ class DailyCorrectionService:
             raise NotFoundError("Koreksi laporan")
         return row
 
+    async def _set_plan_status(self, daily_plan_id: Any, status: str, expected: str) -> None:
+        if not await self.repo.set_plan_status(daily_plan_id, status, expected):
+            raise AppError("INVALID_STATE", "Status jadwal sudah berubah; muat ulang lalu coba lagi.", status=409)
+
     async def decide(self, user: CurrentUser, correction_id: UUID, data: CorrectionDecide) -> Any:
         row = await self._locked(correction_id)
         await check_daily_access(self.db, row.daily_plan_id, user, DailyNeed.MANAGE)
@@ -75,7 +79,7 @@ class DailyCorrectionService:
                 raise AppError("INVALID_STATE", "Permintaan koreksi ini sudah diputuskan.", status=409)
             if data.decision == "APPROVE":
                 await self.repo.set_status(correction_id, "REVISING", reviewer=reviewer, note=note)
-                await self.repo.set_plan_status(row.daily_plan_id, "ONGOING")
+                await self._set_plan_status(row.daily_plan_id, "ONGOING", "COMPLETED")
             else:
                 await self.repo.set_status(correction_id, "REJECTED", reviewer=reviewer, note=note)
         else:
@@ -94,7 +98,7 @@ class DailyCorrectionService:
                             details={"items": [{"title": t, "missing": m} for t, m in gaps]},
                         )
                 await self.repo.set_status(correction_id, "ACCEPTED", reviewer=reviewer, note=note)
-                await self.repo.set_plan_status(row.daily_plan_id, "COMPLETED")
+                await self._set_plan_status(row.daily_plan_id, "COMPLETED", "ONGOING")
             else:
                 await self.repo.set_status(correction_id, "REVISING", reviewer=reviewer, note=note)
         result = await self.repo.get(correction_id)

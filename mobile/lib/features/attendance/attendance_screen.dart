@@ -16,6 +16,7 @@ import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../data/vms_api.dart' show isCursorRejected, kPesanKursorBerubah;
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -53,6 +54,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _busy = false;
   String? _error;
   bool _faceEnrolled = false;
+  // Paginasi keyset riwayat: kursor halaman berikut (null = sudah habis atau data dari cache).
+  String? _nextCursor;
+  bool _memuatLagi = false;
 
   static final _day = DateFormat('EEE, d MMM yyyy', 'id_ID');
   static final _time = DateFormat('HH:mm');
@@ -90,6 +94,36 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     } catch (_) {}
   }
 
+  /// Muat halaman riwayat berikut (keyset). Kursor ditolak (422) = muat ulang dari awal.
+  Future<void> _muatLagi() async {
+    final cursor = _nextCursor;
+    if (cursor == null || _memuatLagi) return;
+    setState(() => _memuatLagi = true);
+    try {
+      final res = await ref
+          .read(syncEngineProvider)
+          .api
+          .myAttendance(employeeId: _employeeId, cursor: cursor);
+      if (!mounted) return;
+      setState(() {
+        _records = [..._records, ...res.items];
+        _nextCursor = res.nextCursor;
+        _memuatLagi = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _memuatLagi = false);
+      if (isCursorRejected(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kPesanKursorBerubah)));
+        await _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e, fallback: 'Riwayat belum bisa dimuat. Coba lagi.'))),
+        );
+      }
+    }
+  }
+
   Future<void> _load() async {
     unawaited(_loadSummary());
     setState(() {
@@ -99,6 +133,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final engine = ref.read(syncEngineProvider);
     final offline = engine.offlineAttendance;
     _offline = await offline.pending();
+    _nextCursor = null;
     try {
       String? anchor;
       final att = await engine.fetchList('attendance', () async {
@@ -108,6 +143,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _reportPending = res.reportPendingCount;
         _reportPlanId = res.reportPendingPlanId;
         anchor = res.timeAnchor;
+        _nextCursor = res.nextCursor;
         return res.items;
       });
       // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen offline.
@@ -1030,6 +1066,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             ],
                           ),
                         ),
+                      ),
+                    ),
+                  if (_nextCursor != null)
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _memuatLagi ? null : _muatLagi,
+                        child: Text(_memuatLagi ? 'Memuat...' : 'Muat lebih banyak'),
                       ),
                     ),
                 ],

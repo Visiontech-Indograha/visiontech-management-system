@@ -119,3 +119,15 @@ def test_hr_records_stay_directly_and_place_in_use_cannot_be_deleted(client, wor
     assert stay.json()["status"] == "APPROVED"
     in_use = client.delete(f"/mess/places/{place['mess_id']}", headers=hr)
     assert in_use.status_code == 409 and in_use.json()["error"]["code"] == "MESS_IN_USE"
+
+
+def test_create_stay_idempotency_key(client, world: World, place):
+    hr = {**world.headers(client, "hr"), "Idempotency-Key": f"mess-{world.tag}"}
+    body = {"employee_id": world.employees["member"], "mess_id": place["mess_id"],
+            "stay_start_date": _day(0), "stay_end_date": _day(4)}
+    first = client.post("/mess", headers=hr, json=body)
+    second = client.post("/mess", headers=hr, json=body)
+    assert first.status_code == 201, first.text
+    assert second.status_code == 201 and second.json() == first.json()
+    count = sync_query("SELECT count(*) FROM company_mess_stay WHERE mess_id = %s", (place["mess_id"],))[0][0]
+    assert count == 1

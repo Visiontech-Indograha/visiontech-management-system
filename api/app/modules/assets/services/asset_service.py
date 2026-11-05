@@ -51,6 +51,10 @@ LICENCES = {
 _LABEL = {"TOOL": "Alat", "VEHICLE": "Kendaraan"}
 
 
+def _status_changed(asset_type: str) -> AppError:
+    return AppError("INVALID_STATE", f"Status {_LABEL[asset_type].lower()} sudah berubah; muat ulang.", status=409)
+
+
 def _in_use(asset_type: str) -> AppError:
     return AppError(
         "ASSET_IN_USE", f"{_LABEL[asset_type]} sedang dipinjam. Selesaikan pengembaliannya dulu.", status=409
@@ -173,11 +177,13 @@ class AssetService:
 
     # ── Status & arsip ────────────────────────────────────────────────────────
     async def set_status(self, asset_type: str, asset_id: UUID, status: str) -> Any:
-        if await self.repo.lock_asset(asset_type, asset_id) is None:
+        asset = await self.repo.lock_asset(asset_type, asset_id)
+        if asset is None:
             raise NotFoundError(_LABEL[asset_type])
         if await self.repo.has_open_loan(asset_type, asset_id):
             raise _in_use(asset_type)
-        await self.repo.set_status(asset_type, asset_id, status)
+        if not await self.repo.set_status(asset_type, asset_id, status, expected=asset.status):
+            raise _status_changed(asset_type)
         return await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
 
     async def delete(self, asset_type: str, asset_id: UUID) -> None:
@@ -325,7 +331,8 @@ class AssetService:
             data.asset_type, asset_id, data.employee_id, data.daily_plan_id, status,
             await self._path(data.handover_file_id, "foto serah terima"),
         )
-        await self.repo.set_status(data.asset_type, asset_id, status)
+        if not await self.repo.set_status(data.asset_type, asset_id, status, expected=asset.status):
+            raise _status_changed(data.asset_type)
         return await self.repo.get_loan(assignment_id)
 
     async def return_loan(self, assignment_id: UUID, condition: str) -> Any:
@@ -385,7 +392,8 @@ class AssetService:
             raise ForbiddenError("Hanya pemohon yang dapat membatalkan pengajuannya.")
         if req.status != "PENDING":
             raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
-        await self.repo.set_request_status(request_id, "CANCELLED", None, None)
+        if not await self.repo.set_request_status(request_id, "CANCELLED", None, None):
+            raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
         req = await self.repo.get_request(request_id)
         await self._notify().notify_roles(
             ["ADMIN_HR_GA"], "ASSET_REQUEST_CANCELLED",
@@ -410,7 +418,8 @@ class AssetService:
                 employee_id=req.employee_id,
             ))
             assignment_id = loan.assignment_id
-        await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id)
+        if not await self.repo.set_request_status(request_id, data.decision, str(reviewer), note, assignment_id):
+            raise AppError("ALREADY_DECIDED", "Pengajuan ini sudah diputuskan.", status=409)
         result = await self.repo.get_request(request_id)
         verdict = "disetujui, silakan ambil aset" if data.decision == "APPROVED" else "ditolak"
         await self._notify().notify_employees(

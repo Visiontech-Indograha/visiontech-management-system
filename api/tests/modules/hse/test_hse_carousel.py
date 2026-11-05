@@ -11,13 +11,14 @@ Kampanye K3 bergambar banyak (carousel): daftar foto `media_paths` dan aturan du
 from __future__ import annotations
 
 import io
+from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db
+from tests.conftest import World, db_exclusive, requires_db
 
 pytestmark = requires_db
 
@@ -49,9 +50,11 @@ def _campaign_payload(media: list[str], cooldown: int) -> dict:
 
 
 @pytest.fixture
-def hse_world(client, world: World) -> World:
-    world.add_person("hse", "HSE")
-    return world
+def hse_world(client, world: World) -> Iterator[World]:
+    # Pintu popup K3 memilih kampanye aktif GLOBAL: tes yang membuat kampanye diserialkan lintas worker xdist.
+    with db_exclusive(727302):
+        world.add_person("hse", "HSE")
+        yield world
 
 
 @pytest.fixture

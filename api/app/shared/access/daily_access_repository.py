@@ -33,6 +33,25 @@ class DailyAccessRepository(BaseRepository):
             {"id": str(daily_plan_id), "emp": str(employee_id) if employee_id else None},
         )
 
+    async def standings(self, daily_plan_ids: list[str], employee_id: UUID | str | None) -> dict[str, Any]:
+        """Versi set dari `standing`: satu kueri untuk banyak jadwal. Kunci kamus = daily_plan_id (teks)."""
+        rows = await self.fetchall(
+            """
+            SELECT CAST(wpd.daily_plan_id AS text) AS daily_plan_id, wpd.status, wpd.kind, wpd.work_date,
+                   wpd.division_id, wpd.team_id, d.pm_id, d.om_id, t.leader_employee_id,
+                   (CAST(:emp AS uuid) IS NOT NULL AND CAST(:emp AS uuid) IN (d.pm_id, d.om_id)) AS manages,
+                   (t.leader_employee_id = CAST(:emp AS uuid)) AS is_leader,
+                   EXISTS (SELECT 1 FROM member m WHERE m.team_id = wpd.team_id
+                           AND m.employee_id = CAST(:emp AS uuid) AND m.is_active AND m.delete_at IS NULL) AS is_member
+            FROM work_plan_daily wpd
+            JOIN division d ON d.division_id = wpd.division_id
+            JOIN team t ON t.team_id = wpd.team_id
+            WHERE wpd.daily_plan_id = ANY(CAST(:ids AS uuid[])) AND wpd.delete_at IS NULL
+            """,
+            {"ids": daily_plan_ids, "emp": str(employee_id) if employee_id else None},
+        )
+        return {str(r.daily_plan_id): r for r in rows}
+
     async def division_managers(self, division_id: UUID | str) -> Any:
         """PM & OM divisi aktif — dasar kewenangan membuat jadwal untuk divisi itu."""
         return await self.fetchone(

@@ -19,7 +19,7 @@ def _kinds(client, world: World, who: str) -> list[str]:
     return [item["kind"] for item in _inbox(client, world, who)["items"]]
 
 
-@pytest.mark.xdist_group("notification_inbox")
+@pytest.mark.xdist_group(name="notification_inbox")
 def test_correction_flow_notifies_pm_then_leader_and_marks_read(client, world: World) -> None:
     plan_id = _completed_plan(world)
     _report(client, world, plan_id)

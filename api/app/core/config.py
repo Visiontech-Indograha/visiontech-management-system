@@ -163,6 +163,17 @@ class Settings(BaseSettings):
     # Seed media & order contoh saat startup (demo/uji). Bawaan MATI: bila aktif, foto kosong/bukan /uploads/
     # ditimpa gambar contoh — jangan pernah diaktifkan di data sungguhan.
     SEED_DEMO_MEDIA: bool = False
+    # Rate limit in-memory (token bucket, satu instance API). Bawaan hanya MENCATAT (log WARNING);
+    # set RATE_LIMIT_ENFORCE=true untuk menolak 429 + Retry-After. Limit = permintaan per menit per IP
+    # dan per pengguna (pengguna = `sub` token sah; login/refresh hanya per IP).
+    RATE_LIMIT_ENFORCE: bool = False
+    RATE_LIMIT_AUTH_PER_MIN: int = 30
+    RATE_LIMIT_FILE_URL_PER_MIN: int = 120
+    RATE_LIMIT_UPLOAD_PER_MIN: int = 60
+    RATE_LIMIT_FACE_PER_MIN: int = 60
+    # Proxy tepercaya (IP atau CIDR, dipisah koma). X-Forwarded-For hanya dibaca bila koneksi datang dari sini.
+    # Kosong = abaikan X-Forwarded-For (sama seperti login: pakai IP koneksi langsung).
+    TRUSTED_PROXY_IPS: str = ""
 
     # Mengabaikan variabel lingkungan berlebih yang tidak dipetakan ke atribut di sini
     model_config = SettingsConfigDict(env_file=(".env", "api/.env"), extra="ignore")

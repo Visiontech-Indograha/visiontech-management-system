@@ -8,6 +8,6 @@ import { useOvertimePending } from "@/services/overtimeService";
 export function OvertimeRecapPage() {
   const [month, setMonth] = useState("");
   const recap = useOvertimeRecap(month);
-  const pending = useOvertimePending();
-  return <OvertimeRecapTemplate month={month} onMonthChange={setMonth} recap={recap} pending={pending} />;
+  const { query: pending, more } = useOvertimePending();
+  return <OvertimeRecapTemplate month={month} onMonthChange={setMonth} recap={recap} pending={pending} more={more} />;
 }

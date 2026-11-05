@@ -33,11 +33,14 @@ def test_list_params_are_validated(client, world: World):
 
 def test_search_is_case_and_accent_insensitive(client, world: World):
     h = world.headers(client, "hr")
-    everything = client.get("/teams", headers=h).json()
-    if everything:
-        name = everything[0]["name"]
-        hit = client.get(f"/teams?q={name.upper()}", headers=h)
-        assert any(t["name"] == name for t in hit.json())
+    name = f"Tim Cari Ünik {world.tag}"  # nama unik milik tes ini: tidak bergantung tim worker lain
+    created = client.post("/teams", headers=world.headers(client, "pm"),
+                          json={"office_id": world.org_id, "division_id": world.unit_id,
+                                "leader_employee_id": world.employees["leader"], "name": name})
+    assert created.status_code == 201, created.text
+    hit = client.get(f"/teams?q={name.upper()}", headers=h)
+    assert hit.status_code == 200, hit.text
+    assert any(t["name"] == name for t in hit.json())
 
 
 def test_master_lists_accept_search_and_paging(client, world: World):

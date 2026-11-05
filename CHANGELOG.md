@@ -13,6 +13,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 - Dengan `ROLE_ASSIGNMENT_ENABLED` hidup, izin khusus HR/Finance di luar absensi (kelola karyawan, akun, wajah, dokumen, mess, proses keluar, cuti, lembur, ubah/hapus kantor, kolom sensitif karyawan) hanya berlaku di kantor sendiri + kantor penugasan; OM yang juga HR tidak melebar. Flag mati = perilaku lama. Aset belum diubah. Tabel audit: `docs/audit-izin-hr-finance-per-kantor.md`. Tanpa perubahan kontrak OpenAPI.
 - Tes: fixture sesi `_main_office` kini aman antar worker xdist (`ON CONFLICT DO NOTHING`); sebelumnya DB baru tanpa kantor utama membuat ratusan galat `UniqueViolation` di putaran pertama.
 
+### Peran ganda dan penugasan kantor, sisi web (ADR 0002)
+- Detail karyawan: bagian "Peran tambahan dan kantor" (hanya pemegang izin `manage:role_assignments`): daftar, "Tambah peran" (HR/Finance wajib kantor, OM semua kantor, Idempotency-Key, aturan terlarang ditolak di layar), "Cabut" dengan konfirmasi.
+- Menu dan "Akun & keamanan" menampilkan "berlaku untuk kantor X" dari `role_scopes` bila ada; tanpa field itu tampilan lama tidak berubah.
+
 ### Peran ganda dan penugasan kantor, sisi API fase 1 (ADR 0002)
 - Flag `ROLE_ASSIGNMENT_ENABLED` (bawaan mati = perilaku lama persis). Bila hidup: izin = union peran utama + penugasan aktif, cakupan kantor absensi (`attendance_office_scope`) menambah penugasan HR/Finance per kantor dan penugasan OM = semua kantor. Dibaca dari DB tiap permintaan; token tidak berubah.
 - Izin baru `manage:role_assignments` (hanya SUPER_ADMIN) dan endpoint `GET/POST /users/{user_id}/role-assignments`, `DELETE /users/{user_id}/role-assignments/{assignment_id}` (maks 2 peran tambahan, SA tidak digabung, HR+Finance dilarang, tidak bisa mengubah diri sendiri, Idempotency-Key pada POST, masuk audit log).

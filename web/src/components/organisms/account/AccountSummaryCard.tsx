@@ -12,7 +12,7 @@ import { fetchMe } from "@/services/authService";
 import { useChangeMyPhoto } from "@/services/profilePhotoService";
 
 /** Kartu akun: foto profil (bisa diganti sendiri), nama, email, peran, tautan ganti password. */
-export function AccountSummaryCard({ email, roleLabel }: { email: string | undefined; roleLabel: string }) {
+export function AccountSummaryCard({ email, roleLabel, scopeLines = [] }: { email: string | undefined; roleLabel: string; scopeLines?: string[] }) {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const change = useChangeMyPhoto();
   const picker = useRef<HTMLInputElement>(null);
@@ -67,7 +67,10 @@ export function AccountSummaryCard({ email, roleLabel }: { email: string | undef
       </div>
       <TextBlock className="font-medium">{name}</TextBlock>
       <TextBlock className="text-sm text-mist">{email}</TextBlock>
-      <TextBlock className="mb-4 text-sm text-mist">{roleLabel}</TextBlock>
+      <TextBlock className={scopeLines.length ? "text-sm text-mist" : "mb-4 text-sm text-mist"}>{roleLabel}</TextBlock>
+      {scopeLines.map((l, i) => (
+        <TextBlock key={l} className={i === scopeLines.length - 1 ? "mb-4 text-sm text-mist" : "text-sm text-mist"}>{l}</TextBlock>
+      ))}
       <ActionButton asChild variant="outline">
         <InlineLink to="/change-password">Ganti password</InlineLink>
       </ActionButton>

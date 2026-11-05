@@ -131,6 +131,29 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_active ON users (email) WHERE delete_at IS NULL;
 
+-- 3b. Tabel user_role_assignment (v2_0029, ADR 0002 fase 1): peran ganda dan penugasan kantor.
+-- Baris source='PRIMARY' diisi migrasi v2_0029 dari users.system_role + employee.office_id.
+CREATE TABLE IF NOT EXISTS user_role_assignment (
+    assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    role system_role_enum NOT NULL,
+    office_id UUID NULL REFERENCES office(office_id),
+    source TEXT NOT NULL DEFAULT 'MANUAL',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_by UUID NULL REFERENCES users(user_id),
+    delete_at TIMESTAMPTZ NULL,
+    delete_by UUID NULL REFERENCES users(user_id),
+    CONSTRAINT ck_ura_source CHECK (source IN ('PRIMARY', 'MANUAL')),
+    CONSTRAINT ck_ura_office CHECK (
+        (office_id IS NULL AND role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER'))
+        OR office_id IS NOT NULL
+    )
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_role_assignment_active ON user_role_assignment
+    (user_id, role, COALESCE(office_id, '00000000-0000-0000-0000-000000000000'::uuid)) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_user_role_assignment_user ON user_role_assignment (user_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_user_role_assignment_office_role ON user_role_assignment (office_id, role) WHERE delete_at IS NULL;
+
 -- 4. Tabel user_sessions (JWT Hybrid Session untuk React Web & Flutter Android)
 CREATE TABLE IF NOT EXISTS user_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

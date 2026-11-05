@@ -179,11 +179,11 @@ class _FakeAssetRepo:
         self.tool_viewers: list[Any] = []
         self.availability_viewers: list[Any] = []
 
-    async def list_tools(self, office_id: Any, status: Any, viewer: Any = None) -> list[Any]:
+    async def list_tools(self, office_id: Any, status: Any, viewer: Any = None, offices: Any = None) -> list[Any]:
         self.tool_viewers.append(viewer)
         return []
 
-    async def availability(self, work_date: Any, viewer: Any = None) -> list[Any]:
+    async def availability(self, work_date: Any, viewer: Any = None, offices: Any = None) -> list[Any]:
         self.availability_viewers.append(viewer)
         return []
 

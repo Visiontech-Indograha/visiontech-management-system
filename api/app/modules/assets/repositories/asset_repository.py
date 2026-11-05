@@ -166,10 +166,11 @@ class AssetRepository(BaseRepository):
 
     # ── Alat ───────────────────────────────────────────────────────────────────
     async def list_tools(self, office_id: UUID | None, status: str | None,
-                         viewer: dict[str, Any] | None = None) -> list[Any]:
+                         viewer: dict[str, Any] | None = None, offices: list[str] | None = None) -> list[Any]:
         """`viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
         visible = asset_visible_sql("t.division_id", "t.office_id", "loan.holder_employee_id")
         scope = "" if viewer is None else f" AND {visible}"
+        scope += "" if offices is None else " AND t.office_id = ANY(CAST(:offices AS uuid[]))"
         return list(await self.fetchall(
             _TOOL_SELECT + f"""
             WHERE t.delete_at IS NULL
@@ -177,7 +178,8 @@ class AssetRepository(BaseRepository):
               AND (CAST(:status AS text) IS NULL OR t.status::text = :status){scope}
             ORDER BY t.category, t.name
             """,
-            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {})},
+            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {}),
+             **({} if offices is None else {"offices": offices})},
         ))
 
     async def get_tool(self, tool_id: UUID | str) -> Any:
@@ -225,10 +227,11 @@ class AssetRepository(BaseRepository):
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
     async def list_vehicles(self, office_id: UUID | None, status: str | None,
-                            viewer: dict[str, Any] | None = None) -> list[Any]:
+                            viewer: dict[str, Any] | None = None, offices: list[str] | None = None) -> list[Any]:
         """`viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
         visible = asset_visible_sql("v.division_id", "v.office_id", "loan.holder_employee_id")
         scope = "" if viewer is None else f" AND {visible}"
+        scope += "" if offices is None else " AND v.office_id = ANY(CAST(:offices AS uuid[]))"
         return list(await self.fetchall(
             _VEHICLE_SELECT + f"""
             WHERE v.delete_at IS NULL
@@ -236,7 +239,8 @@ class AssetRepository(BaseRepository):
               AND (CAST(:status AS text) IS NULL OR v.status::text = :status){scope}
             ORDER BY v.vehicle_type, v.name
             """,
-            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {})},
+            {"office": str(office_id) if office_id else None, "status": status, **(viewer or {}),
+             **({} if offices is None else {"offices": offices})},
         ))
 
     async def get_vehicle(self, vehicle_id: UUID | str) -> Any:
@@ -337,11 +341,15 @@ class AssetRepository(BaseRepository):
             {"id": str(asset_id), "date": work_date},
         )
 
-    async def availability(self, work_date: date, viewer: dict[str, Any] | None = None) -> list[Any]:
+    async def availability(self, work_date: date, viewer: dict[str, Any] | None = None,
+                           offices: list[str] | None = None) -> list[Any]:
         """Setiap alat & kendaraan aktif beserta tim pemakai pada `work_date` (NULL bila tidak dipakai tanggal itu).
         `viewer` = cakupan (scope_rules.asset_viewer); None = seluruh inventaris."""
         tool_scope = "" if viewer is None else f" AND {tool_scope_sql('t')}"
         vehicle_scope = "" if viewer is None else f" AND {vehicle_scope_sql('v')}"
+        if offices is not None:
+            tool_scope += " AND t.office_id = ANY(CAST(:offices AS uuid[]))"
+            vehicle_scope += " AND v.office_id = ANY(CAST(:offices AS uuid[]))"
         return list(await self.fetchall(
             f"""
             SELECT 'TOOL' AS asset_type, t.tool_id AS asset_id, t.name AS asset_name, t.status::text AS status,
@@ -363,8 +371,45 @@ class AssetRepository(BaseRepository):
             WHERE v.delete_at IS NULL{vehicle_scope}
             ORDER BY 3
             """,
-            {"date": work_date, **(viewer or {})},
+            {"date": work_date, **(viewer or {}), **({} if offices is None else {"offices": offices})},
         ))
+
+    async def asset_office(self, asset_type: str, asset_id: UUID | str) -> str | None:
+        """Kantor aset aktif (None bila aset tak ada atau tanpa kantor)."""
+        table, col = ("tool", "tool_id") if asset_type == "TOOL" else ("vehicle", "vehicle_id")
+        row: str | None = await self.scalar(
+            f"SELECT office_id::text FROM {table} WHERE {col} = CAST(:id AS uuid) AND delete_at IS NULL",
+            {"id": str(asset_id)},
+        )
+        return row
+
+    async def is_open_holder(self, asset_type: str, asset_id: UUID | str, employee_id: UUID | str) -> bool:
+        col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
+        return bool(await self.scalar(
+            f"SELECT EXISTS (SELECT 1 FROM asset_assignment WHERE {col} = CAST(:a AS uuid) "
+            "AND employee_id = CAST(:e AS uuid) AND returned_at IS NULL AND delete_at IS NULL)",
+            {"a": str(asset_id), "e": str(employee_id)},
+        ))
+
+    async def loan_office(self, assignment_id: UUID | str) -> str | None:
+        """Kantor aset pada sebuah peminjaman."""
+        row: str | None = await self.scalar(
+            "SELECT COALESCE((SELECT t.office_id FROM tool t WHERE t.tool_id = aa.tool_id),"
+            " (SELECT v.office_id FROM vehicle v WHERE v.vehicle_id = aa.vehicle_id))::text "
+            "FROM asset_assignment aa WHERE aa.assignment_id = CAST(:id AS uuid) AND aa.delete_at IS NULL",
+            {"id": str(assignment_id)},
+        )
+        return row
+
+    async def request_office(self, request_id: UUID | str) -> str | None:
+        """Kantor aset pada sebuah pengajuan pinjam."""
+        row: str | None = await self.scalar(
+            "SELECT COALESCE((SELECT t.office_id FROM tool t WHERE t.tool_id = r.tool_id),"
+            " (SELECT v.office_id FROM vehicle v WHERE v.vehicle_id = r.vehicle_id))::text "
+            "FROM asset_loan_request r WHERE r.request_id = CAST(:id AS uuid) AND r.delete_at IS NULL",
+            {"id": str(request_id)},
+        )
+        return row
 
     async def team_office(self, team_id: UUID | str) -> Any:
         return await self.fetchone(
@@ -452,7 +497,7 @@ class AssetRepository(BaseRepository):
     # ── Peminjaman ────────────────────────────────────────────────────────────
     async def loans(
         self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None,
-        managed_by: UUID | str | None,
+        managed_by: UUID | str | None, offices: list[str] | None = None, own: UUID | str | None = None,
     ) -> list[Any]:
         """`managed_by` (PM/OM): batasi ke pinjaman karyawan di divisi yang ia pimpin/kelola, atau miliknya sendiri."""
         return list(await self.fetchall(
@@ -465,11 +510,15 @@ class AssetRepository(BaseRepository):
                    OR aa.employee_id IN (
                        SELECT e.employee_id FROM employee e JOIN division d ON d.division_id = e.division_id
                        WHERE d.pm_id = CAST(:mgr AS uuid) OR d.om_id = CAST(:mgr AS uuid)))
+              AND (CAST(:offices AS uuid[]) IS NULL
+                   OR COALESCE(t.office_id, v.office_id) = ANY(CAST(:offices AS uuid[]))
+                   OR aa.employee_id = CAST(:own AS uuid))
             ORDER BY aa.returned_at IS NULL DESC, aa.loaned_at DESC
             """,
             {"open": open_only, "emp": str(employee_id) if employee_id else None,
              "plan": str(daily_plan_id) if daily_plan_id else None,
-             "mgr": str(managed_by) if managed_by else None},
+             "mgr": str(managed_by) if managed_by else None, "offices": offices,
+             "own": str(own) if own else None},
         ))
 
     async def get_loan(self, assignment_id: UUID | str) -> Any:
@@ -541,15 +590,20 @@ class AssetRepository(BaseRepository):
             {"a": str(asset_id), "e": str(employee_id)},
         ))
 
-    async def requests(self, *, employee_id: UUID | str | None, status: str | None) -> list[Any]:
+    async def requests(self, *, employee_id: UUID | str | None, status: str | None,
+                       offices: list[str] | None = None, own: UUID | str | None = None) -> list[Any]:
         return list(await self.fetchall(
             _REQUEST_SELECT + """
             WHERE r.delete_at IS NULL
               AND (CAST(:emp AS uuid) IS NULL OR r.employee_id = CAST(:emp AS uuid))
               AND (CAST(:st AS text) IS NULL OR r.status = CAST(:st AS text))
+              AND (CAST(:offices AS uuid[]) IS NULL
+                   OR COALESCE(t.office_id, v.office_id) = ANY(CAST(:offices AS uuid[]))
+                   OR r.employee_id = CAST(:own AS uuid))
             ORDER BY (r.status = 'PENDING') DESC, r.create_at DESC
             """,
-            {"emp": str(employee_id) if employee_id else None, "st": status},
+            {"emp": str(employee_id) if employee_id else None, "st": status, "offices": offices,
+             "own": str(own) if own else None},
         ))
 
     async def get_request(self, request_id: UUID | str) -> Any:

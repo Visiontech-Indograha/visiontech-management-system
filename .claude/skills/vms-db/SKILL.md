@@ -27,11 +27,15 @@ Penanda:
 
 ## 2. Urutan pasang skema (penting)
 
-Urutan yang benar di CI dan `db/README.md:12`: **`06` → `08` → `alembic upgrade head`**. CI melakukannya di `ci.yml:62-75` dengan `ON_ERROR_STOP=1`.
+Urutan yang sama di tiga tempat: **`06` → `08` → `alembic upgrade head`**, dengan `07` opsional untuk data uji sintetis.
+- CI: `.github/workflows/ci.yml:62-73` (`06` dan `08` lewat `psql -v ON_ERROR_STOP=1 -f`, lalu `python -m alembic upgrade head`).
+- Ringkasan di `db/README.md` (tabel berkas dan baris "Urutan pasang").
+- Beta: `deploy/beta/pasang-beta.sh:46` (`06`, `08`); `07` hanya lewat perintah `data`.
+- Jangan membalik urutan dan jangan menaruh FK di `06` ke tabel yang hanya dibuat di `08` (lihat 2.1).
 
 ### 2.1 Bug urutan `client` (catatan kejadian)
 - Di `origin/beta`, `db/06_master_schema_v2.sql:799` (`client_sites`) dan `:817` (`client_work_orders`) memakai `REFERENCES client(client_id)`. Tabel `client` baru dibuat di `db/08_master_v2_tambahan.sql:14`. Akibatnya `06` gagal sebelum `08` berjalan, dan CI gagal pasang skema.
-- Perbaikan: pindahkan blok `client_sites` sampai `work_order_bom` ke `08` agar dibuat setelah `client`. Perbaikan ini ada di commit `d8a12df5` pada cabang `integrasi/uji-ulang`. Diperiksa dengan `git merge-base --is-ancestor d8a12df5 HEAD`: **belum** ada di HEAD `origin/beta`.
+- Perbaikan: blok `client_sites` sampai `work_order_bom` dipindah ke `08` agar dibuat setelah `client`. Commit `2b73663a` (sudah di `prod`). Periksa dengan `git grep -n "REFERENCES client(" db/06_master_schema_v2.sql` (hasil harus kosong).
 - Pelajaran untuk skill: setiap tabel baru yang punya FK harus dibuat setelah tabel rujukannya. Tambah langkah CI yang memasang `06` lalu `08` dengan `ON_ERROR_STOP=1` (sudah ada); jangan menambah file SQL baru tanpa memeriksa urutan.
 - Catatan: `api/alembic_v2` juga memuat DDL. Tes `test_sql_matches_schema.py` mencocokkan model dengan skema. Jika ada kolom baru di `06/08`, pastikan migrasi Alembic tidak membuat ulang tabel yang sama.
 
@@ -76,7 +80,10 @@ Referensi detail: `references/skema-indeks-dan-explain.md`.
 Ringkas:
 - B-tree untuk kesamaan dan rentang. Komposit mengikuti leftmost prefix (PDF 3.2 baris 215-219). `attendance(employee_id, attendance_date)` ada di `v2_0003` (`:21`), tetapi filter tanggal tanpa `employee_id` tidak terlayani (riset 01 F-11).
 - Parsial untuk soft delete: `WHERE delete_at IS NULL` (kode sekarang) atau `WHERE deleted_at IS NULL` (Target).
-- **Kekurangan nyata**: `user_sessions.refresh_token_hash` tanpa indeks (`06:139`). Setiap refresh memindai tabel. Tambahkan `UNIQUE` parsial (`CONCURRENTLY`, lihat `migrasi-expand-contract.md`).
+- **Indeks `user_sessions` (sudah ada)**: `refresh_token_hash` (`v2_0024`, `db/06:755`) dan `token_family_id` (`v2_0026`, `db/06`). Keduanya tidak `UNIQUE` dan tidak parsial.
+- **Aturan indeks parsial**: `WHERE delete_at IS NULL` hanya untuk kueri yang memfilter `delete_at`. Rotasi refresh dan deteksi pemakaian ulang mencari tanpa filter itu (baris yang sudah dicabut harus tetap terlihat), jadi indeksnya penuh.
+- **Jebakan tipe `CHAR(64)`**: `refresh_token_hash` bertipe `CHAR(64)`. Pada EXPLAIN manual, parameter `encode(...)` (text) membuat planner memakai `(kolom)::text` dan Seq Scan. `CAST(... AS char(64))` memakai `Index Scan`. Driver asyncpg di aplikasi mengirim parameter dengan tipe kolom, jadi kode aplikasi sudah benar; cast eksplisit hanya untuk EXPLAIN manual.
+- **`db/06` tidak bisa `CONCURRENTLY`**: berkas itu dibungkus `BEGIN … COMMIT` (`db/06:6`). Di DB yang sudah berisi data, tambah indeks lewat migrasi Alembic (`autocommit_block` + `CREATE INDEX CONCURRENTLY IF NOT EXISTS`, contoh `v2_0026`), bukan dengan menjalankan ulang `db/06`. Baris indeks di `db/06` untuk pasang baru dan DB uji kosong (`IF NOT EXISTS`, idempoten).
 - **Foreign key tanpa indeks**: Target (ADR 0003 A5) indeks penuh di setiap kolom FK. Periksa FK di `06`/`08` yang belum punya indeks sebelum migrasi.
 - Covering index (`INCLUDE (...)`) bila `EXPLAIN` menunjukkan heap fetch besar.
 - Indeks yang tidak dipakai menambah biaya tulis. Pantau dengan `pg_stat_user_indexes` (ADR 0003 R9: pghero sebagai usulan fase 9).
@@ -88,10 +95,10 @@ Detail dan contoh ada di `references/migrasi-expand-contract.md`.
 
 Kondisi sekarang (bukti):
 - `api/alembic.ini` mengarah ke `alembic_v2`. `env.py:17` memakai `MIGRATION_DATABASE_URL` jika ada (peran migrasi terpisah, baik). `env.py` bukan sumber kebenaran peran.
-- Tidak ada `CONCURRENTLY` di `api/alembic_v2/versions` (0 kecocokan). `autocommit_block` dipakai di 2 tempat.
+- `CONCURRENTLY` dipakai di `v2_0024` dan `v2_0026` (dalam `autocommit_block`). Itu pola acuan untuk indeks pada tabel berisi data.
 - `v2_0003_performance_composite_indexes.py:21-31` memakai `CREATE INDEX IF NOT EXISTS` biasa. Ini baseline lama; jangan diubah.
 - **DDL saat startup**: `migration_v3.py:103-117` membuat partisi bulanan saat aplikasi start (`lifespan.py:24-33`). Ini bertentangan dengan aturan "skema hanya lewat Alembic". Target: pindahkan ke migrasi Alembic atau job terjadwal.
-- `test_alembic_v2.py` memeriksa rantai revisi dan head `v2_0019`.
+- `test_alembic_v2.py` memeriksa rantai revisi dan head `v2_0026`. Setiap migrasi baru menambah baris assert di sana.
 
 Target:
 - Lint migrasi di CI: squawk (`https://github.com/sbdchd/squawk`, ADR 0003 R8). Belum dipasang.
@@ -140,6 +147,17 @@ Detail di `references/rls-enkripsi-dan-peran.md` bagian 4.
 - `test_alembic_v2.py` memeriksa head dan rantai.
 - Tambahkan (Target): tes `alembic upgrade head` dari kosong, `downgrade -1` untuk migrasi yang mendukungnya, dan tes RLS (query tanpa konteks → 0 baris).
 - Jalankan pytest di DB uji `vms_test` atas perintah user.
+
+### 10.1 DB uji pribadi dari `vms_test` (untuk EXPLAIN, migrasi, dan konkurensi)
+Jangan memakai `vms_dev`, DB produksi, atau `vms_test` untuk eksperimen. Buat DB terpisah dari template:
+1. Ambil sandi dari konfigurasi kontainer tanpa mencetaknya (PowerShell: `docker inspect vms-test-db | ConvertFrom-Json`, lalu variabel `POSTGRES_PASSWORD` dari `Config.Env`). Simpan di variabel lingkungan sesi, jangan di berkas.
+2. Buat DB: `docker exec -e PGPASSWORD=$env:PGPASSWORD vms-test-db psql -U postgres -d postgres -c "CREATE DATABASE <nama> TEMPLATE vms_test"`. Syarat: tidak ada sesi aktif di `vms_test`. Nama harus berakhiran `_test` atau masuk `TEST_ALLOW_DB_NAMES`.
+3. Versi Alembic ada di tabel `alembic_version_v2` (bukan `alembic_version`). Jalankan `db/06` (idempoten; `-v ON_ERROR_STOP=1`). Untuk menguji migrasi, `alembic stamp <revisi terakhir yang skemanya sudah ada>` lalu `alembic upgrade head` dengan `DATABASE_URL` dan `MIGRATION_DATABASE_URL` menunjuk ke DB itu.
+4. Data sintetis: `INSERT ... SELECT ... FROM generate_series(1, 200000)`, misalnya sesi dengan hash `encode(sha256(convert_to(...)), 'hex')`. Simpan skrip SQL di folder sementara, bukan di repo. Lalu `ANALYZE <tabel>`.
+5. EXPLAIN: `BEGIN; EXPLAIN (ANALYZE, BUFFERS, COSTS OFF, TIMING OFF) <kueri>; ROLLBACK;` agar data tidak berubah. Catat sebelum (indeks belum ada) dan sesudah. Bandingkan jumlah buffer, bukan hanya waktu.
+6. Hapus setelah selesai: `DROP DATABASE <nama>`. Verifikasi dengan `SELECT datname FROM pg_database`.
+
+Bukti kerja (2026-11-05, DB `utang_pribadi`, 200.024 sesi): subquery keluarga token 4.879 → 4 buffer; UPDATE pencabutan 51 ms → 0,6 ms. Sebelum v2_0026 kueri hash memakai Seq Scan karena indeks `refresh_token_hash` belum ada di `vms_test`; setelah `db/06` memakai Index Scan.
 
 ## 11. Checklist selesai (db)
 

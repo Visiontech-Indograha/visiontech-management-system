@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check() -> dict[str, str]:
         """Endpoint pemeriksaan kesehatan sederhana (liveness probe)."""
-        return {"status": "ok", "version": APP_VERSION}
+        return {"status": "ok"}
 
     @app.get(f"{API_PREFIX}/version")
     async def version_info() -> dict[str, str]:

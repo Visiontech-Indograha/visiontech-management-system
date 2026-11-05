@@ -9,6 +9,21 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-05
+
+### Gabungan perbaikan audit dan minggu 4
+- Kunci idempotensi (Idempotency-Key) untuk peminjaman aset dan mess; web ikut mengirim kunci. Dampak: MINOR.
+- Daftar dengan penomoran keyset (kursor) untuk absensi, lembur, dan audit; tanpa parameter perilaku lama tetap. Indeks pendukung ditambah lewat migrasi v2_0028.
+- Perubahan status memakai pengecekan status saat UPDATE (CAS) pada dokumen, aset, offboarding, rencana harian, koreksi, dan rollover agar tidak balapan.
+- Batas input lembur disamakan di OpenAPI, web, dan HP.
+- Daftar yang terpotong diperbaiki; peta transisi status order dicatat di ADR 0001.
+- Server beta memakai daftar putih yang lebih aman; image MinIO dipin.
+- Tes yang kadang gagal (flaky) di xdist dirapikan; audit minggu 1-3 didokumentasikan.
+
+### Diubah
+- Cakupan kantor absensi (keputusan pemilik 2026-11-05): Superadmin dan OM melihat absensi semua kantor; Admin HR/GA dan Finance hanya kantor sendiri (gabungan dengan jabatan OM divisi bila ada). Berlaku untuk daftar `/attendance` (termasuk keyset), rekap, ekspor, uang makan, dan akses swafoto. Dampak: PATCH.
+- `/health` publik hanya mengembalikan `{"status":"ok"}` (field `version` dihapus agar versi tidak bocor tanpa login). Dampak: PATCH.
+
 ### Ditambahkan
 - **Kendali admin akun karyawan** (HR/admin dengan izin kelola pengguna; hapus permanen khusus SUPER_ADMIN), di kartu akun dan detail karyawan:
   - Daftar perangkat yang masuk per akun, cabut satu perangkat, keluarkan semua perangkat, dan kosongkan slot perangkat (API `GET /employees/{id}/account/sessions`, `POST …/sessions/{session_id}/revoke`, `POST …/sessions/revoke-all`, `POST …/device-slots/reset`).

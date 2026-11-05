@@ -10,12 +10,13 @@ Pengujian alur lengkap modul HSE (Health, Safety & Environment / HES):
 """
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db, sync_query
+from tests.conftest import World, db_exclusive, requires_db, sync_query
 
 pytestmark = requires_db
 
@@ -29,9 +30,11 @@ def _future(days: int = 7) -> str:
 
 
 @pytest.fixture
-def hse_world(client, world: World) -> World:
-    world.add_person("hse", "HSE")
-    return world
+def hse_world(client, world: World) -> Iterator[World]:
+    # Pintu popup K3 memilih kampanye aktif GLOBAL: tes yang membuat kampanye diserialkan lintas worker xdist.
+    with db_exclusive(727302):
+        world.add_person("hse", "HSE")
+        yield world
 
 
 @pytest.fixture

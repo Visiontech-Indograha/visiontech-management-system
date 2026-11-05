@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.repository import BaseRepository, safe_columns
 
 _SELECT = """
@@ -22,8 +23,9 @@ class JobPositionRepository(BaseRepository):
             WHERE p.delete_at IS NULL AND (NOT CAST(:active AS boolean) OR p.status)
               AND (CAST(:div AS uuid) IS NULL OR p.division_id = CAST(:div AS uuid) OR p.division_id IS NULL)
             ORDER BY p.grade_level DESC, p.name
+            LIMIT :cap
             """,
-            {"div": str(division_id) if division_id else None, "active": active_only},
+            {"div": str(division_id) if division_id else None, "active": active_only, "cap": MAX_ROWS_UNPAGED},
         ))
 
     async def get(self, position_id: UUID | str) -> Any:

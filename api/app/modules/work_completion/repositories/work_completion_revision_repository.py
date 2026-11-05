@@ -20,14 +20,12 @@ class WorkCompletionRevisionRepository(BaseRepository):
         decision: str,
         decided_by_id: UUID | str | None,
         notes: str | None = None,
-    ) -> None:
-        """Menyimpan keputusan ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)."""
-        order_status_map = {
-            "MENUNGGU_ACC": "WAITING_ACC",
-            "DITERIMA": "ACCEPTED",
-            "DITOLAK_REWORK": "REWORK",
-        }
-        order_status = order_status_map.get(decision, "ONGOING")
+        *,
+        order_status: str,
+        expected_status: str,
+    ) -> int:
+        """Menyimpan keputusan ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK). Compare-and-set pada
+        `expected_status`; kembalian = jumlah baris yang berubah (0 = status sudah diubah pihak lain)."""
         sql = """
             UPDATE work_completion
             SET acc_status = CAST(:decision AS varchar),
@@ -37,18 +35,20 @@ class WorkCompletionRevisionRepository(BaseRepository):
                                     THEN NULL ELSE CAST(:decided_by AS uuid) END,
                 acc_notes = :notes,
                 update_at = NOW()
-            WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL
+            WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL AND order_status = :expected
         """
-        await self.execute(
+        result = await self.execute(
             sql,
             {
                 "id": str(completion_id),
                 "decision": decision,
                 "order_status": order_status,
+                "expected": expected_status,
                 "decided_by": str(decided_by_id) if decided_by_id else None,
                 "notes": notes,
             },
         )
+        return int(result.rowcount or 0)
 
     async def reopen_items_for_rework(self, completion_id: UUID | str) -> int:
         """Buka kembali item pengerjaan deliverable jika klien menolak untuk perbaikan (rework)."""

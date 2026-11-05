@@ -686,6 +686,10 @@ CREATE TABLE IF NOT EXISTS app_activity_logs_2026_11 PARTITION OF app_activity_l
     FOR VALUES FROM ('2026-11-01 00:00:00+07') TO ('2026-12-01 00:00:00+07');
 
 CREATE INDEX IF NOT EXISTS idx_activity_logs_entity ON app_activity_logs (entity_table, entity_id);
+-- Halaman audit: ORDER BY created_at DESC (migrasi v2_0027; indeks induk dibuat ke semua partisi)
+CREATE INDEX IF NOT EXISTS ix_app_activity_logs_created_log ON app_activity_logs (created_at DESC, log_id);
+-- Filter jenis entitas + urutan keyset (v2_0028)
+CREATE INDEX IF NOT EXISTS ix_app_activity_logs_entity_created_log ON app_activity_logs (entity_table, created_at DESC, log_id);
 
 -- 26. Tabel system_backup_registry (Pencatatan Backup 1 Bulan & 6 Bulan)
 CREATE TABLE IF NOT EXISTS system_backup_registry (
@@ -719,6 +723,9 @@ CREATE TABLE IF NOT EXISTS overtime (
 
 CREATE INDEX IF NOT EXISTS idx_overtime_daily_plan ON overtime (daily_plan_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_employee ON overtime (employee_id);
+-- Paginasi keyset create_at DESC, overtime_id DESC (v2_0028)
+CREATE INDEX IF NOT EXISTS ix_overtime_created_keyset ON overtime (create_at DESC, overtime_id DESC) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_overtime_employee_created_keyset ON overtime (employee_id, create_at DESC, overtime_id DESC) WHERE delete_at IS NULL;
 
 -- 28. Tabel file_object (metadata berkas MinIO; kolom *_path / path_file tabel lain = storage_key)
 CREATE TABLE IF NOT EXISTS file_object (
@@ -753,6 +760,7 @@ CREATE INDEX IF NOT EXISTS idx_employee_office ON employee (office_id) WHERE del
 CREATE INDEX IF NOT EXISTS idx_employee_division ON employee (division_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions (user_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS ix_user_sessions_refresh_token_hash ON user_sessions (refresh_token_hash);
+CREATE INDEX IF NOT EXISTS ix_user_sessions_token_family_id ON user_sessions (token_family_id);
 CREATE INDEX IF NOT EXISTS idx_division_om ON division (om_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_division_pm ON division (pm_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_team_office ON team (office_id) WHERE delete_at IS NULL;
@@ -784,6 +792,8 @@ CREATE INDEX IF NOT EXISTS idx_asset_assignment_employee ON asset_assignment (em
 CREATE INDEX IF NOT EXISTS idx_attendance_employee ON attendance (employee_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_attendance_office ON attendance (office_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_attendance_daily_plan ON attendance (daily_plan_id) WHERE delete_at IS NULL;
+-- Pemantauan harian per tanggal (migrasi v2_0027, F-11)
+CREATE INDEX IF NOT EXISTS ix_attendance_date_status ON attendance (attendance_date, om_approval_status) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_completion_daily ON work_completion (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wt_default_materials_type ON work_type_default_materials (work_type_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wc_bom_completion ON work_completion_bom (completion_id) WHERE delete_at IS NULL;
@@ -826,3 +836,17 @@ CREATE TABLE IF NOT EXISTS hse_campaign_views (
     first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (campaign_id, user_id, view_date)
 );
+
+-- Idempotency-Key opsional (v2_0025, F-03). Hanya operasi selesai; dibersihkan `cleanup-idempotency` (>7 hari).
+CREATE TABLE IF NOT EXISTS idempotency_keys (
+    idempotency_key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    key VARCHAR(128) NOT NULL,
+    request_hash CHAR(64) NOT NULL,
+    status SMALLINT NOT NULL CHECK (status BETWEEN 100 AND 599),
+    response_body JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_idempotency_keys_scope UNIQUE (organization_id, user_id, key)
+);
+CREATE INDEX IF NOT EXISTS ix_idempotency_keys_created_at ON idempotency_keys (created_at);

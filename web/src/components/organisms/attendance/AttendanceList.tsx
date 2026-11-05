@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { LoadMoreBar } from "@/components/organisms/LoadMoreBar";
+import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
 import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
@@ -12,16 +14,14 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 /** Kartu absensi (jarak, wajah, penjelasan, status) + tombol Tinjau/Beri penjelasan + navigasi halaman. */
-export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen }: {
+export function AttendanceList({ list, more, meEmployeeId, onOpen }: {
   list: UseQueryResult<AttendanceListData>;
-  page: number;
+  more: KeysetMore;
   meEmployeeId: string | null | undefined;
-  onPageChange: (page: number) => void;
   onOpen: (open: { kind: "review" | "explain"; item: Attendance }) => void;
 }) {
   const qc = useQueryClient();
   const data = list.data;
-  const lastPage = data ? Math.max(1, Math.ceil(data.total / data.size)) : 1;
   return (
       <QueryState query={list} errorText="Absensi tidak dapat dimuat." empty={data?.items.length === 0} emptyText="Tidak ada catatan kehadiran yang cocok.">
         <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -130,21 +130,7 @@ export function AttendanceList({ list, page, meEmployeeId, onPageChange, onOpen 
             </ListEntry>
           ))}
         </ListBlock>
-        {data && data.total > data.size && (
-          <nav aria-label="Halaman" className="mt-4 flex flex-col gap-2 text-sm md:flex-row md:items-center md:justify-between">
-            <TextBlock as="span" className="text-mist">
-              {data.total} catatan · halaman {data.page} dari {lastPage}
-            </TextBlock>
-            <TextBlock as="span" className="flex gap-2">
-              <ActionButton variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-                Sebelumnya
-              </ActionButton>
-              <ActionButton variant="outline" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
-                Berikutnya
-              </ActionButton>
-            </TextBlock>
-          </nav>
-        )}
+        <LoadMoreBar more={more} />
       </QueryState>
   );
 }

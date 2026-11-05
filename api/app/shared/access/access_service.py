@@ -77,6 +77,21 @@ async def check_daily_access(
     row = await DailyAccessRepository(db).standing(daily_plan_id, user.employee_id)
     if row is None:
         raise NotFoundError("Jadwal harian")
+    return access_from_standing(row, user, need)
+
+
+async def daily_standings(db: AsyncSession, daily_plan_ids: Iterable[UUID | str],
+                          employee_id: str | None) -> dict[str, Any]:
+    """Kedudukan banyak jadwal sekaligus (satu kueri), kamus dengan kunci id jadwal (teks). Dipakai daftar agar tidak
+    memanggil `check_daily_access` per baris. Jadwal yang tak ada tidak masuk kamus."""
+    ids = [str(i) for i in daily_plan_ids]
+    if not ids:
+        return {}
+    return await DailyAccessRepository(db).standings(ids, employee_id)
+
+
+def access_from_standing(row: Any, user: CurrentUser, need: DailyNeed) -> DailyAccess:
+    """Aturan kedudukan pada satu jadwal (dipakai `check_daily_access` dan versi banyak jadwal). Melempar 404/403."""
     manages = is_admin(user) or bool(row.manages)
     is_leader, is_member = bool(row.is_leader), bool(row.is_member) or bool(row.is_leader)
     # HR/GA hanya melihat jadwal untuk logistik (aset & lembur), bukan detail rencana kerja.
@@ -128,7 +143,7 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     if row.personal_document and (row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in perms):
         return row
     # Swafoto: pemilik; pemegang VIEW_ALL (OM, Finance, OPS); atau PM yang memimpin divisi karyawan itu.
-    if row.selfie and (row.own_selfie or Permission.VIEW_ALL_ATTENDANCE.value in perms
+    if row.selfie and (row.own_selfie or (Permission.VIEW_ALL_ATTENDANCE.value in perms and row.selfie_office)
                        or (Permission.REVIEW_ATTENDANCE.value in perms and row.selfie_pm)):
         return row
     for daily_plan_id in row.daily_plan_ids or []:

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import { idempotencyHeaders } from "@/lib/idempotency";
 import type { components } from "@/lib/apiTypes";
 import type { BulkOut, PlanItemInput, WeeklyMatrix } from "@/lib/alokasi";
 
@@ -39,15 +40,22 @@ function useInvalidatingMutation<V, D>(fn: (v: V) => Promise<D>) {
 }
 
 export const useBulkAllocate = () =>
-  useInvalidatingMutation(async (body: {
+  useInvalidatingMutation(async ({ idempotencyKey, ...body }: {
     division_id: string;
     team_ids: string[];
     work_dates: string[];
-  }) => (await api.post<BulkOut>("/work-plans/daily/bulk", { ...body, kind: "WORK", target: "DRAFT" })).data);
+    idempotencyKey?: string;
+  }) => (await api.post<BulkOut>("/work-plans/daily/bulk", { ...body, kind: "WORK", target: "DRAFT" },
+    { headers: idempotencyHeaders(idempotencyKey) })).data);
 
 export const useBulkStandby = () =>
-  useInvalidatingMutation(async (body: { division_id: string; team_ids: string[]; work_dates: string[] }) =>
-    (await api.post<BulkOut>("/work-plans/daily/bulk-standby", body)).data);
+  useInvalidatingMutation(async ({ idempotencyKey, ...body }: {
+    division_id: string;
+    team_ids: string[];
+    work_dates: string[];
+    idempotencyKey?: string;
+  }) => (await api.post<BulkOut>("/work-plans/daily/bulk-standby", body,
+    { headers: idempotencyHeaders(idempotencyKey) })).data);
 
 /** Tambah pekerjaan ke jadwal yang baru dibuat (berurutan; satu galat tidak membatalkan yang lain). */
 export async function addItemToPlan(dailyPlanId: string, item: PlanItemInput) {

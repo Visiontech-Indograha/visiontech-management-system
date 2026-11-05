@@ -4,6 +4,7 @@ Dibaca otomatis saat bekerja di `api/`. Aturan lengkap di `CLAUDE.md` root dan s
 
 ## Aturan inti
 - Tanpa `LIKE '%…'` / `ILIKE '%' || :q` (cari = awalan). Tanpa `OFFSET` baru (pakai keyset). Tanpa `SELECT *`. `KNOWN` di `tests/architecture/test_sql_rules.py` hanya boleh menyusut.
+- Keputusan pemilik (5 Nov 2026): pencarian `q` pada daftar LAMA tetap "mengandung kata" (tercatat di `KNOWN`); daftar BARU wajib awalan. `OFFSET` baru dilarang: daftar baru memakai keyset `(created_at, id)`.
 - Daftar pakai `ListParams`/`apply_list` dan `X-Total-Count`. Tanpa parameter = perilaku lama.
 - Router tipis; SQL hanya di `repositories/`; repository tidak commit; transaksi di service.
 - Setiap rute punya `require_permission` atau penjaga terdaftar di `test_route_guards.py`. Objek di luar cakupan → 404.

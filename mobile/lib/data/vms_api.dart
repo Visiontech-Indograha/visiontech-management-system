@@ -5,6 +5,23 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 
 import '../core/api_client.dart';
+import 'pengajuan_idempotency.dart';
+
+/// Ukuran halaman keyset (batas API: absensi maks 200, lembur maks 100).
+const kAttendancePageSize = 60;
+const kOvertimePageSize = 30;
+
+/// Pesan saat kursor ditolak server (422): daftar dimuat ulang dari awal.
+const kPesanKursorBerubah = 'Daftar sudah berubah, jadi dimuat ulang dari awal.';
+
+/// Kursor ditolak server (422) = daftar berubah; mulai lagi dari halaman pertama.
+bool isCursorRejected(Object e) =>
+    e is DioException && e.response?.statusCode == 422;
+
+String? _nextCursor(Response res) {
+  final v = res.headers.value('x-next-cursor');
+  return (v == null || v.isEmpty) ? null : v;
+}
 
 /// Panggilan REST MVP ke backend VMS (api/app/api/*). Bentuk data mengikuti
 /// OpenAPI backend apa adanya (Map JSON) supaya tidak ada lapisan model ganda.
@@ -21,6 +38,40 @@ class VmsApi {
 
   Map<String, dynamic> _map(dynamic data) =>
       Map<String, dynamic>.from(data as Map);
+
+  /// Satu-satunya jalur POST pengajuan yang memakai `Idempotency-Key`.
+  /// [idem] null = tanpa header (perilaku lama). Kunci dibuat/dipakai ulang oleh [idem];
+  /// bila server menolak kunci yang sudah dipakai untuk isi lain (422), kunci diganti.
+  Future<Map<String, dynamic>> _postPengajuan(
+    String path,
+    Map<String, dynamic> data,
+    PengajuanIdempotency? idem,
+  ) async {
+    if (idem == null) return _map((await _dio.post(path, data: data)).data);
+    try {
+      final res = await _dio.post(
+        path,
+        data: data,
+        options: Options(
+          headers: {'Idempotency-Key': idem.kunciUntuk(data)},
+        ),
+      );
+      idem.selesai();
+      return _map(res.data);
+    } on DioException catch (e) {
+      if (_kodeGalat(e) == 'IDEMPOTENCY_KUNCI_DIPAKAI') idem.selesai();
+      rethrow;
+    }
+  }
+
+  static String? _kodeGalat(DioException e) {
+    final data = e.response?.data;
+    if (data is Map && data['error'] is Map) {
+      final code = (data['error'] as Map)['code'];
+      if (code is String) return code;
+    }
+    return null;
+  }
 
   // --- Jadwal harian (Milestone 5–6, daily-first) -------------------------
   /// Jadwal tim saya dalam rentang tanggal (lapangan hanya melihat yang sudah disetujui).
@@ -149,11 +200,11 @@ class VmsApi {
     required String dayId,
     required num hours,
     required String reason,
-  }) async => _map(
-    (await _dio.post(
-      '$_p/overtime',
-      data: {'daily_plan_id': dayId, 'hours': hours, 'reason': reason},
-    )).data,
+    PengajuanIdempotency? idem,
+  }) => _postPengajuan(
+    '$_p/overtime',
+    {'daily_plan_id': dayId, 'hours': hours, 'reason': reason},
+    idem,
   );
 
   /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
@@ -248,18 +299,21 @@ class VmsApi {
       String? requiredOutAt,
       int reportPendingCount,
       String? reportPendingPlanId,
+      String? nextCursor,
     })
   >
-  myAttendance({required String employeeId}) async {
+  myAttendance({required String employeeId, String cursor = ''}) async {
     final res = await _dio.get(
       '$_p/attendance',
       queryParameters: {
         if (employeeId.isNotEmpty) 'employee_id': employeeId,
-        'size': 60,
+        'cursor': cursor,
+        'size': kAttendancePageSize,
       },
     );
     final data = res.data as Map;
     return (
+      nextCursor: _nextCursor(res),
       items: _list(data['items']),
       today: data['today'] as String?,
       timeAnchor: data['time_anchor'] as String?,
@@ -613,8 +667,29 @@ class VmsApi {
   );
 
   // --- Lembur -------------------------------------------------------------
-  Future<List<Map<String, dynamic>>> myOvertime() async =>
-      _list((await _dio.get('$_p/overtime')).data);
+  /// Satu halaman riwayat lembur (keyset). [cursor] kosong = halaman pertama.
+  /// Tidak membaca total; lanjutan lewat `nextCursor` (header X-Next-Cursor).
+  Future<({List<Map<String, dynamic>> items, String? nextCursor})> myOvertime({
+    String cursor = '',
+  }) async {
+    final res = await _dio.get(
+      '$_p/overtime',
+      queryParameters: {'cursor': cursor, 'size': kOvertimePageSize},
+    );
+    return (items: _list(res.data), nextCursor: _nextCursor(res));
+  }
+
+  /// Setujui (APPROVED) atau tolak (REJECTED) lembur tim. Online saja: keputusan tidak diantrikan offline.
+  Future<Map<String, dynamic>> reviewOvertime({
+    required String id,
+    required String decision,
+    String? note,
+  }) async => _map(
+    (await _dio.post(
+      '$_p/overtime/$id/review',
+      data: {'decision': decision, 'note': ?note},
+    )).data,
+  );
 
   // --- Mess, dokumen, koreksi laporan -------------------------------------------
   Future<List<Map<String, dynamic>>> myMess() async => _list((await _dio.get('$_p/mess/me')).data);
@@ -626,11 +701,11 @@ class VmsApi {
     required String start,
     required String end,
     String note = '',
-  }) async => _map(
-    (await _dio.post(
-      '$_p/mess/requests',
-      data: {'mess_id': messId, 'stay_start_date': start, 'stay_end_date': end, 'note': note.isEmpty ? null : note},
-    )).data,
+    PengajuanIdempotency? idem,
+  }) => _postPengajuan(
+    '$_p/mess/requests',
+    {'mess_id': messId, 'stay_start_date': start, 'stay_end_date': end, 'note': note.isEmpty ? null : note},
+    idem,
   );
 
   Future<Map<String, dynamic>> cancelMess(String stayId) async =>
@@ -689,15 +764,15 @@ class VmsApi {
     required String assetType,
     required String assetId,
     required String purpose,
-  }) async => _map(
-    (await _dio.post(
-      '$_p/assets/loan-requests',
-      data: {
-        'asset_type': assetType,
-        if (assetType == 'TOOL') 'tool_id': assetId else 'vehicle_id': assetId,
-        'purpose': purpose,
-      },
-    )).data,
+    PengajuanIdempotency? idem,
+  }) => _postPengajuan(
+    '$_p/assets/loan-requests',
+    {
+      'asset_type': assetType,
+      if (assetType == 'TOOL') 'tool_id': assetId else 'vehicle_id': assetId,
+      'purpose': purpose,
+    },
+    idem,
   );
 
   Future<Map<String, dynamic>> cancelLoanRequest(String requestId) async =>
@@ -748,16 +823,16 @@ class VmsApi {
     required String startDate,
     required String endDate,
     required String reason,
-  }) async => _map(
-    (await _dio.post(
-      '$_p/leaves',
-      data: {
-        'leave_type': leaveType,
-        'start_date': startDate,
-        'end_date': endDate,
-        'reason': reason,
-      },
-    )).data,
+    PengajuanIdempotency? idem,
+  }) => _postPengajuan(
+    '$_p/leaves',
+    {
+      'leave_type': leaveType,
+      'start_date': startDate,
+      'end_date': endDate,
+      'reason': reason,
+    },
+    idem,
   );
 
   Future<Map<String, dynamic>> cancelLeave(String leaveId) async =>

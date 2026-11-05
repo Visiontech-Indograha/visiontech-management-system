@@ -7,6 +7,7 @@ sekali dan tidak pernah disimpan selain hash argon2.
 
 from __future__ import annotations
 
+import asyncio
 import secrets
 import string
 from types import SimpleNamespace
@@ -114,9 +115,8 @@ class AccountService:
             raise AppError("LOGIN_TAKEN", "Email login sudah dipakai akun lain.", status=409)
 
         password = temporary_password()
-        row = await self.users.create_for_employee(
-            org_id, employee_id, login, hash_password(password), system_role
-        )
+        password_hash = await asyncio.to_thread(hash_password, password)
+        row = await self.users.create_for_employee(org_id, employee_id, login, password_hash, system_role)
         await write_delete_audit(
             self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
             entity_type="users", entity_id=row.id, action="ACCOUNT_CREATE",
@@ -166,7 +166,8 @@ class AccountService:
         """
         account = await self._account(employee_id, org_id)
         password = temporary_password()
-        await self.users.update_password_hash(account.id, hash_password(password))
+        password_hash = await asyncio.to_thread(hash_password, password)
+        await self.users.update_password_hash(account.id, password_hash)
         # Menghentikan paksa (revoke) semua sesi terbuka agar pemilik tidak menggunakan sesi yang rentan (compromised).
         await self.sessions.revoke_all_for_user(account.id, "PASSWORD_RESET")
         # Reset oleh HR/admin sekaligus membuka kunci kegagalan login.

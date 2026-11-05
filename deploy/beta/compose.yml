@@ -9,7 +9,7 @@ services:
     image: vms-beta-api
     container_name: vms_beta_api
     env_file: ./api.env
-    ports: ["8001:8000"]
+    ports: ["127.0.0.1:8001:8000"]   # hanya lokal server; tailnet lewat `tailscale serve` (proxy ke 127.0.0.1)
     restart: unless-stopped
     volumes:
       - ./rilis:/srv/rilis:ro          # kanal pembaruan APK beta
@@ -21,7 +21,7 @@ services:
     image: vms-beta-web
     container_name: vms_beta_web
     environment: ["SITE_ADDRESS=:80"]
-    ports: ["8081:80"]
+    ports: ["127.0.0.1:8081:80"]     # idem
     restart: unless-stopped
     depends_on: [api]
     networks: [betanet]

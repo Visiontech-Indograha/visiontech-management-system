@@ -11,6 +11,7 @@ from uuid import UUID
 
 from fastapi import Request
 
+from app.core.rate_limit import client_ip
 from app.core.security import CurrentUser
 from app.modules.hse.schemas.hse_schema import (
     HseAcknowledgeCreate,
@@ -75,14 +76,11 @@ class HseController:
         data: HseAcknowledgeCreate,
         request: Request,
     ) -> dict[str, Any]:
-        client_ip = request.client.host if request.client else None
-        forwarded_for = request.headers.get("x-forwarded-for")
-        ip = (forwarded_for.split(",")[0].strip() if forwarded_for else None) or client_ip
         result = await self.service.acknowledge_campaign(
             campaign_id=campaign_id,
             current_user=current_user,
             data=data,
-            ip_address=ip,
+            ip_address=client_ip(request),
         )
         return {"acknowledged": True, "detail": result}
 

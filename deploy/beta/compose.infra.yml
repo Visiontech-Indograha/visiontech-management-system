@@ -19,6 +19,8 @@ services:
       betanet:
         aliases: [db]
   minio:
+    # TODO pin: ganti dengan quay.io/minio/minio@sha256:<DIGEST> (langkah: deploy/MINIO-PIN.md).
+    # Digest belum diverifikasi dari server, jadi tag lama dipertahankan sampai pemilik mengisinya.
     image: quay.io/minio/minio:latest
     container_name: vms_minio_beta
     restart: always

@@ -13,6 +13,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository, escape_like
+from app.shared.access.office_scope import attendance_office_scope
 from app.shared.access.pm_reach import VIEWER_EMPLOYEE_BY_USER, pm_reaches_employee
 from app.shared.attendance_sql import EFFECTIVE_CITY_ZONE_A, EFFECTIVE_MEAL_AMOUNT_A, IS_LATE, IS_LATE_A
 
@@ -807,8 +808,13 @@ class AttendanceSessionRepository(BaseRepository):
         offset: int,
         scope: str = "all",
         q: str | None = None,
+        after: tuple[Any, ...] | None = None,
     ) -> tuple[list[Any], int]:
-        """Mengambil daftar absensi berpaginasi dengan informasi can_review."""
+        """Mengambil daftar absensi berpaginasi dengan informasi can_review.
+
+        `after` (mode keyset): None = OFFSET lama (+ COUNT); `()` = halaman pertama; `(tanggal, jam_masuk, id)` =
+        setelah kursor. Mode keyset tanpa OFFSET/COUNT (total dikembalikan 0). Cakupan akses sama persis.
+        """
         status_filter = status
         # Normalize status filter jika berasal dari frontend ('NEEDS_REVIEW' -> 'PENDING_OM' atau mapping sebaliknya)
         params = {
@@ -826,13 +832,18 @@ class AttendanceSessionRepository(BaseRepository):
 
         where_clauses = [
             "a.delete_at IS NULL",
-            # OM/SUPER_ADMIN & pemegang VIEW_ALL melihat semua; PM hanya karyawan divisinya (pm_id);
-            # selain itu hanya absensi miliknya sendiri.
+            # Pemegang VIEW_ALL dibatasi cakupan kantor (SA/OM semua kantor, HR/Finance kantor sendiri; gabungan
+            # jabatan); PM hanya karyawan divisinya (pm_id); selain itu hanya absensi miliknya sendiri.
             f"""(
-                CAST(:view_all AS boolean)
-                OR EXISTS (
-                    SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                      AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                (
+                    (
+                        CAST(:view_all AS boolean)
+                        OR EXISTS (
+                            SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
+                              AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                        )
+                    )
+                    AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')}
                 )
                 OR (
                     EXISTS (
@@ -876,7 +887,20 @@ class AttendanceSessionRepository(BaseRepository):
                 )
             )""",
         ]
+        keyset = after is not None
+        if after:
+            where_clauses.append(
+                "(a.attendance_date, a.clock_in_at, a.attendance_id) "
+                "< (CAST(:c_date AS date), CAST(:c_at AS timestamptz), CAST(:c_id AS uuid))"
+            )
+            params["c_date"], params["c_at"], params["c_id"] = after[0], after[1], str(after[2])
+        if keyset:
+            params.pop("offset")
         where_sql = " AND ".join(where_clauses)
+        if keyset:
+            order_tail = "ORDER BY a.attendance_date DESC, a.clock_in_at DESC, a.attendance_id DESC LIMIT :limit"
+        else:
+            order_tail = "ORDER BY a.attendance_date DESC, a.clock_in_at DESC LIMIT :limit OFFSET :offset"
 
         query = f"""
             SELECT a.attendance_id AS id,
@@ -949,8 +973,7 @@ class AttendanceSessionRepository(BaseRepository):
             LEFT JOIN office o ON o.office_id = a.office_id
             LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
             WHERE {where_sql}
-            ORDER BY a.attendance_date DESC, a.clock_in_at DESC
-            LIMIT :limit OFFSET :offset
+            {order_tail}
         """
         count_query = f"""
             SELECT count(*)
@@ -960,6 +983,8 @@ class AttendanceSessionRepository(BaseRepository):
         """
 
         rows = await self.fetchall(query, params)
+        if keyset:
+            return list(rows), 0
         total = await self.scalar(count_query, params)
         return list(rows), int(total or 0)
 
@@ -1019,7 +1044,9 @@ class AttendanceSessionRepository(BaseRepository):
             {"om_status": om_status, "note": note, "id": str(attendance_id)},
         )
 
-    async def export_rows(self, org_id: UUID | str, start: Any, end: Any) -> list[Any]:
+    async def export_rows(
+        self, org_id: UUID | str, start: Any, end: Any, viewer_user_id: UUID | str
+    ) -> list[Any]:
         """Baris ekspor absensi untuk laporan rekap."""
         return list(
             await self.fetchall(
@@ -1050,13 +1077,20 @@ class AttendanceSessionRepository(BaseRepository):
                 LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = a.daily_plan_id
                 WHERE a.delete_at IS NULL
                   AND a.attendance_date BETWEEN :start AND :end
+                  AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')}
                 ORDER BY a.attendance_date ASC, e.full_name ASC
                 """,
-                {"start": start, "end": end},
+                {"start": start, "end": end, "viewer": str(viewer_user_id)},
             )
         )
 
-    async def meal_allowance_recap(self, start: Any, end: Any, division_ids: list[str] | None = None) -> list[Any]:
+    async def meal_allowance_recap(
+        self,
+        start: Any,
+        end: Any,
+        division_ids: list[str] | None = None,
+        scope_viewer_user_id: UUID | str | None = None,
+    ) -> list[Any]:
         """Uang makan per karyawan: tarif sudah dibekukan per absen saat masuk (zona kota kantor utama atau jadwal
         luar kota); hanya absensi sah yang dijumlah. Satu absen per karyawan per hari (attendance_active_uidx)."""
         return list(
@@ -1073,10 +1107,17 @@ class AttendanceSessionRepository(BaseRepository):
                 WHERE a.delete_at IS NULL
                   AND a.attendance_date BETWEEN :start AND :end
                   AND (CAST(:divs AS uuid[]) IS NULL OR e.division_id = ANY(CAST(:divs AS uuid[])))
+                  AND (CAST(:viewer AS uuid) IS NULL
+                       OR {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')})
                 GROUP BY e.employee_id, e.employee_no, e.full_name
                 ORDER BY e.full_name
                 """,
-                {"start": start, "end": end, "divs": division_ids or None},
+                {
+                    "start": start,
+                    "end": end,
+                    "divs": division_ids or None,
+                    "viewer": str(scope_viewer_user_id) if scope_viewer_user_id else None,
+                },
             )
         )
 

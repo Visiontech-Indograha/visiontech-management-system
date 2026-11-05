@@ -92,6 +92,9 @@ class OffboardingService:
             raise AppError("HANDOVER_REQUIRED", f"Serahterimakan jabatan dulu: {held}.", status=409)
         offboarding_id = await self.repo.create(employee_id=data.employee_id, reason=data.reason_type.value,
                                                 effective_date=effective, notes=(data.notes or "").strip() or None)
+        if offboarding_id is None:
+            raise AppError("ALREADY_OFFBOARDING", "Karyawan ini sudah dalam proses keluar atau sudah keluar.",
+                           status=409)
         record = await self.repo.get(offboarding_id)
         return {**dict(record._mapping), "clearance_items": [dict(i._mapping) for i in
                                                               await self.repo.items(offboarding_id)]}
@@ -143,16 +146,19 @@ class OffboardingService:
                 raise AppError("ALREADY_APPROVED", "HR sudah menyetujui.", status=409)
         await self.repo.approve(offboarding_id, as_pm=as_pm, approver_id=user.employee_id)
         updated = await self.repo.get(offboarding_id)
-        if updated.status == "APPROVED" and updated.effective_date <= jakarta_now().date():
-            await self.repo.finalize(offboarding_id, updated.employee_id)
+        due = updated.status == "APPROVED" and updated.effective_date <= jakarta_now().date()
+        if due and not await self.repo.finalize(offboarding_id, updated.employee_id):
+            raise AppError("INVALID_STATE", "Status proses keluar sudah berubah; muat ulang.", status=409)
         return await self.detail(user, offboarding_id)
 
     async def complete_due(self) -> int:
         """Penjadwal: selesaikan offboarding yang sudah disetujui dan tanggal efektifnya tiba."""
         due = await self.repo.due_for_completion(jakarta_now().date())
+        done = 0
         for row in due:
-            await self.repo.finalize(row.offboarding_id, row.employee_id)
-        return len(due)
+            if await self.repo.finalize(row.offboarding_id, row.employee_id):
+                done += 1
+        return done
 
     async def cancel(self, user: CurrentUser, offboarding_id: UUID, reason: str) -> None:
         record = await self._visible(user, offboarding_id, for_update=True)

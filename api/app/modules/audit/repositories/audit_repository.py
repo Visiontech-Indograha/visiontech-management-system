@@ -62,8 +62,27 @@ class AuditRepository(BaseRepository):
         q: str | None = None,
         date_from: Any = None,
         date_to: Any = None,
+        after: tuple[Any, ...] | None = None,
     ) -> list[Any]:
-        """Satu halaman kejadian audit dari tabel terpartisi bulanan, terbaru lebih dulu."""
+        """Satu halaman kejadian audit dari tabel terpartisi bulanan, terbaru lebih dulu.
+
+        `after` (mode keyset): None = OFFSET lama; `()` = halaman pertama; `(created_at, log_id)` = setelah kursor.
+        Urutan keyset `created_at DESC, log_id ASC` (arah campuran -> bentuk OR, bukan row-compare).
+        """
+        keyset = after is not None
+        cond = ""
+        extra: dict[str, Any] = {}
+        if after:
+            cond = (
+                "AND (a.created_at < CAST(:c_at AS timestamptz) OR "
+                "(a.created_at = CAST(:c_at AS timestamptz) AND a.log_id > CAST(:c_id AS uuid)))"
+            )
+            extra = {"c_at": after[0], "c_id": str(after[1])}
+        order = "ORDER BY a.created_at DESC, a.log_id ASC" if keyset else "ORDER BY a.created_at DESC"
+        tail = "LIMIT :limit" if keyset else "LIMIT :limit OFFSET :offset"
+        params = {**_params(entity_type, q, date_from, date_to), **extra, "limit": limit}
+        if not keyset:
+            params["offset"] = offset
         return list(
             await self.fetchall(
                 f"""
@@ -80,10 +99,11 @@ class AuditRepository(BaseRepository):
             FROM public.app_activity_logs a
             {_JOINS}
             {_FILTER}
-            ORDER BY a.created_at DESC
-            LIMIT :limit OFFSET :offset
+            {cond}
+            {order}
+            {tail}
         """,
-                {**_params(entity_type, q, date_from, date_to), "limit": limit, "offset": offset},
+                params,
             )
         )
 

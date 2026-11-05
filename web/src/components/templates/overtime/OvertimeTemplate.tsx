@@ -3,13 +3,16 @@ import { OvertimeApplyButton } from "@/components/organisms/overtime/OvertimeApp
 import { OvertimeApplyDialog } from "@/components/organisms/overtime/OvertimeApplyDialog";
 import { OvertimeList } from "@/components/organisms/overtime/OvertimeList";
 import { OvertimeReviewList } from "@/components/organisms/monitoring/OvertimeReviewList";
+import type { KeysetMore } from "@/hooks/useKeysetList";
 import type { Overtime } from "@/services/overtimeService";
 import { PageTemplate } from "../PageTemplate";
 
 /** Kerangka "Lembur": ajukan, daftar sendiri, dan (bila berhak) antrean keputusan. */
-export function OvertimeTemplate({ mine, pending, canReview, canApply, applying, onApply, onCloseApply }: {
+export function OvertimeTemplate({ mine, moreMine, pending, morePending, canReview, canApply, applying, onApply, onCloseApply }: {
   mine: UseQueryResult<Overtime[]>;
+  moreMine: KeysetMore;
   pending: UseQueryResult<Overtime[]>;
+  morePending: KeysetMore;
   canReview: boolean;
   canApply: boolean;
   applying: boolean;
@@ -18,8 +21,8 @@ export function OvertimeTemplate({ mine, pending, canReview, canApply, applying,
 }) {
   return (
     <PageTemplate title="Lembur" description="Ajukan lembur dan pantau statusnya." action={canApply ? <OvertimeApplyButton onApply={onApply} /> : undefined}>
-      {canReview && <OvertimeReviewList query={pending} />}
-      <OvertimeList query={mine} titled={canReview} />
+      {canReview && <OvertimeReviewList query={pending} more={morePending} />}
+      <OvertimeList query={mine} more={moreMine} titled={canReview} />
       {applying && <OvertimeApplyDialog onClose={onCloseApply} />}
     </PageTemplate>
   );

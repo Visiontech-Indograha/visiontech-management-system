@@ -1,4 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { useLend } from "@/services/assetService";
+import { useCreateMessStay } from "@/services/messService";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, api } from "@/lib/apiClient";
 import { errorMessage } from "@/lib/errors";
@@ -35,5 +39,43 @@ describe("kunci idempotensi", () => {
   it("409 sedang diproses memberi pesan sederhana", () => {
     const err = new ApiError("IDEMPOTENCY_SEDANG_DIPROSES", "x", 409);
     expect(errorMessage(err)).toBe("Pengajuan sedang diproses, tunggu sebentar.");
+  });
+});
+
+describe("kunci idempotensi mess dan serah terima aset", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  function wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: new QueryClient() }, children);
+  }
+
+  it("POST /mess dan /assets/loans memakai kunci sama saat dikirim dua kali", async () => {
+    const post = vi.spyOn(api, "post").mockResolvedValue({ data: {} });
+    const mess = renderHook(() => useCreateMessStay(), { wrapper });
+    const lend = renderHook(() => useLend(), { wrapper });
+    const m = { employee_id: "e", mess_id: "m", stay_start_date: "2026-01-01", stay_end_date: "2026-01-02" };
+    const l = { asset_type: "TOOL", tool_id: "t", employee_id: "e" };
+    await act(async () => {
+      await mess.result.current.mutateAsync({ body: m as never, idempotencyKey: "k-mess-1234" });
+      await mess.result.current.mutateAsync({ body: m as never, idempotencyKey: "k-mess-1234" });
+      await lend.result.current.mutateAsync({ body: l as never, idempotencyKey: "k-loan-1234" });
+      await lend.result.current.mutateAsync({ body: l as never, idempotencyKey: "k-loan-1234" });
+    });
+    expect(post.mock.calls[0][0]).toBe("/mess");
+    expect(post.mock.calls[0][2]).toEqual({ headers: { "Idempotency-Key": "k-mess-1234" } });
+    expect(post.mock.calls[1][2]).toEqual(post.mock.calls[0][2]);
+    expect(post.mock.calls[2][0]).toBe("/assets/loans");
+    expect(post.mock.calls[3][2]).toEqual({ headers: { "Idempotency-Key": "k-loan-1234" } });
+  });
+
+  it("nilai form beda memberi kunci beda", () => {
+    const { result, rerender } = renderHook(({ s }) => useIdempotencyKey(s), {
+      initialProps: { s: JSON.stringify({ employee_id: "a" }) },
+    });
+    const first = result.current.key;
+    rerender({ s: JSON.stringify({ employee_id: "a" }) });
+    expect(result.current.key).toBe(first);
+    rerender({ s: JSON.stringify({ employee_id: "b" }) });
+    expect(result.current.key).not.toBe(first);
   });
 });

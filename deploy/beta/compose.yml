@@ -10,6 +10,7 @@ services:
     container_name: vms_beta_api
     env_file: ./api.env
     ports: ["127.0.0.1:8001:8000"]   # hanya lokal server; tailnet lewat `tailscale serve` (proxy ke 127.0.0.1)
+    mem_limit: 512m                  # batas host bersama prod (RUNBOOK-beta-aman.md)
     restart: unless-stopped
     volumes:
       - ./rilis:/srv/rilis:ro          # kanal pembaruan APK beta
@@ -22,6 +23,7 @@ services:
     container_name: vms_beta_web
     environment: ["SITE_ADDRESS=:80"]
     ports: ["127.0.0.1:8081:80"]     # idem
+    mem_limit: 64m
     restart: unless-stopped
     depends_on: [api]
     networks: [betanet]

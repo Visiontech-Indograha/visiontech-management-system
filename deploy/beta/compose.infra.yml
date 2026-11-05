@@ -5,6 +5,7 @@ services:
   db:
     image: vms-db:18
     container_name: vms_db_beta
+    mem_limit: 256m                  # batas host bersama prod (RUNBOOK-beta-aman.md)
     restart: always
     env_file: ./infra.env            # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
     volumes:
@@ -23,6 +24,7 @@ services:
     # Digest belum diverifikasi dari server, jadi tag lama dipertahankan sampai pemilik mengisinya.
     image: quay.io/minio/minio:latest
     container_name: vms_minio_beta
+    mem_limit: 384m
     restart: always
     command: server /data --console-address ":9001"
     env_file: ./infra.env            # MINIO_ROOT_USER, MINIO_ROOT_PASSWORD

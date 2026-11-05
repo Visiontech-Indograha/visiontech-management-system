@@ -31,6 +31,7 @@ from app.modules.work_completion.repositories.work_completion_bom_repository imp
 from app.modules.work_completion.repositories.work_completion_repository import (
     CRUDWorkCompletion,
 )
+from app.modules.work_completion.services.order_status_rules import ACC_KE_STATUS, cek_transisi, is_mundur
 
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
 SIGNATURE_MAX_BYTES = 300_000
@@ -291,14 +292,28 @@ class WorkCompletionService:
         if "client_id" in data:
             data["client_name"] = await self._client_name(data["client_id"], None)
 
-        # Perubahan status hanya berlaku bila status masih seperti saat dibaca (compare-and-set).
+        # Perubahan status hanya berlaku bila status masih seperti saat dibaca (compare-and-set) dan sesuai peta.
+        dari = str(existing.get("order_status"))
         cas = data.get("order_status") is not None
+        if cas:
+            cek_transisi(dari, data["order_status"])
         rows = await self.crud.update_completion(
-            completion_id, data, expected_status=existing.get("order_status") if cas else None)
+            completion_id, data, expected_status=dari if cas else None)
         if cas and rows == 0:
             raise _status_changed()
+        if cas and is_mundur(dari, data["order_status"]):
+            await self._log_mundur(current_user, completion_id, dari, data["order_status"], None)
         updated = await self.crud.get_completion(completion_id)
         return updated or existing
+
+    async def _log_mundur(
+        self, user: CurrentUser, completion_id: UUID, dari: str, ke: str, notes: str | None
+    ) -> None:
+        """Perpindahan status yang memundurkan dicatat di audit (app_activity_logs)."""
+        await self.crud.log_status_mundur(
+            actor_user_id=user.user_id, actor_role=user.role, completion_id=completion_id,
+            dari=dari, ke=ke, notes=notes,
+        )
 
     async def update_order_status(
         self,
@@ -314,10 +329,13 @@ class WorkCompletionService:
 
         existing = await self._editable(current_user, completion_id)
 
-        # PM override tanpa aturan transisi; yang dijaga hanya penimpaan diam-diam: UPDATE hanya bila status
-        # masih seperti saat dibaca.
-        if await self.crud.update_status(completion_id, new_status, notes, expected=existing["order_status"]) == 0:
+        # Peta transisi (order_status_rules) + compare-and-set: UPDATE hanya bila status masih seperti saat dibaca.
+        dari = existing["order_status"]
+        cek_transisi(dari, new_status)
+        if await self.crud.update_status(completion_id, new_status, notes, expected=dari) == 0:
             raise _status_changed()
+        if is_mundur(dari, new_status):
+            await self._log_mundur(current_user, completion_id, dari, new_status, notes)
         updated = await self.crud.get_completion(completion_id)
         return updated or existing
 
@@ -354,12 +372,15 @@ class WorkCompletionService:
                                "Ketua tim harus menandatangani berita acara lebih dulu.", status=409)
         if not current_user.employee_id:
             raise ForbiddenError("Akun ini belum tertaut ke data karyawan.")
+        dari = str(existing.get("order_status"))
+        if not as_leader:
+            cek_transisi(dari, "COMPLETED")
 
         png = _decode_png(signature_data_url)
         key = f"signatures/work-completion/{completion_id}/{'leader' if as_leader else 'pm'}.png"
         if not storage.upload_file(key, png, "image/png"):
             raise AppError("STORAGE_UNAVAILABLE", "Penyimpanan berkas sedang tidak tersedia. Coba lagi.", status=503)
-        await self.crud.sign_completion(
+        rows = await self.crud.sign_completion(
             completion_id=completion_id,
             signer_id=current_user.employee_id,
             as_leader=as_leader,
@@ -367,7 +388,10 @@ class WorkCompletionService:
             summary_notes=(summary_notes or "").strip() or None,
             obstacles=(obstacles or "").strip() or None,
             photos=photo_ids or None,
+            expected_status=dari,
         )
+        if not as_leader and rows == 0:
+            raise _status_changed()
         signed = await self.crud.get_completion(completion_id)
         if not signed:
             raise NotFoundError("Order Proyek Klien")
@@ -453,8 +477,16 @@ class WorkCompletionService:
         self, current_user: CurrentUser, completion_id: UUID, decision: str, notes: str | None = None
     ) -> dict[str, Any]:
         """Menyimpan keputusan ACC klien (MENUNGGU_ACC, DITERIMA, DITOLAK_REWORK)."""
-        await self._access(current_user, completion_id, manage=True)
-        await self.crud.set_acc_decision(completion_id, decision, current_user.employee_id, notes)
+        existing = await self._access(current_user, completion_id, manage=True)
+        dari = existing["order_status"]
+        ke = ACC_KE_STATUS[decision]
+        cek_transisi(dari, ke)
+        rows = await self.crud.set_acc_decision(
+            completion_id, decision, current_user.employee_id, notes, order_status=ke, expected_status=dari)
+        if rows == 0:
+            raise _status_changed()
+        if is_mundur(dari, ke):
+            await self._log_mundur(current_user, completion_id, dari, ke, notes)
         if decision == "DITOLAK_REWORK":
             await self.crud.reopen_items_for_rework(completion_id)
         return await self.get_order_detail(current_user, completion_id)

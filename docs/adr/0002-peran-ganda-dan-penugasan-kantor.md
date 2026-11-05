@@ -1,5 +1,5 @@
 # ADR 0002: Peran ganda dan penugasan kantor
-Status: Usulan
+Status: Disetujui pemilik 2026-11-05
 Tanggal: 2026-11-05
 Pemilik keputusan bisnis: pemilik VMS (bagian "Keputusan pemilik" sudah final; bagian lain menunggu persetujuan).
 
@@ -139,15 +139,21 @@ Urutan: db -> api (flag mati) -> qa paritas -> web -> nyalakan flag. Rilis MINOR
 - Aplikasi lama: snapshot respons `/api/v1/version` dan `/app/android/update` tidak berubah; APK lama login dan absen tetap jalan.
 - Arsitektur: tanpa `LIKE '%…'` baru, rute baru punya `require_permission` (`test_route_guards.py`).
 
-## 12. Pertanyaan terbuka untuk pemilik (dengan saran)
+## 12. Jawaban pemilik atas pertanyaan terbuka (2026-11-05: semua "ikuti saran")
 
-1. Berapa batas peran per orang? Saran: maksimal 2 peran tambahan di luar peran utama (sesuai "dua peran"), dicek server. Alasan: mencegah penumpukan hak yang sulit diaudit.
-2. Kombinasi yang dilarang? Saran: larang SUPER_ADMIN digabung peran lain (sudah punya semua) dan larang Finance+HR bila pemisahan tugas penting. Alasan: pemisahan tugas uang vs data karyawan. Bila pemilik butuh, boleh diizinkan.
-3. Apakah penugasan perlu tanggal berakhir (mis. pengganti cuti)? Saran: ya, kolom `berlaku_sampai` opsional di fase 2, bukan fase 1. Alasan: mengurangi hak yang terlupa; tidak menghambat rilis awal.
-4. Apakah penugasan kantor juga berlaku untuk Finance? Saran: ya, mekanisme sama. Alasan: konsisten, tanpa kode khusus.
-5. Peran PM/HSE/TEAM_LEADER sebagai peran tambahan? Saran: fase 1 hanya HR, Finance, OM; lainnya menyusul. Alasan: cakupan PM berbasis divisi/tim, bukan kantor, sehingga butuh desain sendiri.
-6. Izin yang hanya milik HR pada orang OM+HR (kelola user dll.): benar hanya kantor tugas? Saran: ya, sesuai keputusan pemilik; tampilkan di layar "berlaku untuk kantor X". Alasan: menghindari kejutan.
-7. Siapa pengganti bila SA tunggal berhalangan? Saran: minimal dua SUPER_ADMIN. Alasan: hanya SA yang boleh menetapkan penugasan.
+1. Maksimal 2 peran tambahan di luar peran utama; dicek server.
+2. SUPER_ADMIN tidak digabung peran lain. Finance + HR dilarang (pemisahan tugas uang dan data karyawan).
+3. Tanggal berakhir penugasan (`berlaku_sampai`) ada di fase 2, opsional.
+4. Finance boleh ditugaskan ke banyak kantor, mekanisme sama.
+5. Fase 1 hanya peran HR, Finance, OM. PM/HSE/TEAM_LEADER menyusul (cakupannya divisi/tim, perlu desain sendiri).
+6. Izin khusus HR pada orang OM+HR hanya berlaku di kantor tugas; layar menampilkan "berlaku untuk kantor X".
+7. Minimal dua SUPER_ADMIN aktif.
+
+Akibat pada skema/tes: kombinasi terlarang (SA+apa pun, Finance+HR) ditolak 422 oleh service dan masuk matriks tes; tabel kasus "HR + Finance" di bagian 5 TIDAK berlaku (dilarang).
+
+## 12a. Verifikasi klaim JWT (grep, 2026-11-05)
+
+`AuthService._access_token` (`api/app/modules/auth/services/auth_service.py:353-361`) hanya mengisi `sub`, `org`, `jti` (+ `auth_time`); `create_jwt_token` (`api/app/core/security.py:63`) menambah `iat`, `exp`, `aud`, header `kid`. Tidak ada klaim peran; komentar kode: peran dan status akun dibaca dari DB tiap permintaan. Jadi token lama otomatis memakai penugasan baru tanpa paksa login ulang, dan tidak perlu menambah klaim peran ke token. Klaim baru tidak diperlukan; bagian 6 yang menyebut klaim opsional dibatalkan.
 
 ## 13. Konsekuensi
 

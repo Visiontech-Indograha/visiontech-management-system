@@ -114,6 +114,26 @@ d. Hapus dump beta lama di `~/deploy/vms-beta/backups/` dan bucket `vms-backups`
 - `curl -sS https://visiontech-bar.tail827174.ts.net:10000/ready` dari tailnet: 200.
 - Log: `~/deploy/vms-beta/logs/cron.log` dan `self-update.log` tidak menampilkan galat berulang.
 
+### 7. Indeks INVALID setelah migrasi CONCURRENTLY
+
+`CREATE INDEX CONCURRENTLY` yang gagal/terputus meninggalkan indeks `INVALID` (membebani tulis, tidak dipakai baca). Cek setiap selesai migrasi (beta dan prod):
+
+```bash
+docker exec vms_db_beta psql -U vms_app -d vms_beta -Atc "SELECT indexrelid::regclass FROM pg_index WHERE NOT indisvalid"
+```
+
+Hasil harus kosong. Bila ada: `DROP INDEX CONCURRENTLY <nama>;` lalu jalankan ulang migrasi (keputusan pemilik).
+
+### 8. Jadwal cleanup-idempotency
+
+Perintah ada: `python -m app.cli cleanup-idempotency --hari 7` (api/app/cli.py; menghapus baris `idempotency_keys` lebih tua dari N hari). Belum ada jadwal otomatis di repo. Pasang cron di server (pemilik), mis. harian 03:20:
+
+```
+20 3 * * * docker exec vms_beta_api python -m app.cli cleanup-idempotency --hari 7 >> ~/deploy/vms-beta/logs/idempotency.log 2>&1
+```
+
+Untuk prod, ganti nama kontainer dan lokasi log. Cek log memuat "Dihapus N Idempotency-Key".
+
 ## Rollback
 
 - Mengembalikan jalur tailnet ke kondisi "tanpa Serve 10000": `sudo tailscale serve --https=10000 off`. API beta menjadi tidak terjangkau

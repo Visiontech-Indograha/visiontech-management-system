@@ -77,6 +77,21 @@ async def check_daily_access(
     row = await DailyAccessRepository(db).standing(daily_plan_id, user.employee_id)
     if row is None:
         raise NotFoundError("Jadwal harian")
+    return access_from_standing(row, user, need)
+
+
+async def daily_standings(db: AsyncSession, daily_plan_ids: Iterable[UUID | str],
+                          employee_id: str | None) -> dict[str, Any]:
+    """Kedudukan banyak jadwal sekaligus (satu kueri), kamus dengan kunci id jadwal (teks). Dipakai daftar agar tidak
+    memanggil `check_daily_access` per baris. Jadwal yang tak ada tidak masuk kamus."""
+    ids = [str(i) for i in daily_plan_ids]
+    if not ids:
+        return {}
+    return await DailyAccessRepository(db).standings(ids, employee_id)
+
+
+def access_from_standing(row: Any, user: CurrentUser, need: DailyNeed) -> DailyAccess:
+    """Aturan kedudukan pada satu jadwal (dipakai `check_daily_access` dan versi banyak jadwal). Melempar 404/403."""
     manages = is_admin(user) or bool(row.manages)
     is_leader, is_member = bool(row.is_leader), bool(row.is_member) or bool(row.is_leader)
     # HR/GA hanya melihat jadwal untuk logistik (aset & lembur), bukan detail rencana kerja.

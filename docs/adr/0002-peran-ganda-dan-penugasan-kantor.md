@@ -85,8 +85,8 @@ Implementasi cakupan: fragmen SQL satu sumber (perluasan `attendance_office_scop
 
 ## 6. Dampak JWT dan kompatibilitas mundur
 
-- Token lama (tanpa klaim penugasan) tetap valid; `kid` dan algoritma tidak berubah. Izin efektif dihitung server dari DB (bukan dari klaim), sehingga token lama langsung memakai penugasan baru dan pencabutan berlaku seketika.
-- Klaim baru (opsional, tidak dipakai server untuk otorisasi): daftar peran untuk tampilan klien baru. Klien lama mengabaikannya. Harus dicek di `core/security.py`/pembuat token agar penambahan klaim tidak melewati batas ukuran token.
+- Token TIDAK berubah: isinya tetap identitas saja (`sub`, `org`, `jti`, `auth_time`); `kid` dan algoritma sama. Peran dan penugasan dibaca dari DB tiap permintaan, sehingga token lama langsung memakai penugasan baru dan pencabutan berlaku seketika.
+- Tidak ada klaim peran baru di JWT (lihat bagian 12a). Tampilan klien baru mengambil daftar peran dari respons profil (field baru opsional).
 - Bentuk respons `/api/v1/version` dan `/app/android/update` tidak diubah. Bila respons profil/login perlu daftar peran, tambahkan FIELD BARU opsional, tanpa mengubah atau menghapus field yang ada.
 - Cache izin (bila ada) harus dibatalkan saat penugasan berubah (TTL pendek atau invalidasi saat tulis).
 - Masa berlaku token lama tidak diubah; tidak perlu paksa login ulang.
@@ -132,7 +132,7 @@ Urutan: db -> api (flag mati) -> qa paritas -> web -> nyalakan flag. Rilis MINOR
 - Kombinasi peran x kantor x endpoint absensi (daftar, rekap, ekspor, uang makan, swafoto): SA, OM, HR 1 kantor, HR 2 kantor, OM+HR, Finance, HR+Finance, penjabat OM+HR, PM+HR, EMPLOYEE (tanpa akses). Kantor dalam dan luar cakupan (luar = 404/kosong).
 - OM memiliki `export:attendance`; peran lain tidak berubah.
 - Paritas migrasi: cakupan lama == baru untuk semua user data uji.
-- Token lama (tanpa klaim baru) berfungsi; token dengan `kid` lama; refresh token lama.
+- Token lama berfungsi tanpa perubahan; token dengan `kid` lama; refresh token lama.
 - Pencabutan penugasan langsung berlaku pada token yang sama.
 - Hanya SA bisa menetapkan; OM/HR ditolak 403; tidak bisa ke diri sendiri; audit tercatat tiap perubahan.
 - CHECK/UNIQUE: duplikat, `office_id` NULL untuk peran non-OM/SA ditolak, soft delete lalu tambah ulang.

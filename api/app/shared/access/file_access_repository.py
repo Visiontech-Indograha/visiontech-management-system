@@ -10,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.access.office_scope import attendance_office_scope
 from app.shared.access.pm_reach import pm_reaches_employee
 
 
@@ -51,6 +52,9 @@ class FileAccessRepository(BaseRepository):
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND {pm_reaches_employee('CAST(:emp AS uuid)', 'a.employee_id')}) AS selfie_pm,
+                   EXISTS (SELECT 1 FROM attendance a JOIN employee se ON se.employee_id = a.employee_id
+                           WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
+                           AND {attendance_office_scope('CAST(:emp AS uuid)', 'se.office_id')}) AS selfie_office,
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND a.employee_id = CAST(:emp AS uuid)) AS own_selfie,

@@ -230,7 +230,9 @@ class AttendanceController:
         end_date: date,
     ) -> str:
         """Mengekspor data absensi organisasi dalam rentang tanggal ke format CSV."""
-        return await self.session_service.export_csv(current_user.organization_id, start_date, end_date)
+        return await self.session_service.export_csv(
+            current_user.organization_id, start_date, end_date, current_user.user_id
+        )
 
     async def handle_meal_allowance(
         self, current_user: CurrentUser, start_date: date, end_date: date, division_id: UUID | None

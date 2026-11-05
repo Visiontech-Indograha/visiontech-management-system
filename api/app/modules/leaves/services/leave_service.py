@@ -12,11 +12,13 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.leaves.repositories.leave_repository import LeaveRepository
 from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, LeaveReview
 from app.modules.notifications.services.notification_service import NotificationService
+from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
 LEAVE_TYPES = (
     ("ANNUAL", "Cuti tahunan", True),
@@ -56,6 +58,22 @@ class LeaveService:
     def _notify(self) -> NotificationService:
         return NotificationService(self.repo.db)
 
+    async def _hr_offices(self, user: CurrentUser) -> list[str] | None:
+        """None = semua kantor. Akses cuti lewat peran HR (bukan SA/OM) dibatasi ke kantor jangkauannya bila
+        ROLE_ASSIGNMENT_ENABLED (ADR 0002); cuti sendiri dan jalur PM tidak terpengaruh."""
+        restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_USERS,
+                                               ("SUPER_ADMIN", "OPERATIONAL_MANAGER"))
+        return None if restriction is None else offices_param(restriction)
+
+    async def _hr_scope_ok(self, user: CurrentUser, employee_id: UUID | str) -> bool:
+        if await self._hr_offices(user) is None:
+            return True
+        try:
+            await ensure_employee_in_scope(self.repo.db, user, Permission.MANAGE_USERS, employee_id)
+        except NotFoundError:
+            return False
+        return True
+
     async def apply(self, user: CurrentUser, data: LeaveCreate) -> Any:
         # Karyawan biasa hanya boleh mengajukan cuti untuk dirinya sendiri
         emp_id: UUID | str | None
@@ -65,6 +83,9 @@ class LeaveService:
             emp_id = user.employee_id
         else:
             emp_id = data.employee_id or user.employee_id
+            if (emp_id is not None and str(emp_id) != str(user.employee_id)
+                    and not await self._hr_scope_ok(user, emp_id)):
+                raise NotFoundError("Karyawan")
 
         if emp_id is None:
             raise ValidationError("Karyawan pemohon cuti wajib ditentukan.")
@@ -127,6 +148,9 @@ class LeaveService:
         # Dikunci agar dua peninjau bersamaan tidak sama-sama membaca PENDING lalu memotong kuota dua kali.
         leave = await self.repo.get_leave(leave_id, for_update=True)
         if leave is None:
+            raise NotFoundError("Permohonan cuti")
+        pm_path = user.has_role("PROJECT_MANAGER") and await self._pm_owns(user, leave.employee_id)
+        if not pm_path and not await self._hr_scope_ok(user, leave.employee_id):
             raise NotFoundError("Permohonan cuti")
 
         if str(user.employee_id) == str(leave.employee_id):
@@ -277,7 +301,9 @@ class LeaveService:
         return pm_id is not None and str(pm_id) == str(user.employee_id)
 
     async def _ensure_can_view(self, user: CurrentUser, employee_id: UUID | str) -> None:
-        if user.has_role(*ORG_WIDE_ROLES) or str(employee_id) == str(user.employee_id):
+        if str(employee_id) == str(user.employee_id):
+            return
+        if user.has_role(*ORG_WIDE_ROLES) and await self._hr_scope_ok(user, employee_id):
             return
         if user.has_role("PROJECT_MANAGER") and await self._pm_owns(user, employee_id):
             return
@@ -305,8 +331,10 @@ class LeaveService:
             if user.employee_id is None:
                 return []
             employee_id = UUID(str(user.employee_id))
+        offices = await self._hr_offices(user) if pm_id is None and user.has_role(*ORG_WIDE_ROLES) else None
         return list(
-            await self.repo.list_leaves(employee_id=employee_id, status=status, year=year, pm_id=pm_id)
+            await self.repo.list_leaves(employee_id=employee_id, status=status, year=year, pm_id=pm_id,
+                                        offices=offices)
         )
 
     async def balance(self, user: CurrentUser, employee_id: UUID, year: int) -> Any:

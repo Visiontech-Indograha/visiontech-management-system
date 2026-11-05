@@ -21,6 +21,7 @@ from app.core.security import CurrentUser
 from app.modules.notifications.services.notification_service import NotificationService
 from app.modules.overtime.repositories.overtime_repository import OvertimeRepository
 from app.shared.access.access_service import DailyNeed, check_daily_access, is_admin, require_daily_status
+from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
 
 def _state(msg: str) -> AppError:
@@ -73,6 +74,8 @@ class OvertimeService:
         ot = await self.repo.get(overtime_id)
         if ot is None:
             raise NotFoundError("Lembur")
+        if await self._offices(user) is not None:
+            await ensure_employee_in_scope(self.db, user, Permission.REVIEW_OVERTIME, ot.employee_id, "Lembur")
         if ot.status != "PENDING_PM":
             raise _state("Pengajuan lembur ini sudah diperiksa.")
         if ot.daily_plan_id is None:
@@ -92,6 +95,13 @@ class OvertimeService:
         )
         return await self.repo.get(overtime_id)
 
+    async def _offices(self, user: CurrentUser) -> list[str] | None:
+        """None = semua kantor. Finance (bukan SA/OM) dibatasi ke kantor jangkauannya bila ROLE_ASSIGNMENT_ENABLED
+        (ADR 0002)."""
+        restriction = await office_restriction(self.db, user, Permission.REVIEW_OVERTIME,
+                                               ("SUPER_ADMIN", "OPERATIONAL_MANAGER"))
+        return None if restriction is None else offices_param(restriction)
+
     async def list_overtimes(
         self,
         user: CurrentUser,
@@ -107,7 +117,7 @@ class OvertimeService:
             await check_daily_access(self.db, daily_plan_id, user, DailyNeed.LOGISTICS)
             return await self.repo.list_by_plan(daily_plan_id, after, limit, status, q)
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
-            return await self.repo.list_all_active(None, after, limit, status, q)
+            return await self.repo.list_all_active(None, after, limit, status, q, await self._offices(user))
         if user.has_role("PROJECT_MANAGER") and user.employee_id:
             return await self.repo.list_all_active(user.employee_id, after, limit, status, q)
         if user.employee_id:
@@ -140,7 +150,7 @@ class OvertimeService:
 
     async def recap(self, user: CurrentUser, month: date | None) -> Sequence[Any]:
         if is_admin(user) or Permission.REVIEW_OVERTIME.value in user.permissions:
-            return await self.repo.recap(month, None)
+            return await self.repo.recap(month, None, await self._offices(user))
         if user.has_role("PROJECT_MANAGER") and user.employee_id:
             return await self.repo.recap(month, user.employee_id)
         raise ForbiddenError("Rekap lembur hanya untuk OM, PM divisi, atau admin.")

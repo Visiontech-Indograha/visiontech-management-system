@@ -138,14 +138,14 @@ class DocumentRepository(BaseRepository):
             {"id": str(doc_id)},
         )
 
-    async def expiring(self, urgency: str | None) -> list[Any]:
+    async def expiring(self, urgency: str | None, offices: list[str] | None = None) -> list[Any]:
         """Dokumen berlaku yang sudah/akan kedaluwarsa dalam WARNING_DAYS hari."""
         return list(
             await self.fetchall(
                 """
                 SELECT d.id, d.employee_id, d.full_name, d.doc_type, d.expiry_date, d.days_left, d.urgency
                 FROM (
-                    SELECT ef.employee_file_id AS id, ef.employee_id, e.full_name, ef.type AS doc_type,
+                    SELECT ef.employee_file_id AS id, ef.employee_id, e.full_name, ef.type AS doc_type, e.office_id,
                            x.expiry_date, x.days_left,
                            CASE WHEN x.days_left < 0 THEN 'EXPIRED'
                                 WHEN x.days_left <= :critical THEN 'CRITICAL'
@@ -160,10 +160,12 @@ class DocumentRepository(BaseRepository):
                     WHERE ef.status = 'active' AND ef.delete_at IS NULL AND ef.expired_at IS NOT NULL
                       AND x.days_left <= :warning
                 ) d
-                WHERE CAST(:urgency AS text) IS NULL OR d.urgency = :urgency
+                WHERE (CAST(:urgency AS text) IS NULL OR d.urgency = :urgency)
+                  AND (NOT CAST(:limited AS boolean) OR d.office_id = ANY(CAST(:offices AS uuid[])))
                 ORDER BY d.days_left, d.full_name
                 """,
-                {"critical": CRITICAL_DAYS, "warning": WARNING_DAYS, "urgency": urgency},
+                {"critical": CRITICAL_DAYS, "warning": WARNING_DAYS, "urgency": urgency,
+                 "limited": offices is not None, "offices": offices or []},
             )
         )
 

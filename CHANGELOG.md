@@ -9,6 +9,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/) · Ver
 
 ## [Unreleased]
 
+### API: izin HR/Finance dibatasi ke kantor tugas (ADR 0002) dan perbaikan tes flaky
+- Dengan `ROLE_ASSIGNMENT_ENABLED` hidup, izin khusus HR/Finance di luar absensi (kelola karyawan, akun, wajah, dokumen, mess, proses keluar, cuti, lembur, ubah/hapus kantor, kolom sensitif karyawan) hanya berlaku di kantor sendiri + kantor penugasan; OM yang juga HR tidak melebar. Flag mati = perilaku lama. Aset belum diubah. Tabel audit: `docs/audit-izin-hr-finance-per-kantor.md`. Tanpa perubahan kontrak OpenAPI.
+- Tes: fixture sesi `_main_office` kini aman antar worker xdist (`ON CONFLICT DO NOTHING`); sebelumnya DB baru tanpa kantor utama membuat ratusan galat `UniqueViolation` di putaran pertama.
+
 ### Peran ganda dan penugasan kantor, sisi web (ADR 0002)
 - Detail karyawan: bagian "Peran tambahan dan kantor" (hanya pemegang izin `manage:role_assignments`): daftar, "Tambah peran" (HR/Finance wajib kantor, OM semua kantor, Idempotency-Key, aturan terlarang ditolak di layar), "Cabut" dengan konfirmasi.
 - Menu dan "Akun & keamanan" menampilkan "berlaku untuk kantor X" dari `role_scopes` bila ada; tanpa field itu tampilan lama tidak berubah.

@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.permissions import Permission, SystemRole
 from app.core.repository import BaseRepository
 from app.core.security import CurrentUser
+from app.shared.access.office_scope import office_restriction, offices_param
 from app.shared.access.pm_reach import pm_reaches_employee
 
 _VIEWER = "CAST(:viewer_emp AS uuid)"
@@ -103,6 +104,7 @@ def employee_sensitive_sql(emp: str) -> str:
     """Kolom sensitif karyawan `emp` boleh dilihat: SA/OM/HR (`:sens_all`), dirinya, atau PM yang menjangkaunya."""
     return f"""(
         CAST(:sens_all AS boolean) OR {emp} = {_VIEWER}
+        OR (SELECT x.office_id FROM employee x WHERE x.employee_id = {emp}) = ANY(CAST(:sens_offices AS uuid[]))
         OR (CAST(:pm AS boolean) AND {pm_reaches_employee(_VIEWER, emp)})
     )"""
 
@@ -113,6 +115,18 @@ def employee_params(user: CurrentUser) -> dict[str, Any]:
         "dir_all": sees_all_employees(user),
         "sens_all": sees_sensitive_employee_fields(user),
     }
+
+
+async def employee_params_scoped(db: AsyncSession, user: CurrentUser) -> dict[str, Any]:
+    """`employee_params` + pembatasan kantor HR/Finance atas kolom sensitif (ADR 0002): izin sensitif yang hanya
+    datang dari peran HR berlaku untuk kantor jangkauannya; SA/OM tetap semua. Flag mati = `employee_params`."""
+    params = {**employee_params(user), "sens_offices": []}
+    if params["sens_all"] and not user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER):
+        restriction = await office_restriction(db, user, Permission.MANAGE_USERS)
+        if restriction is not None:
+            params["sens_all"] = False
+            params["sens_offices"] = offices_param(restriction)
+    return params
 
 
 async def employee_directory_visible(db: AsyncSession, user: CurrentUser, employee_id: UUID | str) -> bool:

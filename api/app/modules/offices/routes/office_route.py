@@ -9,7 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_permission_for_office
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -33,6 +33,8 @@ async def get_offices(
     rows = await controller.handle_list_offices(current_user, for_attendance)
     return list(apply_list(rows, params, response, lambda o: (o.name, o.address)))
 
+_MANAGE_TARGET = Depends(require_permission_for_office(Permission.MANAGE_SITES, "office_id"))
+
 
 @router.post("", response_model=OfficeResponse, status_code=status.HTTP_201_CREATED)
 async def create_office(
@@ -50,7 +52,7 @@ async def create_office(
 async def update_office(
     office_id: UUID,
     data: OfficeUpdate,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_SITES)),
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: OfficeController = Depends(),
 ) -> OfficeResponse:
     """
@@ -62,7 +64,7 @@ async def update_office(
 @router.delete("/{office_id}")
 async def delete_office(
     office_id: UUID,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_SITES)),
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: OfficeController = Depends(),
 ) -> dict[str, str]:
     """

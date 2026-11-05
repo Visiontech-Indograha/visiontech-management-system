@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission, require_permission_for_employee
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.employees.controllers.employee_controller import EmployeeController
@@ -29,6 +29,7 @@ from app.modules.employees.schemas.employee_schema import (
 router = APIRouter(prefix="/employees", tags=["Employees"])
 _VIEW = Depends(require_permission(Permission.VIEW_USERS))
 _MANAGE = Depends(require_permission(Permission.MANAGE_USERS))
+_MANAGE_TARGET = Depends(require_permission_for_employee(Permission.MANAGE_USERS, "employee_id"))
 _DELETE_ANY = Depends(require_permission(Permission.DELETE_ANY))
 
 
@@ -79,7 +80,7 @@ async def create_employee(
     controller: EmployeeController = Depends(),
 ) -> EmployeeDetail:
     """Karyawan baru (akun login dibuat terpisah lewat /employees/{id}/account)."""
-    return await controller.create(data)
+    return await controller.create(data, current_user)
 
 
 @router.put("/me/photo", response_model=MyPhotoOut)
@@ -96,18 +97,18 @@ async def set_my_photo(
 async def update_employee(
     employee_id: UUID,
     data: EmployeeUpdate,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> EmployeeDetail:
     """Ubah data karyawan (sebagian)."""
-    return await controller.update(employee_id, data)
+    return await controller.update(employee_id, data, current_user)
 
 
 @router.post("/{employee_id}/addresses", response_model=AddressOut, status_code=status.HTTP_201_CREATED)
 async def add_address(
     employee_id: UUID,
     data: AddressIn,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> AddressOut:
     """Tambah alamat karyawan."""
@@ -119,7 +120,7 @@ async def update_address(
     employee_id: UUID,
     address_id: UUID,
     data: AddressIn,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> AddressOut:
     """Ubah alamat karyawan."""
@@ -130,7 +131,7 @@ async def update_address(
 async def delete_address(
     employee_id: UUID,
     address_id: UUID,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> dict[str, str]:
     """Hapus alamat karyawan."""
@@ -140,7 +141,7 @@ async def delete_address(
 @router.post("/{employee_id}/archive")
 async def archive_employee(
     employee_id: UUID,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> dict[str, str]:
     """Arsipkan karyawan yang sudah selesai offboarding."""
@@ -160,7 +161,7 @@ async def delete_employee(
 @router.post("/{employee_id}/restore")
 async def restore_employee(
     employee_id: UUID,
-    current_user: CurrentUser = _MANAGE,
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: EmployeeController = Depends(),
 ) -> dict[str, str]:
     """Batalkan arsip (status tetap selesai bekerja)."""

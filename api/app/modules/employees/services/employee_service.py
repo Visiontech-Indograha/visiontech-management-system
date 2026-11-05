@@ -16,11 +16,13 @@ from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.hard_delete import write_delete_audit
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.storage import delete_object
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
-from app.shared.access.scope_rules import employee_params, sees_sensitive_employee_fields
+from app.shared.access.office_scope import ensure_office_in_scope
+from app.shared.access.scope_rules import employee_params_scoped, sees_sensitive_employee_fields
 
 ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
 RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
@@ -50,7 +52,7 @@ class EmployeeService:
         dirinya, sesama divisi, dan sesama tim. Kolom sensitif dikosongkan bila tidak berhak."""
         if user is not None and not sees_sensitive_employee_fields(user) and status not in (None, "all", "active"):
             raise ForbiddenError("Filter status kepegawaian hanya untuk HR/OM.")
-        scope = employee_params(user) if user is not None else None
+        scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
         filters = {"status": status, "division_id": division_id, "office_id": office_id,
                    "position_id": position_id, "q": (q or "").strip() or None}
         rows = await self.repo.page(size, (page - 1) * size, scope=scope, **filters)
@@ -58,7 +60,8 @@ class EmployeeService:
         return [_shape(r._mapping) for r in rows], total
 
     async def get(self, employee_id: UUID, user: CurrentUser | None = None) -> Any:
-        row = await self.repo.get(employee_id, employee_params(user) if user is not None else None)
+        scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
+        row = await self.repo.get(employee_id, scope)
         if row is None:
             raise NotFoundError("Karyawan")
         return row
@@ -121,7 +124,9 @@ class EmployeeService:
         highest = max(int(m.group(2)) for m in parsed if m.group(1) == prefix)
         return f"{prefix}{highest + 1:0{len(digits)}d}"
 
-    async def create(self, data: EmployeeCreate) -> dict[str, Any]:
+    async def create(self, data: EmployeeCreate, user: CurrentUser | None = None) -> dict[str, Any]:
+        if user is not None:  # HR/Finance: karyawan baru hanya di kantor jangkauannya (ADR 0002)
+            await ensure_office_in_scope(self.repo.db, user, Permission.MANAGE_USERS, data.office_id, "Kantor")
         fields = await self._validate(data.model_dump(exclude={"address"}))
         fields.setdefault("photo_path", None)
         employee_id = await self.repo.insert(fields)
@@ -129,8 +134,11 @@ class EmployeeService:
             await self.repo.add_address(employee_id, data.address.model_dump())
         return await self.detail(employee_id)
 
-    async def update(self, employee_id: UUID, data: EmployeeUpdate) -> dict[str, Any]:
+    async def update(self, employee_id: UUID, data: EmployeeUpdate,
+                     user: CurrentUser | None = None) -> dict[str, Any]:
         current = await self.get(employee_id)
+        if user is not None and data.office_id is not None:  # pindah kantor hanya ke kantor jangkauan (ADR 0002)
+            await ensure_office_in_scope(self.repo.db, user, Permission.MANAGE_USERS, data.office_id, "Kantor")
         if current.archived:
             raise AppError("INVALID_STATE", "Karyawan diarsipkan; batalkan arsip dulu.", status=409)
         fields = data.model_dump(exclude_unset=True)

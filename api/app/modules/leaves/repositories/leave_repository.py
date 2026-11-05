@@ -154,6 +154,7 @@ class LeaveRepository(BaseRepository):
         status: str | None = None,
         year: int | None = None,
         pm_id: UUID | str | None = None,
+        offices: list[str] | None = None,
     ) -> Sequence[Any]:
         """Daftar permohonan cuti dengan filter (pm_id: hanya karyawan divisi PM tsb + dirinya)."""
         return await self.fetchall(
@@ -163,6 +164,7 @@ class LeaveRepository(BaseRepository):
               AND (CAST(:st AS text) IS NULL OR lr.status::text = :st)
               AND (CAST(:yr AS integer) IS NULL OR EXTRACT(YEAR FROM lr.start_date) = :yr)
               AND (CAST(:pm AS uuid) IS NULL OR d.pm_id = CAST(:pm AS uuid) OR lr.employee_id = CAST(:pm AS uuid))
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[])))
             ORDER BY lr.create_at DESC
             """,
             {
@@ -170,6 +172,8 @@ class LeaveRepository(BaseRepository):
                 "st": status,
                 "yr": year,
                 "pm": str(pm_id) if pm_id else None,
+                "limited": offices is not None,
+                "offices": offices or [],
             },
         )
 

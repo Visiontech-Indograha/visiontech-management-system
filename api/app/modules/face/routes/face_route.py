@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import get_current_user, require_permission_for_employee
 from app.core.permissions import Permission
 from app.core.rate_limit import GROUP_FACE, rate_limit
 from app.core.security import CurrentUser
@@ -56,11 +56,13 @@ async def reset_own_face_enrollment(
     """Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas."""
     return await controller.handle_reset_own(current_user)
 
+_MANAGE_TARGET = Depends(require_permission_for_employee(Permission.MANAGE_USERS, "employee_id"))
+
 
 @router.get("/enrollments/{employee_id}/status", response_model=FaceStatus)
 async def get_employee_face_status(
     employee_id: UUID,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: FaceController = Depends(),
 ) -> FaceStatus:
     """Apakah wajah karyawan sudah terdaftar (HR/admin)."""
@@ -70,7 +72,7 @@ async def get_employee_face_status(
 @router.delete("/enrollments/{employee_id}", response_model=FaceResetResponse)
 async def reset_face_enrollment(
     employee_id: UUID,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_USERS)),
+    current_user: CurrentUser = _MANAGE_TARGET,
     controller: FaceController = Depends(),
 ) -> FaceResetResponse:
     """Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit."""

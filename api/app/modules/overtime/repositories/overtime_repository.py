@@ -110,6 +110,7 @@ class OvertimeRepository(BaseRepository):
         limit: int | None = None,
         status: str | None = None,
         q: str | None = None,
+        offices: list[str] | None = None,
     ) -> Sequence[Any]:
         cond, tail, extra = self._keyset(after, limit, status, q)
         return await self.fetchall(
@@ -125,6 +126,7 @@ class OvertimeRepository(BaseRepository):
         limit: int | None = None,
         status: str | None = None,
         q: str | None = None,
+        offices: list[str] | None = None,
     ) -> Sequence[Any]:
         cond, tail, extra = self._keyset(after, limit, status, q)
         return await self.fetchall(
@@ -140,6 +142,7 @@ class OvertimeRepository(BaseRepository):
         limit: int | None = None,
         status: str | None = None,
         q: str | None = None,
+        offices: list[str] | None = None,
     ) -> Sequence[Any]:
         cond, tail, extra = self._keyset(after, limit, status, q)
         sql = f"""
@@ -148,12 +151,15 @@ class OvertimeRepository(BaseRepository):
             LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = o.daily_plan_id
             LEFT JOIN division d ON d.division_id = wpd.division_id
             WHERE o.delete_at IS NULL
-              AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id)){cond}
+              AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[]))){cond}
             {tail}
         """
-        return await self.fetchall(sql, {"mgr": managed_by, **extra})
+        return await self.fetchall(sql, {"mgr": managed_by, "limited": offices is not None,
+                                         "offices": offices or [], **extra})
 
-    async def recap(self, month: date | None, managed_by: str | None) -> Sequence[Any]:
+    async def recap(self, month: date | None, managed_by: str | None,
+                    offices: list[str] | None = None) -> Sequence[Any]:
         """Rekap per karyawan per bulan; `managed_by` = hanya jadwal di divisi yang PM/OM-nya karyawan ini."""
         return await self.fetchall(
             """
@@ -172,8 +178,9 @@ class OvertimeRepository(BaseRepository):
               AND (CAST(:month AS date) IS NULL
                    OR CAST(date_trunc('month', o.work_date) AS date) = CAST(:month AS date))
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[])))
             GROUP BY period_month, o.employee_id, e.full_name, e.profile_photo_path
             ORDER BY period_month DESC, employee_name
             """,
-            {"month": month, "mgr": managed_by},
+            {"month": month, "mgr": managed_by, "limited": offices is not None, "offices": offices or []},
         )

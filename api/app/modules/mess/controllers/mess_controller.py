@@ -64,11 +64,11 @@ class MessController:
         end: date | None = None,
         status: str | None = None,
     ) -> list[MessStayOut]:
-        rows = await self.service.list_stays(employee_id, start, end, status)
+        rows = await self.service.list_stays(employee_id, start, end, status, current_user)
         return [_stay(r) for r in rows]
 
     async def handle_get_stay(self, current_user: CurrentUser, mess_stay_id: UUID) -> MessStayOut:
-        return _stay(await self.service.get_stay(mess_stay_id))
+        return _stay(await self.service.get_stay(mess_stay_id, current_user))
 
     async def handle_create_stay(self, current_user: CurrentUser, data: MessStayCreate) -> MessStayOut:
         return _stay(await self.service.create_stay(current_user, data))
@@ -90,10 +90,10 @@ class MessController:
     async def handle_update_stay(
         self, current_user: CurrentUser, mess_stay_id: UUID, data: MessStayUpdate
     ) -> MessStayOut:
-        return _stay(await self.service.update_stay(mess_stay_id, data))
+        return _stay(await self.service.update_stay(mess_stay_id, data, current_user))
 
     async def handle_delete_stay(self, current_user: CurrentUser, mess_stay_id: UUID) -> dict[str, str]:
-        await self.service.delete_stay(mess_stay_id)
+        await self.service.delete_stay(mess_stay_id, current_user)
         return {"message": "Data hunian mess berhasil dihapus."}
 
     async def handle_my_stays(self, current_user: CurrentUser) -> list[MessStayOut]:

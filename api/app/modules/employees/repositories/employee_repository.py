@@ -13,7 +13,7 @@ from app.core.repository import BaseRepository, escape_like
 from app.shared.access.scope_rules import employee_sensitive_sql, employee_visible_sql
 
 # Cakupan default = tanpa pembatasan (pemanggil internal). Pengguna biasa memakai `employee_params(user)`.
-UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "viewer_emp": None, "pm": False}
+UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "sens_offices": [], "viewer_emp": None, "pm": False}
 
 _SELECT = f"""
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,

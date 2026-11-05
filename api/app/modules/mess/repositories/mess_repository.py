@@ -130,7 +130,8 @@ class MessRepository(BaseRepository):
 
     # --- hunian ----------------------------------------------------------------------------------------------------
     async def list_stays(
-        self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None
+        self, employee_id: UUID | None, start: date | None, end: date | None, status: str | None = None,
+        offices: list[str] | None = None,
     ) -> list[Any]:
         """Hunian yang beririsan dengan rentang [start, end] (mis. minggu jadwal)."""
         return list(await self.fetchall(
@@ -140,9 +141,11 @@ class MessRepository(BaseRepository):
               AND (CAST(:end AS date) IS NULL OR m.stay_start_date <= CAST(:end AS date))
               AND (CAST(:start AS date) IS NULL OR m.stay_end_date >= CAST(:start AS date))
               AND (CAST(:status AS text) IS NULL OR m.status = CAST(:status AS text))
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[])))
             ORDER BY (m.status = 'REQUESTED') DESC, m.stay_start_date DESC, e.full_name
             """,
-            {"emp": str(employee_id) if employee_id else None, "start": start, "end": end, "status": status},
+            {"emp": str(employee_id) if employee_id else None, "start": start, "end": end, "status": status,
+             "limited": offices is not None, "offices": offices or []},
         ))
 
     async def get(self, mess_stay_id: UUID | str) -> Any:

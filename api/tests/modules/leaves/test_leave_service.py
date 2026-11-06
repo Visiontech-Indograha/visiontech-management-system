@@ -335,7 +335,7 @@ def test_owner_cancels_hr_approved_annual_leave_with_refund():
         repo = AsyncMock()
         repo.get_leave.return_value = leave
         await LeaveService(repo).cancel(user, leave.leave_id, LeaveCancel(reason="Rencana berubah"))
-        repo.cancel_leave.assert_awaited_once_with(leave.leave_id, "Rencana berubah")
+        repo.cancel_leave.assert_awaited_once_with(leave.leave_id, "Rencana berubah", leave.status)
         repo.deduct_balance.assert_awaited_once_with(user.employee_id, leave.start_date.year, -3)
 
     asyncio.run(run())

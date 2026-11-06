@@ -29,7 +29,7 @@ export function WorkOrderBastModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signerName.trim()) {
-      toast.error("Nama penandatangan BAST perwakilan klien wajib diisi");
+      toast.error("Nama penandatangan dari pihak klien wajib diisi");
       return;
     }
 
@@ -45,10 +45,10 @@ export function WorkOrderBastModal({
         signature_data_uri: signatureDataUri,
         notes: notes.trim() || undefined,
       });
-      toast.success(`BAST resmi untuk WO ${workOrder.wo_number} berhasil ditandatangani!`);
+      toast.success(`Surat serah terima untuk tugas ${workOrder.wo_number} berhasil ditandatangani!`);
       onClose();
     } catch {
-      toast.error("Gagal menandatangani BAST");
+      toast.error("Gagal menandatangani surat serah terima");
     }
   };
 
@@ -56,7 +56,7 @@ export function WorkOrderBastModal({
     <VmsDialog
       open={Boolean(workOrder)}
       onClose={onClose}
-      title={`Tanda Tangan BAST — ${workOrder.wo_number}`}
+      title={`Tandatangani surat serah terima — ${workOrder.wo_number}`}
       size="xl"
     >
       <FormBlock onSubmit={handleSubmit} className="space-y-4 pt-2">
@@ -86,7 +86,7 @@ export function WorkOrderBastModal({
           />
 
           <TextAreaField
-            label="Catatan Penyelesaian / Keterangan BAST"
+            label="Catatan penyelesaian"
             placeholder="Pekerjaan telah diperiksa bersama dan diterima dalam kondisi baik..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -118,11 +118,11 @@ export function WorkOrderBastModal({
             disabled={signMutation.isPending}
           >
             {signMutation.isPending ? (
-              <TextBlock as="span">Menyimpan BAST...</TextBlock>
+              <TextBlock as="span">Menyimpan surat serah terima...</TextBlock>
             ) : (
               <div className="flex items-center gap-1.5">
                 <FileCheck2 className="h-4 w-4" />
-                <TextBlock as="span">Tanda Tangani & Terbitkan BAST</TextBlock>
+                <TextBlock as="span">Tandatangani & terbitkan surat serah terima</TextBlock>
               </div>
             )}
           </ActionButton>

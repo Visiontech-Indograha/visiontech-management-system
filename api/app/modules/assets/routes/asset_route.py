@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -52,7 +52,7 @@ async def asset_availability(
     controller: AssetController = Depends(),
 ) -> list[AssetAvailabilityOut]:
     """Alat & kendaraan beserta ketersediaannya pada tanggal itu (tersedia, atau dipakai tim mana)."""
-    return await controller.handle_availability(work_date, team_id)
+    return await controller.handle_availability(work_date, team_id, current_user)
 
 
 # ── Alat ───────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ async def list_tools(
     controller: AssetController = Depends(),
 ) -> list[ToolOut]:
     """Daftar alat (pribadi & umum) beserta pemegangnya saat ini."""
-    rows = await controller.handle_list_tools(office_id, asset_status)
+    rows = await controller.handle_list_tools(office_id, asset_status, current_user)
     return list(apply_list(rows, params, response, lambda r: (r.name, r.tool_code, r.office_name, r.division_name)))
 
 
@@ -75,7 +75,7 @@ async def create_tool(
     data: ToolCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> ToolOut:
     """Mendaftarkan alat baru (kode alat unik)."""
-    return await controller.handle_create_tool(data)
+    return await controller.handle_create_tool(data, current_user)
 
 
 @router.put("/tools/{tool_id}", response_model=ToolOut)
@@ -83,7 +83,7 @@ async def update_tool(
     tool_id: UUID, data: ToolUpdate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> ToolOut:
     """Mengubah data alat (sebagian)."""
-    return await controller.handle_update_tool(tool_id, data)
+    return await controller.handle_update_tool(tool_id, data, current_user)
 
 
 @router.post("/tools/{tool_id}/status", response_model=ToolOut)
@@ -92,7 +92,7 @@ async def set_tool_status(
     controller: AssetController = Depends(),
 ) -> ToolOut:
     """Menandai alat siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
-    return await controller.handle_tool_status(tool_id, data.status)
+    return await controller.handle_tool_status(tool_id, data.status, current_user)
 
 
 @router.delete("/tools/{tool_id}")
@@ -100,7 +100,7 @@ async def delete_tool(
     tool_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> dict[str, str]:
     """Menghapus (soft delete) alat yang tidak sedang dipinjam."""
-    return await controller.handle_delete("TOOL", tool_id)
+    return await controller.handle_delete("TOOL", tool_id, current_user)
 
 
 # ── Kendaraan ──────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ async def list_vehicles(
     controller: AssetController = Depends(),
 ) -> list[VehicleOut]:
     """Daftar kendaraan beserta masa berlaku STNK/KIR dan pemegangnya saat ini."""
-    rows = await controller.handle_list_vehicles(office_id, asset_status)
+    rows = await controller.handle_list_vehicles(office_id, asset_status, current_user)
     return list(apply_list(rows, params, response, lambda r: (r.name, r.number_plate, r.office_name, r.division_name)))
 
 
@@ -123,7 +123,7 @@ async def create_vehicle(
     data: VehicleCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> VehicleOut:
     """Mendaftarkan kendaraan baru (nomor polisi unik)."""
-    return await controller.handle_create_vehicle(data)
+    return await controller.handle_create_vehicle(data, current_user)
 
 
 @router.put("/vehicles/{vehicle_id}", response_model=VehicleOut)
@@ -132,7 +132,7 @@ async def update_vehicle(
     controller: AssetController = Depends(),
 ) -> VehicleOut:
     """Mengubah data kendaraan (sebagian)."""
-    return await controller.handle_update_vehicle(vehicle_id, data)
+    return await controller.handle_update_vehicle(vehicle_id, data, current_user)
 
 
 @router.post("/vehicles/{vehicle_id}/status", response_model=VehicleOut)
@@ -141,7 +141,7 @@ async def set_vehicle_status(
     controller: AssetController = Depends(),
 ) -> VehicleOut:
     """Menandai kendaraan siap/rusak/hilang/pensiun (tidak saat sedang dipinjam)."""
-    return await controller.handle_vehicle_status(vehicle_id, data.status)
+    return await controller.handle_vehicle_status(vehicle_id, data.status, current_user)
 
 
 @router.delete("/vehicles/{vehicle_id}")
@@ -149,7 +149,7 @@ async def delete_vehicle(
     vehicle_id: UUID, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
 ) -> dict[str, str]:
     """Menghapus (soft delete) kendaraan yang tidak sedang dipinjam."""
-    return await controller.handle_delete("VEHICLE", vehicle_id)
+    return await controller.handle_delete("VEHICLE", vehicle_id, current_user)
 
 
 @router.get("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut])
@@ -157,7 +157,7 @@ async def list_vehicle_files(
     vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
 ) -> list[VehicleFileOut]:
     """Berkas kendaraan (STNK, BPKB, KIR)."""
-    return await controller.handle_vehicle_files(vehicle_id)
+    return await controller.handle_vehicle_files(current_user, vehicle_id)
 
 
 @router.post("/vehicles/{vehicle_id}/files", response_model=list[VehicleFileOut], status_code=201)
@@ -166,7 +166,7 @@ async def add_vehicle_file(
     controller: AssetController = Depends(),
 ) -> list[VehicleFileOut]:
     """Mencatat berkas kendaraan; berkas sejenis yang lama menjadi `extended`."""
-    return await controller.handle_add_vehicle_file(vehicle_id, data)
+    return await controller.handle_add_vehicle_file(vehicle_id, data, current_user)
 
 
 @router.get("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut])
@@ -174,7 +174,7 @@ async def list_inspections(
     vehicle_id: UUID, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
 ) -> list[InspectionOut]:
     """Riwayat inspeksi kendaraan (terbaru dulu)."""
-    return await controller.handle_inspections(vehicle_id)
+    return await controller.handle_inspections(current_user, vehicle_id)
 
 
 @router.post("/vehicles/{vehicle_id}/inspections", response_model=list[InspectionOut], status_code=201)
@@ -206,10 +206,18 @@ async def list_loans(
 
 @router.post("/loans", response_model=LoanOut, status_code=status.HTTP_201_CREATED)
 async def lend_asset(
-    data: LoanCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
-) -> LoanOut:
-    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim)."""
-    return await controller.handle_lend(data)
+    data: LoanCreate,
+    current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> LoanOut | Response:
+    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+    Mendukung Idempotency-Key (opsional)."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_lend(data, current_user)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.post("/loans/{assignment_id}/return", response_model=LoanOut)
@@ -218,7 +226,7 @@ async def return_asset(
     controller: AssetController = Depends(),
 ) -> LoanOut:
     """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
-    return await controller.handle_return(assignment_id, data.condition)
+    return await controller.handle_return(assignment_id, data.condition, current_user)
 
 
 # ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────
@@ -234,10 +242,17 @@ async def list_loan_requests(
 
 @router.post("/loan-requests", response_model=LoanRequestOut, status_code=status.HTTP_201_CREATED)
 async def request_loan(
-    data: LoanRequestCreate, current_user: CurrentUser = _LOGIN, controller: AssetController = Depends()
-) -> LoanRequestOut:
-    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri."""
-    return await controller.handle_request_loan(current_user, data)
+    data: LoanRequestCreate,
+    current_user: CurrentUser = _LOGIN,
+    controller: AssetController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> LoanRequestOut | Response:
+    """Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_request_loan(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.post("/loan-requests/{request_id}/cancel", response_model=LoanRequestOut)

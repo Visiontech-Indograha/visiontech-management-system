@@ -9,12 +9,14 @@ import 'package:intl/intl.dart';
 
 import '../../core/api_client.dart';
 import '../../core/error_message.dart';
+import '../../core/geofence_confirm.dart';
 import '../../core/local_storage.dart';
 import '../../core/location_helper.dart';
 import '../../core/photo_capture.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../data/sync_engine.dart';
+import '../../data/vms_api.dart' show isCursorRejected, kPesanKursorBerubah;
 import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -52,6 +54,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   bool _busy = false;
   String? _error;
   bool _faceEnrolled = false;
+  // Paginasi keyset riwayat: kursor halaman berikut (null = sudah habis atau data dari cache).
+  String? _nextCursor;
+  bool _memuatLagi = false;
 
   static final _day = DateFormat('EEE, d MMM yyyy', 'id_ID');
   static final _time = DateFormat('HH:mm');
@@ -89,6 +94,36 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     } catch (_) {}
   }
 
+  /// Muat halaman riwayat berikut (keyset). Kursor ditolak (422) = muat ulang dari awal.
+  Future<void> _muatLagi() async {
+    final cursor = _nextCursor;
+    if (cursor == null || _memuatLagi) return;
+    setState(() => _memuatLagi = true);
+    try {
+      final res = await ref
+          .read(syncEngineProvider)
+          .api
+          .myAttendance(employeeId: _employeeId, cursor: cursor);
+      if (!mounted) return;
+      setState(() {
+        _records = [..._records, ...res.items];
+        _nextCursor = res.nextCursor;
+        _memuatLagi = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _memuatLagi = false);
+      if (isCursorRejected(e)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(kPesanKursorBerubah)));
+        await _load();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(apiErrorMessage(e, fallback: 'Riwayat belum bisa dimuat. Coba lagi.'))),
+        );
+      }
+    }
+  }
+
   Future<void> _load() async {
     unawaited(_loadSummary());
     setState(() {
@@ -98,6 +133,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final engine = ref.read(syncEngineProvider);
     final offline = engine.offlineAttendance;
     _offline = await offline.pending();
+    _nextCursor = null;
     try {
       String? anchor;
       final att = await engine.fetchList('attendance', () async {
@@ -107,6 +143,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _reportPending = res.reportPendingCount;
         _reportPlanId = res.reportPendingPlanId;
         anchor = res.timeAnchor;
+        _nextCursor = res.nextCursor;
         return res.items;
       });
       // R-34: saat online, simpan jangkar jam server & daftarkan kunci Keystore untuk absen offline.
@@ -332,20 +369,23 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         explanation = await _askExplanation(
           title: outside ? 'Absen di luar zona' : 'Ajukan absen ulang',
           info: outside
-              ? 'Anda ${distance.round()} m dari ${site['name']} (radius ${radius.round()} m). '
-                    'Jelaskan mengapa absen di luar zona.'
+              ? 'Anda sekitar ${formatJarakId(distance)} dari ${site['name']} '
+                    '(batas absen ${formatJarakId(radius.toDouble())}). '
+                    'Jelaskan mengapa Anda absen di luar lokasi. Setelah dikirim, absen menunggu pemeriksaan atasan.'
               : 'Jelaskan alasan pengajuan ulang absensi yang ditolak.',
         );
         if (explanation == null) return;
       }
       String? selfieId;
       if (!mounted) return;
+      if (!await konfirmasiSwafoto(context)) return;
+      if (!mounted) return;
       final (selfieFile, err) = await captureWatermarkedPhoto(
         context: context,
         label: 'Swafoto absen masuk',
         kind: LocalFileKind.selfie,
         hint: outside
-            ? 'Anda ${distance.round()} m dari ${site['name']}. Pastikan wajah terlihat jelas.'
+            ? 'Anda sekitar ${formatJarakId(distance)} dari ${site['name']}. Pastikan wajah terlihat jelas.'
             : 'Pastikan wajah terlihat jelas dan tidak tertutup.',
         preferFrontCamera: true,
       );
@@ -483,6 +523,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       // Wajah terdaftar → swafoto pulang dicocokkan server (wajah V2).
       File? outSelfie;
       if (_faceEnrolled) {
+        if (!mounted) return;
+        if (!await konfirmasiSwafoto(context)) return;
         if (!mounted) return;
         final (file, err) = await captureWatermarkedPhoto(
           context: context,
@@ -841,7 +883,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 icon: Icons.location_off_rounded,
                                 text:
                                     'Belum ada lokasi kerja untuk akun Anda (lokasi rencana kerja maupun kantor). '
-                                    'Hubungi Project Manager atau admin untuk menambahkan lokasi kerja.',
+                                    'Hubungi atasan atau admin untuk menambahkan lokasi kerja.',
                               ),
                               const SizedBox(height: 12),
                             ] else ...[
@@ -1026,6 +1068,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         ),
                       ),
                     ),
+                  if (_nextCursor != null)
+                    SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _memuatLagi ? null : _muatLagi,
+                        child: Text(_memuatLagi ? 'Memuat...' : 'Muat lebih banyak'),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1063,6 +1113,31 @@ Future<void> tampilkanJamBukaAbsen(BuildContext context) {
       ],
     ),
   );
+}
+
+/// Layar singkat sebelum kamera swafoto absen. true bila pengguna menekan Lanjut.
+Future<bool> konfirmasiSwafoto(BuildContext context) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Swafoto'),
+      content: const Text('Swafoto wajib. Pastikan hanya wajah Anda di depan kamera.'),
+      actions: [
+        OutlinedButton(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(110, 48)),
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size(110, 48)),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Lanjut'),
+        ),
+      ],
+    ),
+  );
+  return ok == true;
 }
 
 /// Jam untuk aturan jam absen (07.00 masuk, 19.00 batas pulang). Uji membekukannya agar tidak bergantung jam CI.

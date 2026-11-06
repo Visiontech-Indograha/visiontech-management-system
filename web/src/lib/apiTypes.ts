@@ -161,6 +161,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{user_id}/role-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Role Assignments
+         * @description Penugasan peran aktif milik satu akun.
+         */
+        get: operations["list_role_assignments_api_v1_users__user_id__role_assignments_get"];
+        put?: never;
+        /**
+         * Add Role Assignment
+         * @description Tambah peran tambahan (maks 2). Mendukung Idempotency-Key (opsional).
+         */
+        post: operations["add_role_assignment_api_v1_users__user_id__role_assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{user_id}/role-assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Role Assignment
+         * @description Cabut penugasan (soft delete). Berlaku seketika pada token yang sama.
+         */
+        delete: operations["revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-orders": {
         parameters: {
             query?: never;
@@ -828,6 +872,7 @@ export interface paths {
         /**
          * Bulk Create Daily
          * @description Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_create_daily_api_v1_work_plans_daily_bulk_post"];
         delete?: never;
@@ -848,6 +893,7 @@ export interface paths {
         /**
          * Bulk Standby Daily
          * @description Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).
+         *     Mendukung Idempotency-Key.
          */
         post: operations["bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post"];
         delete?: never;
@@ -2046,6 +2092,7 @@ export interface paths {
         /**
          * Create Stay
          * @description HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["create_stay_api_v1_mess_post"];
         delete?: never;
@@ -2086,6 +2133,7 @@ export interface paths {
         /**
          * Request Stay
          * @description Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["request_stay_api_v1_mess_requests_post"];
         delete?: never;
@@ -2197,7 +2245,7 @@ export interface paths {
         put?: never;
         /**
          * Apply Leave
-         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).
+         * @description Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key.
          */
         post: operations["apply_leave_api_v1_leaves_post"];
         delete?: never;
@@ -3443,6 +3491,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/employees/{emp_id}/account/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Sessions
+         * @description Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin).
+         */
+        get: operations["list_sessions_api_v1_employees__emp_id__account_sessions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/sessions/revoke-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke All Sessions
+         * @description Paksa keluar semua perangkat akun karyawan; tercatat di audit.
+         */
+        post: operations["revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/sessions/{session_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke Session
+         * @description Cabut satu perangkat akun karyawan; sesi milik akun lain → 404.
+         */
+        post: operations["revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/device-slots/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Device Slots
+         * @description Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit.
+         */
+        post: operations["reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unlock
+         * @description Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit.
+         */
+        post: operations["unlock_api_v1_employees__emp_id__account_unlock_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/employees/{emp_id}/account/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Login
+         * @description Ganti email login akun (unik); sesi lama dicabut; tercatat di audit.
+         */
+        post: operations["change_login_api_v1_employees__emp_id__account_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sync/operations": {
         parameters: {
             query?: never;
@@ -3810,6 +3978,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/face/enrollment/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Reset Own Face Enrollment
+         * @description Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas.
+         */
+        delete: operations["reset_own_face_enrollment_api_v1_face_enrollment_me_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/face/enrollments/{employee_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Employee Face Status
+         * @description Apakah wajah karyawan sudah terdaftar (HR/admin).
+         */
+        get: operations["get_employee_face_status_api_v1_face_enrollments__employee_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/face/enrollments/{employee_id}": {
         parameters: {
             query?: never;
@@ -3822,7 +4030,7 @@ export interface paths {
         post?: never;
         /**
          * Reset Face Enrollment
-         * @description Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).
+         * @description Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.
          */
         delete: operations["reset_face_enrollment_api_v1_face_enrollments__employee_id__delete"];
         options?: never;
@@ -4112,6 +4320,7 @@ export interface paths {
         /**
          * Lend Asset
          * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["lend_asset_api_v1_assets_loans_post"];
         delete?: never;
@@ -4155,7 +4364,7 @@ export interface paths {
         put?: never;
         /**
          * Request Loan
-         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.
+         * @description Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key.
          */
         post: operations["request_loan_api_v1_assets_loan_requests_post"];
         delete?: never;
@@ -4254,12 +4463,15 @@ export interface paths {
         /**
          * List Overtime
          * @description Daftar lembur untuk satu jadwal harian.
+         *
+         *     Mode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;
+         *     `q` = awalan nama karyawan, `status` disaring di SQL.
          */
         get: operations["list_overtime_api_v1_overtime_get"];
         put?: never;
         /**
          * Report Overtime
-         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim).
+         * @description Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key.
          */
         post: operations["report_overtime_api_v1_overtime_post"];
         delete?: never;
@@ -4664,6 +4876,14 @@ export interface components {
             system_role: "EMPLOYEE" | "TEAM_LEADER";
         };
         /**
+         * AccountLoginUpdate
+         * @description Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem).
+         */
+        AccountLoginUpdate: {
+            /** Login */
+            login: string;
+        };
+        /**
          * AccountOut
          * @description Schema for account output data, detailing user authentication and status.
          */
@@ -4698,6 +4918,14 @@ export interface components {
              * @enum {string}
              */
             system_role: "EMPLOYEE" | "TEAM_LEADER";
+        };
+        /**
+         * AccountSessionsRevoked
+         * @description Jumlah sesi perangkat yang dicabut oleh HR/admin.
+         */
+        AccountSessionsRevoked: {
+            /** Revoked */
+            revoked: number;
         };
         /**
          * AccountWithPassword
@@ -5180,6 +5408,10 @@ export interface components {
             photo_file_id?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Effective Roles */
+            effective_roles?: string[];
+            /** Role Scopes */
+            role_scopes?: components["schemas"]["RoleScopeOut"][];
         };
         /** AvailableMemberOut */
         AvailableMemberOut: {
@@ -7118,6 +7350,16 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
+             * Media Captions
+             * @description Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto
+             */
+            media_captions?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7136,7 +7378,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7182,6 +7424,16 @@ export interface components {
              */
             media_path?: string | null;
             /**
+             * Media Paths
+             * @description Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8
+             */
+            media_paths?: string[];
+            /**
+             * Media Captions
+             * @description Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto
+             */
+            media_captions?: string[];
+            /**
              * Target Audience
              * @description Target audiens: ALL, FIELD, OFFICE, INDIVIDUAL
              * @default ALL
@@ -7200,7 +7452,7 @@ export interface components {
             is_mandatory: boolean;
             /**
              * Cooldown Seconds
-             * @description Durasi cooldown tombol konfirmasi baca (detik)
+             * @description Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto
              * @default 5
              */
             cooldown_seconds: number;
@@ -7260,6 +7512,10 @@ export interface components {
             content_html?: string | null;
             /** Media Path */
             media_path?: string | null;
+            /** Media Paths */
+            media_paths?: string[] | null;
+            /** Media Captions */
+            media_captions?: string[] | null;
             /** Target Audience */
             target_audience?: string | null;
             /** Target User Ids */
@@ -9491,6 +9747,62 @@ export interface components {
             note?: string | null;
         };
         /**
+         * RoleAssignmentCreate
+         * @description Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).
+         */
+        RoleAssignmentCreate: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER";
+            /** Office Id */
+            office_id?: string | null;
+        };
+        /** RoleAssignmentOut */
+        RoleAssignmentOut: {
+            /**
+             * Assignment Id
+             * Format: uuid
+             */
+            assignment_id: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Role */
+            role: string;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
+            /** Source */
+            source: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * RoleScopeOut
+         * @description Satu peran efektif beserta kantornya (ADR 0002). `office_id` kosong = semua kantor / kantor sendiri.
+         */
+        RoleScopeOut: {
+            /** Role */
+            role: string;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
+            /**
+             * Primary
+             * @default false
+             */
+            primary: boolean;
+        };
+        /**
          * RolloverDecision
          * @description PM: setujui ke jadwal yang ada (`target_daily_plan_id`) atau tanggal baru (`target_date`), atau tolak.
          */
@@ -11117,6 +11429,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0
@@ -11253,6 +11569,10 @@ export interface components {
             bast_signed_at?: string | null;
             /** Bast Signer Name */
             bast_signer_name?: string | null;
+            /** Leader Signed At */
+            leader_signed_at?: string | null;
+            /** Leader Signer Name */
+            leader_signer_name?: string | null;
             /**
              * Total Items
              * @default 0
@@ -11748,6 +12068,112 @@ export interface operations {
                         [key: string]: string;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_role_assignments_api_v1_users__user_id__role_assignments_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_role_assignment_api_v1_users__user_id__role_assignments_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleAssignmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleAssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -13048,7 +13474,10 @@ export interface operations {
     bulk_create_daily_api_v1_work_plans_daily_bulk_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13081,7 +13510,10 @@ export interface operations {
     bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15771,7 +16203,10 @@ export interface operations {
     create_stay_api_v1_mess_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15840,7 +16275,10 @@ export interface operations {
     request_stay_api_v1_mess_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16117,7 +16555,10 @@ export interface operations {
     apply_leave_api_v1_leaves_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17270,6 +17711,8 @@ export interface operations {
     get_audit_events_api_v1_audit_events_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 page?: number;
                 size?: number;
                 entity_type?: string | null;
@@ -18549,6 +18992,197 @@ export interface operations {
             };
         };
     };
+    list_sessions_api_v1_employees__emp_id__account_sessions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionResponseSchema"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSessionsRevoked"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlock_api_v1_employees__emp_id__account_unlock_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_login_api_v1_employees__emp_id__account_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                emp_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountLoginUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_operations_api_v1_sync_operations_post: {
         parameters: {
             query?: never;
@@ -18647,6 +19281,8 @@ export interface operations {
     list_attendance_api_v1_attendance_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 employee_id?: string | null;
                 from?: string | null;
                 to?: string | null;
@@ -19155,6 +19791,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnrollResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_own_face_enrollment_api_v1_face_enrollment_me_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaceResetResponse"];
+                };
+            };
+        };
+    };
+    get_employee_face_status_api_v1_face_enrollments__employee_id__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                employee_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaceStatus"];
                 };
             };
             /** @description Validation Error */
@@ -19817,7 +20504,10 @@ export interface operations {
     lend_asset_api_v1_assets_loans_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -19916,7 +20606,10 @@ export interface operations {
     request_loan_api_v1_assets_loan_requests_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -20081,12 +20774,16 @@ export interface operations {
     list_overtime_api_v1_overtime_get: {
         parameters: {
             query?: {
+                /** @description Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama. */
+                cursor?: string | null;
                 /** @description Filter status lembur */
                 status?: string | null;
                 /** @description ID jadwal harian */
                 daily_plan_id?: string | null;
                 /** @description Alias daily_plan_id */
                 work_plan_id?: string | null;
+                /** @description true = hanya lembur milik pemanggil (hanya mempersempit cakupan) */
+                mine?: boolean;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -20123,7 +20820,10 @@ export interface operations {
     report_overtime_api_v1_overtime_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

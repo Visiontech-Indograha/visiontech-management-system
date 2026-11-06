@@ -17,20 +17,21 @@ export function AttendancePage() {
   const hasTeam = canReview || sees;
   const teamLabel = sees ? "Semua karyawan" : "Absensi anggota";
   const [f, setF] = useState<AttendanceFilters>({
-    status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", q: "", page: 1, scope: hasTeam ? "team" : "",
+    status: canReview ? "NEEDS_REVIEW" : "", from: "", to: "", q: "", scope: hasTeam ? "team" : "",
   });
-  const list = useAttendance(f);
+  const { query: list, more } = useAttendance(f);
   const [open, setOpen] = useState<{ kind: "review" | "explain"; item: Attendance } | null>(null);
-  const set = (patch: Partial<AttendanceFilters>) => setF((old) => ({ ...old, ...patch, page: patch.page ?? 1 }));
+  const set = (patch: Partial<AttendanceFilters>) => setF((old) => ({ ...old, ...patch }));
 
   return (
     <AttendanceTemplate
       list={list}
+      more={more}
       filters={f}
       onFilterChange={set}
       hasTeam={hasTeam}
       teamLabel={teamLabel}
-      onScopeChange={(key) => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "", page: 1 }))}
+      onScopeChange={(key) => setF((old) => ({ ...old, scope: key, status: key === "team" && canReview ? "NEEDS_REVIEW" : "" }))}
       meEmployeeId={me?.employee_id}
       canExport={!!me?.permissions.includes("export:attendance")}
       open={open}

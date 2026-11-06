@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import get_current_user
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard
 from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
@@ -30,9 +30,14 @@ async def apply_leave(
     data: LeaveCreate,
     current_user: CurrentUser = Depends(get_current_user),
     controller: LeaveController = Depends(),
-) -> LeaveResponse:
-    """Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR)."""
-    return await controller.handle_apply(current_user, data)
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> LeaveResponse | Response:
+    """Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key."""
+    tersimpan = idem.tersimpan()
+    if tersimpan is not None:
+        return tersimpan
+    hasil = await controller.handle_apply(current_user, data)
+    return await idem.simpan(hasil, status.HTTP_201_CREATED)
 
 
 @router.get("", response_model=list[LeaveResponse])

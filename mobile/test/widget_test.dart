@@ -27,10 +27,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Email wajib diisi'), findsOneWidget);
-    expect(find.text('Password wajib diisi'), findsOneWidget);
+    expect(find.text('Sandi wajib diisi'), findsOneWidget);
   });
 
-  testWidgets('LoginScreen bisa diisi email & password', (tester) async {
+  testWidgets('LoginScreen bisa diisi email & sandi', (tester) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
@@ -39,5 +39,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('admin@lokal.test'), findsOneWidget);
+    // Kolom yang difokus menjadwalkan gulir otomatis (350 dtk + animasi 250 dtk); habiskan agar tidak bocor.
+    await tester.pump(const Duration(milliseconds: 700));
   });
+
 }

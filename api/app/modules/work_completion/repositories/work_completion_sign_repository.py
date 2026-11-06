@@ -23,8 +23,11 @@ class WorkCompletionSignRepository(BaseRepository):
         summary_notes: str | None = None,
         obstacles: str | None = None,
         photos: list[str] | None = None,
-    ) -> None:
-        """Tanda tangan ketua (boleh diulang sebelum PM; sidik direset) atau PM (order selesai)."""
+        expected_status: str | None = None,
+    ) -> int:
+        """Tanda tangan ketua (boleh diulang sebelum PM; sidik direset) atau PM (order selesai).
+        Tanda tangan PM hanya berlaku bila status order masih `expected_status` (compare-and-set).
+        Kembalian = jumlah baris yang berubah."""
         if as_leader:
             sql = """
                 UPDATE work_completion
@@ -47,9 +50,9 @@ class WorkCompletionSignRepository(BaseRepository):
                     order_status = 'COMPLETED',
                     update_at = NOW()
                 WHERE completion_id = CAST(:id AS uuid) AND delete_at IS NULL AND pm_signed_at IS NULL
-                  AND leader_signed_at IS NOT NULL
+                  AND leader_signed_at IS NOT NULL AND order_status = :expected
             """
-        await self.execute(
+        result = await self.execute(
             sql,
             {
                 "id": str(completion_id),
@@ -58,8 +61,10 @@ class WorkCompletionSignRepository(BaseRepository):
                 "summary_notes": summary_notes,
                 "obstacles": obstacles,
                 "photos": json.dumps(photos) if photos else None,
+                "expected": expected_status,
             },
         )
+        return int(result.rowcount or 0)
 
     async def remove_photo(self, completion_id: UUID | str, file_id: str) -> bool:
         """Lepas satu foto realisasi (format lama: id string; baru: {file_id}). True bila ada yang terhapus."""

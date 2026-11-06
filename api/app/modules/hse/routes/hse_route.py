@@ -105,14 +105,14 @@ async def get_campaign(
     "/campaigns/{campaign_id}",
     response_model=HseCampaignResponse,
     summary="Perbarui kampanye K3",
-    dependencies=[Depends(require_permission(Permission.MANAGE_HSE_CAMPAIGNS))],
 )
 async def update_campaign(
     campaign_id: UUID,
     data: HseCampaignUpdate,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_HSE_CAMPAIGNS)),
     controller: HseController = Depends(get_controller),
 ) -> HseCampaignResponse:
-    return await controller.update_campaign(campaign_id, data)
+    return await controller.update_campaign(campaign_id, data, current_user)
 
 
 @router.delete(

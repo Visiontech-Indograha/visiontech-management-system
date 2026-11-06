@@ -16,6 +16,15 @@ class ManagedDivisionOut(BaseModel):
     is_om: bool = False
 
 
+class RoleScopeOut(BaseModel):
+    """Satu peran efektif beserta kantornya (ADR 0002). `office_id` kosong = semua kantor / kantor sendiri."""
+
+    role: str
+    office_id: str | None = None
+    office_name: str | None = None
+    primary: bool = False
+
+
 class AuthUserMeResponseSchema(BaseModel):
     """
     Skema detail identitas pengguna yang sedang terautentikasi (/me).
@@ -32,6 +41,9 @@ class AuthUserMeResponseSchema(BaseModel):
     managed_divisions: list[ManagedDivisionOut] = Field(default_factory=list)
     photo_file_id: str | None = None
     full_name: str | None = None
+    # Opsional (klien lama mengabaikan): peran efektif (utama + tambahan aktif) dan kantor penugasannya.
+    effective_roles: list[str] = Field(default_factory=list)
+    role_scopes: list[RoleScopeOut] = Field(default_factory=list)
 
 
 class AuthChangePasswordRequestSchema(BaseModel):

@@ -40,7 +40,7 @@ def create_app() -> FastAPI:
         allow_credentials=bool(origins),
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Total-Count"],
+        expose_headers=["X-Total-Count", "X-Result-Truncated"],
     )
 
     # Daftarkan middleware RequestID
@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check() -> dict[str, str]:
         """Endpoint pemeriksaan kesehatan sederhana (liveness probe)."""
-        return {"status": "ok", "version": APP_VERSION}
+        return {"status": "ok"}
 
     @app.get(f"{API_PREFIX}/version")
     async def version_info() -> dict[str, str]:
@@ -69,12 +69,11 @@ def create_app() -> FastAPI:
         Endpoint kesiapan (readiness probe).
         Memastikan basis data benar-benar bisa dihubungi sebelum melayani request.
         """
+        # Body sengaja minimal (tanpa status DB & versi): autodeploy/healthcheck hanya membaca kode status.
         is_healthy = await check_database_health()
         if not is_healthy:
-            return JSONResponse(
-                {"status": "not_ready", "db": "unreachable", "version": APP_VERSION}, status_code=503
-            )
-        return JSONResponse({"status": "ready", "db": "ok", "version": APP_VERSION})
+            return JSONResponse({"status": "not_ready"}, status_code=503)
+        return JSONResponse({"status": "ready"})
 
     # Memasukkan router utama v1 ke dalam aplikasi
     from app.api.v1.router import api_router

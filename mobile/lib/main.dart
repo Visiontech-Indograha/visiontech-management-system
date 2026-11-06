@@ -10,6 +10,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'core/connectivity_sync.dart';
 import 'core/location_helper.dart';
 import 'core/theme/theme.dart';
+import 'features/hse/k3_campaign_gate.dart';
 import 'features/update/update_ui.dart';
 import 'shared/app_frame.dart';
 import 'shared/router.dart';
@@ -57,7 +58,10 @@ class VmsMobileApp extends ConsumerWidget {
           // Gerbang pembaruan wajib (docs/32) di atas Navigator: berlaku juga untuk layar login.
           builder: (context, child) => vmsAppFrame(
             context,
-            AppUpdateGate(child: child ?? const SizedBox.shrink()),
+            AppUpdateGate(
+              // Popup K3 wajib baca: tampil di atas semua layar (termasuk login); hanya saat sudah login.
+              child: K3CampaignGate(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         ),
       ),

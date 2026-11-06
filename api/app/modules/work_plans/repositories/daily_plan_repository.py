@@ -55,6 +55,24 @@ _SELECT = """
     JOIN employee le ON le.employee_id = t.leader_employee_id
 """
 
+# Peminjaman aktif per (aset, tanggal) untuk `bulk_asset_holders`: LATERAL mengambil satu peminjaman terbaru per
+# pasangan, persis seperti `asset_loan_conflict` (ORDER BY loaned_at DESC LIMIT 1). Inner join: pasangan tanpa
+# peminjaman tidak menghasilkan baris.
+_ASSET_HOLDER_TOOL = """
+    SELECT CAST(a.asset_id AS text) AS asset_id, k.work_date, x.team_name
+    FROM unnest(CAST(:ids AS uuid[])) AS a(asset_id)
+    CROSS JOIN unnest(CAST(:dates AS date[])) AS k(work_date)
+    JOIN LATERAL (
+        SELECT t.name AS team_name FROM asset_assignment aa
+        LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
+        LEFT JOIN team t ON t.team_id = wpd.team_id
+        WHERE aa.tool_id = a.asset_id AND aa.returned_at IS NULL AND aa.delete_at IS NULL
+          AND (aa.daily_plan_id IS NULL OR wpd.work_date = k.work_date)
+        ORDER BY aa.loaned_at DESC LIMIT 1
+    ) x ON TRUE
+"""
+_ASSET_HOLDER_VEHICLE = _ASSET_HOLDER_TOOL.replace("aa.tool_id = a.asset_id", "aa.vehicle_id = a.asset_id")
+
 
 class DailyPlanRepository(BaseRepository):
     async def project_window(self, project_id: UUID | str) -> Any:
@@ -236,6 +254,93 @@ class DailyPlanRepository(BaseRepository):
             """
         return await self.fetchone(sql, {"id": str(asset_id), "d": work_date})
 
+    # ── Alokasi massal: satu kueri per jenis data untuk seluruh sel (bukan per sel) ─────────────────
+    async def bulk_teams_in_division(self, team_ids: list[str], division_id: UUID | str) -> set[str]:
+        """Tim aktif yang milik divisi (versi set dari `team_of_division`)."""
+        rows = await self.fetchall(
+            "SELECT CAST(team_id AS text) AS team_id FROM team WHERE team_id = ANY(CAST(:ids AS uuid[])) "
+            "AND division_id = CAST(:d AS uuid) AND delete_at IS NULL AND status",
+            {"ids": team_ids, "d": str(division_id)},
+        )
+        return {str(r.team_id) for r in rows}
+
+    async def bulk_team_leaders(self, team_ids: list[str]) -> dict[str, str]:
+        """Ketua tim per tim (versi set dari `team_leader`). Tim tanpa ketua tidak ada di kamus."""
+        rows = await self.fetchall(
+            "SELECT CAST(team_id AS text) AS team_id, CAST(leader_employee_id AS text) AS leader_id FROM team "
+            "WHERE team_id = ANY(CAST(:ids AS uuid[])) AND leader_employee_id IS NOT NULL",
+            {"ids": team_ids},
+        )
+        return {str(r.team_id): str(r.leader_id) for r in rows}
+
+    async def bulk_team_days_taken(self, team_ids: list[str], work_dates: list[date]) -> set[tuple[str, date]]:
+        """Pasangan (tim, tanggal) yang sudah punya jadwal (versi set dari `team_day_taken`)."""
+        rows = await self.fetchall(
+            "SELECT CAST(team_id AS text) AS team_id, work_date FROM work_plan_daily "
+            "WHERE team_id = ANY(CAST(:ids AS uuid[])) AND work_date = ANY(CAST(:dates AS date[])) "
+            "AND delete_at IS NULL",
+            {"ids": team_ids, "dates": work_dates},
+        )
+        return {(str(r.team_id), r.work_date) for r in rows}
+
+    async def bulk_leaves_on(self, employee_ids: list[str], work_dates: list[date]) -> set[tuple[str, date]]:
+        """Pasangan (karyawan, tanggal) yang sedang cuti (versi set dari `leader_on_leave`)."""
+        rows = await self.fetchall(
+            """
+            SELECT DISTINCT CAST(lr.employee_id AS text) AS employee_id, d.work_date
+            FROM leave_request lr
+            JOIN unnest(CAST(:dates AS date[])) AS d(work_date)
+              ON lr.start_date <= d.work_date AND lr.end_date >= d.work_date
+            WHERE lr.employee_id = ANY(CAST(:ids AS uuid[])) AND lr.delete_at IS NULL
+              AND lr.status IN ('PENDING', 'APPROVED_BY_PM', 'APPROVED_BY_HR')
+            """,
+            {"ids": employee_ids, "dates": work_dates},
+        )
+        return {(str(r.employee_id), r.work_date) for r in rows}
+
+    async def bulk_asset_holders(self, asset_type: str, asset_ids: list[str],
+                                 work_dates: list[date]) -> dict[tuple[str, date], str | None]:
+        """Peminjaman aktif yang bentrok per (aset, tanggal). Nilai = nama tim pemegang (None bila tanpa jadwal).
+        Versi set dari `asset_loan_conflict`: pasangan yang tidak ada peminjamannya tidak muncul di kamus."""
+        sql = _ASSET_HOLDER_TOOL if asset_type == "TOOL" else _ASSET_HOLDER_VEHICLE
+        rows = await self.fetchall(sql, {"ids": asset_ids, "dates": work_dates})
+        return {(str(r.asset_id), r.work_date): r.team_name for r in rows}
+
+    async def bulk_insert_plans(self, cells: list[tuple[str, str, date]], fields: dict[str, Any]) -> None:
+        """Satu INSERT untuk semua sel yang dibuat. `cells` = (daily_plan_id, team_id, work_date); id dibangkitkan
+        aplikasi agar urutan kembalian tidak perlu dicocokkan. `fields` = kolom yang sama untuk semua sel."""
+        await self.execute(
+            """
+            INSERT INTO work_plan_daily (daily_plan_id, division_id, team_id, project_id, work_date, site_name,
+                                         site_lat, site_lng, attendance_radius_m, clock_in_time, clock_out_time,
+                                         status, kind, is_out_of_town, created_by_id)
+            SELECT c.daily_plan_id, CAST(:division_id AS uuid), c.team_id, CAST(NULL AS uuid), c.work_date,
+                   CAST(:site_name AS varchar), CAST(:site_lat AS numeric), CAST(:site_lng AS numeric),
+                   CAST(:attendance_radius_m AS integer), CAST(:clock_in_time AS time),
+                   CAST(:clock_out_time AS time), CAST('DRAFT' AS varchar), CAST(:kind AS varchar),
+                   COALESCE(CAST(:is_out_of_town AS boolean), FALSE), CAST(:created_by_id AS uuid)
+            FROM unnest(CAST(:ids AS uuid[]), CAST(:team_ids AS uuid[]), CAST(:dates AS date[]))
+                 AS c(daily_plan_id, team_id, work_date)
+            """,
+            {"ids": [c[0] for c in cells], "team_ids": [c[1] for c in cells], "dates": [c[2] for c in cells],
+             "division_id": fields["division_id"], "site_name": fields["site_name"],
+             "site_lat": fields["site_lat"], "site_lng": fields["site_lng"],
+             "attendance_radius_m": fields["attendance_radius_m"], "clock_in_time": fields["clock_in_time"],
+             "clock_out_time": fields["clock_out_time"], "kind": fields["kind"],
+             "is_out_of_town": fields["is_out_of_town"], "created_by_id": fields["created_by_id"]},
+        )
+
+    async def bulk_mark_approved(self, daily_plan_ids: list[str], approver: str | None) -> int:
+        """Setujui sekaligus jadwal yang baru dibuat (versi set dari `set_status(..., 'APPROVED')`).
+        Hanya baris yang masih DRAFT (compare-and-set); kembalian = jumlah baris berubah."""
+        result = await self.execute(
+            "UPDATE work_plan_daily SET status = 'APPROVED', approved_by_pm_id = CAST(:approver AS uuid), "
+            "approved_at = now(), update_at = now() "
+            "WHERE daily_plan_id = ANY(CAST(:ids AS uuid[])) AND delete_at IS NULL AND status = 'DRAFT'",
+            {"ids": daily_plan_ids, "approver": approver},
+        )
+        return int(result.rowcount or 0)
+
     async def set_kind(self, daily_plan_id: UUID | str, kind: str) -> None:
         """Ubah jenis jadwal (STANDBY ↔ WORK); dipakai aktivasi siaga."""
         await self.execute(
@@ -306,6 +411,16 @@ class DailyPlanRepository(BaseRepository):
                     {"id": str(row.vehicle_id)},
                 )
 
+    async def lock_status(self, daily_plan_id: UUID | str) -> str | None:
+        """Kunci baris jadwal (FOR UPDATE) lalu kembalikan status terkininya. Dua aksi status bersamaan
+        pada jadwal yang sama berurutan: yang kedua membaca status hasil yang pertama."""
+        status = await self.scalar(
+            "SELECT status FROM work_plan_daily WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL "
+            "FOR UPDATE",
+            {"id": str(daily_plan_id)},
+        )
+        return None if status is None else str(status)
+
     async def set_status(
         self,
         daily_plan_id: UUID | str,
@@ -313,10 +428,17 @@ class DailyPlanRepository(BaseRepository):
         *,
         approver: str | None = None,
         rejection_reason: str | None = None,
-    ) -> None:
+        allowed: tuple[str, ...] | None = None,
+    ) -> int:
         """Perpindahan status. APPROVED mencatat penyetuju; DRAFT dari penolakan mencatat alasannya;
-        pengajuan ulang menghapus alasan lama."""
-        await self.execute(
+        pengajuan ulang menghapus alasan lama. Bila `allowed` diisi, UPDATE hanya berlaku jika status
+        saat itu termasuk `allowed` (compare-and-set). Kembalian = jumlah baris yang berubah."""
+        guard = " AND status = ANY(CAST(:allowed AS varchar[]))" if allowed is not None else ""
+        params: dict[str, Any] = {"id": str(daily_plan_id), "status": status, "approver": approver,
+                                  "reason": rejection_reason}
+        if allowed is not None:
+            params["allowed"] = list(allowed)
+        result = await self.execute(
             """
             UPDATE work_plan_daily SET
                 status = CAST(:status AS varchar),
@@ -328,10 +450,10 @@ class DailyPlanRepository(BaseRepository):
                                         WHEN CAST(:status AS varchar) = 'SUBMITTED' THEN NULL
                                         ELSE rejection_reason END,
                 update_at = now()
-            WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL
-            """,
-            {"id": str(daily_plan_id), "status": status, "approver": approver, "reason": rejection_reason},
+            WHERE daily_plan_id = CAST(:id AS uuid) AND delete_at IS NULL""" + guard,
+            params,
         )
+        return int(result.rowcount or 0)
 
     async def has_activity(self, daily_plan_id: UUID | str) -> bool:
         """Jadwal yang sudah dipakai absensi atau peminjaman aset tidak boleh dihapus."""

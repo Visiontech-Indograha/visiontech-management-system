@@ -10,7 +10,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.core.repository import BaseRepository
+from app.core.repository import BaseRepository, escape_like
 
 _COLUMNS = """
     o.overtime_id AS id, o.daily_plan_id, o.employee_id, e.full_name AS employee_name,
@@ -79,21 +79,81 @@ class OvertimeRepository(BaseRepository):
         )
         return {str(r._mapping["daily_plan_id"]) for r in rows}
 
-    async def list_by_plan(self, daily_plan_id: UUID | str) -> Sequence[Any]:
+    @staticmethod
+    def _keyset(
+        after: tuple[Any, ...] | None, limit: int | None, status: str | None, q: str | None,
+        mine: str | None = None,
+    ) -> tuple[str, str, dict[str, Any]]:
+        """Potongan SQL mode keyset: (kondisi tambahan, ORDER/LIMIT, parameter).
+
+        `after` None = perilaku lama (tanpa LIMIT). Urutan `create_at DESC, overtime_id DESC` memakai indeks
+        `ix_overtime_*_created_keyset`; `q` = awalan nama karyawan.
+        """
+        cond = ""
+        params: dict[str, Any] = {}
+        if mine:
+            # Hanya mempersempit: di-AND dengan cakupan lain (indeks ix_overtime_employee_created_keyset).
+            cond += " AND o.employee_id = CAST(:mine AS uuid)"
+            params["mine"] = str(mine)
+        if after is None:
+            return cond, "ORDER BY o.create_at DESC", params
+        params["lim"] = limit
+        if after:
+            cond += " AND (o.create_at, o.overtime_id) < (CAST(:c_at AS timestamptz), CAST(:c_id AS uuid))"
+            params["c_at"], params["c_id"] = after[0], str(after[1])
+        if status:
+            cond += " AND o.status = :st"
+            params["st"] = status
+        if q:
+            cond += " AND e.full_name ILIKE :qn"
+            params["qn"] = f"{escape_like(q)}%"
+        return cond, "ORDER BY o.create_at DESC, o.overtime_id DESC LIMIT :lim", params
+
+    async def list_by_plan(
+        self,
+        daily_plan_id: UUID | str,
+        after: tuple[Any, ...] | None = None,
+        limit: int | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        offices: list[str] | None = None,
+        mine: str | None = None,
+    ) -> Sequence[Any]:
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         return await self.fetchall(
             f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
-            "WHERE o.daily_plan_id = CAST(:p AS uuid) AND o.delete_at IS NULL ORDER BY o.create_at DESC",
-            {"p": str(daily_plan_id)},
+            f"WHERE o.daily_plan_id = CAST(:p AS uuid) AND o.delete_at IS NULL{cond} {tail}",
+            {"p": str(daily_plan_id), **extra},
         )
 
-    async def list_by_employee(self, employee_id: UUID | str) -> Sequence[Any]:
+    async def list_by_employee(
+        self,
+        employee_id: UUID | str,
+        after: tuple[Any, ...] | None = None,
+        limit: int | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        offices: list[str] | None = None,
+        mine: str | None = None,
+    ) -> Sequence[Any]:
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         return await self.fetchall(
             f"SELECT {_COLUMNS} FROM overtime o JOIN employee e ON e.employee_id = o.employee_id "
-            "WHERE o.employee_id = CAST(:emp AS uuid) AND o.delete_at IS NULL ORDER BY o.create_at DESC",
-            {"emp": str(employee_id)},
+            f"WHERE o.employee_id = CAST(:emp AS uuid) AND o.delete_at IS NULL{cond} {tail}",
+            {"emp": str(employee_id), **extra},
         )
 
-    async def list_all_active(self, managed_by: str | None = None) -> Sequence[Any]:
+    async def list_all_active(
+        self,
+        managed_by: str | None = None,
+        after: tuple[Any, ...] | None = None,
+        limit: int | None = None,
+        status: str | None = None,
+        q: str | None = None,
+        offices: list[str] | None = None,
+        mine: str | None = None,
+    ) -> Sequence[Any]:
+        cond, tail, extra = self._keyset(after, limit, status, q, mine)
         sql = f"""
             SELECT {_COLUMNS} FROM overtime o
             JOIN employee e ON e.employee_id = o.employee_id
@@ -101,11 +161,14 @@ class OvertimeRepository(BaseRepository):
             LEFT JOIN division d ON d.division_id = wpd.division_id
             WHERE o.delete_at IS NULL
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
-            ORDER BY o.create_at DESC
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[]))){cond}
+            {tail}
         """
-        return await self.fetchall(sql, {"mgr": managed_by})
+        return await self.fetchall(sql, {"mgr": managed_by, "limited": offices is not None,
+                                         "offices": offices or [], **extra})
 
-    async def recap(self, month: date | None, managed_by: str | None) -> Sequence[Any]:
+    async def recap(self, month: date | None, managed_by: str | None,
+                    offices: list[str] | None = None) -> Sequence[Any]:
         """Rekap per karyawan per bulan; `managed_by` = hanya jadwal di divisi yang PM/OM-nya karyawan ini."""
         return await self.fetchall(
             """
@@ -124,8 +187,9 @@ class OvertimeRepository(BaseRepository):
               AND (CAST(:month AS date) IS NULL
                    OR CAST(date_trunc('month', o.work_date) AS date) = CAST(:month AS date))
               AND (CAST(:mgr AS uuid) IS NULL OR CAST(:mgr AS uuid) IN (d.pm_id, d.om_id))
+              AND (NOT CAST(:limited AS boolean) OR e.office_id = ANY(CAST(:offices AS uuid[])))
             GROUP BY period_month, o.employee_id, e.full_name, e.profile_photo_path
             ORDER BY period_month DESC, employee_name
             """,
-            {"month": month, "mgr": managed_by},
+            {"month": month, "mgr": managed_by, "limited": offices is not None, "offices": offices or []},
         )

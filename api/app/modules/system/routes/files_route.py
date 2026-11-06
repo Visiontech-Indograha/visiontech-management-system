@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import Response
 
 from app.api.deps import get_current_user, get_file_viewer
+from app.core.rate_limit import GROUP_FILE_URL, GROUP_UPLOAD, rate_limit
 from app.core.security import CurrentUser
 from app.modules.system.controllers.files_controller import FilesController
 from app.modules.system.dependencies import get_file_viewer_service
@@ -20,7 +21,7 @@ from app.modules.system.services.system_service import FileService
 router = APIRouter(prefix="/files", tags=["Files"])
 
 
-@router.post("/upload")
+@router.post("/upload", dependencies=[Depends(rate_limit(GROUP_UPLOAD))])
 async def upload_document(
     file: UploadFile = File(...),
     current_user: CurrentUser = Depends(get_current_user),
@@ -57,7 +58,7 @@ async def get_file_content(
     return await controller.handle_get_file_content(current_user, file_id, variant=variant, download=download)
 
 
-@router.get("/{file_id}/url")
+@router.get("/{file_id}/url", dependencies=[Depends(rate_limit(GROUP_FILE_URL))])
 async def get_file_url(
     file_id: uuid.UUID,
     variant: Literal["thumb", "view", "full"] = "full",

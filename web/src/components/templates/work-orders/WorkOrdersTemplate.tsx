@@ -56,8 +56,8 @@ export function WorkOrdersTemplate({
 }: WorkOrdersTemplateProps) {
   return (
     <PageTemplate
-      title="Manajemen Tugas Klien (Work Orders)"
-      description="Alur kerja terpadu: Permintaan Masuk → Penugasan Survei → Review Hasil → Eksekusi Lapangan → BAST Resmi."
+      title="Tugas Klien"
+      description="Alur tugas: permintaan masuk → survei lapangan → cek hasil survei → pengerjaan di lapangan → surat serah terima resmi."
       action={<WorkOrderCreateAction onClick={onOpenCreate} />}
     >
       <WorkOrderList

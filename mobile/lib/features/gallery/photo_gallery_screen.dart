@@ -177,12 +177,17 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (!widget.selectMode)
-            IconButton(
-              key: const Key('gallery-team-logo'),
-              tooltip: 'Logo tim',
-              icon: const Icon(Icons.groups_2_outlined),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const TeamLogoScreen()),
+            Semantics(
+              label: 'Logo tim',
+              button: true,
+              child: TextButton.icon(
+                key: const Key('gallery-team-logo'),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                icon: const Icon(Icons.groups_2_outlined),
+                label: const Text('Logo tim'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TeamLogoScreen()),
+                ),
               ),
             ),
           if (widget.asTab) const NotificationBell(),

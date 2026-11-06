@@ -10,3 +10,5 @@ a700c8703299f9ee67a5fa11becfb23d8c83e50e:web/src/test/users.test.tsx:generic-api
 a700c8703299f9ee67a5fa11becfb23d8c83e50e:web/src/test/users.test.tsx:generic-api-key:113
 # Positif palsu: komentar contoh nama berkas foto (`laporan_20260926_184512_123.jpg`), bukan kunci.
 4067cab705c3f2ddc8cc0fb1586a988051da4f84:mobile/lib/core/local_storage.dart:generic-api-key:39
+# 2026-11-05: positif palsu, header Idempotency-Key berisi string uji (bukan kredensial).
+1f2bebe7bf9f3f467bd5a2fe958b60ae19ee4280:api/tests/modules/role_assignments/test_role_assignments.py:generic-api-key:141

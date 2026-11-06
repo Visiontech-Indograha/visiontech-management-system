@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
+import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
@@ -16,8 +17,8 @@ final _iso = DateFormat('yyyy-MM-dd');
 
 /// Label status cuti untuk karyawan (alur: PM lalu HR).
 String leaveStatusLabel(String status) => switch (status) {
-  'PENDING' => 'Menunggu PM',
-  'APPROVED_BY_PM' => 'Disetujui PM, menunggu HR',
+  'PENDING' => 'Menunggu atasan',
+  'APPROVED_BY_PM' => 'Sudah disetujui atasan, menunggu HR',
   'APPROVED_BY_HR' || 'APPROVED_BY_FINANCE' => 'Disetujui',
   'REJECTED' => 'Ditolak',
   'CANCELLED' => 'Dibatalkan',
@@ -97,7 +98,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Batalkan pengajuan?'),
+        title: const Text('Batalkan pengajuan cuti?'),
         content: const Text('Pengajuan cuti ini akan dibatalkan.'),
         actions: [
           TextButton(
@@ -106,7 +107,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Batalkan'),
+            child: const Text('Ya, batalkan'),
           ),
         ],
       ),
@@ -286,6 +287,8 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
   DateTime? _start;
   DateTime? _end;
   final _reason = TextEditingController();
+  // Satu niat pengajuan: percobaan ulang memakai kunci yang sama (lihat PengajuanIdempotency).
+  final _idem = PengajuanIdempotency();
   bool _busy = false;
   String? _error;
 
@@ -329,6 +332,19 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
     });
   }
 
+  bool get _adaIsian => _start != null || _end != null || _reason.text.trim().isNotEmpty;
+
+  /// Back: saat keyboard terbuka cukup menutup keyboard; bila ada isian, minta konfirmasi dulu.
+  Future<void> _onBack(bool didPop) async {
+    if (didPop) return;
+    if (MediaQuery.viewInsetsOf(context).bottom > 0) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      return;
+    }
+    if (_adaIsian && !await confirmBuangIsian(context)) return;
+    if (mounted) Navigator.of(context).pop();
+  }
+
   Future<void> _submit() async {
     if (_busy) return;
     if (_start == null || _end == null || _reason.text.trim().length < 3) {
@@ -350,6 +366,7 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
             startDate: _iso.format(_start!),
             endDate: _iso.format(_end!),
             reason: _reason.text.trim(),
+            idem: _idem,
           );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -370,68 +387,72 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
             {'code': 'SICK', 'label': 'Sakit'},
           ]
         : _types;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        16,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DropdownButtonFormField<String>(
-            initialValue: _type,
-            decoration: const InputDecoration(labelText: 'Jenis'),
-            items: [
-              for (final t in types)
-                DropdownMenuItem(
-                  value: t['code'] as String,
-                  child: Text(t['label'] as String),
-                ),
-            ],
-            onChanged: (v) => setState(() => _type = v ?? _type),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _pick(true),
-                  child: Text(_start == null ? 'Mulai' : _tgl.format(_start!)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _pick(false),
-                  child: Text(_end == null ? 'Selesai' : _tgl.format(_end!)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            maxLength: 1000,
-            controller: _reason,
-            onChanged: (_) {
-              if (_error != null) setState(() => _error = null);
-            },
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Alasan'),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) => _onBack(didPop),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _type,
+              decoration: const InputDecoration(labelText: 'Jenis'),
+              items: [
+                for (final t in types)
+                  DropdownMenuItem(
+                    value: t['code'] as String,
+                    child: Text(t['label'] as String),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _type = v ?? _type),
             ),
-          const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _busy ? null : _submit,
-            child: Text(_busy ? 'Mengirim...' : 'Kirim pengajuan'),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pick(true),
+                    child: Text(_start == null ? 'Mulai' : _tgl.format(_start!)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pick(false),
+                    child: Text(_end == null ? 'Selesai' : _tgl.format(_end!)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              maxLength: 1000,
+              controller: _reason,
+              onChanged: (_) {
+                if (_error != null) setState(() => _error = null);
+              },
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Alasan'),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _busy ? null : _submit,
+              child: Text(_busy ? 'Mengirim...' : 'Kirim pengajuan'),
+            ),
+          ],
+        ),
       ),
     );
   }

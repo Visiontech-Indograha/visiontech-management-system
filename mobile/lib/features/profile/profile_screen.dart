@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +22,7 @@ import 'sessions_screen.dart';
 const _roleLabel = {
   'ADMIN': 'Admin',
   'HR': 'HR',
-  'PM': 'Project Manager',
+  'PM': 'Atasan',
   'FINANCE': 'Finance',
   'ASSET': 'Petugas aset',
   'OPS': 'Operasional',
@@ -153,6 +154,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  /// Hapus pendaftaran wajah sendiri (mis. ganti HP/wajah) setelah konfirmasi.
+  Future<void> _hapusWajahSaya() async {
+    final yakin = await _konfirmasi(
+      judul: 'Hapus pendaftaran wajah Anda?',
+      isi:
+          'Hapus wajah hanya bisa dilakukan sekali sehari. '
+          'Setelah dihapus, absensi memakai pengenalan wajah tidak aktif sampai Anda mendaftarkan wajah lagi. '
+          'Tindakan ini dicatat di log aktivitas.',
+      tombol: 'Ya, hapus',
+    );
+    if (!yakin || !mounted) return;
+    setState(() => _isEnrolling = true);
+    try {
+      await ref.read(syncEngineProvider).api.deleteOwnFaceEnrollment();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pendaftaran wajah Anda sudah dihapus.')),
+      );
+      await _loadFaceState();
+    } catch (e) {
+      if (mounted) {
+        // Server membalas 429 bila wajah sudah dihapus hari ini.
+        final batasHarian = e is DioException && e.response?.statusCode == 429;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 6),
+            content: Text(
+              batasHarian
+                  ? 'Wajah hanya bisa dihapus sekali sehari. Coba lagi besok, atau minta bantuan HR.'
+                  : apiErrorMessage(e),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isEnrolling = false);
+    }
+  }
+
   Future<void> _enrollFaceFlow() async {
     if (!mounted) return;
     setState(() => _isEnrolling = true);
@@ -194,7 +234,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // Mematikan gerbang keamanan layak dikonfirmasi. Sebelumnya sekali geser
       // langsung nonaktif tanpa pertanyaan apa pun -- mudah tersenggol.
       final yakin = await _konfirmasi(
-        judul: 'Matikan Login Sidik Jari?',
+        judul: 'Matikan login sidik jari?',
         isi:
             'Setelah ini, membuka aplikasi tidak lagi meminta sidik jari. '
             'Siapa pun yang memegang HP ini bisa langsung melihat isinya.',
@@ -260,10 +300,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       setState(() {
         _syncResultMessage = summary.hasErrors
             ? 'Sync selesai dengan sebagian gagal:\n${[...summary.pushErrors, ...summary.pullErrors].join('\n')}'
-            : 'Sinkronisasi berhasil.';
+            : 'Data berhasil dikirim.';
       });
     } catch (e) {
-      setState(() => _syncResultMessage = 'Sinkronisasi gagal: $e');
+      setState(() => _syncResultMessage = 'Data belum terkirim: $e');
     } finally {
       if (mounted) setState(() => _isSyncing = false);
     }
@@ -313,7 +353,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? 'Masih ada $tertunda data yang BELUM terkirim ke server. '
                 'Keluar sekarang akan menghapusnya dari HP ini. '
                 'Sambungkan ke internet dan sinkronkan dulu bila datanya masih dibutuhkan.'
-          : 'Anda perlu memasukkan email & password lagi untuk masuk.',
+          : 'Anda perlu memasukkan email & sandi lagi untuk masuk.',
       tombol: 'Keluar',
     );
     if (!yakin) return;
@@ -321,12 +361,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   static const _services = <(String, IconData, String, Accent)>[
-    ('/recap', Icons.event_available_rounded, 'Rekap Absen & Uang Makan', Accent.teal),
+    ('/recap', Icons.event_available_rounded, 'Rekap absen & uang makan', Accent.teal),
     ('/leaves', Icons.beach_access_rounded, 'Cuti & Izin', Accent.blue),
     ('/assets', Icons.directions_car_rounded, 'Kendaraan & Alat', Accent.amber),
-    ('/overtime', Icons.more_time_rounded, 'Riwayat Lembur', Accent.indigo),
-    ('/mess', Icons.home_work_rounded, 'Mess Karyawan', Accent.violet),
-    ('/documents', Icons.badge_rounded, 'Dokumen Saya', Accent.emerald),
+    ('/overtime', Icons.more_time_rounded, 'Riwayat lembur', Accent.indigo),
+    ('/mess', Icons.home_work_rounded, 'Mess karyawan', Accent.violet),
+    ('/documents', Icons.badge_rounded, 'Dokumen saya', Accent.emerald),
   ];
 
   @override
@@ -370,7 +410,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SectionTitle('Layanan Karyawan'),
+                const SectionTitle('Layanan karyawan'),
                 // Grid 2 kolom ringkas agar pengguna tidak perlu menggulir panjang.
                 GridView.count(
                   crossAxisCount: 2,
@@ -410,7 +450,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                   ],
                 ),
-                const SectionTitle('Sinkronisasi data'),
+                const SectionTitle('Kirim ulang data'),
                 FadeSlideIn(
                   child: SurfaceCard(
                     child: Column(
@@ -419,21 +459,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Row(
                           children: [
                             _stat(
-                              'Data tertunda',
+                              'Menunggu terkirim',
                               _pendingOperationCount,
                               Accent.blue,
                               Icons.cloud_upload_rounded,
                             ),
                             const SizedBox(width: 8),
                             _stat(
-                              'Foto tertunda',
+                              'Foto menunggu',
                               _pendingPhotoCount,
                               Accent.teal,
                               Icons.photo_rounded,
                             ),
                             const SizedBox(width: 8),
                             _stat(
-                              'Perlu tindakan',
+                              'Perlu dicek',
                               _deadLetterCount,
                               _deadLetterCount > 0 ? Accent.rose : Accent.slate,
                               Icons.report_rounded,
@@ -455,7 +495,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             text: _syncResultMessage!,
                             accent:
                                 _syncResultMessage!.startsWith(
-                                  'Sinkronisasi berhasil',
+                                  'Data berhasil dikirim',
                                 )
                                 ? Accent.emerald
                                 : Accent.amber,
@@ -463,7 +503,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                         const SizedBox(height: 12),
                         PrimaryAction(
-                          label: 'Sinkronkan sekarang',
+                          label: 'Kirim ulang sekarang',
                           icon: Icons.sync_rounded,
                           busy: _isSyncing,
                           onTap: _syncNow,
@@ -479,13 +519,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             await _loadSyncInfo();
                           },
                           icon: const Icon(Icons.list_alt_rounded),
-                          label: const Text('Lihat antrean sinkronisasi'),
+                          label: const Text('Lihat data menunggu terkirim'),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const SectionTitle('Biometrik Wajah (Face API)'),
+                const SectionTitle('Pengenalan wajah'),
                 FadeSlideIn(
                   index: 1,
                   child: SurfaceCard(
@@ -505,7 +545,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Pengenalan Wajah',
+                                    'Pengenalan wajah',
                                     style: VmsTextStyles.bodySm.copyWith(
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -514,8 +554,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     _faceLoading
                                         ? 'Memeriksa status...'
                                         : (_faceStatus?['enrolled'] == true
-                                              ? 'Wajah Terdaftar (Aktif)'
-                                              : 'Belum Terdaftar'),
+                                              ? 'Wajah terdaftar (aktif)'
+                                              : 'Belum terdaftar'),
                                     style: VmsTextStyles.caption.copyWith(
                                       color: _faceStatus?['enrolled'] == true
                                           ? Accent.emerald.strong
@@ -537,7 +577,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Pencocokan biometrik wajah dilakukan di server secara aman untuk memverifikasi absensi masuk dan pulang.',
+                          'Pencocokan wajah dilakukan di server secara aman untuk memverifikasi absensi masuk dan pulang.',
                           style: VmsTextStyles.bodySm.copyWith(
                             color: VmsColors.neutral500,
                           ),
@@ -551,15 +591,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                         const SizedBox(height: 12),
                         if (_faceStatus?['enrolled'] == true)
-                          Text(
-                            'Perlu daftar ulang (ganti wajah/HP)? Minta HR mengatur ulang pendaftaran wajah Anda.',
-                            style: VmsTextStyles.caption.copyWith(
-                              color: VmsColors.neutral500,
+                          OutlinedButton.icon(
+                            key: const Key('profil-hapus-wajah'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Accent.rose.strong,
+                              minimumSize: const Size.fromHeight(48),
                             ),
+                            onPressed: _isEnrolling || _faceLoading
+                                ? null
+                                : _hapusWajahSaya,
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: const Text('Hapus pendaftaran wajah saya'),
                           )
                         else if (_faceStatus?['required'] == true)
                           PrimaryAction(
-                            label: 'Daftarkan Wajah (4 Foto)',
+                            label: 'Daftarkan wajah Anda',
                             icon: Icons.camera_alt_rounded,
                             busy: _isEnrolling,
                             onTap: _isEnrolling || _faceLoading

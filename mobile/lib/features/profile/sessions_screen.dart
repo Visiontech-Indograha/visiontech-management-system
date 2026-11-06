@@ -8,6 +8,15 @@ import '../../core/theme/theme.dart';
 import '../../shared/ui/vms_ui.dart';
 
 /// Daftar perangkat yang sedang masuk ke akun ini. Perlu internet.
+String _namaPerangkat(Map s) {
+  final label = '${s['device_label'] ?? ''}'.trim();
+  if (label.isNotEmpty && !label.startsWith('Dart/')) return label;
+  final ua = '${s['user_agent'] ?? ''}'.trim();
+  if (ua.isEmpty || ua.startsWith('Dart/') || ua.contains('dart:io')) return 'Aplikasi HP';
+  if (ua.startsWith('VMS') || ua.contains('Android')) return 'Aplikasi HP';
+  return 'Perangkat lain';
+}
+
 class SessionsScreen extends ConsumerStatefulWidget {
   const SessionsScreen({super.key});
 
@@ -125,11 +134,10 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${s['device_label'] ?? s['user_agent'] ?? 'Perangkat tidak dikenal'}', style: VmsTextStyles.subheading),
+                                Text(_namaPerangkat(s), style: VmsTextStyles.subheading),
                                 if (s['current'] == true)
                                   Text('Perangkat ini', style: VmsTextStyles.caption.copyWith(color: VmsColors.brand700, fontWeight: FontWeight.w700)),
                                 Text('Terakhir dipakai: ${_fmt(s['last_used_at'])}', style: VmsTextStyles.caption),
-                                if (s['ip_address'] != null) Text('Alamat: ${s['ip_address']}', style: VmsTextStyles.caption),
                               ],
                             ),
                           ),

@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import io
 import re
+import threading
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -131,6 +132,22 @@ def file_name(record: Any) -> str:
     return f"{label}_{stamp}.{EXT.get(record.export_format, 'bin')}"
 
 
+# Builder dokumen (docx/pptx/pdf) bersifat CPU-bound dan sinkron. Dijalankan di threadpool agar event loop
+# tidak terblokir; semafor thread membatasi jumlah ekspor berat yang berjalan bersamaan (memori 4 GB).
+EXPORT_BUILD_CONCURRENCY = 2
+_BUILD_SLOTS = threading.BoundedSemaphore(EXPORT_BUILD_CONCURRENCY)
+
+
+def _build_limited(builder: Callable[[Any], bytes], data: Any) -> bytes:
+    with _BUILD_SLOTS:
+        return builder(data)
+
+
+async def _build(builder: Callable[[Any], bytes], data: Any) -> bytes:
+    """Jalankan builder sinkron di threadpool dengan batas konkurensi; hasil dikembalikan apa adanya."""
+    return await asyncio.to_thread(_build_limited, builder, data)
+
+
 class ExportService:
     def __init__(self, repo: ExportRepository, orders: WorkCompletionService,
                  surveys: SurveyService | None = None) -> None:
@@ -145,7 +162,7 @@ class ExportService:
         survey = await self.surveys.detail(user, task_id)
         if survey["state"] == "DRAFT":
             raise AppError("SURVEY_NOT_SUBMITTED", "Laporan tersedia setelah ketua tim mengirim survei.", status=409)
-        content = build_survey_docx(await self._survey_doc(survey, user))
+        content = await _build(build_survey_docx, await self._survey_doc(survey, user))
         fmt = survey["format"]
         key = (f"exports/survey/{task_id}/{jakarta_now():%Y%m%d-%H%M%S}_survey_{fmt.lower()}_"
                f"{_slug(survey['client_name'])}.docx")
@@ -162,11 +179,12 @@ class ExportService:
         survey = await self.surveys.detail(user, task_id)
         if not survey["points"]:
             raise AppError("NO_SURVEY_POINTS", "Belum ada titik survei untuk dipratinjau.", status=422)
-        docx = build_survey_docx(await self._survey_doc(survey, user))
+        doc = await self._survey_doc(survey, user)  # sekali: unduh & kecilkan foto tidak diulang untuk PDF
+        docx = await _build(build_survey_docx, doc)
         pdf: bytes | None = None
         try:
             from app.shared.documents.reportlab_service import build_survey_pdf_reportlab
-            pdf = build_survey_pdf_reportlab(await self._survey_doc(survey, user))
+            pdf = await _build(build_survey_pdf_reportlab, doc)
         except (ImportError, OSError, RuntimeError, ValueError):
             pdf = await docx_to_pdf(docx)
         return ("PDF", pdf) if pdf else ("WORD_DOCX", docx)
@@ -310,7 +328,7 @@ class ExportService:
             logos=await self._kop_logos([str(header.team_id)]),
             assets=_asset_lines(await self.repo.daily_assets(daily_plan_id)),
         )
-        content = daily_report_docx(report)
+        content = await _build(daily_report_docx, report)
         key = (f"exports/daily-report/{daily_plan_id}/{jakarta_now():%Y%m%d-%H%M%S}_daily_report_"
                f"{_slug(header.team_name)}_{header.work_date:%Y%m%d}.docx")
         record = await self._store(user, key, content, "WORD_DOCX", source_type="WORK_PLAN_DAILY",
@@ -435,7 +453,7 @@ class ExportService:
             generated_at=jakarta_now(), logos=await self._kop_logos([str(team_id)]),
             assets=_asset_lines(await self.repo.team_week_assets(team_id, start, end)),
         )
-        content = team_week_pptx(report)
+        content = await _build(team_week_pptx, report)
         key = f"exports/team-week/{team_id}/{start:%Y%m%d}_{jakarta_now():%H%M%S}_team_week.pptx"
         record = await self._store(user, key, content, "PPTX", source_type="WORK_PLAN_PERIODIC",
                                    template_type="TEAM_WEEK_SLIDES", master="builtin:team-week-pptx-v1",

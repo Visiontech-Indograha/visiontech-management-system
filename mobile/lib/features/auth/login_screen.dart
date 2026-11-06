@@ -23,14 +23,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  final _emailFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+  // Saat keyboard terbuka, layar digulir ke bawah agar tombol Masuk tetap terlihat.
+  final _scroll = ScrollController();
 
   /// Detak per detik untuk hitung mundur cooldown login (R-21); hanya hidup
   /// selama akun terkunci.
   Timer? _ticker;
 
   @override
+  void initState() {
+    super.initState();
+    _emailFocus.addListener(_onFokus);
+    _passwordFocus.addListener(_onFokus);
+  }
+
+  void _onFokus() {
+    if (!(_emailFocus.hasFocus || _passwordFocus.hasFocus)) return;
+    // Beri waktu keyboard selesai naik sebelum menggulir.
+    Future<void>.delayed(const Duration(milliseconds: 350), () {
+      if (mounted && _scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _ticker?.cancel();
+    _emailFocus.dispose();
+    _passwordFocus.dispose();
+    _scroll.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -93,6 +121,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
+              controller: _scroll,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: const EdgeInsets.all(20),
               // Masuk sekali: fade + naik (transform/opacity saja, ringan) — R-13/R-14.
               child: TweenAnimationBuilder<double>(
@@ -170,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         description: const Text(
-                          'Masuk dengan email dan password akun kantor Anda.',
+                          'Masuk dengan email dan sandi akun kantor Anda.',
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(top: 16),
@@ -201,11 +231,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 ],
                                 ShadInputFormField(
                                   controller: _usernameController,
+                                  focusNode: _emailFocus,
                                   enabled: !isLoading,
                                   label: const Text('Email'),
                                   placeholder: const Text('nama@visiontech.id'),
                                   keyboardType: TextInputType.emailAddress,
                                   textInputAction: TextInputAction.next,
+                                  onSubmitted: (_) => _passwordFocus.requestFocus(),
                                   leading: const Icon(
                                     LucideIcons.mail,
                                     size: 18,
@@ -217,10 +249,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 const SizedBox(height: 12),
                                 ShadInputFormField(
                                   controller: _passwordController,
+                                  focusNode: _passwordFocus,
                                   enabled: !isLoading,
-                                  label: const Text('Password'),
+                                  label: const Text('Sandi'),
                                   obscureText: _obscurePassword,
-                                  textInputAction: TextInputAction.done,
+                                  textInputAction: TextInputAction.go,
                                   onSubmitted: (_) => _submit(),
                                   leading: const Icon(
                                     LucideIcons.lock,
@@ -242,7 +275,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                   ),
                                   validator: (v) =>
-                                      v.isEmpty ? 'Password wajib diisi' : null,
+                                      v.isEmpty ? 'Sandi wajib diisi' : null,
                                 ),
                                 const SizedBox(height: 20),
                                 ShadButton(

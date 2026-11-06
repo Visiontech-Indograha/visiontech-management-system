@@ -210,8 +210,14 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
             ),
             const SizedBox(height: 8),
             // Baris chip status cepat
+            Text(
+              'Geser ke kanan untuk melihat filter lainnya.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
               child: Row(
                 children: [
                   for (final (key, label) in const [
@@ -237,6 +243,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
             // Pisahkan jenis pekerjaan, tiap jenis punya warna sendiri.
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
               child: Row(
                 children: [
                   for (final (key, label) in [(null, 'Semua'), ...phaseLabel.entries.map((e) => (e.key, e.value))])
@@ -314,7 +321,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
               EmptyState(
                 icon: Icons.event_busy_rounded,
                 title: _only == null ? 'Tidak ada jadwal minggu ini' : 'Tidak ada ${phaseLabel[_only]} minggu ini',
-                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui PM.',
+                message: hasFilter ? 'Coba atur ulang pencarian atau filter status di atas.' : 'Jadwal muncul setelah disetujui atasan.',
               )
             else
               for (final (n, p) in shown.indexed)

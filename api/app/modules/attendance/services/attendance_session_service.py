@@ -138,7 +138,7 @@ class AttendanceSessionService:
             if uploader is not None and str(uploader) != str(user_id):
                 raise AppError("EVIDENCE_NOT_OWNED", "Foto bukti harus diunggah dari akun Anda sendiri.", status=422)
 
-    async def export_csv(self, org_id: str, start: Any, end: Any) -> str:
+    async def export_csv(self, org_id: str, start: Any, end: Any, viewer_user_id: str) -> str:
         """P4-5 · CSV absensi untuk Finance; jam dalam zona waktu organisasi."""
         out = io.StringIO()
         writer = csv.writer(out)
@@ -158,7 +158,7 @@ class AttendanceSessionService:
                 "Uang makan (Rp)",
             ]
         )
-        for r in await self.repo.export_rows(org_id, start, end):
+        for r in await self.repo.export_rows(org_id, start, end, viewer_user_id):
             writer.writerow(
                 [
                     r.work_date.isoformat(),
@@ -199,7 +199,9 @@ class AttendanceSessionService:
             raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
         if (end - start).days > 62:
             raise ValidationError("Rentang rekap paling lama 62 hari.")
-        return await self.repo.meal_allowance_recap(start, end, divisions)
+        return await self.repo.meal_allowance_recap(
+            start, end, divisions, user.user_id if "export:attendance" in user.permissions else None
+        )
 
     async def my_recap(self, user: Any, month: str | None) -> dict[str, Any]:
         """Rekap absensi bulanan milik sendiri: hari hadir, terlambat, pulang awal, uang makan (hanya absensi sah)."""
@@ -638,6 +640,7 @@ class AttendanceSessionService:
         size: int,
         scope: str = "all",
         q: str | None = None,
+        after: tuple[Any, ...] | None = None,
     ) -> tuple[list[Any], int]:
         """
         Mendapatkan daftar absensi berdasarkan filter, disesuaikan dengan hak visibilitas pengguna.
@@ -656,8 +659,9 @@ class AttendanceSessionService:
             status=status,
             scope=scope,
             q=q,
-            limit=size,
+            limit=size + 1 if after is not None else size,
             offset=(page - 1) * size,
+            after=after,
         )
 
     async def day_hints(self, org_id: str, employee_id: str | None) -> tuple[Any, Any, int, Any]:

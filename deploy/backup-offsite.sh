@@ -11,6 +11,8 @@ set -euo pipefail
 
 BASE="${VMS_DEPLOY_DIR:-$HOME/deploy/vms-mvp}"
 cd "$BASE"
+[ -f deploy.env ] && . ./deploy.env
+BK="${VMS_BACKUP_DIR:-backups}"
 [ -f offsite.env ] || { echo "offsite.env tidak ada — lihat komentar di atas." >&2; exit 2; }
 # shellcheck disable=SC1091
 . ./offsite.env
@@ -19,14 +21,14 @@ KEEP="${OFFSITE_KEEP_DAYS:-30}"
 DRY=""
 [ "${1:-}" = "--coba" ] && DRY="--dry-run"
 
-ls backups/*.dump >/dev/null 2>&1 || { echo "Tidak ada backup lokal untuk disalin." >&2; exit 3; }
+ls "$BK"/*.dump >/dev/null 2>&1 || { echo "Tidak ada backup lokal untuk disalin." >&2; exit 3; }
 SSH="ssh -i $OFFSITE_KEY -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes"
 
-rsync -a --partial --chmod=F600 $DRY -e "$SSH" backups/*.dump "$OFFSITE_HOST:$OFFSITE_DIR/"
+rsync -a --partial --chmod=F600 $DRY -e "$SSH" "$BK"/*.dump "$OFFSITE_HOST:$OFFSITE_DIR/"
 
 if [ -z "$DRY" ]; then
   # Verifikasi ukuran berkas terbaru sama di tujuan, baru catat berhasil.
-  newest=$(ls -1t backups/*.dump | head -n 1)
+  newest=$(ls -1t "$BK"/*.dump | head -n 1)
   local_size=$(stat -c %s "$newest")
   remote_size=$($SSH "$OFFSITE_HOST" "stat -c %s '$OFFSITE_DIR/$(basename "$newest")'")
   [ "$local_size" = "$remote_size" ] || { echo "Ukuran berbeda: lokal $local_size, tujuan $remote_size" >&2; exit 4; }

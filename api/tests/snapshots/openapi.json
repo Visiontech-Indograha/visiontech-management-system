@@ -26,6 +26,22 @@
     "title": "AccountCreate",
     "type": "object"
    },
+   "AccountLoginUpdate": {
+    "description": "Ubah email login akun (dipakai untuk masuk; unik di seluruh sistem).",
+    "properties": {
+     "login": {
+      "maxLength": 254,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Login",
+      "type": "string"
+     }
+    },
+    "required": [
+     "login"
+    ],
+    "title": "AccountLoginUpdate",
+    "type": "object"
+   },
    "AccountOut": {
     "description": "Schema for account output data, detailing user authentication and status.",
     "properties": {
@@ -130,6 +146,20 @@
      "system_role"
     ],
     "title": "AccountRoleUpdate",
+    "type": "object"
+   },
+   "AccountSessionsRevoked": {
+    "description": "Jumlah sesi perangkat yang dicabut oleh HR/admin.",
+    "properties": {
+     "revoked": {
+      "title": "Revoked",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "revoked"
+    ],
+    "title": "AccountSessionsRevoked",
     "type": "object"
    },
    "AccountWithPassword": {
@@ -1449,6 +1479,13 @@
       ],
       "title": "Division Id"
      },
+     "effective_roles": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Effective Roles",
+      "type": "array"
+     },
      "email": {
       "title": "Email",
       "type": "string"
@@ -1510,6 +1547,13 @@
      "role": {
       "title": "Role",
       "type": "string"
+     },
+     "role_scopes": {
+      "items": {
+       "$ref": "#/components/schemas/RoleScopeOut"
+      },
+      "title": "Role Scopes",
+      "type": "array"
      },
      "user_id": {
       "title": "User Id",
@@ -6513,7 +6557,7 @@
      },
      "cooldown_seconds": {
       "default": 5,
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
@@ -6537,6 +6581,15 @@
       "title": "Is Mandatory",
       "type": "boolean"
      },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6549,6 +6602,16 @@
       ],
       "description": "Path foto banner atau infografis K3",
       "title": "Media Path"
+     },
+     "media_paths": {
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Paths",
+      "type": "array"
      },
      "start_date": {
       "description": "Tanggal awal penayangan kampanye",
@@ -6620,7 +6683,7 @@
      },
      "cooldown_seconds": {
       "default": 5,
-      "description": "Durasi cooldown tombol konfirmasi baca (detik)",
+      "description": "Durasi wajib baca sebelum tombol konfirmasi aktif (detik). Dengan foto: 10-300 dan minimal 3 dtk per foto",
       "maximum": 300.0,
       "minimum": 0.0,
       "title": "Cooldown Seconds",
@@ -6665,6 +6728,15 @@
       "title": "Is Mandatory",
       "type": "boolean"
      },
+     "media_captions": {
+      "description": "Keterangan teks per foto (sejajar media_paths), maks 300 karakter per foto",
+      "items": {
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Captions",
+      "type": "array"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6677,6 +6749,16 @@
       ],
       "description": "Path foto banner atau infografis K3",
       "title": "Media Path"
+     },
+     "media_paths": {
+      "description": "Daftar id berkas foto (file_object) carousel K3, urutan tampil; maks 8",
+      "items": {
+       "format": "uuid",
+       "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Media Paths",
+      "type": "array"
      },
      "start_date": {
       "description": "Tanggal awal penayangan kampanye",
@@ -6808,6 +6890,21 @@
       ],
       "title": "Is Mandatory"
      },
+     "media_captions": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "maxItems": 8,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Captions"
+     },
      "media_path": {
       "anyOf": [
        {
@@ -6818,6 +6915,22 @@
        }
       ],
       "title": "Media Path"
+     },
+     "media_paths": {
+      "anyOf": [
+       {
+        "items": {
+         "format": "uuid",
+         "type": "string"
+        },
+        "maxItems": 8,
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Media Paths"
      },
      "start_date": {
       "anyOf": [
@@ -10760,6 +10873,8 @@
       "type": "string"
      },
      "hours": {
+      "exclusiveMinimum": 0.0,
+      "maximum": 12.0,
       "title": "Hours",
       "type": "number"
      },
@@ -12886,6 +13001,137 @@
      "is_approved"
     ],
     "title": "ReviewRequest",
+    "type": "object"
+   },
+   "RoleAssignmentCreate": {
+    "description": "Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).",
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "role": {
+      "enum": [
+       "ADMIN_HR_GA",
+       "FINANCE",
+       "OPERATIONAL_MANAGER"
+      ],
+      "title": "Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "role"
+    ],
+    "title": "RoleAssignmentCreate",
+    "type": "object"
+   },
+   "RoleAssignmentOut": {
+    "properties": {
+     "assignment_id": {
+      "format": "uuid",
+      "title": "Assignment Id",
+      "type": "string"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "office_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
+     "role": {
+      "title": "Role",
+      "type": "string"
+     },
+     "source": {
+      "title": "Source",
+      "type": "string"
+     },
+     "user_id": {
+      "format": "uuid",
+      "title": "User Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "assignment_id",
+     "user_id",
+     "role",
+     "source",
+     "created_at"
+    ],
+    "title": "RoleAssignmentOut",
+    "type": "object"
+   },
+   "RoleScopeOut": {
+    "description": "Satu peran efektif beserta kantornya (ADR 0002). `office_id` kosong = semua kantor / kantor sendiri.",
+    "properties": {
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
+     "primary": {
+      "default": false,
+      "title": "Primary",
+      "type": "boolean"
+     },
+     "role": {
+      "title": "Role",
+      "type": "string"
+     }
+    },
+    "required": [
+     "role"
+    ],
+    "title": "RoleScopeOut",
     "type": "object"
    },
    "RolloverDecision": {
@@ -17340,6 +17586,29 @@
       ],
       "title": "Lead Team Id"
      },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
+     },
      "pm_id": {
       "format": "uuid",
       "title": "Pm Id",
@@ -17700,6 +17969,29 @@
        }
       ],
       "title": "Lead Team Id"
+     },
+     "leader_signed_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signed At"
+     },
+     "leader_signer_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Leader Signer Name"
      },
      "pm_id": {
       "format": "uuid",
@@ -18269,7 +18561,7 @@
  },
  "info": {
   "title": "Visiontech VMS",
-  "version": "1.5.0"
+  "version": "1.7.2"
  },
  "openapi": "3.1.0",
  "paths": {
@@ -18549,8 +18841,28 @@
     ]
    },
    "post": {
-    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri.",
+    "description": "Karyawan mengajukan pinjam alat atau kendaraan untuk dirinya sendiri. Mendukung Idempotency-Key.",
     "operationId": "request_loan_api_v1_assets_loan_requests_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -18848,8 +19160,28 @@
     ]
    },
    "post": {
-    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).",
+    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).\nMendukung Idempotency-Key (opsional).",
     "operationId": "lend_asset_api_v1_assets_loans_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -19959,6 +20291,25 @@
     "operationId": "list_attendance_api_v1_attendance_get",
     "parameters": [
      {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
+     {
       "in": "query",
       "name": "employee_id",
       "required": false,
@@ -20810,6 +21161,25 @@
     "description": "Mendapatkan daftar kejadian audit organisasi pengguna.",
     "operationId": "get_audit_events_api_v1_audit_events_get",
     "parameters": [
+     {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
      {
       "in": "query",
       "name": "page",
@@ -22768,6 +23138,114 @@
     ]
    }
   },
+  "/api/v1/employees/{emp_id}/account/device-slots/reset": {
+   "post": {
+    "description": "Kosongkan slot perangkat akun (batas perangkat per akun) dengan mencabut semua sesinya; tercatat di audit.",
+    "operationId": "reset_device_slots_api_v1_employees__emp_id__account_device_slots_reset_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reset Device Slots",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/login": {
+   "post": {
+    "description": "Ganti email login akun (unik); sesi lama dicabut; tercatat di audit.",
+    "operationId": "change_login_api_v1_employees__emp_id__account_login_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AccountLoginUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Change Login",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
   "/api/v1/employees/{emp_id}/account/reset-password": {
    "post": {
     "description": "Mereset password akun karyawan ke password sementara baru.",
@@ -22871,6 +23349,216 @@
      }
     ],
     "summary": "Set Field Role",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions": {
+   "get": {
+    "description": "Perangkat yang sedang masuk dengan akun karyawan ini (HR/admin).",
+    "operationId": "list_sessions_api_v1_employees__emp_id__account_sessions_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AuthSessionResponseSchema"
+         },
+         "title": "Response List Sessions Api V1 Employees  Emp Id  Account Sessions Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Sessions",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/revoke-all": {
+   "post": {
+    "description": "Paksa keluar semua perangkat akun karyawan; tercatat di audit.",
+    "operationId": "revoke_all_sessions_api_v1_employees__emp_id__account_sessions_revoke_all_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke All Sessions",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/sessions/{session_id}/revoke": {
+   "post": {
+    "description": "Cabut satu perangkat akun karyawan; sesi milik akun lain → 404.",
+    "operationId": "revoke_session_api_v1_employees__emp_id__account_sessions__session_id__revoke_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "session_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Session Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountSessionsRevoked"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke Session",
+    "tags": [
+     "Employee Account"
+    ]
+   }
+  },
+  "/api/v1/employees/{emp_id}/account/unlock": {
+   "post": {
+    "description": "Buka kunci akun yang terkunci karena gagal masuk berulang; tercatat di audit.",
+    "operationId": "unlock_api_v1_employees__emp_id__account_unlock_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "emp_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Emp Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AccountOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Unlock",
     "tags": [
      "Employee Account"
     ]
@@ -24302,9 +24990,36 @@
     ]
    }
   },
+  "/api/v1/face/enrollment/me": {
+   "delete": {
+    "description": "Hapus pendaftaran wajah sendiri (mis. ingin mendaftar ulang); tercatat di log aktivitas.",
+    "operationId": "reset_own_face_enrollment_api_v1_face_enrollment_me_delete",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceResetResponse"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Reset Own Face Enrollment",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
   "/api/v1/face/enrollments/{employee_id}": {
    "delete": {
-    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin).",
+    "description": "Hapus pendaftaran wajah karyawan agar ia bisa mendaftar ulang (HR/admin); tercatat di audit.",
     "operationId": "reset_face_enrollment_api_v1_face_enrollments__employee_id__delete",
     "parameters": [
      {
@@ -24346,6 +25061,55 @@
      }
     ],
     "summary": "Reset Face Enrollment",
+    "tags": [
+     "Face"
+    ]
+   }
+  },
+  "/api/v1/face/enrollments/{employee_id}/status": {
+   "get": {
+    "description": "Apakah wajah karyawan sudah terdaftar (HR/admin).",
+    "operationId": "get_employee_face_status_api_v1_face_enrollments__employee_id__status_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "employee_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Employee Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/FaceStatus"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Get Employee Face Status",
     "tags": [
      "Face"
     ]
@@ -25811,8 +26575,28 @@
     ]
    },
    "post": {
-    "description": "Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR).",
+    "description": "Mengajukan permohonan cuti atau sakit (karyawan, ketua tim, atau HR). Mendukung Idempotency-Key.",
     "operationId": "apply_leave_api_v1_leaves_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -26394,8 +27178,28 @@
     ]
    },
    "post": {
-    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.",
+    "description": "HR/GA mencatat hunian: karyawan + mess dari master, langsung disetujui.\nMendukung Idempotency-Key (opsional).",
     "operationId": "create_stay_api_v1_mess_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -26800,8 +27604,28 @@
   },
   "/api/v1/mess/requests": {
    "post": {
-    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.",
+    "description": "Karyawan mengajukan hunian di mess pilihannya (employee_id dari token); diputus PM/OM/HR.\nMendukung Idempotency-Key.",
     "operationId": "request_stay_api_v1_mess_requests_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -28046,9 +28870,28 @@
   },
   "/api/v1/overtime": {
    "get": {
-    "description": "Daftar lembur untuk satu jadwal harian.",
+    "description": "Daftar lembur untuk satu jadwal harian.\n\nMode keyset: `cursor` ada (boleh kosong) -> `size` (bawaan 20), header `X-Next-Cursor`, tanpa `X-Total-Count`;\n`q` = awalan nama karyawan, `status` disaring di SQL.",
     "operationId": "list_overtime_api_v1_overtime_get",
     "parameters": [
+     {
+      "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+      "in": "query",
+      "name": "cursor",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 300,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kursor keyset (opak). Kosong = halaman pertama mode keyset; tidak ada = mode page/size lama.",
+       "title": "Cursor"
+      }
+     },
      {
       "description": "Filter status lembur",
       "in": "query",
@@ -28104,6 +28947,18 @@
        ],
        "description": "Alias daily_plan_id",
        "title": "Work Plan Id"
+      }
+     },
+     {
+      "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)",
+      "in": "query",
+      "name": "mine",
+      "required": false,
+      "schema": {
+       "default": false,
+       "description": "true = hanya lembur milik pemanggil (hanya mempersempit cakupan)",
+       "title": "Mine",
+       "type": "boolean"
       }
      },
      {
@@ -28203,8 +29058,28 @@
     ]
    },
    "post": {
-    "description": "Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim).",
+    "description": "Mengajukan lembur atas jadwal harian yang sedang berjalan (ketua/anggota tim). Mendukung Idempotency-Key.",
     "operationId": "report_overtime_api_v1_overtime_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -29588,6 +30463,245 @@
     "summary": "Remove Member",
     "tags": [
      "Teams"
+    ]
+   }
+  },
+  "/api/v1/users/{user_id}/role-assignments": {
+   "get": {
+    "description": "Penugasan peran aktif milik satu akun.",
+    "operationId": "list_role_assignments_api_v1_users__user_id__role_assignments_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/RoleAssignmentOut"
+         },
+         "title": "Response List Role Assignments Api V1 Users  User Id  Role Assignments Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Role Assignments",
+    "tags": [
+     "Role Assignments"
+    ]
+   },
+   "post": {
+    "description": "Tambah peran tambahan (maks 2). Mendukung Idempotency-Key (opsional).",
+    "operationId": "add_role_assignment_api_v1_users__user_id__role_assignments_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RoleAssignmentCreate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/RoleAssignmentOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Add Role Assignment",
+    "tags": [
+     "Role Assignments"
+    ]
+   }
+  },
+  "/api/v1/users/{user_id}/role-assignments/{assignment_id}": {
+   "delete": {
+    "description": "Cabut penugasan (soft delete). Berlaku seketika pada token yang sama.",
+    "operationId": "revoke_role_assignment_api_v1_users__user_id__role_assignments__assignment_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "user_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "User Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "assignment_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Assignment Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Revoke Role Assignment",
+    "tags": [
+     "Role Assignments"
     ]
    }
   },
@@ -31703,8 +32817,28 @@
   },
   "/api/v1/work-plans/daily/bulk": {
    "post": {
-    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.",
+    "description": "Alokasi massal: banyak tim × banyak tanggal. Sel yang bentrok dilaporkan, tidak membatalkan sel lain.\nMendukung Idempotency-Key.",
     "operationId": "bulk_create_daily_api_v1_work_plans_daily_bulk_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -31750,8 +32884,28 @@
   },
   "/api/v1/work-plans/daily/bulk-standby": {
    "post": {
-    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).",
+    "description": "Siaga untuk hari kosong: hanya sel tim tanpa jadwal yang dibuat sebagai siaga (disetujui).\nMendukung Idempotency-Key.",
     "operationId": "bulk_standby_daily_api_v1_work_plans_daily_bulk_standby_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {

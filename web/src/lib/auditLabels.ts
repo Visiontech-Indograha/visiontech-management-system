@@ -36,4 +36,13 @@ export const ACTION_LABEL: Record<string, string> = {
   SIGN_REPORT: "Tanda tangan laporan",
   ROLE_ASSIGNMENT_ADD: "Peran tambahan diberikan",
   ROLE_ASSIGNMENT_REVOKE: "Peran tambahan dicabut",
+  ACCOUNT_CREATE: "Akun dibuat",
+  ACCOUNT_UNLOCK: "Akun dibuka kuncinya",
+  ADMIN_UPDATE: "Absensi diubah admin",
+  FACE_RESET: "Data wajah direset",
+  FACE_SELF_RESET: "Data wajah direset sendiri",
+  ROLE_CHANGE: "Peran diubah",
+  BACKDATE_CREATED: "Absen susulan diajukan",
+  BACKDATE_APPROVED: "Absen susulan disetujui",
+  LOCATION_CHANGED: "Lokasi diubah",
 };

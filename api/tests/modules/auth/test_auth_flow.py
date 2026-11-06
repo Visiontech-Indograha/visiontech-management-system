@@ -203,6 +203,21 @@ def test_change_password_rejects_wrong_current_password(client, seeded_user):
     assert response.json()["error"]["details"]["fields"]["current_password"]
 
 
+def test_change_password_rejects_same_as_old_password(client, seeded_user):
+    access = _login(client, seeded_user).json()["access_token"]
+
+    response = client.post(
+        "/auth/change-password",
+        json={"current_password": seeded_user.password, "new_password": seeded_user.password},
+        headers={"Authorization": f"Bearer {access}"},
+    )
+
+    assert response.status_code == 422
+    fields = response.json()["error"]["details"]["fields"]
+    assert fields["new_password"] == "Sandi baru tidak boleh sama dengan sandi lama."
+    assert _login(client, seeded_user).status_code == 200
+
+
 def test_change_password_rotates_all_sessions(client, seeded_user):
     login = _login(client, seeded_user)
     old_refresh = login.cookies["refresh_token"]

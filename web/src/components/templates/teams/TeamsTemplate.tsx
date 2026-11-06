@@ -13,6 +13,7 @@ import { PageTemplate } from "../PageTemplate";
 export function TeamsTemplate({
   controls,
   teams,
+  canManage,
   adding,
   selected,
   onAdd,
@@ -23,6 +24,7 @@ export function TeamsTemplate({
 }: {
   controls: ListControls;
   teams: UseQueryResult<Paged<Team>>;
+  canManage: boolean;
   adding: boolean;
   selected: Team | null;
   onAdd: () => void;
@@ -40,10 +42,10 @@ export function TeamsTemplate({
   };
 
   return (
-    <PageTemplate title="Tim Lapangan" action={<TeamAddButton onAdd={onAdd} />}>
-      <TeamList controls={controls} teams={teams} onAdd={onAdd} onRemove={(team) => setTeamToDelete(team)} onSelectTeam={onSelect} />
-      {adding && <TeamFormDialog onClose={onCloseAdd} />}
-      {selected && <TeamDetailDialog team={selected} onClose={() => onSelect(null)} />}
+    <PageTemplate title="Tim Lapangan" action={canManage ? <TeamAddButton onAdd={onAdd} /> : undefined}>
+      <TeamList canManage={canManage} controls={controls} teams={teams} onAdd={onAdd} onRemove={(team) => setTeamToDelete(team)} onSelectTeam={onSelect} />
+      {canManage && adding && <TeamFormDialog onClose={onCloseAdd} />}
+      {selected && <TeamDetailDialog canManage={canManage} team={selected} onClose={() => onSelect(null)} />}
       <ConfirmDialog
         open={teamToDelete !== null}
         title="Hapus Tim Lapangan?"

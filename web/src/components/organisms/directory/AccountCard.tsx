@@ -136,10 +136,9 @@ export function AccountCard({ employee }: { employee: Employee }) {
               )}
             </TextBlock>
             <TextBlock className="text-mist">
-              Terakhir masuk:{" "}
               {a.last_login_at
-                ? formatDateTime(a.last_login_at)
-                : "belum pernah"}
+                ? `Terakhir masuk: ${formatDateTime(a.last_login_at)}`
+                : "Belum pernah masuk"}
             </TextBlock>
             {terkunci && a.locked_until ? (
               <TextBlock className="text-danger" data-testid="account-locked">

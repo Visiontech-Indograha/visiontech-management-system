@@ -46,8 +46,12 @@ export function roleAddBlocker(opts: {
 }
 
 /** Baris "Peran · berlaku untuk kantor X" dari role_scopes; kosong bila field tidak ada (tampilan lama). */
-export function roleScopeLines(me: Pick<Me, "role_scopes"> | null | undefined): string[] {
+export function roleScopeLines(me: (Pick<Me, "role_scopes"> & { role?: string }) | null | undefined): string[] {
   const scopes = me?.role_scopes;
   if (!scopes || scopes.length === 0) return [];
-  return scopes.map((s) => (s.office_name ? `${roleName(s.role)} · berlaku untuk kantor ${s.office_name}` : roleName(s.role)));
+  // Peran utama sudah tampil sebagai label; jangan ulangi tanpa keterangan kantor.
+  const utama = me?.role ? roleName(me.role) : null;
+  return scopes
+    .filter((s) => s.office_name || roleName(s.role) !== utama)
+    .map((s) => (s.office_name ? `${roleName(s.role)} · berlaku untuk kantor ${s.office_name}` : roleName(s.role)));
 }

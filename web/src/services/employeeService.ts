@@ -139,7 +139,13 @@ export function useDeleteAccount(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => (await api.delete<{ status: string }>(`/employees/${employeeId}/account`)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["employees"] }),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: ["employees"] }),
+        qc.invalidateQueries({ queryKey: ["employee", employeeId] }),
+        qc.invalidateQueries({ queryKey: ["employee-account", employeeId] }),
+        qc.invalidateQueries({ queryKey: ["employee-account-sessions", employeeId] }),
+      ]),
   });
 }
 

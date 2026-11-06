@@ -23,9 +23,11 @@ export function DialogCancelButton({ onCancel, disabled, children = "Batal" }: {
  *
  *   <DialogActions onCancel={onClose} busy={isSubmitting} formId="site-form" />
  */
-export function DialogActions({ onCancel, busy, formId, submitLabel = "Simpan", busyLabel = "Menyimpan...", cancelLabel = "Batal" }: {
+export function DialogActions({ onCancel, busy, submitDisabled, formId, submitLabel = "Simpan", busyLabel = "Menyimpan...", cancelLabel = "Batal" }: {
   onCancel: () => void;
   busy: boolean;
+  /** Simpan nonaktif tanpa mengubah teks dan tanpa mengunci Batal (mis. pilihan diblokir). */
+  submitDisabled?: boolean;
   formId: string;
   submitLabel?: string;
   busyLabel?: string;
@@ -36,7 +38,7 @@ export function DialogActions({ onCancel, busy, formId, submitLabel = "Simpan", 
       <DialogCancelButton onCancel={onCancel} disabled={busy}>
         {cancelLabel}
       </DialogCancelButton>
-      <Button type="submit" form={formId} disabled={busy}>
+      <Button type="submit" form={formId} disabled={busy || submitDisabled}>
         {busy ? busyLabel : submitLabel}
       </Button>
     </>

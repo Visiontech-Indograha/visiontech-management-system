@@ -145,6 +145,7 @@ class _VmsSearchBarState extends State<VmsSearchBar> {
               const SizedBox(height: 8),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(right: 16),
                 child: Row(
                   children: [
                     for (final c in widget.chips)

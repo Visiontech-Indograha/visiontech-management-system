@@ -93,4 +93,9 @@ for obj in client.list_objects(bucket):
 print("minio:", bucket + "/" + os.environ["OBJ"], len(data), "bita")
 ' < "$FILE" || { echo "Unggah MinIO gagal — lihat petunjuk di atas" >&2; exit 4; }
 
+# Opsional (bawaan mati = perilaku lama): cadangkan juga berkas MinIO. Gagal -> peringatan, DB tetap tercadang.
+if [ "${VMS_BACKUP_MINIO:-0}" = 1 ]; then
+  "$(dirname "$0")/backup-minio.sh" "$LABEL" >&2 || echo "PERINGATAN: cadangan berkas MinIO gagal" >&2
+fi
+
 echo "$FILE"

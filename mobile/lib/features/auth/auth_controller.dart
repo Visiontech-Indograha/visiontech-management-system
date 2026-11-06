@@ -13,6 +13,8 @@ import 'auth_state.dart';
 
 /// Pesan tunggal saat sesi ditutup oleh kebijakan 1x24 jam -- dipakai di
 /// beberapa tempat, jadi disatukan supaya tidak berbeda-beda bunyinya.
+const kSessionExpiredFingerprintMessage =
+    'Demi keamanan, sesi diperbarui setiap hari. Masuk lagi dengan sidik jari atau sandi.';
 const kSessionExpiredMessage =
     'Demi keamanan, sesi diperbarui setiap hari. Silakan masuk lagi dengan sandi.';
 
@@ -36,10 +38,8 @@ class AuthController extends Notifier<AuthState> {
     // ApiClient dibuat lewat provider terpisah (lihat core/providers.dart) --
     // callback session-expired diisi di sini, bukan lewat constructor
     // ApiClient, supaya tidak ada circular dependency antar provider.
-    ref.read(apiClientProvider).onSessionExpired = () {
-      state = const AuthUnauthenticated(
-        error: 'Sesi Anda berakhir, silakan login ulang.',
-      );
+    ref.read(apiClientProvider).onSessionExpired = () async {
+      state = AuthUnauthenticated(error: await _expiredMessage());
     };
     ref.onDispose(() => _exchangeTimer?.cancel());
     ref.read(apiClientProvider).sessionPending = () => _sessionPending;
@@ -119,9 +119,7 @@ class AuthController extends Notifier<AuthState> {
       if (status == 401) {
         // Interceptor sudah mencoba refresh; kalau sampai di sini artinya
         // benar-benar ditolak & sesi sudah dibersihkan di sana.
-        state = const AuthUnauthenticated(
-          error: 'Sesi Anda berakhir, silakan login ulang.',
-        );
+        state = AuthUnauthenticated(error: await _expiredMessage());
         return;
       }
       if (status == 403) {
@@ -174,9 +172,15 @@ class AuthController extends Notifier<AuthState> {
     if (!SessionPolicy.isExpired(authTime)) return false;
 
     await tokenStorage.clearSession();
-    state = const AuthUnauthenticated(error: kSessionExpiredMessage);
+    state = AuthUnauthenticated(error: await _expiredMessage());
     return true;
   }
+
+  /// Pesan sesi habis; menawarkan sidik jari bila token perangkat masih sah.
+  Future<String> _expiredMessage() async =>
+      await hasUsableDeviceCredential()
+      ? kSessionExpiredFingerprintMessage
+      : kSessionExpiredMessage;
 
   /// Sesi yang di-restore (bukan login password baru) dikunci dulu di balik
   /// sidik jari LOKAL kalau user pernah mengaktifkannya (plan Keputusan 7) --

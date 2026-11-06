@@ -63,6 +63,23 @@ class NotificationRepository(BaseRepository):
         )
         return [str(r.id) for r in rows]
 
+    async def hr_user_ids_for_office(self, office_id: UUID | str | None) -> list[str]:
+        """Akun aktif ADMIN_HR_GA yang jangkauannya meliputi `office_id`: kantor sendiri atau penugasan HR aktif
+        (ADR 0002). Aset tanpa kantor tidak dijangkau HR terbatas mana pun."""
+        if not office_id:
+            return []
+        rows = await self.fetchall(
+            "SELECT DISTINCT CAST(u.user_id AS text) AS id FROM users u "
+            "LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL "
+            "WHERE u.is_active AND u.delete_at IS NULL AND ("
+            " (CAST(u.system_role AS text) = 'ADMIN_HR_GA' AND e.office_id = CAST(:office AS uuid))"
+            " OR EXISTS (SELECT 1 FROM user_role_assignment a JOIN office o ON o.office_id = a.office_id "
+            "   AND o.delete_at IS NULL WHERE a.user_id = u.user_id AND a.delete_at IS NULL "
+            "   AND CAST(a.role AS text) = 'ADMIN_HR_GA' AND a.office_id = CAST(:office AS uuid)))",
+            {"office": str(office_id)},
+        )
+        return [str(r.id) for r in rows]
+
     async def division_manager_user_ids(self, division_id: UUID | str, roles: Iterable[str]) -> list[str]:
         """Akun PM/OM yang tercatat di divisi itu (division.pm_id / om_id), bukan divisi 'rumah' karyawannya:
         PM yang memimpin beberapa divisi tetap menerima notifikasi tiap divisinya."""

@@ -160,7 +160,7 @@ class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
         child: ListView(
           padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Layanan', title: 'Riwayat Lembur', horizontal: 4),
+            const HeroHeader(eyebrow: 'Layanan', title: 'Riwayat lembur', horizontal: 4),
             ..._isi(),
           ],
         ),

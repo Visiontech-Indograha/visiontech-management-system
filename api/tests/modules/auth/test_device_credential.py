@@ -195,3 +195,16 @@ def test_dua_pemakaian_serentak_hanya_satu_berhasil(client, make_user):
     hasil = dua_bersamaan(lambda i: _bio(client, t))
     assert sorted(r.status_code for r in hasil) == [200, 401], [r.text for r in hasil]
     assert _aktif(user.user_id) <= 1
+
+
+def test_ubah_system_role_lewat_akun_mencabut(client, world):
+    uid, emp = world.users["member"], world.employees["member"]
+    sync_query(
+        "INSERT INTO device_credential (user_id, device_name, token_hash, expires_at) "
+        "VALUES (%s, 'HP uji', %s, now() + interval '30 days')",
+        (uid, hashlib.sha256(uid.encode()).hexdigest()),
+    )
+    r = client.post(f"/employees/{emp}/account/role", headers=world.headers(client, "hr"),
+                    json={"system_role": "TEAM_LEADER"})
+    assert r.status_code == 200, r.text
+    assert _rows(uid)[0][:2] == (True, "ROLE_CHANGED")

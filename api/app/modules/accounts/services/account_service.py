@@ -146,6 +146,7 @@ class AccountService:
                 status=409,
             )
         await self.users.set_system_role(account.id, system_role)
+        await self.sessions.credentials.revoke_user(account.id, "ROLE_CHANGED")
         await write_delete_audit(
             self.users.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
             entity_type="users", entity_id=account.id, action="ROLE_CHANGE",

@@ -65,7 +65,7 @@ class _BiometricLockScreenState extends ConsumerState<BiometricLockScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Verifikasi Sidik Jari',
+                  'Verifikasi sidik jari',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 8),
@@ -94,7 +94,7 @@ class _BiometricLockScreenState extends ConsumerState<BiometricLockScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.fingerprint),
-                  label: const Text('Coba Lagi'),
+                  label: const Text('Coba lagi'),
                 ),
                 const SizedBox(height: 12),
                 TextButton(

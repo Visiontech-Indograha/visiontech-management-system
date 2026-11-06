@@ -115,6 +115,19 @@ def test_xff_rusak_kembali_ke_peer(trusted: None) -> None:
     assert client_ip(_request("192.168.1.5", xff="bukan-ip")) == "192.168.1.5"
 
 
+def test_xff_rantai_docker_gateway_dan_klien(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Peer = kontainer web (172.20.0.5); XFF dari Caddy: klien tailnet, lalu gateway Docker.
+    monkeypatch.setattr(settings, "TRUSTED_PROXY_IPS", "172.20.0.0/16")
+    req = _request("172.20.0.5", xff="100.101.102.103, 172.20.0.1")
+    assert client_ip(req) == "100.101.102.103"
+
+
+def test_xff_klien_palsu_di_kiri_tidak_dipakai(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "TRUSTED_PROXY_IPS", "172.20.0.0/16")
+    req = _request("172.20.0.5", xff="1.2.3.4, 203.0.113.7, 172.20.0.1")
+    assert client_ip(req) == "203.0.113.7"
+
+
 # ---------- dependency + HTTP ----------
 
 

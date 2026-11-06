@@ -1,5 +1,15 @@
 # Caddy: TLS otomatis (bila SITE_ADDRESS berupa domain), static SPA, proxy /api ke api:8000.
 # Lokal/uji: SITE_ADDRESS=:80 (tanpa TLS).
+# IP klien asli: Caddy hanya mempercayai X-Forwarded-For dari lapisan di depannya (Tailscale Serve/Funnel
+# tiba lewat gateway Docker; Cloudflare Tunnel lewat jaringan privat). Tanpa ini Caddy menimpa
+# X-Forwarded-For dengan alamat peer (gateway Docker) dan API hanya melihat IP internal.
+# Wajib selaras dengan TRUSTED_PROXY_IPS di API (docs/CATATAN-IP-KLIEN.md).
+{
+	servers {
+		trusted_proxies static private_ranges 100.64.0.0/10
+	}
+}
+
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
 

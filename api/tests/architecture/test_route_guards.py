@@ -31,6 +31,7 @@ SELF_SERVICE = {
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
     ("POST", "/auth/sessions/revoke-others"): "mencabut perangkat lain milik sendiri (P1-7, diuji)",
     ("POST", "/auth/sessions/{session_id}/revoke"): "hanya sesi milik sendiri; milik orang lain → 404 (diuji)",
+    ("POST", "/auth/device-credential"): "token perangkat untuk akun sendiri (user_id dari token)",
     ("POST", "/auth/change-password"): "kata sandi sendiri",
     ("POST", "/files/upload"): "setiap karyawan mengunggah bukti/dokumen sendiri",
     ("GET", "/notifications"): "notifikasi milik sendiri (alur SK v2)",

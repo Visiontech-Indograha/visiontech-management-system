@@ -23,6 +23,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.repository import BaseRepository
 from app.core.time import utcnow
+from app.shared.device_credential_repository import DeviceCredentialRepository
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ class AuthSessionRepository(BaseRepository):
     """
     CRUD untuk mengelola sesi otentikasi pengguna pada tabel user_sessions.
     """
+
+    @property
+    def credentials(self) -> DeviceCredentialRepository:
+        """Kredensial perangkat (sidik jari) ikut dicabut bersama sesi."""
+        return DeviceCredentialRepository(self.db)
 
     @staticmethod
     def login_key(login: str) -> UUID:
@@ -282,6 +288,7 @@ class AuthSessionRepository(BaseRepository):
 
     async def revoke_by_refresh_token(self, raw_refresh_token: str, reason: str) -> None:
         token_hash = hashlib.sha256(raw_refresh_token.encode("utf-8")).hexdigest()
+        await self.credentials.revoke_for_refresh_hash(token_hash, "LOGOUT")
         await self.execute(
             "UPDATE user_sessions SET is_revoked = TRUE, update_at = now() WHERE refresh_token_hash = :hash",
             {"hash": token_hash},
@@ -307,6 +314,7 @@ class AuthSessionRepository(BaseRepository):
         )
 
     async def revoke_session(self, user_id: UUID | str, session_id: UUID | str, reason: str) -> bool:
+        await self.credentials.revoke_for_session(user_id, session_id, "DEVICE_REMOVED")
         revoked = await self.scalar(
             """
             WITH target AS (
@@ -324,6 +332,7 @@ class AuthSessionRepository(BaseRepository):
         return bool(revoked)
 
     async def revoke_other_sessions(self, user_id: UUID | str, keep_session_id: UUID | str, reason: str) -> int:
+        await self.credentials.revoke_other_devices(user_id, keep_session_id, "DEVICES_REMOVED")
         rows = await self.fetchall(
             """
             UPDATE user_sessions
@@ -337,6 +346,8 @@ class AuthSessionRepository(BaseRepository):
         return len(rows)
 
     async def revoke_all_for_user(self, user_id: UUID | str, reason: str) -> int:
+        """Semua sesi akun dicabut; kredensial perangkat (sidik jari) ikut dicabut."""
+        await self.credentials.revoke_user(user_id, reason[:30])
         rows = await self.fetchall(
             """
             UPDATE user_sessions

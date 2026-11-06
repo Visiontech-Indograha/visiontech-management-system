@@ -145,3 +145,10 @@ Workflow `.github/workflows/images.yml` membangun `api` dan `web` di runner GitH
 `ghcr.io/visiontech-indograha/vms-{api,web}:<sha>` (+ `latest`). Server belum memakainya. Untuk beralih (tindakan pemilik server):
 buat token `read:packages`, `docker login ghcr.io` di server, ubah `compose.yml` server ke `image: ghcr.io/...:${TAG}` dan ganti
 `docker compose build` di `autodeploy.sh` dengan `docker compose pull`. Uji dulu di beta.
+
+## Cadangan berkas MinIO dan uji pulih
+
+- `deploy/backup-minio.sh [label]`: `mc mirror` satu arah semua bucket (kecuali `vms-backups`) ke `$VMS_BACKUP_DIR/<NAME>-berkas/` plus manifest hitungan objek. Tidak menghapus sumber, idempoten. Kontainer MinIO: `VMS_MINIO_CT` (bawaan `${VMS_CONTAINER_PREFIX:-vms}_minio`). Pin citra mc lewat `VMS_MC_IMAGE`.
+- Integrasi opsional: `VMS_BACKUP_MINIO=1 ./backup.sh` (bawaan mati). Cron terpisah juga boleh.
+- `deploy/uji-pulih.sh`: pulihkan dump terbaru ke Postgres sementara (tanpa jaringan) dan cocokkan hitungan berkas dengan manifest. Hanya membaca cadangan.
+- Rencana pengganti MinIO: `docs/RENCANA-KELUAR-MINIO.md`.

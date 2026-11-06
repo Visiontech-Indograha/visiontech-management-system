@@ -151,6 +151,11 @@ Urutan: db -> api (flag mati) -> qa paritas -> web -> nyalakan flag. Rilis MINOR
 
 Akibat pada skema/tes: kombinasi terlarang (SA+apa pun, Finance+HR) ditolak 422 oleh service dan masuk matriks tes; tabel kasus "HR + Finance" di bagian 5 TIDAK berlaku (dilarang).
 
+## 12b. Keputusan lanjutan (2026-11-06, temuan QA di beta)
+
+- (a) Login web mengikuti peran efektif: diizinkan bila peran utama atau peran tambahan aktif (hanya saat `ROLE_ASSIGNMENT_ENABLED`) memuat minimal satu peran kantor. Akun yang efektifnya hanya lapangan (EMPLOYEE/TEAM_LEADER) tetap ditolak `NOT_OFFICE_ACCOUNT`; flag mati = perilaku lama. Logika union dipakai ulang dari `find_identity`. Login mobile dan bentuk token/refresh tidak berubah.
+- (b) Direktori karyawan (`/employees`) SENGAJA terbuka lintas kantor (profil dasar tanpa NIK/rekening); kode direktori tidak diubah.
+
 ## 12a. Verifikasi klaim JWT (grep, 2026-11-05)
 
 `AuthService._access_token` (`api/app/modules/auth/services/auth_service.py:353-361`) hanya mengisi `sub`, `org`, `jti` (+ `auth_time`); `create_jwt_token` (`api/app/core/security.py:63`) menambah `iat`, `exp`, `aud`, header `kid`. Tidak ada klaim peran; komentar kode: peran dan status akun dibaca dari DB tiap permintaan. Jadi token lama otomatis memakai penugasan baru tanpa paksa login ulang, dan tidak perlu menambah klaim peran ke token. Klaim baru tidak diperlukan; bagian 6 yang menyebut klaim opsional dibatalkan.

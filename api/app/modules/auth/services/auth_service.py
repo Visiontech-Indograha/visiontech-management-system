@@ -12,6 +12,7 @@ from datetime import timedelta
 from typing import Any
 
 from app.core.alerts import send_security_alert
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
@@ -177,7 +178,7 @@ class AuthService:
                 "Akun kantor tidak dapat masuk lewat aplikasi HP. Silakan masuk lewat web.",
                 status=403,
             )
-        if platform != "mobile" and role not in OFFICE_ROLES:
+        if platform != "mobile" and not await self._has_office_role(user, role):
             raise AppError(
                 "NOT_OFFICE_ACCOUNT",
                 "Akun lapangan masuk lewat aplikasi HP Visiontech, bukan web.",
@@ -211,6 +212,16 @@ class AuthService:
             },
         )
         return tokens
+
+    async def _has_office_role(self, user: Any, primary_role: str) -> bool:
+        """Peran efektif (utama + tambahan aktif, ADR 0002) memuat minimal satu peran kantor. Flag mati = hanya
+        peran utama (perilaku lama). Memakai find_identity agar logika union tidak digandakan."""
+        if primary_role in OFFICE_ROLES:
+            return True
+        if not settings.ROLE_ASSIGNMENT_ENABLED:
+            return False
+        identity = await self.users.find_identity(user.id)
+        return identity is not None and any(r in OFFICE_ROLES for r in (identity.roles or []))
 
     async def _claim_device_slot(self, user: Any, client: ClientInfo) -> None:
         """Satu perangkat = satu rantai sesi (token_family_id) dengan device_name yang sama. Masuk ulang dari

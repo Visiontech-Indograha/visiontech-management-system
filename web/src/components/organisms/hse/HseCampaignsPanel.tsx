@@ -138,7 +138,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
           }`}
         >
           <ShieldCheck size={18} />
-          <TextBlock as="span">Kampanye & Pengumuman K3 ({campaigns.length})</TextBlock>
+          <TextBlock as="span">Kampanye dan Pengumuman K3 ({campaigns.length})</TextBlock>
         </PlainAction>
         <PlainAction
           type="button"
@@ -252,7 +252,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                 <TableBlockHead className="bg-surface-elevated border-b border-line text-xs uppercase tracking-wider text-mist">
                   <TableBlockRow>
                     <TableBlockHeaderCell className="p-3.5">Kendaraan</TableBlockHeaderCell>
-                    <TableBlockHeaderCell className="p-3.5">Tipe & Tanggal</TableBlockHeaderCell>
+                    <TableBlockHeaderCell className="p-3.5">Tipe dan Tanggal</TableBlockHeaderCell>
                     <TableBlockHeaderCell className="p-3.5">Pemeriksa</TableBlockHeaderCell>
                     <TableBlockHeaderCell className="p-3.5">Kondisi</TableBlockHeaderCell>
                     <TableBlockHeaderCell className="p-3.5">Verifikasi HSE</TableBlockHeaderCell>
@@ -381,7 +381,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Contoh: Kewajiban Penggunaan Helm & Body Harness di Tiang"
+                placeholder="Contoh: Kewajiban Penggunaan Helm dan Body Harness di Tiang"
                 className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
               />
             </div>
@@ -396,7 +396,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                   onChange={(e) => setTargetAudience(e.target.value as "ALL" | "FIELD" | "OFFICE")}
                   className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
                 >
-                  <ControlOption value="ALL">Semua Karyawan (Kantor & Lapangan)</ControlOption>
+                  <ControlOption value="ALL">Semua Karyawan (Kantor dan Lapangan)</ControlOption>
                   <ControlOption value="FIELD">Khusus Teknisi Lapangan</ControlOption>
                   <ControlOption value="OFFICE">Khusus Karyawan Kantor</ControlOption>
                 </ControlSelect>

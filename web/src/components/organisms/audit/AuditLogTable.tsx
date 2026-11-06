@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { formatDateTime } from "@/lib/format";
-import { ACTION_LABEL, AUDIT_ENTITIES } from "@/lib/auditLabels";
+import { ACTION_LABEL, AUDIT_ENTITIES, actorLabelAwam } from "@/lib/auditLabels";
 import type { AuditEventList } from "@/services/auditService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -57,7 +57,7 @@ export function AuditLogTable({ logs }: { logs: UseQueryResult<AuditEventList> }
                   <TableBlockCell className="px-4 py-2 text-mist">
                     {AUDIT_ENTITIES[l.entity_type] ?? l.entity_type} {l.entity_id?.slice(0, 8)}
                   </TableBlockCell>
-                  <TableBlockCell className="px-4 py-2 text-mist">{l.actor_label}</TableBlockCell>
+                  <TableBlockCell className="px-4 py-2 text-mist">{actorLabelAwam(l.actor_label)}</TableBlockCell>
                   <TableBlockCell className="px-4 py-2 text-right">
                     <ActionButton
                       variant="ghost"

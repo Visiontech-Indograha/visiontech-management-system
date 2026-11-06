@@ -35,7 +35,7 @@ export function SidebarProfile({ email, name, photoFileId, roleLabel, scopeLines
         className="mt-2 flex h-10 w-full items-center gap-3 rounded-control px-3 text-sm text-mist transition-colors hover:bg-hover hover:text-ink"
       >
         <ShieldCheck size={19} strokeWidth={1.75} aria-hidden />
-        <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>Akun & keamanan</TextBlock>
+        <TextBlock as="span" className={clsx(collapsed && "md:sr-only")}>Akun dan keamanan</TextBlock>
       </MenuLink>
       <PlainAction
         type="button"

@@ -108,7 +108,7 @@ export function PmSignatureDialog({
           >
             <ShieldCheck className="mr-1.5 h-4 w-4" />
             <TextBlock as="span">
-              {signMutation.isPending ? "Mengesahkan..." : "Sahkan & Kunci Dokumen"}
+              {signMutation.isPending ? "Mengesahkan..." : "Sahkan dan Kunci Dokumen"}
             </TextBlock>
           </ActionButton>
         </div>

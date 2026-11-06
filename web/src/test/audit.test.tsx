@@ -37,3 +37,15 @@ describe("Audit log", () => {
     expect(await screen.findByRole("button", { name: "Coba lagi" })).toBeInTheDocument();
   });
 });
+
+describe("label awam audit", () => {
+  it("label sidik jari dan nama peran pelaku", async () => {
+    const { ACTION_LABEL, actorLabelAwam } = await import("@/lib/auditLabels");
+    expect(ACTION_LABEL.DEVICE_CRED_ISSUED).toBe("Kunci perangkat dibuat untuk login sidik jari");
+    expect(ACTION_LABEL.DEVICE_CRED_USED).toBe("Masuk dengan sidik jari");
+    expect(ACTION_LABEL.DEVICE_CRED_REVOKED).toBe("Kunci perangkat sidik jari dicabut");
+    expect(ACTION_LABEL.DEVICE_CRED_REUSE).toBe("Kunci perangkat dipakai ulang, dicabut demi keamanan");
+    expect(actorLabelAwam("a@x.id (SUPER_ADMIN)")).toBe("a@x.id (Super Admin)");
+    expect(actorLabelAwam("a@x.id (TEAM_LEADER)")).toBe("a@x.id (Ketua tim)");
+  });
+});

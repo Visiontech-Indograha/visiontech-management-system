@@ -160,7 +160,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
           label="Peran"
           hint={
             kind === "SURVEY_POINT"
-              ? "Dipilih ketua tim saat menambah titik survei (mis. Pintu Akses, Barrier Gate). Foto & material di bawah berlaku untuk titik jenis ini."
+              ? "Dipilih ketua tim saat menambah titik survei (mis. Pintu Akses, Barrier Gate). Foto dan material di bawah berlaku untuk titik jenis ini."
               : kind === "SURVEY_TASK"
                 ? "Paket survei yang dimasukkan ke jadwal; titik-titiknya memakai jenis titik survei divisi ini."
                 : kind === "MAINTENANCE"

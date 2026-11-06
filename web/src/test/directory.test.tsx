@@ -10,7 +10,7 @@ const employee = (id = "00000000-0000-4000-8000-0000000000e1") => ({
   office_id: "o1",
   office_name: "Kantor Pusat",
   division_id: "u1",
-  division_name: "CCTV & ACS",
+  division_name: "CCTV dan ACS",
   position_id: "p1",
   position_code: "TEK",
   position_name: "Teknisi",
@@ -25,7 +25,7 @@ const employee = (id = "00000000-0000-4000-8000-0000000000e1") => ({
 });
 const masters = (url: string) => {
   if (url === "/offices") return { data: [{ id: "o1", name: "Kantor Pusat" }] };
-  if (url === "/divisions") return { data: [{ id: "u1", code: "CCTV", name: "CCTV & ACS" }] };
+  if (url === "/divisions") return { data: [{ id: "u1", code: "CCTV", name: "CCTV dan ACS" }] };
   if (url === "/job-positions")
     return { data: [{ position_id: "p1", division_id: null, code: "TEK", name: "Teknisi", status: true }] };
 };
@@ -48,7 +48,7 @@ describe("halaman direktori utama", () => {
     expect(await screen.findByText("Test User")).toBeInTheDocument();
   });
 
-  it("filter cari & status kerja dikirim ke server", async () => {
+  it("filter cari dan status kerja dikirim ke server", async () => {
     const calls = mockApi((c) => (c.url === "/employees" ? { data: page([]) } : undefined));
     renderRoute("/directory", { role: "HR" });
     await screen.findByText("Tidak ada karyawan yang cocok.");
@@ -87,7 +87,7 @@ describe("halaman detail karyawan (HR)", () => {
     expect(screen.getByText("Alamat")).toBeInTheDocument();
   });
 
-  it("rekan kerja tidak melihat email & alamat, hanya catatan", async () => {
+  it("rekan kerja tidak melihat email dan alamat, hanya catatan", async () => {
     mockApi((c) => {
       if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
     });
@@ -156,7 +156,7 @@ describe("halaman detail karyawan (HR)", () => {
     });
   });
 
-  it("validasi zod: nama kosong & akhir PKWT sebelum bergabung tidak dikirim", async () => {
+  it("validasi zod: nama kosong dan akhir PKWT sebelum bergabung tidak dikirim", async () => {
     const calls = mockApi((c) => {
       const m = masters(c.url ?? "");
       if (m) return m;
@@ -324,7 +324,7 @@ describe("siklus karyawan oleh HR (M2-02, M2-03)", () => {
 });
 
 describe("akun login karyawan (M1-01)", () => {
-  it("HR membuat akun; password sementara tampil sekali", async () => {
+  it("HR membuat akun; sandi sementara tampil sekali", async () => {
     let exists = false;
     const calls = mockApi((c) => {
       if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };

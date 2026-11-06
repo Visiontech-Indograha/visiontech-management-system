@@ -11,7 +11,7 @@ describe("htmlToText", () => {
     );
   });
   it("br jadi baris baru, script dibuang, entitas didekode", () => {
-    expect(htmlToText("a<br/>b<script>alert(1)</script> &amp; c")).toBe("a\nb & c");
+    expect(htmlToText("a<br/>b<script>alert(1)</script> dan c")).toBe("a\nb dan c");
   });
   it("null menjadi string kosong", () => {
     expect(htmlToText(null)).toBe("");

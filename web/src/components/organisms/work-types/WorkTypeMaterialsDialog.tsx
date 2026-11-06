@@ -58,7 +58,7 @@ export function WorkTypeMaterialsDialog({
       material_name: "",
       default_qty: 1,
       unit: "",
-      category: "Kabel & Aksesoris",
+      category: "Kabel dan Aksesoris",
       description: "",
     },
   });
@@ -86,7 +86,7 @@ export function WorkTypeMaterialsDialog({
       material_name: "",
       default_qty: 1,
       unit: "",
-      category: "Kabel & Aksesoris",
+      category: "Kabel dan Aksesoris",
       description: "",
     });
   };
@@ -162,7 +162,7 @@ export function WorkTypeMaterialsDialog({
                   material_name: "",
                   default_qty: 1,
                   unit: "",
-                  category: "Kabel & Aksesoris",
+                  category: "Kabel dan Aksesoris",
                   description: "",
                 });
                 setIsAdding(true);

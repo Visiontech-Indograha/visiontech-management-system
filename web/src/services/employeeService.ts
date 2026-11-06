@@ -226,10 +226,10 @@ export const useAccount = (employeeId: string) =>
 export type FieldRole = "EMPLOYEE" | "TEAM_LEADER";
 export const FIELD_ROLE_LABEL: Record<FieldRole, string> = {
   EMPLOYEE: "Karyawan Lapangan",
-  TEAM_LEADER: "Team Leader",
+  TEAM_LEADER: "Ketua tim",
 };
 
-/** Buat akun / reset password / nonaktifkan / aktifkan / ubah peran lapangan. Password sementara hanya ada di respons. */
+/** Buat akun / reset sandi / nonaktifkan / aktifkan / ubah peran lapangan. Sandi sementara hanya ada di respons. */
 export function useAccountAction(employeeId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -251,7 +251,7 @@ export function useAccountAction(employeeId: string) {
         case "unlock":
           return (await api.post<Account>(`${base}/unlock`)).data;
         case "reset":
-          return (await api.post<AccountWithPassword>(`${base}/reset-password`)).data;
+          return (await api.post<AccountWithPassword>(`${base}/reset-sandi`)).data;
         case "deactivate":
         case "activate":
           return (await api.post<Account>(`${base}/${a.kind}`)).data;
@@ -264,7 +264,7 @@ export function useAccountAction(employeeId: string) {
   });
 }
 
-/** Aksi HR/admin atas akun karyawan; password sementara hanya ada di respons `create` & `reset`. */
+/** Aksi HR/admin atas akun karyawan; sandi sementara hanya ada di respons `create` & `reset`. */
 export type AccountAction =
   | { kind: "create"; login: string; systemRole: FieldRole }
   | { kind: "role"; systemRole: FieldRole }

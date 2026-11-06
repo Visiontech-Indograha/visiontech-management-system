@@ -47,7 +47,7 @@ export function TeamList({ controls, teams, onAdd, onRemove, onSelectTeam }: {
               </div>
               <div className="flex items-center gap-1">
                 <ActionButton variant="secondary" size="sm" onClick={() => onSelectTeam(t)}>
-                  Anggota & kontak
+                  Anggota dan kontak
                 </ActionButton>
                 <ActionButton variant="ghost" size="sm" onClick={() => onRemove(t)} aria-label={`Hapus ${t.name}`}>
                   <Trash2 size={16} />

@@ -25,7 +25,7 @@ import { AccountLoginEditForm } from "@/components/organisms/directory/AccountLo
 /**
  * M1-01 · HR/admin mengelola akun login karyawan: buat akun, reset password, buka kunci, ganti email,
  * kelola perangkat yang masuk, nonaktifkan/aktifkan, dan hapus akun (SUPER_ADMIN, di zona berbahaya).
- * Password sementara ditampilkan SEKALI di sini — sampaikan ke karyawan, lalu minta diganti di
+ * Sandi sementara ditampilkan SEKALI di sini — sampaikan ke karyawan, lalu minta diganti di
  * "Akun & keamanan" setelah masuk.
  */
 export function AccountCard({ employee }: { employee: Employee }) {
@@ -83,7 +83,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
             role="status"
             className="mb-3 rounded-control bg-brand-50 px-3 py-2"
           >
-            <TextBlock as="span">Password sementara (hanya ditampilkan sekali): </TextBlock>
+            <TextBlock as="span">Sandi sementara (hanya ditampilkan sekali): </TextBlock>
             <TextBlock as="code" className="select-all font-mono font-semibold">{issued}</TextBlock>
             <TextBlock className="mt-1 text-caption text-mist">
               Sampaikan langsung ke karyawan; minta diganti setelah masuk.
@@ -199,11 +199,11 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 onClick={() =>
                   run(
                     { kind: "reset" },
-                    "Password direset; semua sesi akun ini dikeluarkan.",
+                    "Sandi direset; semua sesi akun ini dikeluarkan.",
                   )
                 }
               >
-                Reset password
+                Reset sandi
               </ActionButton>
               {a.is_active ? (
                 <ActionButton

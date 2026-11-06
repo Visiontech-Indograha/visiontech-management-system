@@ -39,7 +39,7 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
             <PanelTitle>
               <TextBlock as="h1" className="text-title-lg text-ink">{admin ? "Masuk sebagai Admin" : "Selamat datang"}</TextBlock>
             </PanelTitle>
-            <PanelDescription>Masuk dengan email dan password akun kantor Anda.</PanelDescription>
+            <PanelDescription>Masuk dengan email dan sandi akun kantor Anda.</PanelDescription>
           </PanelHeader>
           <PanelContent>
             <FormBlock onSubmit={onSubmit} noValidate className="space-y-4">
@@ -80,7 +80,7 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
                 {errors.email && <TextBlock className="text-sm text-destructive">{errors.email.message}</TextBlock>}
               </div>
               <div className="space-y-1.5">
-                <StyledLabel htmlFor="password">Password</StyledLabel>
+                <StyledLabel htmlFor="password">Sandi</StyledLabel>
                 <StyledInput id="password" type="password" autoComplete="current-password" {...register("password")} />
                 {errors.password && <TextBlock className="text-sm text-destructive">{errors.password.message}</TextBlock>}
               </div>

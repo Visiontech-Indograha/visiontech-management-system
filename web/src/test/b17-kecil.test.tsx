@@ -68,7 +68,7 @@ describe("T-5 judul jadwal tanpa lokasi", () => {
   });
 });
 
-describe("persetujuan jadwal per peran & status", () => {
+describe("persetujuan jadwal per peran dan status", () => {
   for (const [role, r] of Object.entries(ROLES)) {
     for (const status of ["DRAFT", "SUBMITTED", "APPROVED"] as const) {
       it(`${role} · ${status}: ${r.can_manage ? "melihat" : "tidak melihat"} Setujui, tidak pernah Ajukan`, async () => {

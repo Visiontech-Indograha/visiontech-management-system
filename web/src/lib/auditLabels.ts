@@ -1,3 +1,5 @@
+import { ROLE_LABEL } from "@/lib/types";
+
 /** Tabel yang diaudit trigger tg_audit_row (db/06_master_schema_v2.sql). */
 export const AUDIT_ENTITIES: Record<string, string> = {
   work_plan: "Rencana Kerja / pekerjaan",
@@ -46,4 +48,13 @@ export const ACTION_LABEL: Record<string, string> = {
   BACKDATE_CREATED: "Absen susulan diajukan",
   BACKDATE_APPROVED: "Absen susulan disetujui",
   LOCATION_CHANGED: "Lokasi diubah",
+  DEVICE_CRED_ISSUED: "Kunci perangkat dibuat untuk login sidik jari",
+  DEVICE_CRED_USED: "Masuk dengan sidik jari",
+  DEVICE_CRED_REVOKED: "Kunci perangkat sidik jari dicabut",
+  DEVICE_CRED_REUSE: "Kunci perangkat dipakai ulang, dicabut demi keamanan",
 };
+
+/** Ganti kode peran mentah "(SUPER_ADMIN)" pada label pelaku dengan nama peran awam. */
+export function actorLabelAwam(label: string): string {
+  return label.replace(/\(([A-Z_]+)\)/g, (m, kode: string) => (ROLE_LABEL[kode] ? `(${ROLE_LABEL[kode]})` : m));
+}

@@ -62,7 +62,7 @@ describe("Absensi", () => {
     expect(calls.find((c) => c.url === "/attendance/a1/explain")!.data).toEqual({ explanation: "GPS melenceng" });
   });
 
-  it("R-34: absen offline ditandai di daftar & dialog tinjau menampilkan catatan server dan jam pulang yang ditahan", async () => {
+  it("R-34: absen offline ditandai di daftar dan dialog tinjau menampilkan catatan server dan jam pulang yang ditahan", async () => {
     const offline = {
       data: {
         items: [

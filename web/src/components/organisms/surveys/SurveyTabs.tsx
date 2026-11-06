@@ -11,7 +11,7 @@ export function SurveyTabs({ points, map, preview, bom }: {
   return (
     <TabsBlock defaultValue="points">
       <TabsBlockList>
-        <TabsBlockTrigger value="points">Titik & foto</TabsBlockTrigger>
+        <TabsBlockTrigger value="points">Titik dan foto</TabsBlockTrigger>
         <TabsBlockTrigger value="map">Peta layout</TabsBlockTrigger>
         <TabsBlockTrigger value="preview">Pratinjau laporan</TabsBlockTrigger>
         <TabsBlockTrigger value="bom">Daftar material</TabsBlockTrigger>

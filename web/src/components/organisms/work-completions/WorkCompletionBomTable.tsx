@@ -298,7 +298,7 @@ export function WorkCompletionBomTable({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEdit(item)}
-                            aria-label="Ubah jumlah terpakai & catatan"
+                            aria-label="Ubah jumlah terpakai dan catatan"
                           >
                             <Edit2 className="h-4 w-4" />
                           </ActionButton>

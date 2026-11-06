@@ -26,7 +26,7 @@ export function OffboardingTemplate({ controls, offboardings, expiring, canManag
 }) {
   const add = () => onDialog({ kind: "create" });
   return (
-    <PageTemplate title="Offboarding & Clearance" action={canManage && <OffboardingAddButton onAdd={add} />}>
+    <PageTemplate title="Offboarding dan Clearance" action={canManage && <OffboardingAddButton onAdd={add} />}>
       <PkwtExpiringPanel rows={expiring} canManage={canManage}
                          onStart={(r) => onDialog({ kind: "create", employee: { id: r.employee_id, name: r.full_name } })} />
       <OffboardingList controls={controls} offboardings={offboardings} canManage={canManage} onAdd={add}

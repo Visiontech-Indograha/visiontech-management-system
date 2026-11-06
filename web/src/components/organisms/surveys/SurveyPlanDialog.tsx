@@ -91,7 +91,7 @@ export function SurveyPlanDialog({ survey, onClose }: { survey: Survey; onClose:
             ? `Jadwal ${team} pada ${formatDate(day)} sudah terbit (${existing.status}). Pilih tanggal lain.`
             : existing
               ? `Ditambahkan ke jadwal ${existing.status} yang sudah ada (${existing.site_name || "lokasi belum ditentukan"}).`
-              : `Belum ada jadwal ${team} di tanggal ini — jadwal DRAFT baru dibuat otomatis (lokasi & jam disalin dari hari survei).`}
+              : `Belum ada jadwal ${team} di tanggal ini — jadwal DRAFT baru dibuat otomatis (lokasi dan jam disalin dari hari survei).`}
         </TextBlock>
         <SelectField label="Jenis pekerjaan pemasangan" value={typeId} onChange={(e) => setTypeId(e.target.value)}>
           <ControlOption value="">Bawaan tiap jenis titik (otomatis)</ControlOption>

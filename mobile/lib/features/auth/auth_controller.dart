@@ -41,6 +41,8 @@ class AuthController extends Notifier<AuthState> {
         error: 'Sesi Anda berakhir, silakan login ulang.',
       );
     };
+    ref.onDispose(() => _exchangeTimer?.cancel());
+    ref.read(apiClientProvider).sessionPending = () => _sessionPending;
     _restoreSession();
     return const AuthInitial();
   }
@@ -54,6 +56,19 @@ class AuthController extends Notifier<AuthState> {
     final tokenStorage = ref.read(tokenStorageProvider);
     final accessToken = await tokenStorage.readAccessToken();
     if (accessToken == null) {
+      // Sesi offline dari login sidik jari yang belum ditukar ke server
+      // (aplikasi ditutup saat tanpa sinyal): buka lagi lewat gerbang sidik
+      // jari selama token perangkat belum kedaluwarsa.
+      if (await tokenStorage.readDeviceExchangePending() &&
+          await hasUsableDeviceCredential()) {
+        final user = await _cachedUser();
+        if (user != null) {
+          state = AuthLocked(user);
+          _sessionPending = true;
+          _startExchangeRetry();
+          return;
+        }
+      }
       state = const AuthUnauthenticated();
       return;
     }
@@ -269,6 +284,227 @@ class AuthController extends Notifier<AuthState> {
         error: _extractErrorMessage(e),
         lockedUntil: _lockedUntil(e),
       );
+    }
+  }
+
+  // ---- Login sidik jari dengan kredensial perangkat (30 hari) ----
+
+  static const kDeviceLoginRejectedMessage = 'Silakan masuk dengan sandi.';
+  static const kFingerprintCancelledMessage =
+      'Sidik jari dibatalkan. Anda tetap bisa masuk dengan email dan sandi.';
+  static const kFingerprintNoNetworkMessage =
+      'Tidak ada sinyal dan belum ada sesi tersimpan di perangkat ini. '
+      'Coba lagi atau masuk dengan sandi.';
+  static const _deviceHeaders = {'X-Device-Label': 'Aplikasi Android'};
+  static const _rejectCodes = {
+    'BIOMETRIC_INVALID',
+    'BIOMETRIC_REUSED',
+    'INACTIVE',
+    'NOT_FIELD_STAFF',
+  };
+
+  Timer? _exchangeTimer;
+
+  /// True selama sesi offline belum ditukar (belum ada token akses).
+  bool _sessionPending = false;
+  bool _exchanging = false;
+
+  /// Jarak coba ulang tukar token perangkat di latar belakang.
+  static Duration exchangeRetryInterval = const Duration(seconds: 20);
+
+  /// True bila ada token perangkat yang belum kedaluwarsa.
+  Future<bool> hasUsableDeviceCredential() async {
+    final cred = await ref.read(tokenStorageProvider).readDeviceCredential();
+    return cred != null && cred.expiresAt.isAfter(DateTime.now().toUtc());
+  }
+
+  /// Dipanggil saat saklar "Login sidik jari" dinyalakan (butuh login).
+  /// Mengembalikan pesan galat awam, atau null bila berhasil.
+  Future<String?> enableDeviceCredential() async {
+    try {
+      final r = await ref.read(apiClientProvider).dio.post(
+        '/api/v1/auth/device-credential',
+        options: Options(headers: _deviceHeaders),
+      );
+      final data = r.data as Map;
+      await ref.read(tokenStorageProvider).saveDeviceCredential(
+        token: data['device_token'] as String,
+        expiresAt: DateTime.parse(data['expires_at'] as String),
+      );
+      return null;
+    } on DioException catch (e) {
+      return isNetworkFailure(e)
+          ? 'Butuh sinyal untuk mengaktifkan masuk dengan sidik jari. Coba lagi saat ada sinyal.'
+          : apiErrorMessage(
+              e,
+              fallback: 'Sidik jari belum bisa diaktifkan. Coba lagi.',
+            );
+    } catch (_) {
+      return 'Sidik jari belum bisa diaktifkan. Coba lagi.';
+    }
+  }
+
+  /// Tukar token perangkat -> token sesi + token perangkat baru. Token baru
+  /// disimpan SEGERA dalam satu kunci; bila gagal menyimpan, nilai lama utuh.
+  Future<void> _exchangeDeviceToken(String deviceToken) async {
+    final storage = ref.read(tokenStorageProvider);
+    final clientId = await ref.read(deviceIdProvider).getClientId();
+    final r = await ref.read(apiClientProvider).dio.post(
+      '/api/v1/auth/biometric-login',
+      data: {'device_token': deviceToken},
+      options: Options(
+        headers: {
+          'X-Device-Id': clientId,
+          'X-Device-Fingerprint': clientId,
+          ..._deviceHeaders,
+        },
+      ),
+    );
+    final data = r.data as Map;
+    await storage.saveDeviceCredential(
+      token: data['device_token'] as String,
+      expiresAt: DateTime.parse(data['device_token_expires_at'] as String),
+    );
+    final access = data['access_token'] as String;
+    await storage.saveTokens(
+      accessToken: access,
+      refreshToken: refreshTokenFromResponse(r.headers),
+    );
+    final authTime = SessionPolicy.authTimeFromJwt(access);
+    await storage.saveAuthTime(
+      authTime ?? DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
+    );
+    await storage.saveDeviceExchangePending(false);
+    _sessionPending = false;
+  }
+
+  Future<AuthUser?> _cachedUser() async {
+    final cached = await ref.read(tokenStorageProvider).readCachedProfile();
+    if (cached == null) return null;
+    try {
+      return AuthUser.fromJson(jsonDecode(cached) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _rejectDeviceLogin() async {
+    _exchangeTimer?.cancel();
+    _sessionPending = false;
+    final storage = ref.read(tokenStorageProvider);
+    await storage.clearDeviceCredential();
+    await storage.clearSession();
+    state = const AuthUnauthenticated(error: kDeviceLoginRejectedMessage);
+  }
+
+  /// Tombol "Masuk dengan sidik jari" di layar login.
+  Future<void> loginWithDeviceCredential() async {
+    final storage = ref.read(tokenStorageProvider);
+    final cred = await storage.readDeviceCredential();
+    if (cred == null || !cred.expiresAt.isAfter(DateTime.now().toUtc())) {
+      await _rejectDeviceLogin();
+      return;
+    }
+    final ok = await ref
+        .read(biometricAuthProvider)
+        .authenticate('Verifikasi sidik jari untuk masuk ke VMS Mobile');
+    if (!ok) {
+      state = const AuthUnauthenticated(error: kFingerprintCancelledMessage);
+      return;
+    }
+    state = const AuthLoading();
+    try {
+      await _exchangeDeviceToken(cred.token);
+      final me = await ref.read(apiClientProvider).dio.get('/api/v1/auth/me');
+      final user = AuthUser.fromJson(me.data as Map<String, dynamic>);
+      await _wipeIfOtherUser(user.id);
+      await storage.saveCachedProfile(jsonEncode(me.data));
+      state = AuthAuthenticated(user);
+    } on DioException catch (e) {
+      if (isNetworkFailure(e)) {
+        NetworkHint.markOffline();
+        // Tanpa sinyal: sidik jari lolos, buka sesi lokal selama token
+        // perangkat belum kedaluwarsa (dicek di atas). Tanpa panggilan server.
+        final user = await _cachedUser();
+        if (user == null) {
+          state = const AuthUnauthenticated(
+            error: kFingerprintNoNetworkMessage,
+          );
+          return;
+        }
+        await storage.saveDeviceExchangePending(true);
+        _sessionPending = true;
+        state = AuthAuthenticated(user);
+        _startExchangeRetry();
+        return;
+      }
+      if (_rejectCodes.contains(apiErrorCode(e))) {
+        await _rejectDeviceLogin();
+        return;
+      }
+      state = AuthUnauthenticated(
+        error: apiErrorMessage(
+          e,
+          fallback: 'Masuk dengan sidik jari gagal. Coba lagi.',
+        ),
+      );
+    } catch (_) {
+      state = const AuthUnauthenticated(
+        error: 'Masuk dengan sidik jari gagal. Coba lagi atau masuk dengan sandi.',
+      );
+    }
+  }
+
+  Future<void> _wipeIfOtherUser(String newId) async {
+    final previous = await ref.read(tokenStorageProvider).readCachedProfile();
+    if (previous == null) return;
+    String? previousId;
+    try {
+      previousId =
+          (jsonDecode(previous) as Map<String, dynamic>)['user_id'] as String?;
+    } catch (_) {}
+    if (previousId != newId) {
+      await ref.read(appDatabaseProvider).wipeAllLocalData();
+    }
+  }
+
+  void _startExchangeRetry() {
+    _exchangeTimer?.cancel();
+    _exchangeTimer = Timer.periodic(
+      exchangeRetryInterval,
+      (_) => unawaited(retryDeviceExchange()),
+    );
+  }
+
+  /// Tukar token perangkat di latar belakang setelah sesi offline. Berhasil:
+  /// berhenti. Tanpa sinyal: coba lagi nanti. Ditolak atau kedaluwarsa:
+  /// keluarkan ke layar login.
+  Future<void> retryDeviceExchange() async {
+    if (_exchanging) return;
+    final storage = ref.read(tokenStorageProvider);
+    if (!await storage.readDeviceExchangePending()) {
+      _exchangeTimer?.cancel();
+      return;
+    }
+    final cred = await storage.readDeviceCredential();
+    if (cred == null || !cred.expiresAt.isAfter(DateTime.now().toUtc())) {
+      await _rejectDeviceLogin();
+      return;
+    }
+    _exchanging = true;
+    try {
+      await _exchangeDeviceToken(cred.token);
+      _exchangeTimer?.cancel();
+      // Token akses sudah ada: kirim antrean yang tertahan, sekali.
+      unawaited(ref.read(syncEngineProvider).syncAll().then((_) {}));
+    } on DioException catch (e) {
+      if (!isNetworkFailure(e) && _rejectCodes.contains(apiErrorCode(e))) {
+        await _rejectDeviceLogin();
+      }
+    } catch (_) {
+      // Coba lagi pada detak berikutnya.
+    } finally {
+      _exchanging = false;
     }
   }
 

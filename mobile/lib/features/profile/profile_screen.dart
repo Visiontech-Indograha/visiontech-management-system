@@ -230,6 +230,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           .read(biometricAuthProvider)
           .authenticate('Verifikasi sidik jari untuk mengaktifkan fitur ini');
       if (!ok) return;
+      final galat = await ref
+          .read(authControllerProvider.notifier)
+          .enableDeviceCredential();
+      if (galat != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(galat)));
+        }
+        return;
+      }
     } else {
       // Mematikan gerbang keamanan layak dikonfirmasi. Sebelumnya sekali geser
       // langsung nonaktif tanpa pertanyaan apa pun -- mudah tersenggol.
@@ -241,6 +252,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         tombol: 'Matikan',
       );
       if (!yakin) return;
+      await ref.read(tokenStorageProvider).clearDeviceCredential();
     }
     await ref.read(tokenStorageProvider).saveBiometricEnabled(value);
     if (mounted) setState(() => _biometricEnabled = value);

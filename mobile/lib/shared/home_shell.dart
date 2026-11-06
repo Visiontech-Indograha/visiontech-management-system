@@ -175,6 +175,11 @@ class _HomeShellState extends ConsumerState<HomeShell>
         .read(biometricAuthProvider)
         .authenticate('Verifikasi sidik jari untuk mengaktifkan login cepat');
     await tokenStorage.saveBiometricEnabled(verified);
+    if (verified) {
+      // Gagal (mis. tanpa sinyal) tidak membatalkan gerbang lokal; kredensial
+      // sidik jari bisa diaktifkan lagi dari Profil.
+      await ref.read(authControllerProvider.notifier).enableDeviceCredential();
+    }
     if (!verified && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

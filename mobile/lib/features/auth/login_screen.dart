@@ -120,8 +120,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final lockRemaining = _lockRemaining();
     _syncTicker(lockRemaining != null);
     final theme = ShadTheme.of(context);
-    final showFingerprint =
-        ref.watch(deviceLoginAvailableProvider).asData?.value ?? false;
+    final deviceLogin = ref.watch(deviceLoginAvailableProvider);
+    final showFingerprint = deviceLogin.value ?? false;
+    final fingerprintChecking =
+        deviceLogin.isLoading && !deviceLogin.hasValue;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
@@ -240,6 +242,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   ),
                                   const SizedBox(height: 12),
                                 ],
+                                if (fingerprintChecking)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: Text(
+                                      'Memeriksa sidik jari...',
+                                      key: const Key('login-sidik-jari-memuat'),
+                                      textAlign: TextAlign.center,
+                                      style: VmsTextStyles.bodySm.copyWith(
+                                        color: VmsColors.neutral600,
+                                      ),
+                                    ),
+                                  ),
+                                if (showFingerprint) ...[
+                                  ShadButton(
+                                    key: const Key('login-sidik-jari'),
+                                    height: 54,
+                                    onPressed: isLoading
+                                        ? null
+                                        : () => ref
+                                              .read(
+                                                authControllerProvider.notifier,
+                                              )
+                                              .loginWithDeviceCredential(),
+                                    leading: const Icon(
+                                      LucideIcons.fingerprintPattern,
+                                      size: 18,
+                                    ),
+                                    child: Text(
+                                      errorMessage ==
+                                              AuthController
+                                                  .kFingerprintNoNetworkMessage
+                                          ? 'Coba lagi dengan sidik jari'
+                                          : 'Masuk dengan sidik jari',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'atau masuk dengan sandi',
+                                    key: const Key('login-atau-sandi'),
+                                    textAlign: TextAlign.center,
+                                    style: VmsTextStyles.bodySm.copyWith(
+                                      color: VmsColors.neutral600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
                                 ShadInputFormField(
                                   controller: _usernameController,
                                   focusNode: _emailFocus,
@@ -311,27 +359,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         : 'Masuk',
                                   ),
                                 ),
-                                if (showFingerprint) ...[
-                                  const SizedBox(height: 12),
-                                  ShadButton.outline(
-                                    key: const Key('login-sidik-jari'),
-                                    height: 54,
-                                    onPressed: isLoading
-                                        ? null
-                                        : () => ref
-                                              .read(
-                                                authControllerProvider.notifier,
-                                              )
-                                              .loginWithDeviceCredential(),
-                                    leading: const Icon(
-                                      LucideIcons.fingerprintPattern,
-                                      size: 18,
-                                    ),
-                                    child: const Text(
-                                      'Masuk dengan sidik jari',
+                                const SizedBox(height: 16),
+                                if (!showFingerprint && !fingerprintChecking)
+                                  Semantics(
+                                    container: true,
+                                    child: Text(
+                                      'Aktifkan login sidik jari di menu Profil setelah masuk.',
+                                      key: const Key('login-sidik-jari-petunjuk'),
+                                      textAlign: TextAlign.center,
+                                      style: VmsTextStyles.bodySm.copyWith(
+                                        color: VmsColors.neutral600,
+                                      ),
                                     ),
                                   ),
-                                ],
                               ],
                             ),
                           ),

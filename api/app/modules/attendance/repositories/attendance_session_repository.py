@@ -375,7 +375,7 @@ class AttendanceSessionRepository(BaseRepository):
         dalam radius kantor mana pun (keputusan pemilik 2026-10-09)."""
         return await self.fetchone(
             """
-            SELECT id, name, unit_id, kind, office_id, distance_m, radius_m, clock_in, clock_out
+            SELECT id, name, unit_id, kind, office_id, distance_m, radius_m, clock_in, clock_out, own
             FROM (
                 SELECT o.office_id AS id,
                        o.name,
@@ -393,7 +393,8 @@ class AttendanceSessionRepository(BaseRepository):
                    )::numeric AS distance_m,
                        o.attendance_radius_m AS radius_m,
                        o.clock_in_time AS clock_in,
-                       o.clock_out_time AS clock_out
+                       o.clock_out_time AS clock_out,
+                       (o.office_id = CAST(:org AS uuid)) AS own
                 FROM office o
                 WHERE o.delete_at IS NULL
                 UNION ALL
@@ -413,14 +414,15 @@ class AttendanceSessionRepository(BaseRepository):
                        )::numeric AS distance_m,
                        cs.geofence_radius_meters AS radius_m,
                        '08:00:00'::time AS clock_in,
-                       '17:00:00'::time AS clock_out
+                       '17:00:00'::time AS clock_out,
+                       FALSE AS own
                 FROM client_sites cs
                 WHERE cs.delete_at IS NULL
             ) offices
-            ORDER BY distance_m - radius_m ASC
+            ORDER BY distance_m - radius_m ASC, own DESC, id
             LIMIT 1
             """,
-            {"lat": lat, "lng": lng},
+            {"lat": lat, "lng": lng, "org": str(org_id)},
         )
 
     async def insert(

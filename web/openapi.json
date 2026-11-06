@@ -10384,6 +10384,75 @@
     }
    }
   },
+  "/api/v1/auth/device-credential": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Issue Device Credential",
+    "description": "Menerbitkan token perangkat (30 hari) untuk masuk dengan sidik jari. Token lama perangkat ini dicabut.\nToken hanya dikembalikan sekali.",
+    "operationId": "issue_device_credential_api_v1_auth_device_credential_post",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeviceCredentialResponseSchema"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/auth/biometric-login": {
+   "post": {
+    "tags": [
+     "Authentication"
+    ],
+    "summary": "Biometric Login",
+    "description": "Masuk dengan token perangkat. Token dipakai sekali lalu diganti token baru di respons.",
+    "operationId": "biometric_login_api_v1_auth_biometric_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BiometricLoginRequestSchema"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BiometricLoginResponseSchema"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/auth/me": {
    "get": {
     "tags": [
@@ -19378,6 +19447,51 @@
     ],
     "title": "BackupOut"
    },
+   "BiometricLoginRequestSchema": {
+    "properties": {
+     "device_token": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 20,
+      "title": "Device Token"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_token"
+    ],
+    "title": "BiometricLoginRequestSchema"
+   },
+   "BiometricLoginResponseSchema": {
+    "properties": {
+     "access_token": {
+      "type": "string",
+      "title": "Access Token"
+     },
+     "token_type": {
+      "type": "string",
+      "title": "Token Type",
+      "default": "bearer"
+     },
+     "device_token": {
+      "type": "string",
+      "title": "Device Token"
+     },
+     "device_token_expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Device Token Expires At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "access_token",
+     "device_token",
+     "device_token_expires_at"
+    ],
+    "title": "BiometricLoginResponseSchema",
+    "description": "Sama seperti login biasa, ditambah token perangkat pengganti (token lama sudah tidak berlaku)."
+   },
    "Body_enroll_face_api_v1_face_enroll_post": {
     "properties": {
      "files": {
@@ -22392,6 +22506,31 @@
     "type": "object",
     "title": "DefaultMaterialUpdate",
     "description": "Schema perbaikan template material default."
+   },
+   "DeviceCredentialResponseSchema": {
+    "properties": {
+     "device_token": {
+      "type": "string",
+      "title": "Device Token"
+     },
+     "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Expires At"
+     },
+     "device_label": {
+      "type": "string",
+      "title": "Device Label"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_token",
+     "expires_at",
+     "device_label"
+    ],
+    "title": "DeviceCredentialResponseSchema",
+    "description": "Token perangkat baru. Simpan di penyimpanan aman HP; tidak bisa dilihat lagi."
    },
    "DeviceKeyRequest": {
     "properties": {

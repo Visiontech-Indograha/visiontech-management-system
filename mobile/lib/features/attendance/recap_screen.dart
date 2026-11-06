@@ -96,7 +96,7 @@ class _RecapScreenState extends ConsumerState<RecapScreen> {
           padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
             HeroHeader(
-              eyebrow: 'Kehadiran & Tunjangan',
+              eyebrow: 'Kehadiran dan Tunjangan',
               title: 'Rekap Bulanan',
               horizontal: 4,
               bottom: Align(

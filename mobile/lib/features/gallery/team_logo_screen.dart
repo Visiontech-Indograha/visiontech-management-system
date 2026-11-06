@@ -138,12 +138,10 @@ class _TeamLogoScreenState extends ConsumerState<TeamLogoScreen> {
         ),
         data: (team) => team == null
             ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    'Logo tim tersedia setelah Anda terdaftar di tim pada jadwal harian.',
-                    textAlign: TextAlign.center,
-                  ),
+                child: EmptyState(
+                  icon: Icons.groups_rounded,
+                  title: 'Belum ada tim',
+                  message: 'Logo tim tersedia setelah Anda terdaftar di tim pada jadwal harian.',
                 ),
               )
             : _body(context, team),

@@ -627,7 +627,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                   ],
                 ),
                 actions: [
-                  FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup & Selamat Beristirahat')),
+                  FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup dan Selamat Beristirahat')),
                 ],
               ),
             );
@@ -925,7 +925,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                               icon: Icons.cloud_upload_rounded,
                               accent: Accent.indigo,
                               text: today['status'] == 'OFFLINE'
-                                  ? 'Absen masuk & pulang tersimpan offline. Dikirim '
+                                  ? 'Absen masuk dan pulang tersimpan offline. Dikirim '
                                         'otomatis saat ada sinyal.'
                                   : 'Absen pulang tersimpan offline. Dikirim '
                                         'otomatis saat ada sinyal.',

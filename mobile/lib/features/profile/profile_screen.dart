@@ -353,7 +353,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? 'Masih ada $tertunda data yang BELUM terkirim ke server. '
                 'Keluar sekarang akan menghapusnya dari HP ini. '
                 'Sambungkan ke internet dan sinkronkan dulu bila datanya masih dibutuhkan.'
-          : 'Anda perlu memasukkan email & sandi lagi untuk masuk.',
+          : 'Anda perlu memasukkan email dan sandi lagi untuk masuk.',
       tombol: 'Keluar',
     );
     if (!yakin) return;
@@ -361,9 +361,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   static const _services = <(String, IconData, String, Accent)>[
-    ('/recap', Icons.event_available_rounded, 'Rekap absen & uang makan', Accent.teal),
-    ('/leaves', Icons.beach_access_rounded, 'Cuti & Izin', Accent.blue),
-    ('/assets', Icons.directions_car_rounded, 'Kendaraan & Alat', Accent.amber),
+    ('/recap', Icons.event_available_rounded, 'Rekap absen dan uang makan', Accent.teal),
+    ('/leaves', Icons.beach_access_rounded, 'Cuti dan Izin', Accent.blue),
+    ('/assets', Icons.directions_car_rounded, 'Kendaraan dan Alat', Accent.amber),
     ('/overtime', Icons.more_time_rounded, 'Riwayat lembur', Accent.indigo),
     ('/mess', Icons.home_work_rounded, 'Mess karyawan', Accent.violet),
     ('/documents', Icons.badge_rounded, 'Dokumen saya', Accent.emerald),

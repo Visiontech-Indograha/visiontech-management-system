@@ -32,7 +32,7 @@ class DayAssetsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle('Kendaraan & alat hari ini'),
+        const SectionTitle('Kendaraan dan alat hari ini'),
         SurfaceCard(
           child: assets.isEmpty
               ? const InfoRow(

@@ -14,6 +14,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.modules.notifications.repositories.notification_repository import NotificationRepository
 
 _MONTH = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
@@ -97,6 +98,17 @@ class NotificationService:
         await self.repo.insert_for_users(
             [u for u in users if u != exclude_user_id], kind, title, body, plan_id, target
         )
+
+    async def notify_hr_of_office(
+        self, office_id: UUID | str | None, kind: str, title: str, body: str = "", *, target: str | None = None,
+    ) -> None:
+        """Notifikasi ke HR/GA. Flag ROLE_ASSIGNMENT_ENABLED mati = semua ADMIN_HR_GA (perilaku lama); hidup =
+        hanya HR yang cakupannya meliputi `office_id` (kantor sendiri + penugasan HR)."""
+        if not settings.ROLE_ASSIGNMENT_ENABLED:
+            await self.notify_roles(["ADMIN_HR_GA"], kind, title, body, target=target)
+            return
+        users = await self.repo.hr_user_ids_for_office(office_id)
+        await self.repo.insert_for_users(users, kind, title, body, None, target)
 
     async def list_for(self, user_id: str, unread_only: bool = False, limit: int = 50) -> list[Any]:
         """

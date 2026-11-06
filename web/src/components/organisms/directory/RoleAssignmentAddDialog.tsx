@@ -75,7 +75,8 @@ export function RoleAssignmentAddDialog({ userId, primaryRole, held, scopes, ext
       footer={
         <DialogActions
           onCancel={onClose}
-          busy={isSubmitting || mutation.isPending || !!blocker}
+          busy={isSubmitting || mutation.isPending}
+          submitDisabled={!!blocker}
           formId="role-assignment-form"
           submitLabel="Simpan peran"
           busyLabel="Menyimpan..."

@@ -96,7 +96,7 @@ describe("Peran tambahan dan kantor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Tambah peran" }));
     fireEvent.change(await screen.findByLabelText("Peran tambahan"), { target: { value: "FINANCE" } });
     expect(await screen.findByText("HR dan Finance tidak boleh dipegang bersamaan oleh satu orang.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Menyimpan..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Simpan peran" })).toBeDisabled();
     expect(calls.some((c) => c.method === "post")).toBe(false);
   });
 

@@ -34,4 +34,6 @@ export const ACTION_LABEL: Record<string, string> = {
   OFFBOARD_CLEARANCE: "Clearance offboarding",
   OFFLINE_OPERATION: "Operasi offline disinkronkan",
   SIGN_REPORT: "Tanda tangan laporan",
+  ROLE_ASSIGNMENT_ADD: "Peran tambahan diberikan",
+  ROLE_ASSIGNMENT_REVOKE: "Peran tambahan dicabut",
 };

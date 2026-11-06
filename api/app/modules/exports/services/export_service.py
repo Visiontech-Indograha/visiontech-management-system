@@ -179,11 +179,12 @@ class ExportService:
         survey = await self.surveys.detail(user, task_id)
         if not survey["points"]:
             raise AppError("NO_SURVEY_POINTS", "Belum ada titik survei untuk dipratinjau.", status=422)
-        docx = await _build(build_survey_docx, await self._survey_doc(survey, user))
+        doc = await self._survey_doc(survey, user)  # sekali: unduh & kecilkan foto tidak diulang untuk PDF
+        docx = await _build(build_survey_docx, doc)
         pdf: bytes | None = None
         try:
             from app.shared.documents.reportlab_service import build_survey_pdf_reportlab
-            pdf = await _build(build_survey_pdf_reportlab, await self._survey_doc(survey, user))
+            pdf = await _build(build_survey_pdf_reportlab, doc)
         except (ImportError, OSError, RuntimeError, ValueError):
             pdf = await docx_to_pdf(docx)
         return ("PDF", pdf) if pdf else ("WORD_DOCX", docx)

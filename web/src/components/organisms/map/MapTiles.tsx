@@ -13,6 +13,12 @@ const TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 /** Lapisan ubin OpenStreetMap untuk semua peta (lokasi kerja, lokasi rencana). */
-export function MapTiles() {
-  return <TileLayer url={TILE_URL} attribution={ATTRIBUTION} />;
+export function MapTiles({ onTileError }: { onTileError?: () => void }) {
+  return (
+    <TileLayer
+      url={TILE_URL}
+      attribution={ATTRIBUTION}
+      eventHandlers={onTileError ? { tileerror: onTileError } : undefined}
+    />
+  );
 }

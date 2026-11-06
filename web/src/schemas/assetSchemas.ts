@@ -8,8 +8,8 @@ export const toolSchema = z.object({
   division_id: z.string(),
   ownership_type: z.enum(["PERSONAL_LOAN", "SHARED_TOOL"]),
   category: z.enum(["BAJU", "LAPTOP", "SEPATU", "BOR", "TANGGA", "LAINNYA"]),
-  name: z.string().trim().min(2, "Nama alat minimal 2 karakter."),
-  tool_code: z.string().trim().min(2, "Kode alat minimal 2 karakter."),
+  name: z.string().trim().min(2, "Nama alat minimal 2 karakter.").max(100, "Nama alat maksimal 100 karakter."),
+  tool_code: z.string().trim().min(2, "Kode alat minimal 2 karakter.").max(50, "Kode alat maksimal 50 karakter."),
 });
 export type ToolValues = z.infer<typeof toolSchema>;
 
@@ -17,7 +17,7 @@ export const vehicleSchema = z.object({
   office_id: required("Kantor"),
   division_id: required("Divisi"),
   vehicle_type: z.enum(["Motorcycle", "Car", "Truck"]),
-  name: z.string().trim().min(2, "Nama kendaraan minimal 2 karakter."),
-  number_plate: z.string().trim().min(3, "Nomor polisi wajib diisi."),
+  name: z.string().trim().min(2, "Nama kendaraan minimal 2 karakter.").max(150, "Nama kendaraan maksimal 150 karakter."),
+  number_plate: z.string().trim().min(3, "Nomor polisi wajib diisi.").max(20, "Nomor polisi maksimal 20 karakter."),
 });
 export type VehicleValues = z.infer<typeof vehicleSchema>;

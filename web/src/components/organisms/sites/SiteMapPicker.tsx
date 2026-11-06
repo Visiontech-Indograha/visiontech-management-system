@@ -33,6 +33,7 @@ export function SiteMapPicker({
   onPick: (p: LatLng, label?: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [tileFailed, setTileFailed] = useState(false);
   const q = useDebouncedValue(query.trim(), 1000); // kebijakan Nominatim: ≤ 1 permintaan/detik
   const search = useQuery({
     queryKey: ["geo-search", q],
@@ -109,9 +110,14 @@ export function SiteMapPicker({
         </div>
       )}
       {gpsNote && <TextBlock className="mb-1 text-sm text-warning">{gpsNote}</TextBlock>}
+      {tileFailed && (
+        <TextBlock role="alert" className="mb-1 text-sm text-warning">
+          Gambar peta tidak bisa dimuat. Periksa sambungan internet, lalu isi lintang dan bujur secara manual atau coba lagi nanti.
+        </TextBlock>
+      )}
       <div className="isolate h-64 overflow-hidden rounded-control border border-line" data-testid="site-map">
         <MapContainer center={view.center} zoom={view.zoom} className="h-full w-full">
-          <MapTiles />
+          <MapTiles onTileError={() => setTileFailed(true)} />
           <MapViewController center={view.center} zoom={view.zoom} />
           <MapClickToPlace onPick={(p) => place(p)} />
           {point && (

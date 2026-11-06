@@ -217,6 +217,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
             const SizedBox(height: 4),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
               child: Row(
                 children: [
                   for (final (key, label) in const [
@@ -242,6 +243,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
             // Pisahkan jenis pekerjaan, tiap jenis punya warna sendiri.
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 16),
               child: Row(
                 children: [
                   for (final (key, label) in [(null, 'Semua'), ...phaseLabel.entries.map((e) => (e.key, e.value))])

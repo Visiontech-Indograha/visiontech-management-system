@@ -200,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         description: const Text(
-                          'Masuk dengan email dan password akun kantor Anda.',
+                          'Masuk dengan email dan sandi akun kantor Anda.',
                         ),
                         child: Padding(
                           padding: const EdgeInsets.only(top: 16),
@@ -251,7 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   controller: _passwordController,
                                   focusNode: _passwordFocus,
                                   enabled: !isLoading,
-                                  label: const Text('Password'),
+                                  label: const Text('Sandi'),
                                   obscureText: _obscurePassword,
                                   textInputAction: TextInputAction.go,
                                   onSubmitted: (_) => _submit(),
@@ -275,7 +275,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                                   ),
                                   validator: (v) =>
-                                      v.isEmpty ? 'Password wajib diisi' : null,
+                                      v.isEmpty ? 'Sandi wajib diisi' : null,
                                 ),
                                 const SizedBox(height: 20),
                                 ShadButton(

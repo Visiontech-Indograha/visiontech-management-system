@@ -7,7 +7,7 @@ Pola perintah ke server: `ssh ageng@192.168.88.160 "bash -s" < deploy/...` (sama
 
 | Berkas | Sebelum | Sesudah |
 |---|---|---|
-| `deploy/beta/pasang-beta.sh` (Tailscale) | Funnel `:10000` (publik) ke API beta | Funnel 10000 dimatikan; Serve `:10000` (tailnet saja) |
+| `deploy/beta/pasang-beta.sh` (Tailscale) | Funnel `:10000` (publik) ke API beta (SUDAH dimatikan; beta kini hanya tailnet) | Funnel 10000 dimatikan; Serve `:10000` (tailnet saja) |
 | `deploy/beta/pasang-beta.sh` (`data`) | `pg_dump` DB prod ke beta | Seed sintetis `db/07_master_seed_v2.sql` (hanya bila beta belum berisi karyawan) |
 | `deploy/beta/pasang-beta.sh` (`berkas`) | Salin semua bucket MinIO prod ke beta | Dinonaktifkan (exit 2) |
 | `deploy/compose.limits.yml` (face) | 768m | 1200m (nilai yang sudah terpasang) |

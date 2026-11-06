@@ -104,7 +104,7 @@ class _BiometricLockScreenState extends ConsumerState<BiometricLockScreen> {
                   onPressed: () => ref
                       .read(authControllerProvider.notifier)
                       .switchToPasswordLogin(),
-                  child: const Text('Masuk dengan Password'),
+                  child: const Text('Masuk dengan Sandi'),
                 ),
               ],
             ),

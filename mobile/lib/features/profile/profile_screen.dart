@@ -353,7 +353,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ? 'Masih ada $tertunda data yang BELUM terkirim ke server. '
                 'Keluar sekarang akan menghapusnya dari HP ini. '
                 'Sambungkan ke internet dan sinkronkan dulu bila datanya masih dibutuhkan.'
-          : 'Anda perlu memasukkan email & password lagi untuk masuk.',
+          : 'Anda perlu memasukkan email & sandi lagi untuk masuk.',
       tombol: 'Keluar',
     );
     if (!yakin) return;

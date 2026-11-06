@@ -53,6 +53,7 @@ class ApiClient {
               error.requestOptions.extra['retriedAfterRefresh'] == true;
           final isAuthEndpoint =
               error.requestOptions.path.contains('/auth/login') ||
+              error.requestOptions.path.contains('/auth/biometric-login') ||
               error.requestOptions.path.contains('/auth/refresh');
 
           if (!isUnauthorized || alreadyRetried || isAuthEndpoint) {

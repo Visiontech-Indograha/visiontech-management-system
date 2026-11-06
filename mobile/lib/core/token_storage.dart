@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Menyimpan access/refresh token dan client_id perangkat di Android Keystore
@@ -12,6 +14,8 @@ class TokenStorage {
   static const _cachedProfileKey = 'vms_cached_profile';
   static const _biometricEnabledKey = 'vms_biometric_enabled';
   static const _authTimeKey = 'vms_auth_time';
+  static const _deviceCredKey = 'vms_device_credential';
+  static const _deviceExchangePendingKey = 'vms_device_exchange_pending';
 
   Future<String?> readAccessToken() => _storage.read(key: _accessKey);
   Future<String?> readRefreshToken() => _storage.read(key: _refreshKey);
@@ -45,7 +49,51 @@ class TokenStorage {
     await clearSession();
     await _storage.delete(key: _cachedProfileKey);
     await _storage.delete(key: _biometricEnabledKey);
+    await clearDeviceCredential();
   }
+
+  /// Kredensial perangkat (login sidik jari, 30 hari). Token dan kedaluwarsa
+  /// disimpan dalam SATU nilai supaya rotasi atomik: bila tulis gagal, nilai
+  /// lama tetap utuh. Keterbatasan: flutter_secure_storage memakai Keystore
+  /// tetapi tidak mendukung kunci terikat sidik jari; penjagaannya lewat
+  /// prompt sidik jari di aplikasi.
+  Future<void> saveDeviceCredential({
+    required String token,
+    required DateTime expiresAt,
+  }) => _storage.write(
+    key: _deviceCredKey,
+    value: jsonEncode({
+      'token': token,
+      'expires_at': expiresAt.toUtc().toIso8601String(),
+    }),
+  );
+
+  /// Null bila tidak ada atau rusak. Kedaluwarsa TIDAK disaring di sini.
+  Future<({String token, DateTime expiresAt})?> readDeviceCredential() async {
+    final raw = await _storage.read(key: _deviceCredKey);
+    if (raw == null) return null;
+    try {
+      final m = jsonDecode(raw) as Map<String, dynamic>;
+      final token = m['token'] as String;
+      final exp = DateTime.parse(m['expires_at'] as String);
+      return (token: token, expiresAt: exp);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearDeviceCredential() async {
+    await _storage.delete(key: _deviceCredKey);
+    await _storage.delete(key: _deviceExchangePendingKey);
+  }
+
+  /// True bila sesi dibuka offline dan token perangkat belum ditukar ke server.
+  Future<bool> readDeviceExchangePending() async =>
+      (await _storage.read(key: _deviceExchangePendingKey)) == 'true';
+
+  Future<void> saveDeviceExchangePending(bool pending) => pending
+      ? _storage.write(key: _deviceExchangePendingKey, value: 'true')
+      : _storage.delete(key: _deviceExchangePendingKey);
 
   Future<String?> readClientId() => _storage.read(key: _clientIdKey);
 

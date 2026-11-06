@@ -170,6 +170,25 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     delete_at TIMESTAMPTZ NULL
 );
 
+-- 4b. Tabel device_credential (v2_0030): kredensial perangkat untuk masuk dengan sidik jari (30 hari).
+-- Hanya SHA-256 token yang disimpan. Satu kredensial aktif per (akun, perangkat).
+CREATE TABLE IF NOT EXISTS device_credential (
+    credential_id UUID PRIMARY KEY DEFAULT uuidv7(),
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    device_name VARCHAR(100) NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    last_used_at TIMESTAMPTZ NULL,
+    revoked_at TIMESTAMPTZ NULL,
+    revoked_reason VARCHAR(30) NULL,
+    create_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    delete_at TIMESTAMPTZ NULL,
+    CONSTRAINT uq_device_credential_token_hash UNIQUE (token_hash)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_device_credential_active ON device_credential
+    (user_id, device_name) WHERE revoked_at IS NULL AND delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_device_credential_user ON device_credential (user_id) WHERE delete_at IS NULL;
+
 -- 5. Tabel division (CSV #10 Revisi - Konfirmasi 4A, 4B: OM membawahi beberapa PM)
 CREATE TABLE IF NOT EXISTS division (
     division_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

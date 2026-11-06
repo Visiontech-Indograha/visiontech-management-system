@@ -5,6 +5,8 @@ Dipindah dari app/controllers/auth_controller.py (R-28 M4) tanpa perubahan peril
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -56,6 +58,16 @@ class AuthFlowService:
         """
         async with unit_of_work(self.db):
             return await self.service.refresh(raw_refresh_token, client)
+
+    async def issue_device_credential(self, user_id: str, client: ClientInfo) -> tuple[str, Any, str]:
+        """Terbitkan token perangkat untuk masuk dengan sidik jari (dalam satu transaksi)."""
+        async with unit_of_work(self.db):
+            return await self.service.issue_device_credential(user_id, client)
+
+    async def biometric_login(self, raw_token: str, client: ClientInfo) -> tuple[IssuedTokens, str, Any]:
+        """Masuk dengan token perangkat (rotasi token dalam satu transaksi)."""
+        async with unit_of_work(self.db):
+            return await self.service.biometric_login(raw_token, client)
 
     async def logout(self, raw_refresh_token: str | None) -> None:
         """

@@ -2747,6 +2747,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/device-credential": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue Device Credential
+         * @description Menerbitkan token perangkat (30 hari) untuk masuk dengan sidik jari. Token lama perangkat ini dicabut.
+         *     Token hanya dikembalikan sekali.
+         */
+        post: operations["issue_device_credential_api_v1_auth_device_credential_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/biometric-login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Biometric Login
+         * @description Masuk dengan token perangkat. Token dipakai sekali lalu diganti token baru di respons.
+         */
+        post: operations["biometric_login_api_v1_auth_biometric_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -5491,6 +5532,31 @@ export interface components {
              */
             created_at: string;
         };
+        /** BiometricLoginRequestSchema */
+        BiometricLoginRequestSchema: {
+            /** Device Token */
+            device_token: string;
+        };
+        /**
+         * BiometricLoginResponseSchema
+         * @description Sama seperti login biasa, ditambah token perangkat pengganti (token lama sudah tidak berlaku).
+         */
+        BiometricLoginResponseSchema: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            /** Device Token */
+            device_token: string;
+            /**
+             * Device Token Expires At
+             * Format: date-time
+             */
+            device_token_expires_at: string;
+        };
         /** Body_enroll_face_api_v1_face_enroll_post */
         Body_enroll_face_api_v1_face_enroll_post: {
             /** Files */
@@ -6590,6 +6656,21 @@ export interface components {
             description?: string | null;
             /** Sort Order */
             sort_order?: number | null;
+        };
+        /**
+         * DeviceCredentialResponseSchema
+         * @description Token perangkat baru. Simpan di penyimpanan aman HP; tidak bisa dilihat lagi.
+         */
+        DeviceCredentialResponseSchema: {
+            /** Device Token */
+            device_token: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Device Label */
+            device_label: string;
         };
         /**
          * DeviceKeyRequest
@@ -17558,6 +17639,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthMessageResponseSchema"];
+                };
+            };
+        };
+    };
+    issue_device_credential_api_v1_auth_device_credential_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceCredentialResponseSchema"];
+                };
+            };
+        };
+    };
+    biometric_login_api_v1_auth_biometric_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BiometricLoginRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BiometricLoginResponseSchema"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

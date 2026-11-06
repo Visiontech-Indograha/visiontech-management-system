@@ -86,6 +86,7 @@ class RoleAssignmentService:
             raise ValidationError("Peran utama tidak bisa dicabut di sini.")
         if await self.repo.revoke(assignment_id, actor.user_id) != 1:
             raise NotFoundError("Penugasan")
+        await self.repo.revoke_device_credentials(user_id)
         await self._audit(actor, user_id, "ROLE_ASSIGNMENT_REVOKE", {
             "assignment_id": str(assignment_id), "role": row.role,
             "office_id": str(row.office_id) if row.office_id else None,

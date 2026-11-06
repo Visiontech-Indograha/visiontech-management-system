@@ -870,15 +870,6 @@ CREATE TABLE IF NOT EXISTS hse_campaigns (
 ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_paths JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE hse_campaigns ADD COLUMN IF NOT EXISTS media_captions JSONB NOT NULL DEFAULT '[]'::jsonb;  -- v2_0023
 CREATE INDEX IF NOT EXISTS idx_hse_campaigns_dates ON hse_campaigns (is_active, start_date, end_date) WHERE delete_at IS NULL;
--- Penanda popup per hari (v2_0022). UTANG: tidak dipakai lagi, sengaja tidak di-drop
-CREATE TABLE IF NOT EXISTS hse_campaign_views (
-    campaign_id UUID NOT NULL REFERENCES hse_campaigns(campaign_id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    view_date DATE NOT NULL,
-    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (campaign_id, user_id, view_date)
-);
-
 -- Idempotency-Key opsional (v2_0025, F-03). Hanya operasi selesai; dibersihkan `cleanup-idempotency` (>7 hari).
 CREATE TABLE IF NOT EXISTS idempotency_keys (
     idempotency_key_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

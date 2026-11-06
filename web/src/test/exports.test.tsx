@@ -67,7 +67,7 @@ describe("Verifikasi QR (publik)", () => {
         : undefined,
     );
     renderRoute(`/verify/work-completion/00000000-0000-4000-8000-0000000000c1?h=${HASH}`, { role: null });
-    expect(await screen.findByText("Asli & tidak berubah")).toBeInTheDocument();
+    expect(await screen.findByText("Asli dan tidak berubah")).toBeInTheDocument();
     expect(screen.getByText(/Agus/)).toBeInTheDocument();
     expect(calls[0]!.params).toEqual({ h: HASH });
   });

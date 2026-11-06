@@ -56,7 +56,7 @@ fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { 
     );
   });
 
-  it("tanggal kosong membuka form buat jadwal untuk tim & tanggal itu", async () => {
+  it("tanggal kosong membuka form buat jadwal untuk tim dan tanggal itu", async () => {
     mockApi((c) => {
       if (c.url === "/work-plans/daily") return { data: [] };
       if (c.url === "/work-plans/form-options") return { data: options };

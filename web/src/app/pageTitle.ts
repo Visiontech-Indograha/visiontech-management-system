@@ -7,8 +7,8 @@ export const DEFAULT_TITLE = `${APP_NAME} — Manajemen Pekerjaan Lapangan`;
 const PATTERNS: [RegExp, string][] = [
   [/^\/login$/, "Masuk"],
   [/^\/admin-login$/, "Masuk administrator"],
-  [/^\/change-password$/, "Ganti password"],
-  [/^\/account$/, "Akun & keamanan"],
+  [/^\/change-password$/, "Ganti sandi"],
+  [/^\/account$/, "Akun dan keamanan"],
   [/^\/403$/, "Tidak berwenang"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
   [/^\/surveys\/[^/]+$/, "Detail survei"],

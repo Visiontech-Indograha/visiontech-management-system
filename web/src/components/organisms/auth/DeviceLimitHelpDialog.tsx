@@ -17,7 +17,7 @@ export function DeviceLimitHelpDialog({ open, onClose }: { open: boolean; onClos
       </TextBlock>
       <ListBlock as="ol" className="list-decimal space-y-2 pl-5 text-sm">
         <ListEntry>Buka aplikasi atau web Visiontech di perangkat lama yang masih aktif, lalu masuk seperti biasa.</ListEntry>
-        <ListEntry>Buka menu Akun &amp; keamanan, lalu bagian Perangkat yang masuk.</ListEntry>
+        <ListEntry>Buka menu Akun dan keamanan, lalu bagian Perangkat yang masuk.</ListEntry>
         <ListEntry>Pilih Keluarkan pada perangkat yang sudah tidak dipakai.</ListEntry>
         <ListEntry>Kembali ke halaman ini dan masuk lagi di perangkat baru.</ListEntry>
       </ListBlock>

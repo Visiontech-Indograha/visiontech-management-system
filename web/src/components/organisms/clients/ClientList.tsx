@@ -127,7 +127,7 @@ export function ClientList({
                         variant="secondary"
                         size="sm"
                         onClick={() => onManageSites(c)}
-                        title="Kelola lokasi cabang & geofence absensi"
+                        title="Kelola lokasi cabang dan geofence absensi"
                       >
                         <MapPin size={13} className="mr-1 text-primary" /> Lokasi Site
                       </ActionButton>

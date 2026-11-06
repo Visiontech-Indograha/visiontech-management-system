@@ -162,13 +162,13 @@ export function WorkOrderSurveyReviewModal({
     <VmsDialog
       open={Boolean(workOrderId)}
       onClose={onClose}
-      title={`Rincian Tugas & Dokumen Resmi — ${detail?.wo_number || "..."}`}
+      title={`Rincian Tugas dan Dokumen Resmi — ${detail?.wo_number || "..."}`}
       size="2xl"
     >
       {isLoading || !detail ? (
         <div className="py-16 text-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent align-[-0.125em]" />
-          <TextBlock className="mt-3 text-muted-foreground">Memuat data hasil survei & titik lokasi...</TextBlock>
+          <TextBlock className="mt-3 text-muted-foreground">Memuat data hasil survei dan titik lokasi...</TextBlock>
         </div>
       ) : (
         <div className="space-y-4">
@@ -198,7 +198,7 @@ export function WorkOrderSurveyReviewModal({
                   className="h-7 px-2.5 text-xs gap-1"
                 >
                   <Layers className="h-3.5 w-3.5" />
-                  <TextBlock as="span">Peta & Daftar</TextBlock>
+                  <TextBlock as="span">Peta dan Daftar</TextBlock>
                 </ActionButton>
                 <ActionButton
                   type="button"
@@ -257,7 +257,7 @@ export function WorkOrderSurveyReviewModal({
                       </TextBlock>
                     </div>
                     <TextBlock className="text-xs text-mist">
-                      Klik penanda untuk melihat foto & rekomendasi
+                      Klik penanda untuk melihat foto dan rekomendasi
                     </TextBlock>
                   </div>
 
@@ -319,7 +319,7 @@ export function WorkOrderSurveyReviewModal({
                   <div className="flex items-center justify-between pb-1">
                     <div className="text-sm font-semibold text-ink flex items-center gap-1.5">
                       <Camera className="h-4 w-4 text-primary" />
-                      <TextBlock as="span">Daftar Titik & Foto Dokumentasi Lapangan</TextBlock>
+                      <TextBlock as="span">Daftar Titik dan Foto Dokumentasi Lapangan</TextBlock>
                     </div>
                     <TextBlock className="text-xs text-muted-foreground">
                       Total: {detail.survey_points?.length || 0} Titik
@@ -414,7 +414,7 @@ export function WorkOrderSurveyReviewModal({
                 <div className="pb-2.5 border-b border-border">
                   <div className="text-sm font-bold text-ink flex items-center gap-1.5">
                     <Layers className="h-4 w-4 text-emerald-500" />
-                    <TextBlock as="span">Daftar Tugas & Kebutuhan Material</TextBlock>
+                    <TextBlock as="span">Daftar Tugas dan Kebutuhan Material</TextBlock>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
                     <TextBlock as="span">
@@ -613,7 +613,7 @@ export function WorkOrderSurveyReviewModal({
                         ) : (
                           <div className="flex items-center justify-center gap-1.5">
                             <CheckCircle2 className="h-4 w-4" />
-                            <TextBlock as="span">Setujui hasil survei & kunci tugas</TextBlock>
+                            <TextBlock as="span">Setujui hasil survei dan kunci tugas</TextBlock>
                           </div>
                         )}
                       </ActionButton>

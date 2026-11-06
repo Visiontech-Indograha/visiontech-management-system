@@ -103,7 +103,7 @@ export function WorkCompletionDetailModal({
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
                 >
                   <Layers className="mr-1.5 h-4 w-4" />
-                  <TextBlock as="span">Ringkasan & hasil kerja</TextBlock>
+                  <TextBlock as="span">Ringkasan dan hasil kerja</TextBlock>
                 </TabsBlockTrigger>
                 <TabsBlockTrigger
                   value="bom"
@@ -168,7 +168,7 @@ export function WorkCompletionDetailModal({
                   <div className="rounded-control border border-line p-3 space-y-2">
                     <div className="flex items-center gap-2 text-xs text-mist">
                       <Building className="h-4 w-4 text-primary shrink-0" />
-                      <TextBlock as="span">Divisi & PM:</TextBlock>
+                      <TextBlock as="span">Divisi dan PM:</TextBlock>
                     </div>
                     <TextBlock className="font-semibold text-ink pl-6">
                       {order.division_name || "Divisi Operasional"} • {order.pm_name || "PM"}

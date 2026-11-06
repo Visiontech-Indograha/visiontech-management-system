@@ -10,7 +10,7 @@ describe("R1 · tidak ada dialog bawaan peramban", () => {
     eager: true,
   }) as Record<string, string>;
 
-  it("kode web tidak memanggil alert/confirm/prompt (membekukan halaman & otomasi)", () => {
+  it("kode web tidak memanggil alert/confirm/prompt (membekukan halaman dan otomasi)", () => {
     expect(Object.keys(sources).length).toBeGreaterThan(50);
     const offenders = Object.entries(sources)
       .filter(([, text]) => /(^|[^\w.])(window\.)?(alert|confirm|prompt)\s*\(/m.test(text))

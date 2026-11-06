@@ -18,19 +18,19 @@ export function ChangePasswordForm({ form, onSubmit, formError }: {
   const { register, formState: { errors, isSubmitting } } = form;
   return (
     <>
-      <TextBlock as="h1" className="mb-1 text-2xl font-semibold">Ganti password</TextBlock>
-      <TextBlock className="mb-6 text-mist">Masukkan password saat ini dan password baru.</TextBlock>
+      <TextBlock as="h1" className="mb-1 text-2xl font-semibold">Ganti sandi</TextBlock>
+      <TextBlock className="mb-6 text-mist">Masukkan sandi saat ini dan sandi baru.</TextBlock>
       <FormBlock onSubmit={onSubmit} noValidate>
         <FormErrorText message={formError} />
         <TextField
-          label="Password saat ini"
+          label="Sandi saat ini"
           type="password"
           autoComplete="current-password"
           error={errors.current_password?.message}
           {...register("current_password")}
         />
         <TextField
-          label="Password baru"
+          label="Sandi baru"
           type="password"
           autoComplete="new-password"
           hint="Minimal 8 karakter, memuat huruf dan angka."
@@ -38,14 +38,14 @@ export function ChangePasswordForm({ form, onSubmit, formError }: {
           {...register("new_password")}
         />
         <TextField
-          label="Ulangi password baru"
+          label="Ulangi sandi baru"
           type="password"
           autoComplete="new-password"
           error={errors.confirm?.message}
           {...register("confirm")}
         />
         <ActionButton type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Menyimpan..." : "Ganti password"}
+          {isSubmitting ? "Menyimpan..." : "Ganti sandi"}
         </ActionButton>
       </FormBlock>
     </>

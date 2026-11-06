@@ -11,7 +11,7 @@ import { errorMessage } from "@/lib/errors";
 import { fetchMe } from "@/services/authService";
 import { useChangeMyPhoto } from "@/services/profilePhotoService";
 
-/** Kartu akun: foto profil (bisa diganti sendiri), nama, email, peran, tautan ganti password. */
+/** Kartu akun: foto profil (bisa diganti sendiri), nama, email, peran, tautan ganti sandi. */
 export function AccountSummaryCard({ email, roleLabel, scopeLines = [] }: { email: string | undefined; roleLabel: string; scopeLines?: string[] }) {
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe });
   const change = useChangeMyPhoto();
@@ -72,7 +72,7 @@ export function AccountSummaryCard({ email, roleLabel, scopeLines = [] }: { emai
         <TextBlock key={l} className={i === scopeLines.length - 1 ? "mb-4 text-sm text-mist" : "text-sm text-mist"}>{l}</TextBlock>
       ))}
       <ActionButton asChild variant="outline">
-        <InlineLink to="/change-password">Ganti password</InlineLink>
+        <InlineLink to="/change-password">Ganti sandi</InlineLink>
       </ActionButton>
       <ConfirmDialog
         open={removing}

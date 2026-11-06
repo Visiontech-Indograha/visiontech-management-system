@@ -44,7 +44,7 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
               </div>
               <div className="flex gap-2">
                 <ActionButton size="sm" disabled={review.isPending} onClick={() => setApproving(r)}>
-                  Setujui & serahkan
+                  Setujui dan serahkan
                 </ActionButton>
                 <ActionButton size="sm" variant="outline" disabled={review.isPending} onClick={() => setRejecting(r)}>
                   Tolak
@@ -67,7 +67,7 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
                 </TextBlock>
               </div>
               <ActionButton size="sm" onClick={() => onReceive(l)}>
-                Periksa & terima
+                Periksa dan terima
               </ActionButton>
             </div>
           ))}
@@ -76,9 +76,9 @@ export function LoanRequestsPanel({ onReceive }: { onReceive: (loan: Loan) => vo
       {rejecting && <RejectDialog request={rejecting} onClose={() => setRejecting(null)} />}
     <ConfirmDialog
         open={approving !== null}
-        title="Setujui & serahkan aset?"
+        title="Setujui dan serahkan aset?"
         message={approving ? `${approving.asset_name} (${approving.asset_code}) akan diserahkan ke ${approving.employee_name} dan statusnya menjadi dipinjam.` : ""}
-        confirmLabel="Setujui & serahkan"
+        confirmLabel="Setujui dan serahkan"
         busy={review.isPending}
         onConfirm={() => approving && approve(approving)}
         onClose={() => setApproving(null)}

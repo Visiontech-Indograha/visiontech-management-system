@@ -23,7 +23,7 @@ describe("login dan sesi API", () => {
     mockApi(() => undefined);
     renderRoute("/login");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    expect(await screen.findByText("Format email tidak valid.")).toBeInTheDocument();
+    expect(await screen.findByText("Email wajib diisi.")).toBeInTheDocument();
     expect(screen.getByText("Sandi wajib diisi.")).toBeInTheDocument();
   });
 

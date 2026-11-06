@@ -17,7 +17,7 @@ import { useEmployees } from "@/services/employeeService";
 import { useAddTeamMember, useRemoveTeamMember, useTeam, useTeamLogo, type Team } from "@/services/teamService";
 
 /** Anggota tim + kontak (Telepon/WhatsApp), tambah/keluarkan anggota (karyawan aktif divisi tim). */
-export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () => void }) {
+export function TeamDetailDialog({ team, canManage, onClose }: { team: Team; canManage: boolean; onClose: () => void }) {
   const detail = useTeam(team.team_id);
   const [q, setQ] = useState("");
   const candidates = useEmployees({ status: "active", page: 1, q: q.trim() || undefined, division_id: team.division_id });
@@ -60,7 +60,7 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
                   <TextBlock className="text-xs text-mist">{`${m.employee_no ?? "-"} · ${m.system_role ?? "-"}`}</TextBlock>
                 </div>
                 <ContactLinks phone={m.phone_number} name={m.full_name} />
-                {!leader && (
+                {canManage && !leader && (
                   <ActionButton
                     size="sm"
                     variant="ghost"
@@ -78,6 +78,7 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
             <ListEntry className="p-3 text-sm text-mist">Belum ada anggota.</ListEntry>
           )}
         </ListBlock>
+        {canManage && (
         <div className="flex flex-wrap items-end gap-2">
           <TextField label="Cari karyawan" placeholder="Nama / NIK" value={q} onChange={(e) => setQ(e.target.value)} />
           <SelectField label="Tambah anggota (karyawan divisi ini)" value={pick} onChange={(e) => setPick(e.target.value)}>
@@ -94,7 +95,8 @@ export function TeamDetailDialog({ team, onClose }: { team: Team; onClose: () =>
             Tambah
           </ActionButton>
         </div>
-        {!candidates.isPending && options.length === 0 && (
+        )}
+        {canManage && !candidates.isPending && options.length === 0 && (
           <TextBlock className="text-xs text-mist">
             Tidak ada karyawan divisi ini yang belum masuk tim. Atur divisi karyawan di menu Direktori.
           </TextBlock>

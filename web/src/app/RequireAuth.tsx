@@ -7,8 +7,9 @@ import { FaceEnrollRequiredPage } from "@/pages/face/FaceEnrollRequiredPage";
 /** Wajib login; menunggu pemulihan sesi (UX saja — backend tetap menegakkan otorisasi). */
 export function RequireAuth() {
   const { me, ready } = useSession();
+  const { pathname, search, hash } = useLocation();
   if (!ready) return <PageSkeleton />;
-  if (!me) return <Navigate to="/login" replace />;
+  if (!me) return <Navigate to="/login" replace state={{ from: `${pathname}${search}${hash}` }} />;
   return <RequireFace />;
 }
 

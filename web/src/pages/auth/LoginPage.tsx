@@ -1,11 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "@/stores/sessionStore";
 import { ApiError } from "@/lib/apiClient";
 import { LoginTemplate } from "@/components/templates/auth/LoginTemplate";
 import { loginSchema, type LoginValues } from "@/schemas/loginSchema";
+import { safeRedirectPath } from "@/lib/safeRedirect";
 import { useLockCountdown } from "@/hooks/useLockCountdown";
 
 /** Kedua halaman login memakai endpoint auth yang sama. */
@@ -17,7 +18,8 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
   const { handleSubmit } = form;
 
-  if (me) return <Navigate to="/" replace />;
+  const tujuan = safeRedirectPath((useLocation().state as { from?: unknown } | null)?.from);
+  if (me) return <Navigate to={tujuan} replace />;
 
   const onSubmit = handleSubmit(async ({ email, password }) => {
     setFormError(null);

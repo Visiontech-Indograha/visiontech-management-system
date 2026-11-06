@@ -11,6 +11,7 @@ import ipaddress
 
 from fastapi import Depends, Request, Response
 
+from app.core.rate_limit import client_ip
 from app.modules.auth.dependencies import get_auth_flow_service
 from app.modules.auth.schemas.auth_login_request_schema import AuthLoginRequestSchema
 from app.modules.auth.schemas.auth_login_response_schema import AuthLoginResponseSchema
@@ -45,9 +46,9 @@ class AuthLoginController:
     @staticmethod
     def extract_client_info(request: Request) -> ClientInfo:
         """Mengambil IP, User-Agent, Device-Label, dan Device-Fingerprint dari permintaan HTTP."""
-        host = request.client.host if request.client else None
+        host = client_ip(request)
         try:
-            ip = str(ipaddress.ip_address(host)) if host else None
+            ip = str(ipaddress.ip_address(host))
         except ValueError:
             ip = None
         user_agent = request.headers.get("user-agent", "Unknown")

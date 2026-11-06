@@ -19,24 +19,24 @@ function type(label: string, value: string) {
 }
 
 describe("login dan sesi API", () => {
-  it("memvalidasi email dan password", async () => {
+  it("memvalidasi email dan sandi", async () => {
     mockApi(() => undefined);
     renderRoute("/login");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     expect(await screen.findByText("Format email tidak valid.")).toBeInTheDocument();
-    expect(screen.getByText("Password wajib diisi.")).toBeInTheDocument();
+    expect(screen.getByText("Sandi wajib diisi.")).toBeInTheDocument();
   });
 
   it("menampilkan galat login dari API", async () => {
-    mockApi(() => apiError(401, "INVALID_CREDENTIALS", "Email atau password salah."));
+    mockApi(() => apiError(401, "INVALID_CREDENTIALS", "Email atau sandi salah."));
     renderRoute("/login");
     type("Email", "budi@example.com");
-    type("Password", "salah");
+    type("Sandi", "salah");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Email atau password salah.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Email atau sandi salah.");
   });
 
-  it("akun terkunci: hitung mundur cooldown & tombol Masuk mati (R-21)", async () => {
+  it("akun terkunci: hitung mundur cooldown dan tombol Masuk mati (R-21)", async () => {
     mockApi(() =>
       apiError(403, "LOCKED", "Terlalu banyak kegagalan login. Coba lagi dalam 15 menit.", {
         retry_after_seconds: 900,
@@ -45,7 +45,7 @@ describe("login dan sesi API", () => {
     );
     renderRoute("/login");
     type("Email", "budi@example.com");
-    type("Password", "salah");
+    type("Sandi", "salah");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     expect(await screen.findByTestId("login-locked")).toHaveTextContent("15:00");
     expect(screen.getByRole("button", { name: /Tunggu 1[45]:/ })).toBeDisabled();
@@ -58,7 +58,7 @@ describe("login dan sesi API", () => {
     });
     const { router } = renderRoute("/login");
     type("Email", ME.email);
-    type("Password", "Rahasia123");
+    type("Sandi", "Rahasia123");
     await userEvent.setup().click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
@@ -77,22 +77,22 @@ describe("login dan sesi API", () => {
     renderRoute("/admin-login");
     expect(screen.getByRole("heading", { name: "Masuk sebagai Admin" })).toBeInTheDocument();
     type("Email", "admin@example.com");
-    type("Password", "Rahasia123");
+    type("Sandi", "Rahasia123");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => expect(calls.some((call) => call.url === "/auth/login")).toBe(true));
   });
 });
 
-describe("ganti password sukarela", () => {
+describe("ganti sandi sukarela", () => {
   it("validasi password baru tetap bekerja tanpa field must_change_password", async () => {
     mockApi(() => undefined);
     renderRoute("/change-password", { me: ME });
-    type("Password saat ini", "Rahasia123");
-    type("Password baru", "abc");
-    type("Ulangi password baru", "abd");
-    fireEvent.click(screen.getByRole("button", { name: "Ganti password" }));
-    expect(await screen.findByText("Password minimal 8 karakter.")).toBeInTheDocument();
-    expect(screen.getByText("Konfirmasi password tidak sama.")).toBeInTheDocument();
+    type("Sandi saat ini", "Rahasia123");
+    type("Sandi baru", "abc");
+    type("Ulangi sandi baru", "abd");
+    fireEvent.click(screen.getByRole("button", { name: "Ganti sandi" }));
+    expect(await screen.findByText("Sandi minimal 8 karakter.")).toBeInTheDocument();
+    expect(screen.getByText("Konfirmasi sandi tidak sama.")).toBeInTheDocument();
   });
 
   it("sesudah perubahan password, token baru dan /auth/me dipakai", async () => {
@@ -101,10 +101,10 @@ describe("ganti password sukarela", () => {
       if (request.url === "/auth/me") return { data: ME };
     });
     const { router } = renderRoute("/change-password", { me: ME });
-    type("Password saat ini", "Rahasia123");
-    type("Password baru", "BaruLagi99");
-    type("Ulangi password baru", "BaruLagi99");
-    fireEvent.click(screen.getByRole("button", { name: "Ganti password" }));
+    type("Sandi saat ini", "Rahasia123");
+    type("Sandi baru", "BaruLagi99");
+    type("Ulangi sandi baru", "BaruLagi99");
+    fireEvent.click(screen.getByRole("button", { name: "Ganti sandi" }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
       expect(getAccessToken()).toBe("baru");

@@ -63,7 +63,7 @@ export function LeavesTemplate({
 }) {
   return (
     <PageTemplate
-      title="Cuti & Izin Karyawan"
+      title="Cuti dan Izin Karyawan"
       description="Pengajuan permohonan cuti tahunan, izin sakit, persetujuan atasan, dan pemantauan kuota tahunan."
       action={<LeaveApplyButton onApply={onApply} />}
     >

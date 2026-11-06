@@ -59,7 +59,7 @@ function matrixFor(weekStartIso: string, plans: Record<string, Record<string, un
 
 const cellName = (team: string, date: string, label: string) => `${team}, ${longDate(date)}: ${label}`;
 
-describe("Alokasi mingguan — peran & navigasi", () => {
+describe("Alokasi mingguan — peran dan navigasi", () => {
   it("menu hanya untuk PM/OM (izin create:plan); ketua lapangan dan HR tidak melihatnya", () => {
     const labels = (perms: string[]) => visibleNav(perms).map((i) => i.label);
     expect(labels(["create:plan"])).toContain("Alokasi mingguan");
@@ -78,7 +78,7 @@ describe("Alokasi mingguan — peran & navigasi", () => {
   });
 });
 
-describe("Alokasi mingguan — matriks & legenda", () => {
+describe("Alokasi mingguan — matriks dan legenda", () => {
   it("menampilkan tim × 7 hari dengan label status dan legenda", async () => {
     const mon = weekStart(todayIso);
     mockApi((c) => {
@@ -242,7 +242,7 @@ describe("Alokasi mingguan — dialog Alokasikan", () => {
   });
 });
 
-describe("Alokasi mingguan — siaga & salin minggu", () => {
+describe("Alokasi mingguan — siaga dan salin minggu", () => {
   it("'Siaga hari kosong' mengirim bulk-standby hanya untuk tim dan tanggal yang kosong", async () => {
     const day = addDays(nextWeek, 1);
     const calls = mockApi((c) => {

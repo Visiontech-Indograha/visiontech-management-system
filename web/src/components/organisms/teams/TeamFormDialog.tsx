@@ -31,7 +31,7 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
       return setError("Isi nama tim, divisi, kantor, dan ketua tim.");
     try {
       await create.mutateAsync({ name: name.trim(), division_id: effectiveDivisionId, office_id: officeId, leader_employee_id: leaderId, status: true });
-      toast.success("Tim ditambahkan. Tambah anggotanya lewat tombol Anggota & kontak.");
+      toast.success("Tim ditambahkan. Tambah anggotanya lewat tombol Anggota dan kontak.");
       onClose();
     } catch (err) {
       setError(errorMessage(err));

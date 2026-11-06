@@ -100,7 +100,7 @@ export function SurveyList({ query, state, onState }: {
               <TableBlockHead className="border-b border-line text-mist">
                 <TableBlockRow>
                   <TableBlockHeaderCell className="px-4 py-3 font-medium">Survei</TableBlockHeaderCell>
-                  <TableBlockHeaderCell className="px-4 py-3 font-medium">Klien & lokasi</TableBlockHeaderCell>
+                  <TableBlockHeaderCell className="px-4 py-3 font-medium">Klien dan lokasi</TableBlockHeaderCell>
                   <TableBlockHeaderCell className="px-4 py-3 font-medium">Tim · tanggal</TableBlockHeaderCell>
                   <TableBlockHeaderCell className="px-4 py-3 font-medium">Titik</TableBlockHeaderCell>
                   <TableBlockHeaderCell className="px-4 py-3 font-medium">Status</TableBlockHeaderCell>

@@ -152,7 +152,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
         child: ListView(
           padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Layanan', title: 'Cuti & Izin', horizontal: 4),
+            const HeroHeader(eyebrow: 'Layanan', title: 'Cuti dan Izin', horizontal: 4),
             if (_balance != null) _balanceCard(_balance!),
             if (_loading)
               const Padding(

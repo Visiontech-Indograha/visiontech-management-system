@@ -34,7 +34,7 @@ describe("Pinjam aset dengan jadwal, tim, dan ketersediaan", () => {
     expect(within(dialog).getByRole("button", { name: "Serahkan" })).toBeDisabled();
   });
 
-  it("jadwal dipilih: ketersediaan diminta per tanggal & tim, lalu daily_plan_id ikut dikirim", async () => {
+  it("jadwal dipilih: ketersediaan diminta per tanggal dan tim, lalu daily_plan_id ikut dikirim", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/assets/tools") return { data: [tool] };
       if (c.url === "/assets/vehicles") return { data: [] };

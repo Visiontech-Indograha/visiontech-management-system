@@ -7,7 +7,7 @@ const TONE = { SUBMITTED: "warning", DRAFT: "info", APPROVED: "success" } as con
 
 const NEXT: Record<Survey["state"], string> = {
   DRAFT: "Ketua tim sedang mengisi titik di aplikasi HP. Anda tetap bisa melihat pratinjau laporannya.",
-  SUBMITTED: "Periksa titik & foto serta pratinjau laporan, lalu Setujui atau Kembalikan dengan catatan.",
+  SUBMITTED: "Periksa titik dan foto serta pratinjau laporan, lalu Setujui atau Kembalikan dengan catatan.",
   APPROVED: "Survei disetujui. Unduh laporan resmi dan rencanakan pemasangan dari survei ini.",
 };
 

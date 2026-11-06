@@ -28,7 +28,7 @@ export function lowResolutionWarning(size: PhotoSize): string | null {
 export function mixedOrientationNote(sizes: PhotoSize[]): string | null {
   const kinds = new Set(sizes.map((s) => orientationOf(s)).filter((k) => k !== "square"));
   if (kinds.size < 2) return null;
-  return "Campuran potret & lanskap: sebagian foto akan tampil lebih kecil di HP. Disarankan orientasi seragam.";
+  return "Campuran potret dan lanskap: sebagian foto akan tampil lebih kecil di HP. Disarankan orientasi seragam.";
 }
 
 /** Membaca ukuran piksel asli sebuah berkas gambar di peramban. */

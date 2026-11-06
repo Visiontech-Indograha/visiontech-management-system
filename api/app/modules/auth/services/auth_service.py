@@ -12,6 +12,7 @@ from datetime import timedelta
 from typing import Any
 
 from app.core.alerts import send_security_alert
+from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
@@ -22,6 +23,7 @@ from app.modules.auth.repositories.auth_session_repository import (
     CRUDSession,
 )
 from app.modules.auth.repositories.auth_user_repository import FIELD_ROLES, OFFICE_ROLES, CRUDUser
+from app.shared.device_credential_repository import new_token
 
 ACCESS_TOKEN_TTL = timedelta(minutes=15)
 DEFAULT_ROLE = "field"
@@ -176,26 +178,14 @@ class AuthService:
                 "Akun kantor tidak dapat masuk lewat aplikasi HP. Silakan masuk lewat web.",
                 status=403,
             )
-        if platform != "mobile" and role not in OFFICE_ROLES:
+        if platform != "mobile" and not await self._has_office_role(user, role):
             raise AppError(
                 "NOT_OFFICE_ACCOUNT",
                 "Akun lapangan masuk lewat aplikasi HP Visiontech, bukan web.",
                 status=403,
             )
 
-        # Satu perangkat = satu rantai sesi (token_family_id) dengan device_name yang sama. Masuk ulang dari
-        # perangkat yang sama mengganti rantai lamanya; perangkat baru ditolak bila sudah ada MAX_DEVICES aktif.
-        existing_family = await self.sessions.find_active_family_by_device(user.id, client.device_name)
-        if existing_family is not None:
-            await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
-        elif await self.sessions.count_active_devices(user.id) >= MAX_DEVICES:
-            raise AppError(
-                "MAX_DEVICES_REACHED",
-                f"Akun ini sudah aktif di {MAX_DEVICES} perangkat. Keluarkan salah satu perangkat lewat menu "
-                "Akun & keamanan (bagian Perangkat yang masuk), lalu coba lagi. "
-                "Tidak punya akses? Minta HR atau admin.",
-                status=403,
-            )
+        await self._claim_device_slot(user, client)
 
         await self.sessions.record_login_attempt(
             login, client.ip, True, user_id=user.id, role=user.role, platform=platform
@@ -222,6 +212,31 @@ class AuthService:
             },
         )
         return tokens
+
+    async def _has_office_role(self, user: Any, primary_role: str) -> bool:
+        """Peran efektif (utama + tambahan aktif, ADR 0002) memuat minimal satu peran kantor. Flag mati = hanya
+        peran utama (perilaku lama). Memakai find_identity agar logika union tidak digandakan."""
+        if primary_role in OFFICE_ROLES:
+            return True
+        if not settings.ROLE_ASSIGNMENT_ENABLED:
+            return False
+        identity = await self.users.find_identity(user.id)
+        return identity is not None and any(r in OFFICE_ROLES for r in (identity.roles or []))
+
+    async def _claim_device_slot(self, user: Any, client: ClientInfo) -> None:
+        """Satu perangkat = satu rantai sesi (token_family_id) dengan device_name yang sama. Masuk ulang dari
+        perangkat yang sama mengganti rantai lamanya; perangkat baru ditolak bila sudah ada MAX_DEVICES aktif."""
+        existing_family = await self.sessions.find_active_family_by_device(user.id, client.device_name)
+        if existing_family is not None:
+            await self.sessions.revoke_family(user.id, existing_family, "Masuk ulang pada perangkat yang sama")
+        elif await self.sessions.count_active_devices(user.id) >= MAX_DEVICES:
+            raise AppError(
+                "MAX_DEVICES_REACHED",
+                f"Akun ini sudah aktif di {MAX_DEVICES} perangkat. Keluarkan salah satu perangkat lewat menu "
+                "Akun & keamanan (bagian Perangkat yang masuk), lalu coba lagi. "
+                "Tidak punya akses? Minta HR atau admin.",
+                status=403,
+            )
 
     async def refresh(self, raw_refresh_token: str | None, client: ClientInfo) -> IssuedTokens:
         """
@@ -261,6 +276,74 @@ class AuthService:
             access_token=self._access_token(user, rotated.session_id, auth_time=auth_time),
             refresh_token=rotated.refresh_token,
         )
+
+    async def issue_device_credential(self, user_id: str, client: ClientInfo) -> tuple[str, Any, str]:
+        """Terbitkan token perangkat (30 hari) untuk masuk dengan sidik jari. Yang lama untuk perangkat ini dicabut.
+        Mengembalikan (token mentah, kedaluwarsa, nama perangkat); token mentah hanya ada di respons ini."""
+        await self._user(user_id)
+        raw = new_token()
+        issued = await self.sessions.credentials.issue(user_id, client.device_name, raw, ip=client.ip)
+        return raw, issued.expires_at, client.device_name
+
+    async def biometric_login(self, raw_token: str, client: ClientInfo) -> tuple[IssuedTokens, str, Any]:
+        """Masuk dengan token perangkat: token dipakai sekali (dirotasi), sesi baru seperti login biasa.
+        Mengembalikan (tokens, token perangkat baru, kedaluwarsa token baru)."""
+        creds = self.sessions.credentials
+        used = await creds.consume(raw_token, ip=client.ip)
+        if used is None:
+            known = await creds.lookup(raw_token)
+            if known is not None and known.revoked_reason == "ROTATED":
+                # Token lama dipakai lagi setelah dirotasi: salinan token kemungkinan bocor. Cabut kredensial
+                # perangkat itu (harus masuk ulang dengan kata sandi) dan simpan perubahannya (persist).
+                await creds.note_reuse(known.credential_id, known.user_id, known.device_name, client.ip)
+                await send_security_alert(
+                    "Token Sidik Jari Dipakai Ulang", f"Token perangkat usang dipakai oleh IP {client.ip}."
+                )
+                raise AppError(
+                    "BIOMETRIC_REUSED",
+                    "Demi keamanan, masuk dengan sidik jari dinonaktifkan. Silakan masuk dengan email dan kata sandi.",
+                    status=401,
+                    persist=True,
+                )
+            raise AppError(
+                "BIOMETRIC_INVALID",
+                "Masuk dengan sidik jari tidak berlaku lagi. Silakan masuk dengan email dan kata sandi.",
+                status=401,
+            )
+
+        user = await self.users.find_by_id(used.user_id)
+        if not user or not user.is_active:
+            await self.sessions.revoke_all_for_user(used.user_id, "Akun dinonaktifkan")
+            raise AppError("INACTIVE", "Akun Anda dinonaktifkan. Hubungi HR atau admin.", status=403, persist=True)
+        await self._act_as(user)
+        role = user.role or ""
+        if role not in FIELD_ROLES and role != "SUPER_ADMIN":
+            raise AppError(
+                "NOT_FIELD_STAFF",
+                "Akun kantor tidak dapat masuk lewat aplikasi HP. Silakan masuk lewat web.",
+                status=403,
+            )
+        await self._claim_device_slot(user, client)
+        auth_time = int(utcnow().timestamp())
+        tokens = await self._start_session(user, client, auth_time=auth_time, platform="mobile")
+        raw = new_token()
+        issued = await creds.issue(user.id, client.device_name, raw, ip=client.ip)
+        broker.publish(
+            [str(user.id)],
+            {
+                "topic": "security",
+                "data": {
+                    "type": "SECURITY_LOGIN",
+                    "title": "Masuk dari Perangkat",
+                    "body": f"Akun Anda masuk dengan sidik jari dari {client.device_name} "
+                            f"(IP: {client.ip or 'tidak diketahui'}).",
+                    "device_label": client.device_name,
+                    "ip": client.ip or "-",
+                    "time": auth_time,
+                },
+            },
+        )
+        return tokens, raw, issued.expires_at
 
     async def logout(self, raw_refresh_token: str | None) -> None:
         """

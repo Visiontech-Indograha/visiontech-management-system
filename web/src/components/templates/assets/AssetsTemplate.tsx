@@ -20,7 +20,7 @@ export function AssetsTemplate({ canManage, open, onOpen, close }: {
   close: () => void;
 }) {
   return (
-    <PageTemplate title="Kendaraan & alat" action={canManage && <AssetCreateButton onCreate={(asset) => onOpen({ kind: "create", asset })} />}>
+    <PageTemplate title="Kendaraan dan alat" action={canManage && <AssetCreateButton onCreate={(asset) => onOpen({ kind: "create", asset })} />}>
       {canManage && <LoanRequestsPanel onReceive={(loan) => onOpen({ kind: "return", loan })} />}
       <AssetList canManage={canManage} onOpen={onOpen} />
       {open?.kind === "create" && <AssetCreateDialog kind={open.asset} onClose={close} />}

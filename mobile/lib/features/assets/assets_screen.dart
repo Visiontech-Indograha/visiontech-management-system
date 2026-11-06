@@ -135,7 +135,7 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
         child: ListView(
           padding: safeListPadding(context).add(const EdgeInsets.symmetric(horizontal: kListGutter)),
           children: [
-            const HeroHeader(eyebrow: 'Layanan', title: 'Kendaraan & Alat', horizontal: 4),
+            const HeroHeader(eyebrow: 'Layanan', title: 'Kendaraan dan Alat', horizontal: 4),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(32),

@@ -72,7 +72,7 @@ export const BackupRegistryTable: React.FC = () => {
           <TableBlockHead className="border-b border-line text-mist">
             <TableBlockRow>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Waktu Eksekusi</TableBlockHeaderCell>
-              <TableBlockHeaderCell className="px-4 py-3 font-medium">Siklus & Periode</TableBlockHeaderCell>
+              <TableBlockHeaderCell className="px-4 py-3 font-medium">Siklus dan Periode</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Ukuran</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Integritas (SHA-256)</TableBlockHeaderCell>
               <TableBlockHeaderCell className="px-4 py-3 font-medium">Status</TableBlockHeaderCell>

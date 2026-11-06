@@ -61,10 +61,11 @@ class WorkCompletionRevisionRepository(BaseRepository):
                 update_at = NOW()
             WHERE completion_id = CAST(:id AS uuid)
               AND is_main_deliverable = TRUE
+              AND status IN ('DONE', 'IN_PROGRESS')
               AND delete_at IS NULL
         """
         result = await self.execute(sql, {"id": str(completion_id)})
-        return getattr(result, "rowcount", 0)
+        return int(getattr(result, "rowcount", 0) or 0)
 
     async def create_revision(
         self,

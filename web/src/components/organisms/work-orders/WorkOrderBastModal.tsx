@@ -122,7 +122,7 @@ export function WorkOrderBastModal({
             ) : (
               <div className="flex items-center gap-1.5">
                 <FileCheck2 className="h-4 w-4" />
-                <TextBlock as="span">Tandatangani & terbitkan surat serah terima</TextBlock>
+                <TextBlock as="span">Tandatangani dan terbitkan surat serah terima</TextBlock>
               </div>
             )}
           </ActionButton>

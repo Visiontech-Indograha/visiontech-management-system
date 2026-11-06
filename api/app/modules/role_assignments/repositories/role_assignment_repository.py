@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.repository import BaseRepository
+from app.shared.device_credential_repository import DeviceCredentialRepository
 
 _COLS = """
     a.assignment_id, a.user_id, a.role::text AS role, a.office_id, o.name AS office_name,
@@ -70,3 +71,7 @@ class RoleAssignmentRepository(BaseRepository):
             {"a": str(assignment_id), "d": actor},
         )
         return int(result.rowcount)
+
+    async def revoke_device_credentials(self, user_id: UUID | str) -> int:
+        """Peran dicabut: kredensial perangkat (masuk sidik jari) akun ini dicabut; akun harus masuk ulang."""
+        return await DeviceCredentialRepository(self.db).revoke_user(user_id, "ROLE_REVOKED")

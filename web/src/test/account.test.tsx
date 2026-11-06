@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { mockApi, renderRoute, apiError } from "./utils";
 
-/** M1 / P1-7: Akun & keamanan — ganti password bisa ditemukan, daftar perangkat, keluarkan perangkat. */
+/** M1 / P1-7: Akun & keamanan — ganti sandi bisa ditemukan, daftar perangkat, keluarkan perangkat. */
 
 const sessions = [
   { id: "s1", device_label: "Web Login", ip_address: "10.0.0.2", user_agent: "Mozilla/5.0 (Windows NT 10.0) Chrome/140.0",
@@ -11,7 +11,7 @@ const sessions = [
     issued_at: "2026-09-26T01:00:00Z", last_used_at: null, current: false },
 ];
 
-describe("Akun & keamanan", () => {
+describe("Akun dan keamanan", () => {
   it("tautan di menu, perangkat ini ditandai, perangkat lain bisa dikeluarkan satu per satu", async () => {
     const calls = mockApi((c) => {
       if (c.url === "/auth/sessions") return { data: sessions };
@@ -19,8 +19,8 @@ describe("Akun & keamanan", () => {
     });
     renderRoute("/account", { role: "PM" });
 
-    expect(screen.getByRole("link", { name: "Akun & keamanan" })).toHaveAttribute("href", "/account");
-    expect(await screen.findByRole("link", { name: "Ganti password" })).toHaveAttribute("href", "/change-password");
+    expect(screen.getByRole("link", { name: "Akun dan keamanan" })).toHaveAttribute("href", "/account");
+    expect(await screen.findByRole("link", { name: "Ganti sandi" })).toHaveAttribute("href", "/change-password");
     const list = await screen.findByRole("region", { name: "Perangkat yang masuk" });
     expect(await within(list).findByText("Perangkat ini")).toBeInTheDocument();
     expect(within(list).getByText(/Chrome · Windows/)).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("Wajib daftar wajah setelah login", () => {
     mockApi((c) => (c.url === "/face/status" ? { data: status() } : undefined));
     renderRoute("/work-plans", { role: "field" });
     const gate = await screen.findByTestId("face-gate");
-    expect(screen.queryByRole("link", { name: "Akun & keamanan" })).toBeNull(); // menu tidak tampil
+    expect(screen.queryByRole("link", { name: "Akun dan keamanan" })).toBeNull(); // menu tidak tampil
     expect(within(gate).getByTestId("face-capture")).toBeInTheDocument();
   });
 
@@ -104,21 +104,21 @@ describe("Wajib daftar wajah setelah login", () => {
         if (c.url === "/face/status") return { data: status(over) };
       });
       const { unmount } = renderRoute("/account", { role: "field" });
-      expect(await screen.findByRole("link", { name: "Ganti password" })).toBeInTheDocument();
+      expect(await screen.findByRole("link", { name: "Ganti sandi" })).toBeInTheDocument();
       expect(screen.queryByTestId("face-gate")).toBeNull();
       unmount();
     }
   });
 
-  it("ganti password tetap bisa dibuka walau wajib daftar wajah (tidak ikut terkunci)", async () => {
+  it("ganti sandi tetap bisa dibuka walau wajib daftar wajah (tidak ikut terkunci)", async () => {
     mockApi((c) => (c.url === "/face/status" ? { data: status() } : undefined));
     renderRoute("/change-password", { role: "field" });
     await waitFor(() => expect(screen.queryByTestId("face-gate")).toBeNull());
-    expect(await screen.findByRole("heading", { name: /ganti password/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /ganti sandi/i })).toBeInTheDocument();
   });
 });
 
-describe("Tata letak halaman Akun & keamanan", () => {
+describe("Tata letak halaman Akun dan keamanan", () => {
   it("responsif: dua kolom di desktop (lg), urutan ponsel Akun → Biometrik → Perangkat", async () => {
     mockApi((c) => {
       if (c.url === "/auth/sessions") return { data: [] };
@@ -148,7 +148,7 @@ describe("Tata letak halaman Akun & keamanan", () => {
  * karena browser tidak menyertakan header Authorization pada permintaan gambar sehingga API
  * selalu menjawab 404. Kunci kueri disamakan dengan FilePreview agar tidak meminta URL dua kali.
  */
-describe("Foto profil di Akun & keamanan", () => {
+describe("Foto profil di Akun dan keamanan", () => {
   const ME_WITH_PHOTO = {
     user_id: "u-1", email: "ramadani@visiontech.id", role: "PM",
     permissions: ["view:users", "view:documents"], employee_id: "e-1",

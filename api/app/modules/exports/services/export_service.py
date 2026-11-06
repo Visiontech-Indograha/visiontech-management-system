@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import io
 import re
-import threading
 from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
@@ -61,6 +60,8 @@ from app.modules.work_completion.services.work_completion_service import WorkCom
 from app.modules.work_plans.services.survey_service import SurveyService
 from app.shared.access.access_service import DailyNeed, check_daily_access, check_division_manager, is_admin
 from app.shared.documents import branding
+from app.shared.documents.build_limiter import EXPORT_BUILD_CONCURRENCY as _EXPORT_BUILD_CONCURRENCY
+from app.shared.documents.build_limiter import build_limited
 from app.shared.documents.office_convert import docx_to_pdf
 from app.shared.documents.static_map import MapPoint, render_point_map
 
@@ -132,20 +133,10 @@ def file_name(record: Any) -> str:
     return f"{label}_{stamp}.{EXT.get(record.export_format, 'bin')}"
 
 
-# Builder dokumen (docx/pptx/pdf) bersifat CPU-bound dan sinkron. Dijalankan di threadpool agar event loop
-# tidak terblokir; semafor thread membatasi jumlah ekspor berat yang berjalan bersamaan (memori 4 GB).
-EXPORT_BUILD_CONCURRENCY = 2
-_BUILD_SLOTS = threading.BoundedSemaphore(EXPORT_BUILD_CONCURRENCY)
-
-
-def _build_limited(builder: Callable[[Any], bytes], data: Any) -> bytes:
-    with _BUILD_SLOTS:
-        return builder(data)
-
-
-async def _build(builder: Callable[[Any], bytes], data: Any) -> bytes:
-    """Jalankan builder sinkron di threadpool dengan batas konkurensi; hasil dikembalikan apa adanya."""
-    return await asyncio.to_thread(_build_limited, builder, data)
+# Builder dokumen bersifat CPU-bound dan sinkron: antre di event loop dengan batas konkurensi bersama
+# (app.shared.documents.build_limiter), kerja berat di threadpool.
+EXPORT_BUILD_CONCURRENCY = _EXPORT_BUILD_CONCURRENCY
+_build = build_limited
 
 
 class ExportService:

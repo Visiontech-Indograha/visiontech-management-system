@@ -1739,6 +1739,51 @@
     "title": "BackupOut",
     "type": "object"
    },
+   "BiometricLoginRequestSchema": {
+    "properties": {
+     "device_token": {
+      "maxLength": 128,
+      "minLength": 20,
+      "title": "Device Token",
+      "type": "string"
+     }
+    },
+    "required": [
+     "device_token"
+    ],
+    "title": "BiometricLoginRequestSchema",
+    "type": "object"
+   },
+   "BiometricLoginResponseSchema": {
+    "description": "Sama seperti login biasa, ditambah token perangkat pengganti (token lama sudah tidak berlaku).",
+    "properties": {
+     "access_token": {
+      "title": "Access Token",
+      "type": "string"
+     },
+     "device_token": {
+      "title": "Device Token",
+      "type": "string"
+     },
+     "device_token_expires_at": {
+      "format": "date-time",
+      "title": "Device Token Expires At",
+      "type": "string"
+     },
+     "token_type": {
+      "default": "bearer",
+      "title": "Token Type",
+      "type": "string"
+     }
+    },
+    "required": [
+     "access_token",
+     "device_token",
+     "device_token_expires_at"
+    ],
+    "title": "BiometricLoginResponseSchema",
+    "type": "object"
+   },
    "Body_enroll_face_api_v1_face_enroll_post": {
     "properties": {
      "files": {
@@ -4752,6 +4797,31 @@
      }
     },
     "title": "DefaultMaterialUpdate",
+    "type": "object"
+   },
+   "DeviceCredentialResponseSchema": {
+    "description": "Token perangkat baru. Simpan di penyimpanan aman HP; tidak bisa dilihat lagi.",
+    "properties": {
+     "device_label": {
+      "title": "Device Label",
+      "type": "string"
+     },
+     "device_token": {
+      "title": "Device Token",
+      "type": "string"
+     },
+     "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+     }
+    },
+    "required": [
+     "device_token",
+     "expires_at",
+     "device_label"
+    ],
+    "title": "DeviceCredentialResponseSchema",
     "type": "object"
    },
    "DeviceKeyRequest": {
@@ -18561,7 +18631,7 @@
  },
  "info": {
   "title": "Visiontech VMS",
-  "version": "1.7.2"
+  "version": "1.8.3"
  },
  "openapi": "3.1.0",
  "paths": {
@@ -21343,6 +21413,48 @@
     ]
    }
   },
+  "/api/v1/auth/biometric-login": {
+   "post": {
+    "description": "Masuk dengan token perangkat. Token dipakai sekali lalu diganti token baru di respons.",
+    "operationId": "biometric_login_api_v1_auth_biometric_login_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BiometricLoginRequestSchema"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BiometricLoginResponseSchema"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Biometric Login",
+    "tags": [
+     "Authentication"
+    ]
+   }
+  },
   "/api/v1/auth/change-password": {
    "post": {
     "description": "Mengubah password pengguna saat ini.",
@@ -21385,6 +21497,33 @@
      }
     ],
     "summary": "Change Password",
+    "tags": [
+     "Authentication"
+    ]
+   }
+  },
+  "/api/v1/auth/device-credential": {
+   "post": {
+    "description": "Menerbitkan token perangkat (30 hari) untuk masuk dengan sidik jari. Token lama perangkat ini dicabut.\nToken hanya dikembalikan sekali.",
+    "operationId": "issue_device_credential_api_v1_auth_device_credential_post",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeviceCredentialResponseSchema"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Issue Device Credential",
     "tags": [
      "Authentication"
     ]

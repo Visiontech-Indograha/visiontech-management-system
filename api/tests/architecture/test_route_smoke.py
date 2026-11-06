@@ -22,6 +22,7 @@ PUBLIC_ROUTES = {
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),
+    ("POST", "/auth/biometric-login"),  # hanya token perangkat; per IP, sekali pakai, umur 30 hari
     # Media rujukan statis (contoh SOP, foto alat/kendaraan seed) untuk tag <img>: folder & jenis berkas dibatasi.
     ("GET", "/media/preview"),
     ("GET", "/media/download"),

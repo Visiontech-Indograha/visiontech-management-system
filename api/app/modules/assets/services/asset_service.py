@@ -430,9 +430,9 @@ class AssetService:
             data.asset_type, asset_id, employee_id, data.purpose.strip(), data.needed_on
         )
         req = await self.repo.get_request(request_id)
-        await self._notify().notify_roles(
-            ["ADMIN_HR_GA"], "ASSET_REQUESTED", f"{req.employee_name} mengajukan pinjam {req.asset_name}",
-            data.purpose.strip(), target="asset",
+        await self._notify().notify_hr_of_office(
+            await self.repo.asset_office(data.asset_type, asset_id), "ASSET_REQUESTED",
+            f"{req.employee_name} mengajukan pinjam {req.asset_name}", data.purpose.strip(), target="asset",
         )
         return req
 
@@ -456,8 +456,8 @@ class AssetService:
         if not await self.repo.set_request_status(request_id, "CANCELLED", None, None):
             raise AppError("NOT_CANCELLABLE", "Pengajuan ini sudah diputuskan.", status=409)
         req = await self.repo.get_request(request_id)
-        await self._notify().notify_roles(
-            ["ADMIN_HR_GA"], "ASSET_REQUEST_CANCELLED",
+        await self._notify().notify_hr_of_office(
+            await self.repo.request_office(request_id), "ASSET_REQUEST_CANCELLED",
             f"{req.employee_name} membatalkan pengajuan pinjam {req.asset_name}", "", target="asset",
         )
         return req
@@ -505,8 +505,8 @@ class AssetService:
         note = data.note.strip() if data.note else None
         await self.repo.request_return(assignment_id, data.condition, note, photo)
         done = await self.repo.get_loan(assignment_id)
-        await self._notify().notify_roles(
-            ["ADMIN_HR_GA"], "ASSET_RETURN_REQUESTED",
+        await self._notify().notify_hr_of_office(
+            await self.repo.loan_office(assignment_id), "ASSET_RETURN_REQUESTED",
             f"{done.employee_name} mengembalikan {done.asset_name}, mohon diperiksa", note or "", target="asset",
         )
         return done

@@ -407,6 +407,15 @@ class AuthService:
                 details={"fields": {"current_password": "Kata sandi saat ini salah."}},
             )
 
+        # Sandi baru tidak boleh sama dengan sandi saat ini (cek lewat verifikasi hash).
+        if await asyncio.to_thread(verify_password, new_password, user.password_hash):
+            raise AppError(
+                "VALIDATION_ERROR",
+                "Sandi baru tidak boleh sama dengan sandi lama.",
+                status=422,
+                details={"fields": {"new_password": "Sandi baru tidak boleh sama dengan sandi lama."}},
+            )
+
         new_hash = await asyncio.to_thread(hash_password, new_password)
         await self.users.update_password_hash(user_id, new_hash)
         # Kata sandi berganti → semua perangkat lain keluar; perangkat ini mendapat sesi baru.

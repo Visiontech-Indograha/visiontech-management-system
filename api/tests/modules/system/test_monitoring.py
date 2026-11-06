@@ -47,3 +47,20 @@ def test_attendance_recap_counts_per_employee(client, world: World):
     assert [r["employee_id"] for r in own.json()["employees"]] == [world.employees["member"]]
     bad = client.get("/recaps/attendance", headers=world.headers(client, "member"), params={"month": "2026-13"})
     assert bad.status_code == 422
+
+
+def test_attendance_recap_empty_month_has_no_presence(client, world: World):
+    ops = client.get("/recaps/attendance", headers=world.headers(client, "ops"), params={"month": "2001-01"})
+    assert ops.status_code == 200, ops.text
+    assert all(r["days_present"] == 0 for r in ops.json()["employees"])
+
+
+def test_attendance_recap_without_token_is_rejected(client):
+    assert client.get("/recaps/attendance").status_code == 401
+
+
+def test_attendance_recap_month_boundaries(client, world: World):
+    headers = world.headers(client, "ops")
+    for bad in ("2026-00", "2026-1", "26-01", "2026-01-01", "x" * 300):
+        assert client.get("/recaps/attendance", headers=headers, params={"month": bad}).status_code == 422, bad
+    assert client.get("/recaps/attendance", headers=headers, params={"month": "2026-12"}).status_code == 200

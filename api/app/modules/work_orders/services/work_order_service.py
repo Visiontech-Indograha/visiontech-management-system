@@ -31,6 +31,7 @@ from app.modules.exports.services.builders.docx_builders import (
 )
 from app.modules.exports.services.builders.model import CompletionReport
 from app.modules.exports.services.builders.office_builders import completion_pptx, completion_xlsx
+from app.modules.exports.services.builders.pdf_builders import completion_pdf
 from app.modules.work_orders.repositories.work_order_repository import WorkOrderRepository
 from app.modules.work_orders.schemas.work_order_schema import (
     SurveySubmitIn,
@@ -40,7 +41,7 @@ from app.modules.work_orders.schemas.work_order_schema import (
 )
 from app.shared.access.scope_rules import sees_all_work_orders, viewer_params
 from app.shared.documents.branding import default_kop_logos
-from app.shared.documents.reportlab_service import build_completion_pdf_reportlab
+from app.shared.documents.build_limiter import build_limited
 
 SIGNATURE_MAX_BYTES = 300_000
 
@@ -420,7 +421,7 @@ class WorkOrderService:
         docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
         if template_upper in ("PDF", "BAST_PDF"):
-            content = build_completion_pdf_reportlab(report)
+            content = await build_limited(completion_pdf, report)
             return f"BAST_{wo_num}.pdf", "application/pdf", content
         elif template_upper in ("DOCX", "BAST", "BAST_DOCX"):
             content = bast_docx(report)

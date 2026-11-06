@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTION_LABEL } from "./auditLabels";
+import { ACTION_LABEL, AUDIT_ENTITIES } from "./auditLabels";
 
 describe("ACTION_LABEL", () => {
   it("punya label awam untuk kode audit baru", () => {
@@ -12,5 +12,9 @@ describe("ACTION_LABEL", () => {
     expect(ACTION_LABEL.BACKDATE_CREATED).toBe("Absen susulan diajukan");
     expect(ACTION_LABEL.BACKDATE_APPROVED).toBe("Absen susulan disetujui");
     expect(ACTION_LABEL.LOCATION_CHANGED).toBe("Lokasi diubah");
+  });
+
+  it("punya label untuk entitas rencana kerja harian", () => {
+    expect(AUDIT_ENTITIES.work_plan_daily).toBe("Rencana kerja harian");
   });
 });

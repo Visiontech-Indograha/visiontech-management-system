@@ -17,6 +17,7 @@ export const AUDIT_ENTITIES: Record<string, string> = {
   users: "Akun pengguna",
   work_completion: "Penyelesaian pekerjaan",
   work_plan_item: "Item pekerjaan",
+  work_plan_daily: "Rencana kerja harian",
 };
 
 export const ACTION_LABEL: Record<string, string> = {

@@ -18,6 +18,11 @@ typedef VoidCallback = void Function();
 /// diisi belakangan (bukan lewat constructor) supaya tidak ada dependency
 /// melingkar dengan provider auth yang justru memakai ApiClient ini.
 class ApiClient {
+  /// Diisi AuthController: true selama sesi offline (sidik jari) belum ditukar
+  /// ke server, jadi belum ada token akses. 401 pada saat itu BUKAN sesi
+  /// berakhir: jangan refresh/keluarkan, cukup teruskan galatnya.
+  bool Function()? sessionPending;
+
   /// [baseUrl]: bawaan [ApiConfig.baseUrl]; diisi uji yang memakai server HTTP lokal.
   ApiClient({required TokenStorage tokenStorage, String? baseUrl})
     : _tokenStorage = tokenStorage, // ignore: prefer_initializing_formals
@@ -56,6 +61,10 @@ class ApiClient {
               error.requestOptions.path.contains('/auth/biometric-login') ||
               error.requestOptions.path.contains('/auth/refresh');
 
+          if (isUnauthorized && (sessionPending?.call() ?? false)) {
+            handler.next(error);
+            return;
+          }
           if (!isUnauthorized || alreadyRetried || isAuthEndpoint) {
             handler.next(error);
             return;

@@ -42,6 +42,7 @@ class AuthController extends Notifier<AuthState> {
       );
     };
     ref.onDispose(() => _exchangeTimer?.cancel());
+    ref.read(apiClientProvider).sessionPending = () => _sessionPending;
     _restoreSession();
     return const AuthInitial();
   }
@@ -63,6 +64,7 @@ class AuthController extends Notifier<AuthState> {
         final user = await _cachedUser();
         if (user != null) {
           state = AuthLocked(user);
+          _sessionPending = true;
           _startExchangeRetry();
           return;
         }
@@ -302,6 +304,9 @@ class AuthController extends Notifier<AuthState> {
   };
 
   Timer? _exchangeTimer;
+
+  /// True selama sesi offline belum ditukar (belum ada token akses).
+  bool _sessionPending = false;
   bool _exchanging = false;
 
   /// Jarak coba ulang tukar token perangkat di latar belakang.
@@ -370,6 +375,7 @@ class AuthController extends Notifier<AuthState> {
       authTime ?? DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000,
     );
     await storage.saveDeviceExchangePending(false);
+    _sessionPending = false;
   }
 
   Future<AuthUser?> _cachedUser() async {
@@ -384,6 +390,7 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> _rejectDeviceLogin() async {
     _exchangeTimer?.cancel();
+    _sessionPending = false;
     final storage = ref.read(tokenStorageProvider);
     await storage.clearDeviceCredential();
     await storage.clearSession();
@@ -426,6 +433,7 @@ class AuthController extends Notifier<AuthState> {
           return;
         }
         await storage.saveDeviceExchangePending(true);
+        _sessionPending = true;
         state = AuthAuthenticated(user);
         _startExchangeRetry();
         return;
@@ -487,6 +495,8 @@ class AuthController extends Notifier<AuthState> {
     try {
       await _exchangeDeviceToken(cred.token);
       _exchangeTimer?.cancel();
+      // Token akses sudah ada: kirim antrean yang tertahan, sekali.
+      unawaited(ref.read(syncEngineProvider).syncAll().then((_) {}));
     } on DioException catch (e) {
       if (!isNetworkFailure(e) && _rejectCodes.contains(apiErrorCode(e))) {
         await _rejectDeviceLogin();

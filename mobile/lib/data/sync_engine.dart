@@ -53,6 +53,7 @@ class SyncEngine {
     required AppDatabase db,
     required DeviceIdProvider deviceId,
   }) : _api = VmsApi(apiClient),
+       _client = apiClient,
        _db = db, // ignore: prefer_initializing_formals
        _deviceId = deviceId {
     // ignore: prefer_initializing_formals
@@ -67,6 +68,11 @@ class SyncEngine {
   late final OfflineAttendance offlineAttendance;
 
   final VmsApi _api;
+  final ApiClient _client;
+
+  /// Sesi offline (sidik jari) belum ditukar ke server: belum ada token akses.
+  /// Tukar dulu, baru kirim; antrean dan foto tetap utuh.
+  bool get _holdForDeviceExchange => _client.sessionPending?.call() ?? false;
   final AppDatabase _db;
   final DeviceIdProvider _deviceId;
 
@@ -172,7 +178,7 @@ class SyncEngine {
             ),
           );
         } on DioException catch (e) {
-          if (isNetworkFailure(e)) {
+          if (isNetworkFailure(e) || e.response?.statusCode == 401) {
             break; // urutan dijaga: berhenti di sini, coba lagi nanti
           }
           await _markDead(row.id, 'Foto gagal diunggah: ${_describe(e)}');
@@ -362,6 +368,12 @@ class SyncEngine {
   /// [manual] = tombol sinkron buatan user: selalu mencoba jaringan. Pemicu otomatis (konektivitas/startup)
   /// tidak mereset status offline, supaya layar yang baru dibuka tetap langsung dari cache.
   Future<SyncSummary> syncAll({bool manual = false}) async {
+    if (_holdForDeviceExchange) {
+      return const SyncSummary(
+        pushErrors: ['Menunggu masuk ulang ke server.'],
+        pullErrors: [],
+      );
+    }
     if (manual) NetworkHint.markOnline();
     final push = <String>[];
     final pull = <String>[];

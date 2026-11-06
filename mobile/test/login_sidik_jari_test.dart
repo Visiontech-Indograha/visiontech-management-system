@@ -12,9 +12,12 @@ import 'package:vms_mobile/core/biometric_auth.dart';
 import 'package:vms_mobile/core/providers.dart';
 import 'package:vms_mobile/core/theme/theme.dart';
 import 'package:vms_mobile/core/token_storage.dart';
+import 'package:vms_mobile/data/sync_engine.dart';
 import 'package:vms_mobile/features/auth/auth_controller.dart';
 import 'package:vms_mobile/features/auth/auth_state.dart';
 import 'package:vms_mobile/features/auth/login_screen.dart';
+
+import 'support/fake_backend.dart' show memoryDb;
 
 /// Penyimpanan di memori (tanpa Keystore).
 class _MemStorage extends TokenStorage {
@@ -181,6 +184,7 @@ ResponseBody _offline(RequestOptions o) => throw DioException.connectionError(
       tokenStorageProvider.overrideWithValue(st),
       biometricAuthProvider.overrideWithValue(bio),
       apiClientProvider.overrideWithValue(api),
+      appDatabaseProvider.overrideWithValue(memoryDb()),
     ],
   );
   addTearDown(c.dispose);
@@ -300,6 +304,69 @@ void main() {
         .enableDeviceCredential();
     expect(galat, contains('sinyal'));
     expect(t.st.m['dev'], isNull);
+  });
+
+  ResponseBody syncAware(RequestOptions o, bool online) {
+    if (!online) return _offline(o);
+    if (o.path.contains('sync/operations')) {
+      final ops = (o.data as Map)['operations'] as List;
+      return _json({
+        'results': [
+          for (final op in ops)
+            {'client_op_id': (op as Map)['client_op_id'], 'status': 'APPLIED'},
+        ],
+      });
+    }
+    if (o.path.contains('daily')) return _json(<Object>[]);
+    return _ok(o);
+  }
+
+  test('sesi offline belum ditukar: sinkron ditahan, antrean utuh', () async {
+    var online = false;
+    final t = _setup((o) => syncAware(o, online));
+    await _settle(t.c);
+    final n = t.c.read(authControllerProvider.notifier);
+    await n.loginWithDeviceCredential();
+    final engine = t.c.read(syncEngineProvider);
+    await engine.submit(OfflineOp.taskToggle, {'task_id': 't-1'});
+    online = true; // sinyal kembali, tetapi belum ditukar
+    t.ad.paths.clear();
+    final ringkas = await engine.syncAll();
+    expect(ringkas.pushErrors, isNotEmpty);
+    expect(t.ad.paths, isEmpty); // tidak ada panggilan -> tidak ada 401
+    expect(await engine.pendingOperationCount(), 1);
+    expect((await engine.allPendingOperations()).single.deadLetter, isFalse);
+  });
+
+  test('tukar berhasil lalu antrean terkirim', () async {
+    var online = false;
+    final t = _setup((o) => syncAware(o, online));
+    await _settle(t.c);
+    final n = t.c.read(authControllerProvider.notifier);
+    await n.loginWithDeviceCredential();
+    final engine = t.c.read(syncEngineProvider);
+    await engine.submit(OfflineOp.taskToggle, {'task_id': 't-1'});
+    online = true;
+    await n.retryDeviceExchange();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    expect(t.ad.paths.any((p) => p.contains('sync/operations')), isTrue);
+    expect(await engine.pendingOperationCount(), 0);
+  });
+
+  test('401 saat sesi belum ditukar: tidak keluar, tidak dead-letter', () async {
+    final t = _setup((o) {
+      if (o.path.contains('sync/operations')) return _err('UNAUTHORIZED', 401);
+      return _offline(o);
+    });
+    await _settle(t.c);
+    final n = t.c.read(authControllerProvider.notifier);
+    await n.loginWithDeviceCredential();
+    final api = t.c.read(apiClientProvider);
+    await expectLater(
+      api.dio.post('/api/v1/sync/operations', data: {}),
+      throwsA(isA<DioException>()),
+    );
+    expect(t.c.read(authControllerProvider), isA<AuthAuthenticated>());
   });
 
   Widget app(ProviderContainer c) => UncontrolledProviderScope(

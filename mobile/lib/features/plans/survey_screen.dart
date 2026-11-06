@@ -442,7 +442,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
           const SizedBox(height: 6),
           _Step(done: points.isNotEmpty, text: 'Tambah titik (${points.length} titik)'),
           _Step(done: photosOk, text: 'Setiap titik berfoto sesuai format'),
-          _Step(done: infoOk, text: 'Isi lokasi & uraian (layout dibuat otomatis)'),
+          _Step(done: infoOk, text: 'Isi lokasi dan uraian (layout dibuat otomatis)'),
           const _Step(done: false, text: 'Pratinjau laporan, lalu kirim ke PM'),
         ],
       ),
@@ -475,7 +475,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
             maxLines: 4,
             decoration: const InputDecoration(
               labelText: 'Uraian survei (opsional)',
-              hintText: 'Kosongkan bila ingin dibuat otomatis dari tanggal & nama tim.',
+              hintText: 'Kosongkan bila ingin dibuat otomatis dari tanggal dan nama tim.',
             ),
           ),
           const SizedBox(height: 12),

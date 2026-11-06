@@ -297,7 +297,7 @@ class _SurveyPointScreenState extends ConsumerState<SurveyPointScreen> {
         children: [
           _Section(
             number: 1,
-            title: 'Jenis & nama titik',
+            title: 'Jenis dan nama titik',
             subtitle: 'Jenis titik menentukan foto dan katalog material yang diminta.',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

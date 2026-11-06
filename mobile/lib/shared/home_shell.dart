@@ -148,7 +148,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
       builder: (ctx) => AlertDialog(
         title: const Text('Aktifkan Login Sidik Jari?'),
         content: const Text(
-          'Buka aplikasi berikutnya cukup dengan sidik jari, tanpa perlu mengetik email & sandi lagi. '
+          'Buka aplikasi berikutnya cukup dengan sidik jari, tanpa perlu mengetik email dan sandi lagi. '
           'Bisa diubah kapan saja lewat menu Profil. Pilih "Nanti Saja" bila belum mau; Anda tetap bisa masuk dengan email dan sandi.',
         ),
         actions: [

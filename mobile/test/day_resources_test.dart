@@ -161,7 +161,7 @@ void main() {
         backend.routes['/mess/me'] = (_) => [];
         await pumpPlan(tester);
 
-        expect(find.text('Kendaraan & alat hari ini'), findsOneWidget);
+        expect(find.text('Kendaraan dan alat hari ini'), findsOneWidget);
         expect(
           find.textContaining('Hilux (B 1234 XY) · dipegang Agus'),
           findsOneWidget,
@@ -182,7 +182,7 @@ void main() {
         await pumpPlan(tester);
 
         expect(find.textContaining('Tim MEP'), findsOneWidget);
-        expect(find.text('Kendaraan & alat hari ini'), findsNothing);
+        expect(find.text('Kendaraan dan alat hari ini'), findsNothing);
       },
     );
 

@@ -95,7 +95,7 @@ class AuthController extends Notifier<AuthState> {
         state =
             await _stateFromCachedProfile() ??
             const AuthUnauthenticated(
-              error: 'Tidak ada koneksi & belum ada sesi tersimpan di perangkat ini.',
+              error: 'Tidak ada koneksi dan belum ada sesi tersimpan di perangkat ini.',
             );
         return;
       }
@@ -338,7 +338,7 @@ class AuthController extends Notifier<AuthState> {
 
   String _extractErrorMessage(DioException e) {
     if (isNetworkFailure(e)) {
-      return 'Tidak bisa terhubung ke server. Periksa koneksi & alamat server.';
+      return 'Tidak bisa terhubung ke server. Periksa koneksi dan alamat server.';
     }
     // Dulu hanya membaca `detail` (format FastAPI) sehingga pesan VMS
     // (`error.message`: salah sandi, sisa percobaan, terkunci) tak pernah tampil.

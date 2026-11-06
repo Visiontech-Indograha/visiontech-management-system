@@ -27,10 +27,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Email wajib diisi'), findsOneWidget);
-    expect(find.text('Password wajib diisi'), findsOneWidget);
+    expect(find.text('Sandi wajib diisi'), findsOneWidget);
   });
 
-  testWidgets('LoginScreen bisa diisi email & password', (tester) async {
+  testWidgets('LoginScreen bisa diisi email & sandi', (tester) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 

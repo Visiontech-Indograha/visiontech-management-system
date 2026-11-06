@@ -14,7 +14,7 @@ import 'auth_state.dart';
 /// Pesan tunggal saat sesi ditutup oleh kebijakan 1x24 jam -- dipakai di
 /// beberapa tempat, jadi disatukan supaya tidak berbeda-beda bunyinya.
 const kSessionExpiredMessage =
-    'Demi keamanan, sesi diperbarui setiap hari. Silakan masuk lagi dengan password.';
+    'Demi keamanan, sesi diperbarui setiap hari. Silakan masuk lagi dengan sandi.';
 
 /// Riverpod 3.x tidak lagi punya StateNotifier/StateNotifierProvider (dulu
 /// ada di flutter_riverpod 2.x) -- polanya sekarang Notifier/NotifierProvider.

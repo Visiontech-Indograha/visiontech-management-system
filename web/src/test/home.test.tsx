@@ -15,7 +15,7 @@ const plan = (id: string, status: string, work_date = todayIso) => ({
 const stat = (label: string) => screen.getByText(label).closest("a")!;
 
 describe("beranda", () => {
-  it("menghitung jadwal hari ini, berjalan, & menunggu persetujuan; daftar maksimal 6", async () => {
+  it("menghitung jadwal hari ini, berjalan, dan menunggu persetujuan; daftar maksimal 6", async () => {
     const plans = [
       plan("a", "ONGOING"), plan("b", "ONGOING"), plan("c", "APPROVED"), plan("d", "SUBMITTED", "2099-01-01"),
       plan("e", "SUBMITTED", "2099-01-01"), plan("f", "DRAFT", "2099-01-01"),

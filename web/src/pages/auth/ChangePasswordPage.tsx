@@ -9,7 +9,7 @@ import { changePassword } from "@/services/authService";
 import { changePasswordSchema, type ChangePasswordValues } from "@/schemas/changePasswordSchema";
 import { ChangePasswordTemplate } from "@/components/templates/auth/ChangePasswordTemplate";
 
-/** Ganti password (wajib saat login pertama). Berhasil → token baru dipasang, kembali ke Beranda. */
+/** Ganti sandi (wajib saat login pertama). Berhasil → token baru dipasang, kembali ke Beranda. */
 export function ChangePasswordPage() {
   const { me, applyToken } = useSession();
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export function ChangePasswordPage() {
     setFormError(null);
     try {
       await applyToken(await changePassword(current_password, new_password));
-      toast.success("Password diubah.");
+      toast.success("Sandi diubah.");
       navigate("/", { replace: true });
     } catch (e) {
       if (e instanceof ApiError) {
@@ -32,7 +32,7 @@ export function ChangePasswordPage() {
         else if (fields.password) setError("new_password", { message: fields.password });
         else setFormError(e.message);
       } else {
-        setFormError("Password tidak dapat diubah. Coba lagi.");
+        setFormError("Sandi tidak dapat diubah. Coba lagi.");
       }
     }
   });

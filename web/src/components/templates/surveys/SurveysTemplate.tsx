@@ -13,7 +13,7 @@ export function SurveysTemplate(props: {
   return (
     <PageTemplate
       title="Survei"
-      description="Survei lapangan ACS & CCTV dari ketua tim: tinjau titik dan foto, lihat pratinjau laporan, setujui, unduh dokumen resmi, lalu rencanakan pemasangan."
+      description="Survei lapangan ACS dan CCTV dari ketua tim: tinjau titik dan foto, lihat pratinjau laporan, setujui, unduh dokumen resmi, lalu rencanakan pemasangan."
     >
       <div className="space-y-4">
         <SurveyLogoPanel />

@@ -13,7 +13,7 @@ interface SessionState {
   ready: boolean;
   login: (email: string, password: string, admin?: boolean) => Promise<Me>;
   logout: () => Promise<void>;
-  /** Terapkan token baru (mis. setelah ganti password) lalu muat ulang /auth/me. */
+  /** Terapkan token baru (mis. setelah ganti sandi) lalu muat ulang /auth/me. */
   applyToken: (token: TokenOut) => Promise<Me>;
   initSession: () => Promise<void>;
   /** Muat ulang /auth/me (mis. setelah foto profil diganti) tanpa mengubah token. */

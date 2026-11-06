@@ -30,7 +30,7 @@ describe("fase bawaan per peran", () => {
   });
 });
 
-describe("label satuan & fase", () => {
+describe("label satuan dan fase", () => {
   it("fase kosong berarti mengikuti peran", () => {
     expect(defaultsLabel("Meter", null)).toBe("Satuan: Meter · Fase bawaan: mengikuti peran");
   });

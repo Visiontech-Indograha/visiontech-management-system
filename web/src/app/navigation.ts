@@ -42,22 +42,22 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/teams", label: "Tim Lapangan", icon: Users, requires: ["view:teams"], group: "Operasional" },
   { path: "/safety-campaigns", label: "K3 / HSE", icon: ShieldCheck, anyOf: ["view:hse_campaigns", "manage:hse_campaigns"], group: "Operasional" },
   // 2. Kehadiran & Waktu
-  { path: "/attendance", label: "Absensi", icon: Clock, group: "Kehadiran & SDM" },
-  { path: "/leaves", label: "Cuti & Izin", icon: CalendarDays, group: "Kehadiran & SDM" },
-  { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran & SDM" },
-  { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran & SDM" },
-  { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran & SDM" },
+  { path: "/attendance", label: "Absensi", icon: Clock, group: "Kehadiran dan SDM" },
+  { path: "/leaves", label: "Cuti dan Izin", icon: CalendarDays, group: "Kehadiran dan SDM" },
+  { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran dan SDM" },
+  { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran dan SDM" },
+  { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
   // 3. Aset & Fasilitas
-  { path: "/assets", label: "Kendaraan & alat", icon: Truck, group: "Aset & Fasilitas" },
-  { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset & Fasilitas" },
+  { path: "/assets", label: "Kendaraan dan alat", icon: Truck, group: "Aset dan Fasilitas" },
+  { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset dan Fasilitas" },
   // 4. SDM & Direktori
-  { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"], group: "Karyawan & Berkas" },
-  { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"], group: "Karyawan & Berkas" },
-  { path: "/offboarding", label: "Offboarding", icon: UserMinus, requires: ["view:offboarding"], group: "Karyawan & Berkas" },
+  { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"], group: "Karyawan dan Berkas" },
+  { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"], group: "Karyawan dan Berkas" },
+  { path: "/offboarding", label: "Offboarding", icon: UserMinus, requires: ["view:offboarding"], group: "Karyawan dan Berkas" },
   // 5. Master & Sistem
-  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"], group: "Master & Sistem" },
-  { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master & Sistem" },
-  { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master & Sistem" },
+  { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"], group: "Master dan Sistem" },
+  { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
+  { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
 ];
 
 /** Tujuan utama untuk bilah navigasi bawah ponsel (< 768 px). */

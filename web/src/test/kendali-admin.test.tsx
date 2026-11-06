@@ -10,7 +10,7 @@ const ID = "00000000-0000-4000-8000-0000000000e1";
 const ACCOUNT = `/employees/${ID}/account`;
 const employee = () => ({
   employee_id: ID, employee_no: "VT-001", full_name: "Test User", office_id: "o1", office_name: "Kantor Pusat",
-  division_id: "u1", division_name: "CCTV & ACS", position_id: "p1", position_code: "TEK", position_name: "Teknisi",
+  division_id: "u1", division_name: "CCTV dan ACS", position_id: "p1", position_code: "TEK", position_name: "Teknisi",
   join_date: "2024-01-01", pkwt_end_date: null, photo_file_id: null, face_enrolled: false,
   offboarding_status: "active", archived: false, email: null, addresses: [],
 });
@@ -19,7 +19,7 @@ const future = () => new Date(Date.now() + 10 * 60_000).toISOString();
 /** Pengguna HR yang juga punya izin hapus permanen (SUPER_ADMIN) untuk menguji zona berbahaya. */
 const superAdmin = () => ({ ...mockMe("HR")!, permissions: [...mockMe("HR")!.permissions, "delete:any"] });
 
-describe("akun karyawan: buka kunci & status terkunci (HR)", () => {
+describe("akun karyawan: buka kunci dan status terkunci (HR)", () => {
   it("akun terkunci menampilkan status dan tombol buka kunci yang memanggil API", async () => {
     let locked = true;
     const calls = mockApi((c) => {
@@ -112,7 +112,7 @@ describe("halaman login: petunjuk penolakan", () => {
     });
     renderRoute("/login");
     type("Email", "lapangan@contoh.id");
-    type("Password", "Rahasia123");
+    type("Sandi", "Rahasia123");
     await userEvent.setup().click(screen.getByRole("button", { name: "Masuk" }));
     const alert = await screen.findByTestId("login-error");
     expect(within(alert).getByText(/masuk lewat aplikasi HP Visiontech/)).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe("halaman login: petunjuk penolakan", () => {
     });
     renderRoute("/login");
     type("Email", "penuh@contoh.id");
-    type("Password", "Rahasia123");
+    type("Sandi", "Rahasia123");
     await userEvent.setup().click(screen.getByRole("button", { name: "Masuk" }));
     expect(await screen.findByText(/sudah aktif di 4 perangkat/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lihat cara mengeluarkan perangkat lama" }));

@@ -15,7 +15,7 @@ import { ZoomableImage } from "@/components/molecules/ZoomableImage";
 
 const VIEW = { width: 400, height: 300 };
 
-describe("zoom & geser (murni)", () => {
+describe("zoom dan geser (murni)", () => {
   it("skala dibatasi 1x sampai 4x", () => {
     expect(clampScale(10)).toBe(ZOOM_MAX);
     expect(clampScale(0.2)).toBe(1);

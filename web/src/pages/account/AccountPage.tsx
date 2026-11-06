@@ -5,7 +5,7 @@ import { roleScopeLines } from "@/lib/roleAssignments";
 
 
 /**
- * Akun & keamanan (M1 / P1-7): ganti password dan perangkat yang sedang masuk, termasuk
+ * Akun & keamanan (M1 / P1-7): ganti sandi dan perangkat yang sedang masuk, termasuk
  * "Keluarkan perangkat lain". Token akses perangkat lain habis paling lama 15 menit.
  */
 export function AccountPage() {

@@ -3,7 +3,7 @@ import { koordinatError, namaKlienError, parseTanggalInput } from "@/lib/inputRu
 
 describe("namaKlienError", () => {
   it("menerima nama biasa dan tanda baca umum", () => {
-    expect(namaKlienError("PT Pertamina EP (Persero) & Co.")).toBeNull();
+    expect(namaKlienError("PT Pertamina EP (Persero) dan Co.")).toBeNull();
   });
   it("menolak tag HTML dan emoji dengan pesan Indonesia", () => {
     expect(namaKlienError("<script>x</script>")).toMatch(/tanda < atau >/);

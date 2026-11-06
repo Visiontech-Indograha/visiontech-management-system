@@ -196,7 +196,7 @@ export function WorkOrderList({
               : "border-transparent text-muted-foreground hover:text-ink hover:bg-muted/30"
           }`}
         >
-          <TextBlock as="span">1. Tugas Masuk & Survei</TextBlock>
+          <TextBlock as="span">1. Tugas Masuk dan Survei</TextBlock>
           <div className="ml-2 px-2 py-0.5 text-xs rounded-full bg-muted font-bold">
             <TextBlock as="span">{categorized.intake.length}</TextBlock>
           </div>
@@ -255,7 +255,7 @@ export function WorkOrderList({
               : "border-transparent text-muted-foreground hover:text-ink hover:bg-muted/30"
           }`}
         >
-          <TextBlock as="span">4. Selesai & serah terima</TextBlock>
+          <TextBlock as="span">4. Selesai dan serah terima</TextBlock>
           <div className="ml-2 px-2 py-0.5 text-xs rounded-full bg-muted font-bold">
             <TextBlock as="span">{categorized.completed.length}</TextBlock>
           </div>

@@ -42,7 +42,7 @@ export function CompletionVerificationCard({ data, pending, failed }: {
   ];
   return (
     <section className="space-y-3 rounded-panel border border-line bg-surface p-5 shadow-card" data-testid="verify-result">
-      {data.intact ? <Pill tone="success">Asli & tidak berubah</Pill> : <Pill tone="danger">Isi berubah sejak disahkan</Pill>}
+      {data.intact ? <Pill tone="success">Asli dan tidak berubah</Pill> : <Pill tone="danger">Isi berubah sejak disahkan</Pill>}
       <TextBlock className="text-sm text-mist">
         {data.intact
           ? "Dokumen serah terima ini dibuat sistem VMS Visiontech dan isinya sama dengan saat disetujui PM."

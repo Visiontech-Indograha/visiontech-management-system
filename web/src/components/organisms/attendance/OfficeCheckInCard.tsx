@@ -303,7 +303,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
         // Pulang di luar radius: penjelasan + swafoto wajib (sama seperti absen masuk di luar zona).
         setAskExplanation(true);
         if (!explanation.trim()) {
-          setError(`${err.message} Isi penjelasan di bawah, lalu tekan "Ambil swafoto & absen pulang".`);
+          setError(`${err.message} Isi penjelasan di bawah, lalu tekan "Ambil swafoto dan absen pulang".`);
           return;
         }
         setError(null);
@@ -430,7 +430,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
                   setSelfieOut(true);
                 }}
               >
-                {checkOut.isPending ? "Mengirim…" : "Ambil swafoto & absen pulang"}
+                {checkOut.isPending ? "Mengirim…" : "Ambil swafoto dan absen pulang"}
               </ActionButton>
             </div>
           ) : !rec.check_out_at ? (

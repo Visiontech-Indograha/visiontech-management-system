@@ -23,7 +23,7 @@ const STATUS: Record<string, { label: string; tone: string; bar: string }> = {
   URGENT: { label: "Mendesak", tone: "bg-danger-bg text-danger border-danger-border", bar: "bg-danger-solid" },
   PENDING: { label: "Menunggu klien", tone: "bg-warning-bg text-warning border-warning-border", bar: "bg-warning-solid" },
   PENDING_CLIENT: { label: "Menunggu klien", tone: "bg-warning-bg text-warning border-warning-border", bar: "bg-warning-solid" },
-  COMPLETED: { label: "Selesai & diserahkan", tone: "bg-success-bg text-success border-success-border", bar: "bg-success-solid" },
+  COMPLETED: { label: "Selesai dan diserahkan", tone: "bg-success-bg text-success border-success-border", bar: "bg-success-solid" },
 };
 const statusOf = (s: string) =>
   STATUS[s] ?? { label: "Belum mulai", tone: "bg-neutral-100 text-neutral-700 border-neutral-300", bar: "bg-neutral-400" };
@@ -185,7 +185,7 @@ export function WorkCompletionList({
                       className="flex-1 justify-center"
                       onClick={() => setSelectedCompletionId(order.completion_id)}
                     >
-                      {done ? "Lihat hasil & dokumen" : "Buka detail"}
+                      {done ? "Lihat hasil dan dokumen" : "Buka detail"}
                     </ActionButton>
                     {canManage && !done && (
                       <>

@@ -1,6 +1,6 @@
 /**
  * web/src/components/organisms/audit/AuditNavigationTabs.tsx
- * Tab navigasi untuk beralih antara Audit Log Aktivitas dan Registry Backup Basis Data.
+ * Tab navigasi untuk beralih antara Audit Log Aktivitas dan Riwayat cadangan data.
  */
 
 import { ActionButton } from "@/components/molecules/ActionButton";
@@ -21,7 +21,7 @@ export function AuditNavigationTabs({
         onClick={() => onTabChange("activity")}
         className="text-xs"
       >
-        <TextBlock as="span">Aktivitas & Perubahan Data</TextBlock>
+        <TextBlock as="span">Aktivitas dan Perubahan Data</TextBlock>
       </ActionButton>
       <ActionButton
         variant={activeTab === "backups" ? "default" : "outline"}
@@ -29,7 +29,7 @@ export function AuditNavigationTabs({
         onClick={() => onTabChange("backups")}
         className="text-xs"
       >
-        <TextBlock as="span">Registry Backup Basis Data</TextBlock>
+        <TextBlock as="span">Riwayat cadangan data</TextBlock>
       </ActionButton>
     </div>
   );

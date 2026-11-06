@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Menolak atribusi AI di pesan commit (keputusan pemilik). Pasang: `bash scripts/pasang-hook.sh`.
+# Baris komentar (#) diabaikan, jadi merge/revert/template git tidak salah tolak.
+set -uo pipefail
+berkas="${1:-}"
+[ -f "$berkas" ] || exit 0
+pesan=$(grep -v '^#' "$berkas" | tr -d '\r')
+temuan=""
+cek() { # $1=regex $2=keterangan
+  local hit
+  hit=$(printf '%s\n' "$pesan" | grep -i -E -- "$1" | head -n 1)
+  [ -n "$hit" ] && temuan+="  - $2: $hit"$'\n'
+  return 0
+}
+cek '^[[:space:]]*co-authored-by:.*(claude|anthropic|copilot|gemini)' 'baris Co-Authored-By dari AI'
+cek 'noreply@anthropic\.com' 'email noreply@anthropic.com'
+cek 'generated with' 'teks "Generated with"'
+cek 'claude-session' 'teks "Claude-Session"'
+if [ -n "$temuan" ]; then
+  {
+    echo "COMMIT DITOLAK: pesan memuat atribusi AI yang dilarang proyek ini:"
+    printf '%s' "$temuan"
+    echo "Perbaiki: hapus baris tersebut dari pesan commit, lalu commit ulang"
+    echo "(ubah pesan terakhir dengan: git commit --amend)."
+  } >&2
+  exit 1
+fi
+exit 0

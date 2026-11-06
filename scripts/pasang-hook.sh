@@ -10,4 +10,4 @@ if [ "${1:-}" = "--lepas" ]; then
   exit 0
 fi
 git config core.hooksPath .githooks
-echo "Hook aktif: $(git config core.hooksPath)/pre-commit (ruff · dart analyze · eslint · cegah berkas rahasia)."
+echo "Hook aktif: $(git config core.hooksPath)/pre-commit (ruff · dart analyze · eslint · cegah berkas rahasia) dan commit-msg (tolak atribusi AI)."

@@ -66,7 +66,7 @@ export function OffboardingFormDialog({ employee, onClose }: {
       <FormBlock {...dirtyForm.formProps} id="offboarding-form" onSubmit={submit} noValidate className="space-y-3">
         <FormErrorText message={error} />
         <TextBlock className="text-sm text-mist">
-          Pinjaman alat & kendaraan yang belum kembali otomatis masuk daftar clearance. Akun baru dinonaktifkan setelah
+          Pinjaman alat dan kendaraan yang belum kembali otomatis masuk daftar clearance. Akun baru dinonaktifkan setelah
           barang lengkap, PM & HR menyetujui, dan tanggal efektif tiba.
         </TextBlock>
         {!employee && (

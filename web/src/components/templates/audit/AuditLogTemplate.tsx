@@ -23,7 +23,7 @@ export function AuditLogTemplate({ logs, more, controls, entity, dateFrom, dateT
   const [tab, setTab] = useState<"activity" | "backups">("activity");
 
   return (
-    <PageTemplate title="Audit Log & Cadangan Sistem">
+    <PageTemplate title="Riwayat aktivitas dan cadangan">
       <AuditNavigationTabs activeTab={tab} onTabChange={setTab} />
 
       {tab === "activity" && (

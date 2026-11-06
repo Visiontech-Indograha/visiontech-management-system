@@ -8,7 +8,7 @@ const EID = "00000000-0000-4000-8000-0000000000e1";
 const UID = "11111111-1111-4111-8111-111111111111";
 const employee = {
   employee_id: EID, employee_no: "VT-001", full_name: "Test User", office_id: "o1", office_name: "Kantor Pusat",
-  division_id: "u1", division_name: "CCTV & ACS", position_id: "p1", position_code: "TEK", position_name: "Teknisi",
+  division_id: "u1", division_name: "CCTV dan ACS", position_id: "p1", position_code: "TEK", position_name: "Teknisi",
   join_date: "2024-01-01", pkwt_end_date: null, photo_file_id: null, face_enrolled: false,
   offboarding_status: "active", archived: false, email: null, addresses: [],
 };

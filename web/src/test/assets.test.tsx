@@ -46,8 +46,8 @@ const setup = (extra?: (url: string, method: string) => { status?: number; data?
     if (c.url === "/employees") return { data: employees };
   });
 
-describe("Kendaraan & alat (M4)", () => {
-  it("kendaraan: status & masa berkas; truk tanpa KIR ditandai; lapangan tanpa tombol kelola", async () => {
+describe("Kendaraan dan alat (M4)", () => {
+  it("kendaraan: status dan masa berkas; truk tanpa KIR ditandai; lapangan tanpa tombol kelola", async () => {
     setup();
     renderRoute("/assets", { role: "field" });
     expect(await screen.findByText("Avanza Operasional")).toBeInTheDocument();

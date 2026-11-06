@@ -41,6 +41,7 @@ class _MemStorage extends TokenStorage {
   Future<void> clearSession() async {
     m.remove('access');
     m.remove('refresh');
+    m.remove('auth');
   }
 
   @override
@@ -52,9 +53,9 @@ class _MemStorage extends TokenStorage {
   @override
   Future<void> saveCachedProfile(String j) async => m['profile'] = j;
   @override
-  Future<int?> readAuthTime() async => null;
+  Future<int?> readAuthTime() async => int.tryParse(m['auth'] ?? '');
   @override
-  Future<void> saveAuthTime(int e) async {}
+  Future<void> saveAuthTime(int e) async => m['auth'] = '$e';
   @override
   Future<bool?> readBiometricEnabled() async => true;
   @override
@@ -369,6 +370,88 @@ void main() {
     expect(t.c.read(authControllerProvider), isA<AuthAuthenticated>());
   });
 
+  int lama() =>
+      DateTime.now()
+          .toUtc()
+          .subtract(const Duration(days: 3))
+          .millisecondsSinceEpoch ~/
+      1000;
+
+  test('sesi habis saat buka aplikasi: pesan menawarkan sidik jari', () async {
+    final t = _setup(_ok);
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await _settle(t.c);
+    final s = t.c.read(authControllerProvider) as AuthUnauthenticated;
+    expect(s.error, kSessionExpiredFingerprintMessage);
+    expect(s.error, isNot(contains('&')));
+    expect(t.st.m['access'], isNull);
+    expect(t.st.m['dev'], startsWith('dev-lama|'));
+  });
+
+  test('sesi habis tanpa token perangkat: pesan hanya sandi', () async {
+    final t = _setup(_ok, withDevice: false);
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await _settle(t.c);
+    expect(
+      (t.c.read(authControllerProvider) as AuthUnauthenticated).error,
+      kSessionExpiredMessage,
+    );
+  });
+
+  test('sesi habis lalu ONLINE: sidik jari masuk tanpa sandi', () async {
+    final t = _setup(_ok);
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await _settle(t.c);
+    await t.c.read(authControllerProvider.notifier).loginWithDeviceCredential();
+    expect(t.c.read(authControllerProvider), isA<AuthAuthenticated>());
+    expect(t.ad.paths.any((p) => p.contains('biometric-login')), isTrue);
+    expect(t.st.m['access'], 'acc2');
+  });
+
+  test('sesi habis lalu OFFLINE: sesi lokal dibuka, ditukar saat online', () async {
+    var online = false;
+    final t = _setup((o) => online ? _ok(o) : _offline(o));
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await _settle(t.c);
+    final n = t.c.read(authControllerProvider.notifier);
+    await n.loginWithDeviceCredential();
+    expect(t.c.read(authControllerProvider), isA<AuthAuthenticated>());
+    await n.relockIfBiometricEnabled();
+    expect(t.c.read(authControllerProvider), isNot(isA<AuthUnauthenticated>()));
+    online = true;
+    await n.retryDeviceExchange();
+    expect(t.st.m['pending'], isNull);
+    expect(t.st.m['access'], 'acc2');
+  });
+
+  test('sesi habis di latar belakang: kunci ulang -> login, sidik jari ditawarkan', () async {
+    final t = _setup(_ok);
+    await _settle(t.c);
+    final n = t.c.read(authControllerProvider.notifier);
+    await n.loginWithDeviceCredential();
+    expect(t.c.read(authControllerProvider), isA<AuthAuthenticated>());
+    t.st.m['auth'] = '${lama()}';
+    await n.relockIfBiometricEnabled();
+    final s = t.c.read(authControllerProvider) as AuthUnauthenticated;
+    expect(s.error, kSessionExpiredFingerprintMessage);
+    expect(t.st.m['dev'], isNotNull);
+  });
+
+  test('sesi habis dan token perangkat kedaluwarsa: sandi saja', () async {
+    final t = _setup(_offline, deviceAge: const Duration(days: -1));
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await _settle(t.c);
+    expect(
+      (t.c.read(authControllerProvider) as AuthUnauthenticated).error,
+      kSessionExpiredMessage,
+    );
+  });
+
   Widget app(ProviderContainer c) => UncontrolledProviderScope(
     container: c,
     child: ShadApp(
@@ -395,6 +478,81 @@ void main() {
     await tester.pumpWidget(app(t.c));
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.byKey(const Key('login-sidik-jari')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('tersedia: pilihan sidik jari dan sandi berdampingan', (
+    tester,
+  ) async {
+    final t = _setup(_ok);
+    await tester.pumpWidget(app(t.c));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Masuk dengan sidik jari'), findsOneWidget);
+    expect(find.byKey(const Key('login-atau-sandi')), findsOneWidget);
+    expect(find.byKey(const Key('login-sidik-jari-petunjuk')), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('tidak tersedia: petunjuk tanpa tombol', (tester) async {
+    final t = _setup(_ok, withDevice: false);
+    await tester.pumpWidget(app(t.c));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byKey(const Key('login-sidik-jari')), findsNothing);
+    expect(
+      find.text('Aktifkan login sidik jari di menu Profil setelah masuk.'),
+      findsOneWidget,
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('memuat: indikator tampil, petunjuk belum', (tester) async {
+    final t = _setup(_ok);
+    await tester.pumpWidget(app(t.c));
+    expect(find.byKey(const Key('login-sidik-jari-memuat')), findsOneWidget);
+    expect(find.byKey(const Key('login-sidik-jari-petunjuk')), findsNothing);
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('galat jaringan: pesan dan tombol coba lagi', (tester) async {
+    final t = _setup(_offline, withProfile: false);
+    await tester.pumpWidget(app(t.c));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.runAsync(
+      () =>
+          t.c.read(authControllerProvider.notifier).loginWithDeviceCredential(),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.textContaining('Tidak ada sinyal'), findsOneWidget);
+    expect(find.text('Coba lagi dengan sidik jari'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('dibatalkan: pesan tampil, tombol tetap ada', (tester) async {
+    final t = _setup(_ok, bioOk: false);
+    await tester.pumpWidget(app(t.c));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.runAsync(
+      () =>
+          t.c.read(authControllerProvider.notifier).loginWithDeviceCredential(),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.textContaining('Sidik jari dibatalkan'), findsOneWidget);
+    expect(find.byKey(const Key('login-sidik-jari')), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('sesi habis: layar login menawarkan sidik jari', (tester) async {
+    final t = _setup(_ok);
+    t.st.m['access'] = 'acc-lama';
+    t.st.m['auth'] = '${lama()}';
+    await tester.pumpWidget(app(t.c));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text(kSessionExpiredFingerprintMessage), findsOneWidget);
+    expect(find.byKey(const Key('login-sidik-jari')), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
   });
 }

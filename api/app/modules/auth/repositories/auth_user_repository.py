@@ -237,7 +237,7 @@ class AuthUserRepository(BaseRepository):
                 u.username,
                 u.system_role::text AS role,
                 u.is_active,
-                u.update_at AS last_login_at
+                (SELECT max(s.create_at) FROM user_sessions s WHERE s.user_id = u.user_id) AS last_login_at
             FROM users u
             WHERE u.employee_id = CAST(:emp AS uuid) AND u.delete_at IS NULL
             """,
@@ -261,7 +261,7 @@ class AuthUserRepository(BaseRepository):
             """
             INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
             VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true)
-            RETURNING user_id AS id, email AS login, is_active, update_at AS last_login_at,
+            RETURNING user_id AS id, email AS login, is_active, CAST(NULL AS timestamptz) AS last_login_at,
                       system_role::text AS role
             """,
             {

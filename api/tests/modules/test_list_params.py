@@ -70,3 +70,14 @@ def test_attendance_search_contains_name(client, world: World):
     res = client.get("/attendance?q=zzz-tidak-ada-xyz&size=5", headers=h)
     assert res.status_code == 200
     assert res.json()["items"] == [] and res.json()["total"] == 0
+
+
+def test_offices_search_is_prefix_only(client, world: World):
+    h = world.headers(client, "ops")
+    name = f"Kantor Awalan{world.tag}"
+    body = {"name": name, "address": "Jl. Uji 1", "location": {"lat": -6.2, "lng": 106.8}, "radius_m": 150}
+    assert client.post("/offices", headers=h, json=body).status_code == 201
+    hit = client.get(f"/offices?q=kantor awalan{world.tag}", headers=h)
+    assert any(o["name"] == name for o in hit.json())
+    miss = client.get(f"/offices?q=awalan{world.tag}", headers=h)  # tengah nama: tidak cocok
+    assert not any(o["name"] == name for o in miss.json())

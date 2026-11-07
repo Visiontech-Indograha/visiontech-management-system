@@ -59,6 +59,7 @@ def apply_list[T](
     haystack: Callable[[T], Iterable[Any]],
     *,
     extra: Callable[[T], bool] | None = None,
+    prefix: bool = False,
 ) -> Sequence[T]:
     """Saring (`q` + `extra`), potong halaman bila diminta, dan isi `X-Total-Count` (jumlah setelah filter)."""
     rows = list(items)
@@ -67,7 +68,10 @@ def apply_list[T](
         rows = [r for r in rows if extra(r)]
     if params.q:
         needle = _fold(params.q)
-        rows = [r for r in rows if any(needle in _fold(v) for v in haystack(r))]
+        if prefix:
+            rows = [r for r in rows if any(_fold(v).startswith(needle) for v in haystack(r))]
+        else:
+            rows = [r for r in rows if any(needle in _fold(v) for v in haystack(r))]
     response.headers[TOTAL_HEADER] = str(len(rows))
     if not params.paged and total_in >= MAX_ROWS_UNPAGED:
         # Repository memotong di MAX_ROWS_UNPAGED: beri tahu klien baru, klien lama mengabaikan header ini.

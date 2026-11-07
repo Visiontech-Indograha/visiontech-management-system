@@ -11,8 +11,8 @@ describe("menu berdasarkan izin API", () => {
   it("menampilkan menu hanya ketika izin API yang sesuai tersedia", () => {
     expect(labels([])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat"]);
     expect(labels(["view:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Direktori"]);
-    // API tidak punya endpoint /users: izin manage:users tidak membuka menu apa pun.
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat"]);
+    // manage:users (jabatan) dan manage:divisions membuka menu "Divisi dan jabatan".
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Divisi dan jabatan"]);
     expect(labels(["view:documents"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Berkas saya"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Audit log"]);
     expect(labels(["create:plan"])).toEqual(["Beranda", "Tugas Klien (WO)", "Jadwal harian", "Alokasi mingguan", "Klien", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan dan alat", "Jenis pekerjaan"]);

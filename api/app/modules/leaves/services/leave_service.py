@@ -156,13 +156,14 @@ class LeaveService:
         if str(user.employee_id) == str(leave.employee_id):
             raise ForbiddenError("Pemohon cuti tidak dapat menyetujui atau menolak permohonannya sendiri.")
 
-        if user.has_role("PROJECT_MANAGER") and not await self._pm_owns(user, leave.employee_id):
+        if not pm_path and not user.has_role(*ORG_WIDE_ROLES):
             raise ForbiddenError("PM hanya dapat meninjau cuti karyawan di divisinya.")
 
         if leave.status in ("APPROVED_BY_HR", "REJECTED", "CANCELLED"):
             raise AppError("ALREADY_DECIDED", "Permohonan cuti ini sudah diputuskan.", status=409)
 
-        is_pm = user.has_role("PROJECT_MANAGER")
+        # PM yang juga HR/OM/SA memutus sebagai peran lebarnya (satu langkah), bukan sebagai PM divisi.
+        is_pm = pm_path and not user.has_role(*ORG_WIDE_ROLES)
         if is_pm and leave.status == "APPROVED_BY_PM":
             raise AppError(
                 "ALREADY_APPROVED_BY_PM",
@@ -325,7 +326,7 @@ class LeaveService:
         year: int | None = None,
     ) -> list[Any]:
         pm_id = None
-        if user.has_role("PROJECT_MANAGER"):
+        if user.has_role("PROJECT_MANAGER") and not user.has_role(*ORG_WIDE_ROLES):
             pm_id = user.employee_id
         elif not user.has_role(*ORG_WIDE_ROLES):
             if user.employee_id is None:

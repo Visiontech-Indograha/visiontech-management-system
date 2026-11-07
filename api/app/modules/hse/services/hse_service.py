@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.errors import AppError, ValidationError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_campaign_repository import HseCampaignRepository
 from app.modules.hse.repositories.vehicle_inspection_repository import VehicleInspectionRepository
@@ -37,6 +38,7 @@ from app.modules.hse.schemas.hse_schema import (
     VehicleInspectionResponse,
     VehicleInspectionVerify,
 )
+from app.shared.access.office_scope import office_restriction, offices_param
 
 
 class HseService:
@@ -44,6 +46,14 @@ class HseService:
         self.db = db
         self.campaign_repo = HseCampaignRepository(db)
         self.inspection_repo = VehicleInspectionRepository(db)
+
+    async def _offices(self, user: CurrentUser | None, perm: Permission) -> list[str] | None:
+        """None = semua kantor. HSE yang hanya peran tambahan (ADR 0002 fase 2) dibatasi ke kantor penugasannya
+        bila ROLE_ASSIGNMENT_ENABLED; HSE utama, SA, dan flag mati = perilaku lama."""
+        if user is None:
+            return None
+        restriction = await office_restriction(self.db, user, perm)
+        return None if restriction is None else offices_param(restriction) or ["00000000-0000-0000-0000-000000000000"]
 
     # ================= Kampanye K3 =================
     async def create_campaign(
@@ -204,12 +214,15 @@ class HseService:
         )
         return result
 
-    async def get_campaign_audit_stats(self, campaign_id: UUID) -> HseCampaignAuditStats:
+    async def get_campaign_audit_stats(
+        self, campaign_id: UUID, user: CurrentUser | None = None,
+    ) -> HseCampaignAuditStats:
         campaign = await self.campaign_repo.get_by_id(campaign_id)
         if not campaign:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
 
-        raw_readers = await self.campaign_repo.list_readers_by_campaign(campaign_id)
+        raw_readers = await self.campaign_repo.list_readers_by_campaign(
+            campaign_id, await self._offices(user, Permission.VIEW_HSE_CAMPAIGNS))
         readers = [HseReaderItem.model_validate(r) for r in raw_readers]
 
         return HseCampaignAuditStats(
@@ -251,6 +264,7 @@ class HseService:
         to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
+        user: CurrentUser | None = None,
     ) -> list[VehicleInspectionResponse]:
         items = await self.inspection_repo.list_inspections(
             vehicle_id=vehicle_id,
@@ -260,12 +274,22 @@ class HseService:
             to_date=to_date,
             limit=limit,
             offset=offset,
+            offices=await self._offices(user, Permission.VIEW_VEHICLE_INSPECTIONS),
         )
         return [VehicleInspectionResponse.model_validate(item) for item in items]
 
-    async def get_vehicle_inspection(self, inspection_id: UUID) -> VehicleInspectionResponse:
-        item = await self.inspection_repo.get_by_id(inspection_id)
+    async def _inspection_visible(self, item: dict[str, Any] | None, user: CurrentUser | None,
+                                  perm: Permission) -> bool:
         if not item:
+            return False
+        offices = await self._offices(user, perm)
+        return offices is None or str(item.get("office_id")) in offices
+
+    async def get_vehicle_inspection(
+        self, inspection_id: UUID, user: CurrentUser | None = None,
+    ) -> VehicleInspectionResponse:
+        item = await self.inspection_repo.get_by_id(inspection_id)
+        if not await self._inspection_visible(item, user, Permission.VIEW_VEHICLE_INSPECTIONS) or item is None:
             raise AppError("NOT_FOUND", "Data inspeksi kendaraan tidak ditemukan.", status=404)
         return VehicleInspectionResponse.model_validate(item)
 
@@ -275,6 +299,9 @@ class HseService:
         data: VehicleInspectionVerify,
         current_user: CurrentUser,
     ) -> VehicleInspectionResponse:
+        existing = await self.inspection_repo.get_by_id(inspection_id)
+        if not await self._inspection_visible(existing, current_user, Permission.MANAGE_VEHICLE_INSPECTIONS):
+            raise AppError("NOT_FOUND", "Data inspeksi tidak ditemukan untuk diverifikasi.", status=404)
         verifier_uuid = UUID(str(current_user.user_id))
         updated = await self.inspection_repo.verify(inspection_id, data, verifier_uuid)
         if not updated:

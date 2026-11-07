@@ -152,13 +152,13 @@ async def acknowledge_campaign(
     "/campaigns/{campaign_id}/readers",
     response_model=HseCampaignAuditStats,
     summary="Audit jejak pengguna yang telah membaca kampanye K3",
-    dependencies=[Depends(require_permission(Permission.VIEW_HSE_CAMPAIGNS))],
 )
 async def get_campaign_readers(
     campaign_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_HSE_CAMPAIGNS)),
     controller: HseController = Depends(get_controller),
 ) -> HseCampaignAuditStats:
-    return await controller.get_campaign_audit_stats(campaign_id)
+    return await controller.get_campaign_audit_stats(campaign_id, current_user)
 
 
 # ================= 3. Inspeksi Keselamatan Kendaraan =================
@@ -167,7 +167,6 @@ async def get_campaign_readers(
     "/inspections",
     response_model=list[VehicleInspectionResponse],
     summary="Daftar riwayat inspeksi keselamatan kendaraan",
-    dependencies=[Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS))],
 )
 async def list_inspections(
     vehicle_id: UUID | None = Query(None),
@@ -177,6 +176,7 @@ async def list_inspections(
     to_date: date | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS)),
     controller: HseController = Depends(get_controller),
 ) -> list[VehicleInspectionResponse]:
     return await controller.list_vehicle_inspections(
@@ -187,6 +187,7 @@ async def list_inspections(
         to_date=to_date,
         limit=limit,
         offset=offset,
+        user=current_user,
     )
 
 
@@ -208,13 +209,13 @@ async def create_inspection(
     "/inspections/{inspection_id}",
     response_model=VehicleInspectionResponse,
     summary="Detail inspeksi kendaraan",
-    dependencies=[Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS))],
 )
 async def get_inspection(
     inspection_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS)),
     controller: HseController = Depends(get_controller),
 ) -> VehicleInspectionResponse:
-    return await controller.get_vehicle_inspection(inspection_id)
+    return await controller.get_vehicle_inspection(inspection_id, current_user)
 
 
 @router.patch(

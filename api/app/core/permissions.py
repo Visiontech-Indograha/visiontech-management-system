@@ -69,6 +69,8 @@ class Permission(StrEnum):
     MANAGE_DIVISIONS = "manage:divisions"
     # Penugasan peran ganda (ADR 0002): hanya SUPER_ADMIN
     MANAGE_ROLE_ASSIGNMENTS = "manage:role_assignments"
+    # Fase 2: OM boleh memberi/mencabut hanya peran tambahan PROJECT_MANAGER dan HSE (dicek di service)
+    MANAGE_FIELD_ROLE_ASSIGNMENTS = "manage:field_role_assignments"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -143,6 +145,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
+        P.MANAGE_FIELD_ROLE_ASSIGNMENTS,
         P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.

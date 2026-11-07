@@ -13,7 +13,7 @@ import pytest
 from PIL import Image
 
 from app.core.time import jakarta_now
-from tests.conftest import World, requires_db, sync_query
+from tests.conftest import World, isolate_site, requires_db, sync_query
 
 WIB = ZoneInfo("Asia/Jakarta")
 
@@ -281,10 +281,14 @@ def test_gps_accuracy_at_the_limit_or_unknown_is_accepted(client, world):
 
 def test_radius_boundary_is_decided_consistently(client, world):
     """Tepat di tepi radius: titik ±99 m di dalam, ±101 m di luar — keputusan server stabil."""
+    # Isolasi dari data global: semua kantor uji berpusat di (-6.2, 106.8), jadi kantor sisa/paralel berradius
+    # lebih besar bisa "menang" di nearest_valid_site. Kantor uji ini dipindah ke koordinat unik yang tak dipakai
+    # kantor lain, lalu titik dalam/luar dihitung dari pusat itu.
+    center = isolate_site(world)
     radius = sync_query("SELECT attendance_radius_m FROM office WHERE office_id = %s", (world.site_id,))[0][0]
     deg_per_m = 1 / 111_320  # derajat lintang per meter
-    inside = {"lat": INSIDE["lat"] + (radius - 1) * deg_per_m, "lng": INSIDE["lng"]}
-    outside = {"lat": INSIDE["lat"] - (radius + 1) * deg_per_m, "lng": INSIDE["lng"]}
+    inside = {"lat": center["lat"] + (radius - 1) * deg_per_m, "lng": center["lng"]}
+    outside = {"lat": center["lat"] - (radius + 1) * deg_per_m, "lng": center["lng"]}
 
     near = _check_in(client, world, location=inside)
     assert near.status_code == 200, near.text

@@ -10,6 +10,7 @@ from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
+from app.core.audit_log import record_audit
 from app.core.errors import AppError, ForbiddenError, NotFoundError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -25,9 +26,26 @@ def can_read_clients(user: CurrentUser) -> bool:
     return Permission.CREATE_PLAN.value in user.permissions or user.has_role(*_LIST_ROLES)
 
 
+_CLIENT_FIELDS = ("client_code", "name", "status")
+_CLIENT_MASKED = ("pic_name", "pic_phone", "address")
+_SITE_FIELDS = ("site_name", "latitude", "longitude", "geofence_radius_meters")
+_SITE_MASKED = ("address", "pic_name", "pic_phone")
+
+
 class ClientService:
     def __init__(self, repo: ClientRepository) -> None:
         self.repo = repo
+
+    async def _audit(
+        self, user: CurrentUser, action: str, entity_id: Any, before: Any, after: Any, *, site: bool = False,
+        client_id: UUID | None = None, skip_if_empty: bool = False,
+    ) -> None:
+        await record_audit(
+            self.repo.db, user, action=action, entity_type="client_sites" if site else "client",
+            entity_id=entity_id, before=before, after=after,
+            fields=_SITE_FIELDS if site else _CLIENT_FIELDS, masked=_SITE_MASKED if site else _CLIENT_MASKED,
+            extra={"client_id": str(client_id)} if client_id else None, skip_if_empty=skip_if_empty,
+        )
 
     async def list(self, q: str | None, active_only: bool) -> list[Any]:
         return await self.repo.list((q or "").strip() or None, active_only)
@@ -45,12 +63,14 @@ class ClientService:
             raise NotFoundError("Klien")
         return row
 
-    async def create(self, data: ClientCreate) -> Any:
+    async def create(self, data: ClientCreate, user: CurrentUser) -> Any:
         code = data.client_code.strip().upper()
         if await self.repo.code_taken(code):
             raise AppError("CLIENT_CODE_TAKEN", CODE_TAKEN, status=409)
         await self._ensure_unique_name(data.name)
-        return await self.repo.insert({**data.model_dump(), "client_code": code, "name": data.name.strip()})
+        row = await self.repo.insert({**data.model_dump(), "client_code": code, "name": data.name.strip()})
+        await self._audit(user, "CLIENT_CREATE", row.client_id, None, row)
+        return row
 
     async def _check_manage(self, client_id: UUID, user: CurrentUser) -> None:
         """Klien yang sudah punya proyek hanya diubah/dihapus PM/OM divisi pemilik proyek (atau SUPER_ADMIN)."""
@@ -62,6 +82,7 @@ class ClientService:
 
     async def update(self, client_id: UUID, data: ClientUpdate, user: CurrentUser) -> Any:
         await self._check_manage(client_id, user)
+        before = await self.get(client_id)
         fields = data.model_dump(exclude_unset=True)
         if fields.get("client_code"):
             fields["client_code"] = fields["client_code"].strip().upper()
@@ -70,7 +91,9 @@ class ClientService:
         if fields.get("name"):
             fields["name"] = fields["name"].strip()
             await self._ensure_unique_name(fields["name"], exclude=client_id)
-        return await self.repo.update(client_id, fields)
+        row = await self.repo.update(client_id, fields)
+        await self._audit(user, "CLIENT_UPDATE", client_id, before, row, skip_if_empty=True)
+        return row
 
     async def delete(self, client_id: UUID, user: CurrentUser) -> None:
         await self._check_manage(client_id, user)
@@ -79,6 +102,7 @@ class ClientService:
             raise AppError("CLIENT_IN_USE", f"Klien masih punya {row.project_count} proyek. Nonaktifkan saja.",
                            status=409)
         await self.repo.archive(client_id)
+        await self._audit(user, "CLIENT_DELETE", client_id, row, None)
 
     # ── Client Sites ────────────────────────────────────────────────────────
     async def list_sites(self, client_id: UUID) -> Sequence[Any]:
@@ -93,18 +117,24 @@ class ClientService:
 
     async def create_site(self, client_id: UUID, data: ClientSiteCreate, user: CurrentUser) -> Any:
         await self._check_manage(client_id, user)
-        return await self.repo.create_site(client_id, data.model_dump())
+        row = await self.repo.create_site(client_id, data.model_dump())
+        await self._audit(user, "CLIENT_SITE_CREATE", row.site_id, None, row, site=True, client_id=client_id)
+        return row
 
     async def update_site(self, client_id: UUID, site_id: UUID, data: ClientSiteUpdate, user: CurrentUser) -> Any:
         await self._check_manage(client_id, user)
-        await self.get_site(site_id)
+        before = await self.get_site(site_id)
         fields = data.model_dump(exclude_unset=True)
-        return await self.repo.update_site(site_id, fields)
+        row = await self.repo.update_site(site_id, fields)
+        await self._audit(user, "CLIENT_SITE_UPDATE", site_id, before, row, site=True, client_id=client_id,
+                          skip_if_empty=True)
+        return row
 
     async def delete_site(self, client_id: UUID, site_id: UUID, user: CurrentUser) -> None:
         await self._check_manage(client_id, user)
-        await self.get_site(site_id)
+        before = await self.get_site(site_id)
         await self.repo.delete_site(site_id)
+        await self._audit(user, "CLIENT_SITE_DELETE", site_id, before, None, site=True, client_id=client_id)
 
     async def get_with_sites(self, client_id: UUID) -> dict[str, Any]:
         client = await self.get(client_id)

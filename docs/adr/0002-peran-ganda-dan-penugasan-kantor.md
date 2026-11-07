@@ -163,3 +163,16 @@ Akibat pada skema/tes: kombinasi terlarang (SA+apa pun, Finance+HR) ditolak 422 
 ## 13. Konsekuensi
 
 Plus: jabatan ganda dan multi-kantor terkelola rapi dan terekam; klien lama tidak terdampak. Minus: satu tabel dan satu join indeks tambahan di jalur cakupan; kerja tes lebih banyak. Tidak ada kode atau migrasi pada PR ini (hanya dokumen).
+
+## 14. Perluasan fase 2: PM dan HSE sebagai peran tambahan
+
+Status: Usulan, disetujui pemilik (2026-11-07).
+
+- Cakupan: `PROJECT_MANAGER` dan `HSE` menjadi peran tambahan seperti HR/Finance, SELALU per kantor (`ck_ura_office` mewajibkan `office_id` selain SA/OM; tanpa migrasi, enum `system_role_enum` sudah memuat keduanya, lihat v2_0019 dan v2_0029). Peran utama PM/HSE tidak berubah (PM per divisi lewat data, HSE tanpa batas kantor).
+- Pemberi: SUPER_ADMIN (semua peran) dan OM (hanya PM/HSE, izin `manage:field_role_assignments`, batas peran dicek di service, 403 untuk HR/Finance/OM). HR tidak boleh memberi. PM/HSE tambahan tidak memegang `manage:users` maupun izin penugasan.
+- Kombinasi: HR + Finance tetap dilarang; PM + HSE satu orang boleh; `MAX_EXTRA_ROLES` = 2; SA tidak digabung; peran sama dengan peran utama ditolak untuk PM/HSE.
+- Cakupan kantor: `office_restriction` memperlakukan PM/HSE sebagai terikat kantor HANYA bila bukan peran utama, dan hanya kantor penugasan (kantor sendiri tidak ikut). Dipakai oleh: mess dan offboarding (izin PM), dokumen karyawan (izin HSE), inspeksi kendaraan (daftar, detail, verifikasi: kantor kendaraan) dan daftar pembaca kampanye (kantor pembaca).
+- Hasil audit `has_role(PROJECT_MANAGER)`: jalur PM adalah BERBASIS DATA (`division.pm_id`, dan `pm_id` hanya bisa karyawan yang peran UTAMA-nya PM). PM tambahan karena itu tidak mendapat jalur cuti/absensi/jadwal/WO/order anggota divisi: peninjauan cuti, keputusan mess, absensi bawahan dan pembuatan WO/order tetap butuh `pm_id` atau peran utama. Yang berubah hanya izin global (lihat tim, lihat mess, offboarding) yang kini dibatasi kantor. Perbaikan regresi union: daftar tim, daftar/peninjauan cuti, work types, dan pembuatan order tidak lagi menyempit ke divisi PM bila orangnya juga SA/OM/HR.
+- Belum dibatasi kantor (tidak ada kolom kantor): kampanye K3 (isi, buat, ubah, hapus) bersifat satu perusahaan; HSE tambahan tetap mengelolanya. Perlu keputusan bila harus per kantor.
+- Pencabutan seketika: peran dihitung per permintaan dari DB; akun nonaktif ditolak; audit `ROLE_ASSIGNMENT_ADD/REVOKE` berisi before/after.
+- Rollback: `ROLE_ASSIGNMENT_ENABLED=false` mengembalikan perilaku lama persis (peran tambahan diabaikan); atau cabut penugasan PM/HSE. Tanpa migrasi.

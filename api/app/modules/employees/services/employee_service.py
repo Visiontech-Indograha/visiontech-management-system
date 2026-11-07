@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
+from app.core.audit_log import record_audit
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
@@ -28,6 +29,9 @@ ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
 RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
 
 # Kolom sensitif: hanya HR/OM/SA, PM yang menjangkau karyawan itu, dan pemiliknya.
+_AUDIT_FIELDS = ("employee_no", "office_id", "division_id", "position_id", "join_date")
+# Hanya nama bidang yang dicatat bila berubah (tanpa nilai): nama lengkap, telepon, akhir PKWT, foto.
+_AUDIT_MASKED = ("full_name", "phone_number", "pkwt_end_date", "photo_file_id")
 _SENSITIVE_FIELDS = ("phone_number", "email", "city", "pkwt_end_date", "system_role", "account_active")
 
 
@@ -58,6 +62,18 @@ class EmployeeService:
         rows = await self.repo.page(size, (page - 1) * size, scope=scope, **filters)
         total = await self.repo.count(scope=scope, **filters)
         return [_shape(r._mapping) for r in rows], total
+
+    async def _audit(
+        self, user: CurrentUser | None, action: str, employee_id: Any, before: Any = None, after: Any = None,
+        *, skip_if_empty: bool = False,
+    ) -> None:
+        """Catat perubahan data karyawan; pemanggil internal tanpa pengguna tidak dicatat."""
+        if user is None:
+            return
+        await record_audit(
+            self.repo.db, user, action=action, entity_type="employee", entity_id=employee_id,
+            before=before, after=after, fields=_AUDIT_FIELDS, masked=_AUDIT_MASKED, skip_if_empty=skip_if_empty,
+        )
 
     async def get(self, employee_id: UUID, user: CurrentUser | None = None) -> Any:
         scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
@@ -132,6 +148,7 @@ class EmployeeService:
         employee_id = await self.repo.insert(fields)
         if data.address:
             await self.repo.add_address(employee_id, data.address.model_dump())
+        await self._audit(user, "EMPLOYEE_CREATE", employee_id, None, await self.get(employee_id))
         return await self.detail(employee_id)
 
     async def update(self, employee_id: UUID, data: EmployeeUpdate,
@@ -146,6 +163,8 @@ class EmployeeService:
             if required in fields and fields[required] is None:
                 raise ValidationError("No. karyawan, nama, kantor, dan tanggal bergabung tidak boleh dikosongkan.")
         await self.repo.update(employee_id, await self._validate(fields, current))
+        await self._audit(user, "EMPLOYEE_UPDATE", employee_id, current, await self.get(employee_id),
+                          skip_if_empty=True)
         return await self.detail(employee_id)
 
     async def set_own_photo(self, user: CurrentUser, file_id: UUID | None) -> UUID | None:
@@ -177,7 +196,7 @@ class EmployeeService:
             raise NotFoundError("Alamat")
 
     # ── Arsip ─────────────────────────────────────────────────────────────────
-    async def archive(self, employee_id: UUID) -> dict[str, Any]:
+    async def archive(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
@@ -186,6 +205,7 @@ class EmployeeService:
         if employee.offboarding_status != "offboarded":
             raise AppError("INVALID_STATE", "Selesaikan dulu proses keluar karyawan ini.", status=409)
         await self.repo.archive(employee_id)
+        await self._audit(user, "EMPLOYEE_ARCHIVE", employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 
     async def delete(self, employee_id: UUID, actor: CurrentUser) -> None:
@@ -205,11 +225,12 @@ class EmployeeService:
         for key in photo_keys:
             delete_object(key)
 
-    async def restore(self, employee_id: UUID) -> dict[str, Any]:
+    async def restore(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan tidak diarsipkan.", status=409)
         await self.repo.restore(employee_id)
+        await self._audit(user, "EMPLOYEE_RESTORE", employee_id)
         return {"id": str(employee_id), "message": RESTORED}

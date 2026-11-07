@@ -15,6 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
+from app.core.audit_log import record_audit
 from app.core.errors import AppError, NotFoundError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -39,11 +40,26 @@ def _fields(data: OfficeCreate | OfficeUpdate) -> dict[str, Any]:
     }
 
 
+_AUDIT_FIELDS = (
+    "name", "radius_m", "city_boundary_radius_m", "clock_in_time", "clock_out_time",
+    "in_city_meal_rate", "out_city_meal_rate", "is_main_office",
+)
+_AUDIT_MASKED = ("address",)
+
+
 class OfficeService:
     """Layanan master kantor."""
 
     def __init__(self, repo: CRUDOffice) -> None:
         self.repo = repo
+
+    async def _audit(
+        self, user: CurrentUser, action: str, office_id: Any, before: Any, after: Any, *, skip_if_empty: bool = False
+    ) -> None:
+        await record_audit(
+            self.repo.db, user, action=action, entity_type="office", entity_id=office_id,
+            before=before, after=after, fields=_AUDIT_FIELDS, masked=_AUDIT_MASKED, skip_if_empty=skip_if_empty,
+        )
 
     @staticmethod
     def can_manage(user: CurrentUser) -> bool:
@@ -70,6 +86,7 @@ class OfficeService:
         if data.is_main_office:
             await self.repo.set_main(row.id)
             row = await self.repo.get(row.id)
+        await self._audit(user, "OFFICE_CREATE", row.id, None, row)
         return row
 
     async def update_office(self, user: CurrentUser, office_id: UUID, data: OfficeUpdate) -> Any:
@@ -89,6 +106,7 @@ class OfficeService:
         if data.is_main_office and not current.is_main_office:
             await self.repo.set_main(office_id)
             row = await self.repo.get(office_id)
+        await self._audit(user, "OFFICE_UPDATE", office_id, current, row, skip_if_empty=True)
         return row
 
     async def delete_office(self, user: CurrentUser, office_id: UUID) -> None:
@@ -105,3 +123,4 @@ class OfficeService:
                 status=409,
             )
         await self.repo.archive(office_id)
+        await self._audit(user, "OFFICE_DELETE", office_id, office, None)

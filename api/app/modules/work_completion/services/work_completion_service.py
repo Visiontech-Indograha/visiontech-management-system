@@ -216,9 +216,10 @@ class WorkCompletionService:
 
     async def create_order(self, current_user: CurrentUser, data: dict[str, Any]) -> dict[str, Any]:
         """Membuat order proyek baru."""
-        if not current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER"):
+        # PM lewat data (pm_id divisi) hanya untuk peran utama PM; PM tambahan (ADR 0002 fase 2) tidak punya jalur ini.
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Order Klien.")
-        if current_user.has_role("PROJECT_MANAGER"):
+        if current_user.has_role("PROJECT_MANAGER") and not current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER"):
             if not current_user.employee_id:
                 raise ForbiddenError("Akun PM ini belum tertaut ke data karyawan.")
             if data.get("pm_id") and str(data["pm_id"]) != str(current_user.employee_id):
@@ -255,7 +256,9 @@ class WorkCompletionService:
             data["order_number"] = data.get("order_number") or project.spk_number[:50]
             data.setdefault("start_work_date", project.start_date)
             data.setdefault("end_work_date", project.end_date)
-            if not current_user.has_role("PROJECT_MANAGER") and not data.get("pm_id"):
+            pm_only = current_user.has_role("PROJECT_MANAGER") and not current_user.has_role(
+                "SUPER_ADMIN", "OPERATIONAL_MANAGER")
+            if not pm_only and not data.get("pm_id"):
                 data["pm_id"] = project.pm_id
         data["client_name"] = await self._client_name(data.get("client_id"), project)
         if not data.get("project_title"):

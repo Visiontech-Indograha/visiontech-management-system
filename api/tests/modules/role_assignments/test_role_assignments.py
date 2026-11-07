@@ -64,8 +64,10 @@ def test_permission_only_super_admin():
 
 def test_only_super_admin_can_manage(client, world: World):
     world.add_person("x", None)
-    for who in ("hr", "ops", "pm", "member"):
+    for who in ("hr", "ops", "pm", "member"):  # OM hanya boleh PM/HSE (fase 2), bukan HR
         assert _assign(client, world, "x", HR, world.org_id, by=who).status_code == 403
+        if who == "ops":
+            continue
         r = client.get(f"/users/{world.users['x']}/role-assignments", headers=world.headers(client, who))
         assert r.status_code == 403
 
@@ -100,7 +102,10 @@ def test_add_list_revoke_and_audit(client, world: World):
     (FIN, None, False),
     (OM, "OFFICE", False),        # OM tanpa kantor
     (OM, None, True),
-    ("PROJECT_MANAGER", None, False),   # peran fase 1 saja (ditolak skema/validasi)
+    ("PROJECT_MANAGER", None, False),   # PM wajib kantor
+    ("PROJECT_MANAGER", "OFFICE", True),
+    ("HSE", None, False),
+    ("HSE", "OFFICE", True),
 ])
 def test_office_rules(client, world: World, role, office, ok):
     world.add_person("x", None)

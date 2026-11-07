@@ -145,7 +145,7 @@ async def archive_employee(
     controller: EmployeeController = Depends(),
 ) -> dict[str, str]:
     """Arsipkan karyawan yang sudah selesai offboarding."""
-    return await controller.archive(employee_id)
+    return await controller.archive(employee_id, current_user)
 
 
 @router.delete("/{employee_id}")
@@ -165,4 +165,4 @@ async def restore_employee(
     controller: EmployeeController = Depends(),
 ) -> dict[str, str]:
     """Batalkan arsip (status tetap selesai bekerja)."""
-    return await controller.restore(employee_id)
+    return await controller.restore(employee_id, current_user)

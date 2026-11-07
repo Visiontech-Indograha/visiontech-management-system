@@ -257,7 +257,7 @@ export function useAccountAction(employeeId: string) {
         case "unlock":
           return (await api.post<Account>(`${base}/unlock`)).data;
         case "reset":
-          return (await api.post<AccountWithPassword>(`${base}/reset-sandi`)).data;
+          return (await api.post<AccountWithPassword>(`${base}/reset-password`)).data;
         case "deactivate":
         case "activate":
           return (await api.post<Account>(`${base}/${a.kind}`)).data;

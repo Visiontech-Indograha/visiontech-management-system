@@ -31,7 +31,7 @@ class ClientController:
         return [ClientOut(**dict(r._mapping)) for r in await self.service.list(q, active_only)]
 
     async def create(self, user: CurrentUser, data: ClientCreate) -> ClientOut:
-        return ClientOut(**dict((await self.service.create(data))._mapping))
+        return ClientOut(**dict((await self.service.create(data, user))._mapping))
 
     async def update(self, user: CurrentUser, item_id: UUID, data: ClientUpdate) -> ClientOut:
         return ClientOut(**dict((await self.service.update(item_id, data, user))._mapping))

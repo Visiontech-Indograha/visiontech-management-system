@@ -237,7 +237,7 @@ class AuthUserRepository(BaseRepository):
                 u.username,
                 u.system_role::text AS role,
                 u.is_active,
-                (SELECT max(s.create_at) FROM user_sessions s WHERE s.user_id = u.user_id) AS last_login_at
+                u.last_login_at
             FROM users u
             WHERE u.employee_id = CAST(:emp AS uuid) AND u.delete_at IS NULL
             """,

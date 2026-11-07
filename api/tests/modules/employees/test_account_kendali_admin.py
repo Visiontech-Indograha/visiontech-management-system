@@ -129,3 +129,15 @@ def test_new_account_has_no_last_login_until_first_login(client, world: World):
     assert created.status_code in (200, 201), created.text
     assert created.json().get("last_login_at") is None
     assert client.get(f"/employees/{emp}/account", headers=hr).json()["last_login_at"] is None
+
+
+def test_last_login_survives_session_cleanup(client, world: World):
+    """Login berhasil mengisi last_login_at; tetap ada setelah sesi dihapus (cleanup-orphans)."""
+    hr = world.headers(client, "hr")
+    emp = _new_employee(client, world, f"KA-{world.tag}-LS")
+    login = f"jejak.{world.tag}@contoh.id"
+    temp = client.post(f"/employees/{emp}/account", headers=hr, json={"login": login}).json()["temporary_password"]
+    assert client.post("/auth/login", json={"email": login, "password": temp, "platform": "mobile"}).status_code == 200
+    uid = _user_id(client, hr, emp)
+    sync_query("DELETE FROM user_sessions WHERE user_id = %s RETURNING 1", (uid,))
+    assert client.get(f"/employees/{emp}/account", headers=hr).json()["last_login_at"] is not None

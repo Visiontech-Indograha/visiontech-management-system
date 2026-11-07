@@ -161,6 +161,10 @@ class AuthSessionRepository(BaseRepository):
                 "exp": expires_at,
             },
         )
+        # Jejak login tahan lama (sesi lama dibersihkan cleanup-orphans).
+        await self.execute(
+            "UPDATE users SET last_login_at = now() WHERE user_id = CAST(:uid AS uuid)", {"uid": str(user_id)}
+        )
         return SessionIssueResult(
             session_id=session_id,
             family_id=family_id,

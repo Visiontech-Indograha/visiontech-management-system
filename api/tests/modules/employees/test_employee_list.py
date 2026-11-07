@@ -22,7 +22,7 @@ def test_search_filter_and_paging(client, world):
     assert set(world.employees.values()) <= ids and everyone["total"] == len(ids)
     assert [i["full_name"] for i in everyone["items"]] == sorted(i["full_name"] for i in everyone["items"])
 
-    found = _list(client, world, q="uji pm")
+    found = _list(client, world, q="karyawan uji pm")
     assert [i["employee_id"] for i in found["items"]] == [world.employees["pm"]]
 
     page = _list(client, world, size=3, page=2)

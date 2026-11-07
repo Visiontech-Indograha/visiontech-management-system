@@ -131,7 +131,7 @@ class WorkOrderService:
 
     async def create_work_order(self, data: WorkOrderCreate, current_user: CurrentUser) -> Any:
         # Cek kewenangan
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Work Order.")
 
         wo_number = await self.repo.generate_wo_number()
@@ -151,7 +151,7 @@ class WorkOrderService:
     async def assign_survey(
         self, work_order_id: UUID | str, data: WorkOrderAssignSurvey, current_user: CurrentUser
     ) -> Any:
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat menugaskan survei.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat menugaskan survei.")
@@ -197,7 +197,7 @@ class WorkOrderService:
         """
         Fitur Inti: PM menyetujui survei dan mengunci item tugas & BOM.
         """
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM atau OM yang dapat menyetujui survei dan mengunci daftar tugas.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat menyetujui survei.")
@@ -389,7 +389,7 @@ class WorkOrderService:
         """Menghasilkan dokumen resmi ekspor untuk Work Order.
         Mendukung BAST_PDF, BAST_DOCX, SURVEY_REPORT, ORDER_SHEET, BOQ, PROGRESS_SLIDES.
         """
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat mengunduh dokumen resmi.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat mengunduh dokumen resmi.")

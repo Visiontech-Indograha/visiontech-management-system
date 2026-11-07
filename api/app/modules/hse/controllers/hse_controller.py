@@ -84,8 +84,10 @@ class HseController:
         )
         return {"acknowledged": True, "detail": result}
 
-    async def get_campaign_audit_stats(self, campaign_id: UUID) -> HseCampaignAuditStats:
-        return await self.service.get_campaign_audit_stats(campaign_id)
+    async def get_campaign_audit_stats(
+        self, campaign_id: UUID, user: CurrentUser | None = None,
+    ) -> HseCampaignAuditStats:
+        return await self.service.get_campaign_audit_stats(campaign_id, user)
 
     async def list_vehicle_inspections(
         self,
@@ -96,6 +98,7 @@ class HseController:
         to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
+        user: CurrentUser | None = None,
     ) -> list[VehicleInspectionResponse]:
         return await self.service.list_vehicle_inspections(
             vehicle_id=vehicle_id,
@@ -105,6 +108,7 @@ class HseController:
             to_date=to_date,
             limit=limit,
             offset=offset,
+            user=user,
         )
 
     async def create_vehicle_inspection(
@@ -114,8 +118,10 @@ class HseController:
     ) -> VehicleInspectionResponse:
         return await self.service.create_vehicle_inspection(data, current_user)
 
-    async def get_vehicle_inspection(self, inspection_id: UUID) -> VehicleInspectionResponse:
-        return await self.service.get_vehicle_inspection(inspection_id)
+    async def get_vehicle_inspection(
+        self, inspection_id: UUID, user: CurrentUser | None = None,
+    ) -> VehicleInspectionResponse:
+        return await self.service.get_vehicle_inspection(inspection_id, user)
 
     async def verify_vehicle_inspection(
         self,

@@ -52,7 +52,7 @@ class VehicleInspectionRepository(BaseRepository):
     async def get_by_id(self, inspection_id: UUID) -> dict[str, Any] | None:
         query = """
             SELECT
-                i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate,
+                i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate, v.office_id,
                 i.inspector_id, e.full_name AS inspector_name,
                 i.period_type, i.inspection_date, i.odometer_km,
                 i.checklist_json, i.photos_json, i.notes, i.status,
@@ -77,6 +77,7 @@ class VehicleInspectionRepository(BaseRepository):
         to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
+        offices: list[str] | None = None,
     ) -> Sequence[dict[str, Any]]:
         conditions = ["i.delete_at IS NULL"]
         params: dict[str, Any] = {"limit": limit + offset}
@@ -97,10 +98,14 @@ class VehicleInspectionRepository(BaseRepository):
             conditions.append("i.inspection_date <= :to_date")
             params["to_date"] = to_date
 
+        if offices is not None:  # peran HSE tambahan: hanya kendaraan di kantor penugasan (ADR 0002 fase 2)
+            conditions.append("v.office_id = ANY(CAST(:offices AS uuid[]))")
+            params["offices"] = offices
+
         where_clause = " AND ".join(conditions)
         query = f"""
             SELECT
-                i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate,
+                i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate, v.office_id,
                 i.inspector_id, e.full_name AS inspector_name,
                 i.period_type, i.inspection_date, i.odometer_km,
                 i.checklist_json, i.photos_json, i.notes, i.status,

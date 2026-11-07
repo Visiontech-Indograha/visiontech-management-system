@@ -22,6 +22,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
+from app.core.audit_log import record_audit
 from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission
@@ -65,12 +66,30 @@ def _in_use(asset_type: str) -> AppError:
 
 _NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
+# Bidang aset yang dicatat di audit (foto/berkas tidak dicatat).
+_AUDIT_FIELDS = {
+    "TOOL": ("office_id", "division_id", "team_id", "ownership_type", "category", "name", "tool_code", "status"),
+    "VEHICLE": ("office_id", "division_id", "team_id", "vehicle_type", "name", "number_plate", "status"),
+}
+
 
 class AssetService:
     """Use case inventaris & peminjaman aset."""
 
     def __init__(self, repo: AssetRepository) -> None:
         self.repo = repo
+
+    async def _audit(
+        self, user: CurrentUser | None, action: str, asset_type: str, asset_id: UUID, before: Any, after: Any,
+        *, skip_if_empty: bool = False, fields: tuple[str, ...] | None = None,
+    ) -> None:
+        """Catat perubahan aset (alat/kendaraan); pemanggil internal tanpa pengguna tidak dicatat."""
+        if user is None:
+            return
+        await record_audit(
+            self.repo.db, user, action=action, entity_type=asset_type.lower(), entity_id=asset_id,
+            before=before, after=after, fields=fields or _AUDIT_FIELDS[asset_type], skip_if_empty=skip_if_empty,
+        )
 
     def _notify(self) -> NotificationService:
         return NotificationService(self.repo.db)
@@ -145,7 +164,9 @@ class AssetService:
         fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip(), photo_path=await self._path(data.photo_file_id, "foto"))
-        return await self.repo.get_tool(await self.repo.insert_tool(fields))
+        row = await self.repo.get_tool(await self.repo.insert_tool(fields))
+        await self._audit(user, "TOOL_CREATE", "TOOL", row.tool_id, None, row)
+        return row
 
     async def update_tool(self, tool_id: UUID, data: ToolUpdate, user: CurrentUser | None = None) -> Any:
         tool = await self._tool(tool_id)
@@ -164,7 +185,9 @@ class AssetService:
                       name=data.name.strip() if data.name else None,
                       photo_path=await self._path(data.photo_file_id, "foto"))
         await self.repo.update_tool(tool_id, fields)
-        return await self.repo.get_tool(tool_id)
+        row = await self.repo.get_tool(tool_id)
+        await self._audit(user, "TOOL_UPDATE", "TOOL", tool_id, tool, row, skip_if_empty=True)
+        return row
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
     async def list_vehicles(
@@ -188,7 +211,9 @@ class AssetService:
         fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id), name=data.name.strip(),
                       photo_path=await self._path(data.photo_file_id, "foto"))
-        return await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
+        row = await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
+        await self._audit(user, "VEHICLE_CREATE", "VEHICLE", row.vehicle_id, None, row)
+        return row
 
     async def update_vehicle(self, vehicle_id: UUID, data: VehicleUpdate, user: CurrentUser | None = None) -> Any:
         vehicle = await self._vehicle(vehicle_id)
@@ -207,7 +232,9 @@ class AssetService:
                       name=data.name.strip() if data.name else None,
                       photo_path=await self._path(data.photo_file_id, "foto"))
         await self.repo.update_vehicle(vehicle_id, fields)
-        return await self.repo.get_vehicle(vehicle_id)
+        row = await self.repo.get_vehicle(vehicle_id)
+        await self._audit(user, "VEHICLE_UPDATE", "VEHICLE", vehicle_id, vehicle, row, skip_if_empty=True)
+        return row
 
     # ── Status & arsip ────────────────────────────────────────────────────────
     async def set_status(self, asset_type: str, asset_id: UUID, status: str, user: CurrentUser | None = None) -> Any:
@@ -219,15 +246,21 @@ class AssetService:
             raise _in_use(asset_type)
         if not await self.repo.set_status(asset_type, asset_id, status, expected=asset.status):
             raise _status_changed(asset_type)
-        return await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
+        row = await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
+        await self._audit(user, f"{asset_type}_STATUS", asset_type, asset_id, asset, row, skip_if_empty=True,
+                          fields=("status",))
+        return row
 
     async def delete(self, asset_type: str, asset_id: UUID, user: CurrentUser | None = None) -> None:
         await self._guard_asset(user, asset_type, asset_id)
-        if await self.repo.lock_asset(asset_type, asset_id) is None:
+        asset = await self.repo.lock_asset(asset_type, asset_id)
+        if asset is None:
             raise NotFoundError(_LABEL[asset_type])
         if await self.repo.has_open_loan(asset_type, asset_id):
             raise _in_use(asset_type)
+        before = await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
         await self.repo.archive(asset_type, asset_id)
+        await self._audit(user, f"{asset_type}_DELETE", asset_type, asset_id, before, None)
 
     # ── Berkas & inspeksi kendaraan ───────────────────────────────────────────
     async def _vehicle_in_scope(self, vehicle_id: UUID, user: CurrentUser | None) -> None:

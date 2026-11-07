@@ -424,3 +424,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
+
+
+def isolate_site(world: World) -> dict[str, float]:
+    """Pindahkan kantor uji `world` ke koordinat unik (jauh dari -6.2/106.8 yang dipakai semua kantor uji) dan
+    kembalikan pusatnya. Dipakai uji radius/jarak agar kantor sisa atau milik worker paralel (radius lebih besar)
+    tidak bisa "menang" di `nearest_valid_site`."""
+    n = uuid.uuid4().int
+    center = {"lat": -60.0 - (n % 100_000) / 10_000, "lng": -120.0 - ((n >> 20) % 100_000) / 10_000}
+    sync_query("UPDATE office SET latitude = %s, longitude = %s WHERE office_id = %s",
+               (center["lat"], center["lng"], world.site_id))
+    return center

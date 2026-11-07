@@ -60,12 +60,12 @@ class EmployeeController:
         await self.service.delete_address(employee_id, address_id)
         return {"message": "Alamat dihapus."}
 
-    async def archive(self, employee_id: UUID) -> dict[str, str]:
-        return await self.service.archive(employee_id)
+    async def archive(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, str]:
+        return await self.service.archive(employee_id, user)
 
     async def delete(self, employee_id: UUID, actor: CurrentUser) -> dict[str, str]:
         await self.service.delete(employee_id, actor)
         return {"status": "deleted"}
 
-    async def restore(self, employee_id: UUID) -> dict[str, str]:
-        return await self.service.restore(employee_id)
+    async def restore(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, str]:
+        return await self.service.restore(employee_id, user)

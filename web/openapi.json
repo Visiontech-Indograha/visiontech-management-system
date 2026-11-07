@@ -30788,7 +30788,9 @@
       "enum": [
        "ADMIN_HR_GA",
        "FINANCE",
-       "OPERATIONAL_MANAGER"
+       "OPERATIONAL_MANAGER",
+       "PROJECT_MANAGER",
+       "HSE"
       ],
       "title": "Role"
      },
@@ -30810,7 +30812,7 @@
      "role"
     ],
     "title": "RoleAssignmentCreate",
-    "description": "Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor)."
+    "description": "Tambah peran. HR/Finance/PM/HSE wajib `office_id`; OM tanpa `office_id` (semua kantor)."
    },
    "RoleAssignmentOut": {
     "properties": {

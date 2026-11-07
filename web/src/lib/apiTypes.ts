@@ -9829,14 +9829,14 @@ export interface components {
         };
         /**
          * RoleAssignmentCreate
-         * @description Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).
+         * @description Tambah peran. HR/Finance/PM/HSE wajib `office_id`; OM tanpa `office_id` (semua kantor).
          */
         RoleAssignmentCreate: {
             /**
              * Role
              * @enum {string}
              */
-            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER";
+            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER" | "PROJECT_MANAGER" | "HSE";
             /** Office Id */
             office_id?: string | null;
         };

@@ -8,7 +8,7 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { RoleAssignmentAddDialog } from "@/components/organisms/directory/RoleAssignmentAddDialog";
 import { errorMessage } from "@/lib/errors";
-import { roleName } from "@/lib/roleAssignments";
+import { allowedExtraRoles, roleName } from "@/lib/roleAssignments";
 import { useAccount, type Employee } from "@/services/employeeService";
 import {
   useRevokeRoleAssignment,
@@ -18,12 +18,12 @@ import {
 import { useSession } from "@/stores/sessionStore";
 
 /**
- * Bagian "Peran tambahan dan kantor": hanya untuk pemegang izin manage:role_assignments (Super Admin).
+ * Bagian "Peran tambahan dan kantor": hanya untuk pemegang izin manage:role_assignments (Super Admin; Operational Manager untuk PM/HSE).
  * Tanpa izin, bagian ini tidak tampil sama sekali (API tetap memeriksa).
  */
 export function RoleAssignmentsPanel({ employee }: { employee: Employee }) {
   const me = useSession().me;
-  const allowed = !!me?.permissions.includes("manage:role_assignments");
+  const allowed = allowedExtraRoles(me?.permissions).length > 0;
   if (!allowed) return null;
   return <PanelBody employee={employee} myUserId={me?.user_id} />;
 }
@@ -38,6 +38,7 @@ function PanelBody({ employee, myUserId }: { employee: Employee; myUserId?: stri
   const [error, setError] = useState<string | null>(null);
 
   const rows = list.data ?? [];
+  const grantable = allowedExtraRoles(useSession().me?.permissions) as string[];
   const extras = rows.filter((r) => r.source !== "PRIMARY");
   const primaryRole = account.data?.system_role;
   const held = [...(primaryRole ? [primaryRole] : []), ...extras.map((r) => r.role)];
@@ -80,7 +81,7 @@ function PanelBody({ employee, myUserId }: { employee: Employee; myUserId?: stri
                       {roleName(r.role)} · {r.office_name ?? "Semua kantor"}
                       {r.source === "PRIMARY" ? " (peran utama)" : ""}
                     </TextBlock>
-                    {r.source !== "PRIMARY" && (
+                    {r.source !== "PRIMARY" && grantable.includes(r.role) && (
                       <ActionButton
                         size="sm"
                         variant="outline"

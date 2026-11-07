@@ -1,5 +1,6 @@
 import {
   Bed,
+  Network,
   BookUser,
   Briefcase,
   Building2,
@@ -57,6 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   // 5. Master & Sistem
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"], group: "Master dan Sistem" },
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
+  { path: "/divisions", label: "Divisi dan jabatan", icon: Network, anyOf: ["manage:divisions", "manage:users"], group: "Master dan Sistem" },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
 ];
 

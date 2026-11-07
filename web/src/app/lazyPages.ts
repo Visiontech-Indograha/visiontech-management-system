@@ -8,6 +8,7 @@ export const DirectoryPage = lazy(() => import("@/pages/directory/DirectoryPage"
 export const EmployeeDetailPage = lazy(() => import("@/pages/directory/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })));
 export const MyDocumentsPage = lazy(() => import("@/pages/directory/MyDocumentsPage").then((m) => ({ default: m.MyDocumentsPage })));
 export const WorkTypesPage = lazy(() => import("@/pages/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
+export const DivisionsPage = lazy(() => import("@/pages/divisions/DivisionsPage").then((m) => ({ default: m.DivisionsPage })));
 export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
 export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
 export const AllocationPage = lazy(() => import("@/pages/alokasi/AllocationPage").then((m) => ({ default: m.AllocationPage })));

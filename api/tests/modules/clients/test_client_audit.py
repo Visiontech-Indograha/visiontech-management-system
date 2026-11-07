@@ -30,7 +30,8 @@ def test_client_and_site_changes_are_audited(client, world):
     assert len(created) == 1 and created[0]["table"] == "client" and created[0]["actor"]
     assert created[0]["diff"]["changes"]["status"] == {"new": True}
 
-    upd = client.put(f"/clients/{cid}", headers=pm, json={"name": f"Klien Audit B {world.tag}", "pic_phone": "081111111"})
+    upd = client.put(f"/clients/{cid}", headers=pm,
+                     json={"name": f"Klien Audit B {world.tag}", "pic_phone": "081111111"})
     assert upd.status_code == 200, upd.text
     log = _logs("CLIENT_UPDATE", cid)
     assert len(log) == 1
@@ -43,7 +44,8 @@ def test_client_and_site_changes_are_audited(client, world):
     assert site.status_code == 201, site.text
     sid = site.json()["site_id"]
     assert len(_logs("CLIENT_SITE_CREATE", sid)) == 1
-    assert client.put(f"/clients/{cid}/sites/{sid}", headers=pm, json={"geofence_radius_meters": 200}).status_code == 200
+    site_upd = client.put(f"/clients/{cid}/sites/{sid}", headers=pm, json={"geofence_radius_meters": 200})
+    assert site_upd.status_code == 200
     up = _logs("CLIENT_SITE_UPDATE", sid)
     assert up[0]["diff"]["changes"]["geofence_radius_meters"] == {"old": 120, "new": 200}
     assert client.delete(f"/clients/{cid}/sites/{sid}", headers=pm).status_code == 200

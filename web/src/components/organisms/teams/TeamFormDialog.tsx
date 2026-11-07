@@ -68,7 +68,7 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
             <ControlOption key={o.id} value={o.id}>{o.name}</ControlOption>
           ))}
         </SelectField>
-        <TextField label="Cari calon ketua" placeholder="Nama / NIK" value={q} onChange={(e) => setQ(e.target.value)} />
+        <TextField label="Cari calon ketua" placeholder="Cari awal nama atau nomor..." value={q} onChange={(e) => setQ(e.target.value)} />
         <SelectField label="Ketua tim" value={leaderId} onChange={(e) => setLeaderId(e.target.value)}>
           <ControlOption value="">Pilih ketua tim</ControlOption>
           {(employees.data?.items ?? []).map((e) => (

@@ -82,8 +82,8 @@ function ToolForm({ onClose }: { onClose: () => void }) {
           </ControlOption>
         ))}
       </SelectField>
-      <TextField label="Kode alat" hint="Unik, contoh: TL-BOR-002" error={errors.tool_code?.message} {...register("tool_code")} />
-      <TextField label="Nama alat" error={errors.name?.message} {...register("name")} />
+      <TextField label="Kode alat" maxLength={50} hint="Unik, contoh: TL-BOR-002" error={errors.tool_code?.message} {...register("tool_code")} />
+      <TextField label="Nama alat" maxLength={100} error={errors.name?.message} {...register("name")} />
       <PlaceFields register={register} errors={errors} divisionRequired={false} />
     </AssetFormDialog>
   );
@@ -120,8 +120,8 @@ function VehicleForm({ onClose }: { onClose: () => void }) {
           </ControlOption>
         ))}
       </SelectField>
-      <TextField label="Nomor polisi" hint="Contoh: BK 1452 ZN" error={errors.number_plate?.message} {...register("number_plate")} />
-      <TextField label="Nama kendaraan" error={errors.name?.message} {...register("name")} />
+      <TextField label="Nomor polisi" maxLength={20} hint="Contoh: BK 1452 ZN" error={errors.number_plate?.message} {...register("number_plate")} />
+      <TextField label="Nama kendaraan" maxLength={150} error={errors.name?.message} {...register("name")} />
       <PlaceFields register={register} errors={errors} divisionRequired />
     </AssetFormDialog>
   );

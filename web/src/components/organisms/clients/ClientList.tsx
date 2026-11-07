@@ -34,7 +34,7 @@ export function ClientList({
         <div className="w-full sm:w-72">
           <TextField
             label=""
-            placeholder="Cari kode atau nama klien..."
+            placeholder="Cari awal nama atau kode klien..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -77,12 +77,12 @@ export function ClientList({
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <TextBlock as="span" className="rounded-control bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-2">
+                      <TextBlock as="span" className="shrink-0 rounded-control bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
                         {c.client_code}
                       </TextBlock>
-                      <TextBlock className="font-semibold text-foreground">{c.name}</TextBlock>
+                      <TextBlock className="min-w-0 break-words font-semibold text-foreground">{c.name}</TextBlock>
                     </div>
                   </div>
                   {!c.status && (
@@ -96,7 +96,7 @@ export function ClientList({
                   {c.pic_name && (
                     <div className="flex items-center gap-2 text-xs">
                       <Briefcase size={14} className="text-mist shrink-0" />
-                      <TextBlock as="span">
+                      <TextBlock as="span" className="min-w-0 break-words">
                         PIC: <TextBlock as="strong" className="text-foreground">{c.pic_name}</TextBlock>
                       </TextBlock>
                     </div>
@@ -104,7 +104,7 @@ export function ClientList({
                   {c.pic_phone && (
                     <div className="flex items-center gap-2 text-xs">
                       <Phone size={14} className="text-mist shrink-0" />
-                      <TextBlock as="span">{c.pic_phone}</TextBlock>
+                      <TextBlock as="span" className="min-w-0 break-words">{c.pic_phone}</TextBlock>
                     </div>
                   )}
                   {c.address && (

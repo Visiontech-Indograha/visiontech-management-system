@@ -12,7 +12,7 @@ export function EmployeeListFilter({ q, onQChange, status, onStatusChange }: {
       <div className="mb-4 flex flex-wrap gap-3">
         <ControlInput
           aria-label="Cari nama atau no. karyawan"
-          placeholder="Cari nama atau no. karyawan..."
+          placeholder="Cari awal nama, nomor, atau email..."
           className={`${inputCls} w-full md:w-64`}
           value={q}
           onChange={(e) => onQChange(e.target.value)}

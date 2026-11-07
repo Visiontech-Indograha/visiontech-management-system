@@ -128,9 +128,9 @@ class WorkOrderRepository(BaseRepository):
             params["lead_team_id"] = str(lead_team_id)
         if q:
             sql += (
-                " AND (wo.wo_number ILIKE '%' || :q || '%'"
-                " OR wo.title ILIKE '%' || :q || '%'"
-                " OR c.name ILIKE '%' || :q || '%')"
+                " AND (wo.wo_number ILIKE :q || '%'"
+                " OR wo.title ILIKE :q || '%'"
+                " OR c.name ILIKE :q || '%')"
             )
             params["q"] = escape_like(q)
 

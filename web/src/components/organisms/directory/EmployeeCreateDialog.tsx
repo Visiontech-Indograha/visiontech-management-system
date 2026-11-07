@@ -22,7 +22,7 @@ import { AvatarBlock, AvatarBlockFallback, AvatarBlockImage } from "@/components
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 
 const createSchema = employeeFormSchema.and(
-  z.object({ address_line: z.string().trim(), city: z.string().trim(), postal_code: z.string().trim() }),
+  z.object({ address_line: z.string().trim().max(255, "Alamat maksimal 255 karakter."), city: z.string().trim().max(100, "Kota maksimal 100 karakter."), postal_code: z.string().trim().max(10, "Kode pos maksimal 10 karakter.") }),
 );
 type CreateValues = z.infer<typeof createSchema>;
 
@@ -213,9 +213,9 @@ export function EmployeeCreateDialog({ onClose }: { onClose: () => void }) {
           control={control as unknown as Control<EmployeeFormValues>}
         />
         <TextBlock className="mt-6 mb-2 font-semibold text-sm text-foreground">Alamat (Opsional)</TextBlock>
-        <TextField label="Alamat" error={errors.address_line?.message} {...register("address_line")} />
-        <TextField label="Kota" error={errors.city?.message} {...register("city")} />
-        <TextField label="Kode pos" error={errors.postal_code?.message} {...register("postal_code")} />
+        <TextField label="Alamat" maxLength={255} error={errors.address_line?.message} {...register("address_line")} />
+        <TextField label="Kota" maxLength={100} error={errors.city?.message} {...register("city")} />
+        <TextField label="Kode pos" maxLength={10} error={errors.postal_code?.message} {...register("postal_code")} />
       </FormBlock>
     </VmsDialog>
   );

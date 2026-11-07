@@ -23,8 +23,8 @@ const coordinate = (min: number, max: number, label: string) =>
     });
 
 const siteSchema = z.object({
-  name: z.string().trim().min(1, "Nama lokasi wajib diisi."),
-  address: z.string().trim(),
+  name: z.string().trim().min(1, "Nama lokasi wajib diisi.").max(100, "Nama lokasi maksimal 100 karakter."),
+  address: z.string().trim().max(500, "Alamat maksimal 500 karakter."),
   lat: coordinate(-90, 90, "Lintang"),
   lng: coordinate(-180, 180, "Bujur"),
   radius_m: z
@@ -100,8 +100,8 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
             }
           }}
         />
-        <TextField label="Nama lokasi" error={errors.name?.message} {...register("name")} />
-        <TextField label="Alamat" error={errors.address?.message} {...register("address")} />
+        <TextField label="Nama lokasi" maxLength={100} error={errors.name?.message} {...register("name")} />
+        <TextField label="Alamat" maxLength={500} error={errors.address?.message} {...register("address")} />
         <div className="grid gap-x-3 md:grid-cols-2">
           <TextField label="Lintang (lat)" inputMode="decimal" error={errors.lat?.message} {...register("lat")} />
           <TextField label="Bujur (lng)" inputMode="decimal" error={errors.lng?.message} {...register("lng")} />

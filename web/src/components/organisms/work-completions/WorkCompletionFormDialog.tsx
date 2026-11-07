@@ -203,7 +203,7 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
           <>
             <TextField
               label="Cari klien"
-              placeholder="Ketik kode atau nama klien..."
+              placeholder="Cari awal nama atau kode klien..."
               value={clientQuery}
               onChange={(e) => setClientQuery(e.target.value)}
             />

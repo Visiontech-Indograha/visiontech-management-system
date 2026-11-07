@@ -26,6 +26,13 @@ import {
 import "leaflet/dist/leaflet.css";
 
 const SAT_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+/** Tombol tutup bawaan Leaflet berlabel "Close popup" (tanpa opsi bahasa); labelnya diganti saat popup dibuka. */
+function indonesianCloseButton(e: L.PopupEvent) {
+  const button = e.popup.getElement()?.querySelector(".leaflet-popup-close-button");
+  button?.setAttribute("aria-label", "Tutup keterangan titik");
+  button?.setAttribute("title", "Tutup keterangan titik");
+}
+
 const SAT_ATTR = "Imagery &copy; Esri, Maxar, Earthstar Geographics";
 
 const createSurveyPin = (n: number) =>
@@ -134,6 +141,7 @@ export function WorkOrderSurveyReviewModal({
   const { data: detail, isLoading } = useWorkOrderDetail(workOrderId || undefined);
   const applyMutation = useApplySurvey(workOrderId || "");
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [tileFailed, setTileFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<"both" | "map" | "list">("both");
 
   const surveyPoints = detail?.survey_points;
@@ -261,6 +269,11 @@ export function WorkOrderSurveyReviewModal({
                     </TextBlock>
                   </div>
 
+                  {tileFailed && (
+                    <TextBlock role="alert" className="text-sm text-warning">
+          Gambar peta tidak bisa dimuat. Periksa sambungan internet, lalu coba lagi nanti.
+        </TextBlock>
+                  )}
                   <div className="h-[380px] w-full relative">
                     {validCoords.length > 0 ? (
                       <MapContainer
@@ -270,13 +283,13 @@ export function WorkOrderSurveyReviewModal({
                         scrollWheelZoom={false}
                         className="h-full w-full"
                       >
-                        <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} />
+                        <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} eventHandlers={{ tileerror: () => setTileFailed(true) }} />
                         <FitSurveyMap coords={validCoords} />
                         {detail.survey_points?.map((pt, idx) => {
                           if (pt.site_lat == null || pt.site_lng == null) return null;
                           const pos: [number, number] = [Number(pt.site_lat), Number(pt.site_lng)];
                           return (
-                            <Marker key={pt.point_id || idx} position={pos} icon={createSurveyPin(idx + 1)}>
+                            <Marker key={pt.point_id || idx} position={pos} icon={createSurveyPin(idx + 1)} eventHandlers={{ popupopen: indonesianCloseButton }}>
                               <Popup className="vms-map-popup">
                                 <div className="w-56 p-1 space-y-1.5 text-ink">
                                   <div className="font-bold text-xs"><TextBlock as="span">{idx + 1}. {pt.point_name}</TextBlock></div>

@@ -105,6 +105,7 @@ export function ClientFormDialog({
           />
           <TextField
             label="Nama Perusahaan Klien"
+            maxLength={150}
             placeholder="cth. PT Telekomunikasi Seluler"
             error={errors.name?.message}
             {...register("name", {

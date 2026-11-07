@@ -3,8 +3,8 @@ import { z } from "zod";
 /** Data kerja karyawan V2 (Milestone 10): dipakai form tambah & ubah karyawan. */
 export const employeeFormSchema = z
   .object({
-    employee_no: z.string().trim().min(2, "No. karyawan minimal 2 karakter."),
-    full_name: z.string().trim().min(2, "Nama lengkap minimal 2 karakter."),
+    employee_no: z.string().trim().min(2, "No. karyawan minimal 2 karakter.").max(50, "No. karyawan maksimal 50 karakter."),
+    full_name: z.string().trim().min(2, "Nama lengkap minimal 2 karakter.").max(150, "Nama lengkap maksimal 150 karakter."),
     office_id: z.string().min(1, "Pilih kantor."),
     division_id: z.string(),
     position_id: z.string(),

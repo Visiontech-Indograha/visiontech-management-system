@@ -35,12 +35,8 @@ SQL_HINT = re.compile(r"\b(select|insert|update|delete|returning|where|from)\b",
 KNOWN: dict[str, int] = {
     "app/modules/attendance/repositories/attendance_session_repository.py | offset": 1,
     "app/modules/audit/repositories/audit_repository.py | offset": 1,
-    "app/modules/employees/repositories/employee_repository.py | like-leading-wildcard": 3,
     "app/modules/employees/repositories/employee_repository.py | offset": 1,
-    # Milestone 10 (master V2): pencarian klien/karyawan/pekerjaan klien "mengandung kata" & daftar order
-    # berhalaman — diterima pemilik 2026-10-22 sebagai pengecualian (tabel kecil); ganti ke trigram/keyset bila tumbuh.
-    "app/modules/clients/repositories/client_repository.py | like-leading-wildcard": 2,
-    "app/modules/work_completion/repositories/work_completion_core_repository.py | like-leading-wildcard": 2,
+    # Daftar order berhalaman (OFFSET) — pengecualian lama; pencarian kini awalan (putusan pemilik 2026-11).
     "app/modules/work_completion/repositories/work_completion_core_repository.py | offset": 1,
 }
 

@@ -10,7 +10,7 @@ import io
 import pytest
 from PIL import Image
 
-from tests.conftest import WORLD_PASSWORD, World, requires_db, sync_query
+from tests.conftest import WORLD_PASSWORD, World, isolate_site, requires_db, sync_query
 
 pytestmark = requires_db
 
@@ -98,10 +98,12 @@ def test_office_worker_rejected_on_mobile_and_checks_in_out_on_web(client, world
 
 
 def test_web_out_of_radius_needs_an_explanation_then_review(client, world):
-    without = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80, explanation=None)
+    center = isolate_site(world)  # kantor lain (radius besar) tak boleh menampung titik ini
+    near = {"lat": center["lat"] - 0.0018, "lng": center["lng"]}  # ±200 m
+    without = _check_in(client, world, "pm", "WEB", location=near, accuracy_m=80, explanation=None)
     assert without.status_code == 422 and without.json()["error"]["code"] == "EXPLANATION_REQUIRED"
 
-    response = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80)
+    response = _check_in(client, world, "pm", "WEB", location=near, accuracy_m=80)
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "NEEDS_REVIEW"
     assert response.json()["distance_m"] > 100

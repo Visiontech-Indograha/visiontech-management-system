@@ -34,7 +34,7 @@ export function ClientList({
         <div className="w-full sm:w-72">
           <TextField
             label=""
-            placeholder="Cari kode atau nama klien..."
+            placeholder="Cari awal nama atau kode klien..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
           />

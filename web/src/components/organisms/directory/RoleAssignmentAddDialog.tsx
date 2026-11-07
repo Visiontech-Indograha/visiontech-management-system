@@ -9,9 +9,10 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useIdempotencyKey } from "@/lib/idempotency";
-import { EXTRA_ROLES, EXTRA_ROLE_LABEL, needsOffice, roleAddBlocker, type ExtraRole } from "@/lib/roleAssignments";
+import { allowedExtraRoles, EXTRA_ROLE_LABEL, needsOffice, roleAddBlocker, type ExtraRole } from "@/lib/roleAssignments";
 import { useOffices } from "@/services/employeeService";
 import { useAddRoleAssignment } from "@/services/roleAssignmentService";
+import { useSession } from "@/stores/sessionStore";
 
 interface Values {
   role: string;
@@ -29,6 +30,7 @@ export function RoleAssignmentAddDialog({ userId, primaryRole, held, scopes, ext
   onClose: () => void;
 }) {
   const offices = useOffices();
+  const roles = allowedExtraRoles(useSession().me?.permissions);
   const mutation = useAddRoleAssignment(userId);
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -86,9 +88,9 @@ export function RoleAssignmentAddDialog({ userId, primaryRole, held, scopes, ext
       <FormBlock id="role-assignment-form" onSubmit={handleSubmit(onSubmit)}>
         <FormErrorText message={blocker} />
         <FormErrorText message={formError} />
-        <SelectField label="Peran tambahan"error={errors.role?.message} {...register("role", { required: "Pilih peran." })}>
+        <SelectField label="Peran tambahan" error={errors.role?.message} {...register("role", { required: "Pilih peran." })}>
           <ControlOption value="">Pilih peran</ControlOption>
-          {EXTRA_ROLES.map((r) => (
+          {roles.map((r) => (
             <ControlOption key={r} value={r}>{EXTRA_ROLE_LABEL[r]}</ControlOption>
           ))}
         </SelectField>
@@ -100,6 +102,7 @@ export function RoleAssignmentAddDialog({ userId, primaryRole, held, scopes, ext
             ))}
           </SelectField>
         )}
+        {needsOffice(role) && <TextBlock className="text-sm text-mist">Berlaku hanya untuk kantor yang dipilih.</TextBlock>}
         {role === "OPERATIONAL_MANAGER" && <TextBlock className="text-sm text-mist">Berlaku untuk semua kantor.</TextBlock>}
       </FormBlock>
     </VmsDialog>

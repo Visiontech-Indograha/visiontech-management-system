@@ -20,6 +20,7 @@ version: 1.8.4+2654
 
 environment:
   sdk: ^3.13.3
+  flutter: 3.47.9   # PIN tunggal CI (apk.yml, ci.yml, golden.yml); cara naik: mobile/README.md
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions

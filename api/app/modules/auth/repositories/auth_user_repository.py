@@ -7,7 +7,7 @@ Organisasi pengguna = kantor karyawannya (`employee.office_id`); akun tanpa kary
 from typing import Any
 from uuid import UUID
 
-from app.core.config import settings
+from app.core import system_settings
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
@@ -70,7 +70,7 @@ class AuthUserRepository(BaseRepository):
         Dengan ROLE_ASSIGNMENT_ENABLED, peran utama diikuti peran tambahan aktif (ADR 0002); peran utama tetap
         urutan pertama. Penugasan di kantor yang sudah dihapus diabaikan."""
         roles_sql = "ARRAY[u.system_role::text]"
-        if settings.ROLE_ASSIGNMENT_ENABLED:
+        if system_settings.role_assignment_enabled():
             roles_sql = """ARRAY[u.system_role::text] || COALESCE((
                     SELECT array_agg(DISTINCT a.role::text ORDER BY a.role::text)
                     FROM user_role_assignment a

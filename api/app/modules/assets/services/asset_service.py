@@ -22,8 +22,8 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
+from app.core import system_settings
 from app.core.audit_log import record_audit
-from app.core.config import settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -100,7 +100,7 @@ class AssetService:
         bila ROLE_ASSIGNMENT_ENABLED; SA dan peran ASSET tidak dibatasi. Flag mati = perilaku lama.
         `read`: pembacaan inventaris; OM (yang sudah melihat semua aset) tetap melihat semua kantor walau juga HR.
         Mutasi memakai izin pengelola aset yang dibawa HR, sehingga OM+HR hanya mengubah aset kantor tugasnya."""
-        if user is None or not settings.ROLE_ASSIGNMENT_ENABLED:
+        if user is None or not system_settings.role_assignment_enabled():
             return None
         restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_ASSETS,
                                                ("SUPER_ADMIN", "OPERATIONAL_MANAGER") if read else ("SUPER_ADMIN",))

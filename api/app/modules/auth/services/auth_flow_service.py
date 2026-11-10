@@ -9,7 +9,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core import system_settings
 from app.database.session import unit_of_work
 from app.modules.auth.repositories.auth_session_repository import CRUDSession
 from app.modules.auth.repositories.auth_user_repository import CRUDUser
@@ -105,7 +105,7 @@ class AuthFlowService:
 
     async def role_scopes(self, user_id: str) -> list[RoleScopeOut]:
         """Peran tambahan aktif + kantornya untuk profil (kosong bila ROLE_ASSIGNMENT_ENABLED mati)."""
-        if not settings.ROLE_ASSIGNMENT_ENABLED:
+        if not system_settings.role_assignment_enabled():
             return []
         return [
             RoleScopeOut(

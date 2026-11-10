@@ -22,6 +22,7 @@ from functools import lru_cache
 import jwt
 from fastapi import Request
 
+from app.core import system_settings
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import verify_jwt_token
@@ -211,7 +212,7 @@ def rate_limit(group: str, *, always: bool = False) -> Callable[[Request], Await
             retry_after = limiter.hit(group, f"{scope}:{key}")
             if retry_after == 0:
                 continue
-            if always or settings.RATE_LIMIT_ENFORCE:
+            if always or system_settings.rate_limit_enforce():
                 raise RateLimitedError(retry_after)
             route = request.scope.get("route")
             path = getattr(route, "path", request.url.path)

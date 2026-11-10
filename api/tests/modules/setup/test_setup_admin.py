@@ -21,7 +21,7 @@ pytestmark = requires_db
 TOKEN = secrets.token_urlsafe(24)
 WRONG_TOKEN = secrets.token_urlsafe(24)
 PASSWORD = secrets.token_urlsafe(18)
-PREFIX = "setup-test-"
+PREFIX = f"setup-test-{secrets.token_hex(4)}-"  # unik per proses xdist: worker lain tidak saling menghapus
 
 
 def _body(n: int = 1, token: str = TOKEN) -> dict:

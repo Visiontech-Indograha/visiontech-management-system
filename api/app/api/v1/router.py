@@ -37,6 +37,7 @@ from app.modules.system.routes import (
     sync_router,
 )
 from app.modules.system_backup.routes import router as backup_router
+from app.modules.system_settings.routes import router as system_settings_router
 from app.modules.teams.routes import router as teams_router
 from app.modules.work_completion.routes import router as work_completion_router
 from app.modules.work_completion.routes import verify_router
@@ -84,6 +85,7 @@ api_router.include_router(offices_router)
 api_router.include_router(divisions_router)
 api_router.include_router(accounts_router)
 api_router.include_router(sync_router)
+api_router.include_router(system_settings_router)
 api_router.include_router(setup_router)
 api_router.include_router(dev_clock_router)
 api_router.include_router(monitoring_router)

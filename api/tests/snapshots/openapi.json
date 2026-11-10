@@ -14107,6 +14107,91 @@
     "title": "SyncResponse",
     "type": "object"
    },
+   "SystemSettingOut": {
+    "properties": {
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "env_default": {
+      "title": "Env Default",
+      "type": "boolean"
+     },
+     "key": {
+      "title": "Key",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "locked": {
+      "title": "Locked",
+      "type": "boolean"
+     },
+     "source": {
+      "enum": [
+       "env_force",
+       "db",
+       "env_default"
+      ],
+      "title": "Source",
+      "type": "string"
+     },
+     "type": {
+      "const": "bool",
+      "default": "bool",
+      "title": "Type",
+      "type": "string"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     },
+     "value": {
+      "title": "Value",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "key",
+     "label",
+     "description",
+     "value",
+     "source",
+     "env_default",
+     "locked"
+    ],
+    "title": "SystemSettingOut",
+    "type": "object"
+   },
+   "SystemSettingsUpdate": {
+    "description": "Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka).",
+    "properties": {
+     "values": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "maxProperties": 20,
+      "minProperties": 1,
+      "title": "Values",
+      "type": "object"
+     }
+    },
+    "required": [
+     "values"
+    ],
+    "title": "SystemSettingsUpdate",
+    "type": "object"
+   },
    "TeamAvailabilityItem": {
     "properties": {
      "active_items_count": {
@@ -30009,6 +30094,86 @@
     "summary": "Sync Status",
     "tags": [
      "Offline Sync"
+    ]
+   }
+  },
+  "/api/v1/system/settings": {
+   "get": {
+    "description": "Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).",
+    "operationId": "list_system_settings_api_v1_system_settings_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "title": "Response List System Settings Api V1 System Settings Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List System Settings",
+    "tags": [
+     "System"
+    ]
+   },
+   "put": {
+    "description": "Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.",
+    "operationId": "update_system_settings_api_v1_system_settings_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SystemSettingsUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "title": "Response Update System Settings Api V1 System Settings Put",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update System Settings",
+    "tags": [
+     "System"
     ]
    }
   },

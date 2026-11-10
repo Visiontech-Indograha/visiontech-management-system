@@ -22,7 +22,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core import system_settings
 from app.core.errors import NotFoundError
 from app.core.permissions import Permission, permissions_for_roles
 from app.core.repository import BaseRepository
@@ -32,7 +32,7 @@ from app.core.security import CurrentUser
 def attendance_office_scope(viewer_emp: str, emp_office: str) -> str:
     """Ekspresi boolean SQL: peninjau (`viewer_emp` = ekspresi employee_id) boleh melihat absensi karyawan yang
     kantornya `emp_office` (ekspresi office_id). Kedua argumen adalah ekspresi SQL internal, bukan input pengguna."""
-    if not settings.ROLE_ASSIGNMENT_ENABLED:
+    if not system_settings.role_assignment_enabled():
         return f"""(
         EXISTS (SELECT 1 FROM users os WHERE os.employee_id = {viewer_emp} AND os.delete_at IS NULL
                 AND os.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER'))
@@ -80,7 +80,11 @@ async def office_restriction(db: AsyncSession, user: CurrentUser, perm: Permissi
     dihitung sebagai pembawa pelebar, jadi HR yang juga PM tetap dibatasi kantor pada alur HR.
     Selain itu: kantor sendiri (`employee.office_id`) + kantor penugasan aktif untuk peran HR/Finance pembawa izin.
     """
-    if not settings.ROLE_ASSIGNMENT_ENABLED or perm.value not in user.permissions or user.has_role(*wide_roles):
+    if (
+        not system_settings.role_assignment_enabled()
+        or perm.value not in user.permissions
+        or user.has_role(*wide_roles)
+    ):
         return None
     extra_bound = EXTRA_ONLY_BOUND_ROLES - {user.role}  # peran utama PM/HSE tidak dibatasi
     # PM tambahan tidak ikut "per divisi": ia tak punya jalur data (pm_id), jadi dibatasi kantor penugasan.

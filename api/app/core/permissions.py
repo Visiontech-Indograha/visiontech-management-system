@@ -69,6 +69,8 @@ class Permission(StrEnum):
     MANAGE_DIVISIONS = "manage:divisions"
     # Penugasan peran ganda (ADR 0002): hanya SUPER_ADMIN
     MANAGE_ROLE_ASSIGNMENTS = "manage:role_assignments"
+    # Setelan sistem saat operasi (flag fitur): hanya SUPER_ADMIN
+    MANAGE_SYSTEM_SETTINGS = "manage:system_settings"
     # Fase 2: OM boleh memberi/mencabut hanya peran tambahan PROJECT_MANAGER dan HSE (dicek di service)
     MANAGE_FIELD_ROLE_ASSIGNMENTS = "manage:field_role_assignments"
 
@@ -117,7 +119,9 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS},
+    RoleCode.ADMIN: frozenset(Permission) - {
+        Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS, Permission.MANAGE_SYSTEM_SETTINGS,
+    },
     RoleCode.OPS: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,

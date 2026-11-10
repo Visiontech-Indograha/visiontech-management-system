@@ -108,6 +108,20 @@ def test_runtime_role_switch_backs_up_never_prints_secret_and_rolls_back():
     assert "kembalikan" in text
 
 
+def test_runtime_role_sql_is_idempotent_least_privilege_and_has_no_secret():
+    sql = read(DEPLOY / "peran-runtime.sql")
+    assert "\\getenv pw VMS_API_PASSWORD" in sql                              # sandi dari env, bukan repo
+    assert "NOSUPERUSER NOBYPASSRLS" in sql and "WHERE NOT EXISTS (SELECT 1 FROM pg_roles" in sql
+    assert "ALTER DEFAULT PRIVILEGES" in sql and "ON ALL SEQUENCES" in sql
+    assert "CREATE POLICY" not in sql and "PASSWORD '" not in sql
+
+
+def test_runtime_role_script_has_check_apply_rollback_modes_by_pg_roles_not_alembic_name():
+    text = read(DEPLOY / "pakai-peran-runtime.sh")
+    assert "0024_runtime_role" not in text                                    # migrasi itu tidak pernah ada
+    assert "FROM pg_roles" in text and "cek|terapkan" in text and "kembalikan" in text
+
+
 def test_verify_url_script_sets_public_domain_and_keeps_rollback_copies_in_sync():
     text = read(DEPLOY / "setel-url-verifikasi.sh")
     assert "set -euo pipefail" in text

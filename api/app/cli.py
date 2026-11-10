@@ -129,6 +129,17 @@ async def cleanup_idempotency(hari: int) -> None:
     await engine.dispose()
 
 
+async def buat_partisi(bulan_ke_depan: int) -> int:
+    """Buat partisi bulanan app_activity_logs + DEFAULT sebagai peran pemilik (cron host bulanan)."""
+    from app.database.migration_v3 import ensure_activity_log_partitions
+
+    engine = make_engine(_operator_url())
+    try:
+        return await ensure_activity_log_partitions(bulan_ke_depan, eng=engine)
+    finally:
+        await engine.dispose()
+
+
 async def backup_database(cycle: str = "WEEKLY", output_dir: str = "backups") -> dict[str, Any]:
     """
     Menjalankan prosedur backup data sistem terkompresi dan mencatatkannya ke registry.
@@ -159,6 +170,9 @@ def main() -> None:
     idem_parser = subparsers.add_parser("cleanup-idempotency", help="Hapus Idempotency-Key lebih tua dari N hari")
     idem_parser.add_argument("--hari", type=int, default=7, help="Batas umur kunci (hari)")
 
+    part_parser = subparsers.add_parser("buat-partisi", help="Buat partisi app_activity_logs (peran pemilik, untuk cron)")
+    part_parser.add_argument("--bulan", type=int, default=6, help="Jumlah bulan ke depan")
+
     backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
     backup_parser.add_argument(
         "--cycle", default="WEEKLY", choices=["DAILY", "WEEKLY", "MONTHLY"], help="Siklus backup"
@@ -183,6 +197,8 @@ def main() -> None:
         asyncio.run(cleanup_orphans())
     elif args.command == "cleanup-idempotency":
         asyncio.run(cleanup_idempotency(args.hari))
+    elif args.command == "buat-partisi":
+        print(f"Partisi diperiksa/dibuat: {asyncio.run(buat_partisi(args.bulan))} pernyataan.")
     elif args.command == "backup-db":
         asyncio.run(backup_database(cycle=args.cycle, output_dir=args.output_dir))
     else:

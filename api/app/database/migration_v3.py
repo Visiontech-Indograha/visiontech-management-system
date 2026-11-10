@@ -8,6 +8,7 @@ from datetime import date
 from pathlib import Path
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app.core.config import settings
 from app.core.time import jakarta_now
@@ -100,14 +101,33 @@ def _activity_log_partition_ddl(today: date, months_ahead: int = 2) -> list[str]
     return statements
 
 
-async def ensure_activity_log_partitions(months_ahead: int = 2) -> None:
-    """Pastikan partisi jejak audit tersedia (idempoten; dijalankan setiap startup)."""
+async def _can_create_partitions(conn: AsyncConnection) -> bool:
+    """Peran runtime `vms_api` bukan pemilik tabel, jadi tak berhak DDL: lewati diam-diam (partisi dibuat
+    migrasi Alembic atau `python -m app.cli buat-partisi` oleh peran pemilik)."""
+    row = await conn.execute(text(
+        "SELECT pg_has_role(current_user, c.relowner, 'USAGE') FROM pg_class c "
+        "WHERE c.oid = to_regclass('app_activity_logs')"
+    ))
+    return bool(row.scalar())
+
+
+async def ensure_activity_log_partitions(months_ahead: int = 2, eng: AsyncEngine | None = None) -> int:
+    """Pastikan partisi jejak audit tersedia (idempoten). `eng` = engine peran pemilik (CLI); tanpa `eng`
+    memakai engine runtime dan dilewati tanpa peringatan bila perannya bukan pemilik. → jumlah pernyataan dijalankan."""
+    use = eng or engine
+    async with use.connect() as conn:
+        if eng is None and not await _can_create_partitions(conn):
+            logger.debug("Peran runtime bukan pemilik app_activity_logs: pembuatan partisi dilewati")
+            return 0
+    done = 0
     for stmt in _activity_log_partition_ddl(jakarta_now().date(), months_ahead):
         try:
-            async with engine.begin() as conn:
+            async with use.begin() as conn:
                 await conn.execute(text(stmt))
+            done += 1
         except Exception as e:  # noqa: BLE001
             logger.warning("Partisi app_activity_logs tidak dibuat: %s - %s", stmt[:70], e)
+    return done
 
 
 async def prepare_v2_runtime() -> None:

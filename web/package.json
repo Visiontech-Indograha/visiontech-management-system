@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
     "gen:api": "openapi-typescript openapi.json -o src/lib/apiTypes.ts",
-    "gen:api:export": "cd ../api && .venv\\Scripts\\python -c \"import json; from app.main import app; open('../web/openapi.json', 'w', encoding='utf-8', newline='\\n').write(json.dumps(app.openapi(), indent=1, ensure_ascii=False))\""
+    "gen:api:export": "cd ../api && .venv\\Scripts\\python -c \"import json; from app.main import app; open('../web/openapi.json', 'w', encoding='utf-8', newline='\\n').write(json.dumps(app.openapi(), indent=1, ensure_ascii=False))\"",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",

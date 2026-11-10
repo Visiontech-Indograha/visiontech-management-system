@@ -42,7 +42,22 @@ class AuthUser {
     this.attendanceMode = 'FIELD',
     this.photoFileId,
     this.fullName,
+    this.mustChangePassword = false,
   });
+
+  /// True bila sandi sementara dari admin belum diganti: aplikasi hanya boleh membuka layar Ganti sandi.
+  final bool mustChangePassword;
+
+  AuthUser withMustChange(bool value) => AuthUser(
+    id: id,
+    username: username,
+    role: role,
+    employeeId: employeeId,
+    attendanceMode: attendanceMode,
+    photoFileId: photoFileId,
+    fullName: fullName,
+    mustChangePassword: value,
+  );
 
   final String id;
   final String username;
@@ -83,6 +98,7 @@ class AuthUser {
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,
       fullName: json['full_name'] as String?,
+      mustChangePassword: json['must_change_password'] == true,
     );
   }
 }

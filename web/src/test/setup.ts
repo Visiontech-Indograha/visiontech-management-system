@@ -5,7 +5,8 @@ import { useDrafts } from '@/hooks/useFormDraft'
 
 // Mesin CI/verify-branch sempit memori: findBy* bawaan 1 detik terlalu pendek saat beban tinggi;
 // 5 dtk pun sempat gagal saat uji API berjalan bersamaan (R-19) — lulus cepat tetap cepat.
-configure({ asyncUtilTimeout: 10000 })
+// 10 dtk pun gagal saat 4 vitest berjalan bersamaan (impor malas halaman pertama 10-13 dtk); batas tes 30 dtk.
+configure({ asyncUtilTimeout: 20000 })
 
 if (typeof window !== "undefined" && !window.ResizeObserver) {
   window.ResizeObserver = class ResizeObserver {

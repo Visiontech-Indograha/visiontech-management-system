@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 
+from app.core import system_settings
 from app.core.alerts import send_security_alert
-from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
@@ -218,7 +218,7 @@ class AuthService:
         peran utama (perilaku lama). Memakai find_identity agar logika union tidak digandakan."""
         if primary_role in OFFICE_ROLES:
             return True
-        if not settings.ROLE_ASSIGNMENT_ENABLED:
+        if not system_settings.role_assignment_enabled():
             return False
         identity = await self.users.find_identity(user.id)
         return identity is not None and any(r in OFFICE_ROLES for r in (identity.roles or []))

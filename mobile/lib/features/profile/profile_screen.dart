@@ -690,6 +690,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                SurfaceCard(
+                  onTap: () => context.push('/ganti-sandi'),
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.lock_reset_rounded, accent: Accent.blue, size: 40),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Ganti sandi', style: VmsTextStyles.subheading),
+                            Text('Ubah sandi akun Anda', style: VmsTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: VmsColors.neutral400),
+                    ],
+                  ),
+                ),
                 const SectionTitle('Tentang aplikasi'),
                 const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),

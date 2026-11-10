@@ -202,7 +202,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           // Tanpa tugas berjalan: pilih lokasi terdekat dari titik GPS terakhir yang segar (bila ada).
           final fix = runningSites.isEmpty ? LocationWarmer.instance.freshFix() : null;
           final near = fix == null ? null : nearestSiteId(_sites, fix.latitude, fix.longitude);
-          _siteId = near ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
+          // Tanpa GPS: lokasi absen terakhir pengguna sendiri, baru urutan abjad (bukan kantor acak).
+          final lastId = att.items.map((r) => r['site_id']).whereType<String>().firstOrNull;
+          final last = lastId != null && _sites.any((s) => s['id'] == lastId) ? lastId : null;
+          _siteId = near ?? last ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
         }
       });
       unawaited(_autoPickNearest());

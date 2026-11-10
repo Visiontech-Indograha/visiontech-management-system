@@ -39,9 +39,14 @@ class AccountCreate(BaseModel):
     system_role: FieldRole = "EMPLOYEE"
 
 
+AssignableRole = Literal[
+    "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "HSE", "ADMIN_HR_GA", "FINANCE", "TEAM_LEADER", "EMPLOYEE"
+]
+
+
 class AccountRoleUpdate(BaseModel):
-    """Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER)."""
-    system_role: FieldRole
+    """Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN."""
+    system_role: AssignableRole
 
 
 class AccountLoginUpdate(BaseModel):

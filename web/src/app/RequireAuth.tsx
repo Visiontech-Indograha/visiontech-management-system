@@ -10,6 +10,11 @@ export function RequireAuth() {
   const { pathname, search, hash } = useLocation();
   if (!ready) return <PageSkeleton />;
   if (!me) return <Navigate to="/login" replace state={{ from: `${pathname}${search}${hash}` }} />;
+  // Sandi sementara belum diganti: hanya halaman ganti sandi (dan keluar) yang boleh dibuka.
+  if (me.must_change_password && pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+  if (me.must_change_password) return <Outlet />;
   return <RequireFace />;
 }
 
@@ -23,4 +28,3 @@ function RequireFace() {
   }
   return <Outlet />;
 }
-

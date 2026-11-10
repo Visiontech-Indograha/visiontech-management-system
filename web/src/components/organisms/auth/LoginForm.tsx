@@ -10,6 +10,7 @@ import { StyledInput, StyledLabel } from "@/components/molecules/InputControls";
 import { AlertCircle, Timer } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ImageView } from "@/components/molecules/ImageView";
+import { InlineLink } from "@/components/molecules/Links";
 import { FormBlock } from "@/components/molecules/FormBlock";
 
 function mmss(total: number): string {
@@ -20,7 +21,7 @@ function mmss(total: number): string {
  * Kartu login: judul, galat/kunci sementara, email + password, tombol masuk.
  * State form & pengiriman dipegang Page; `lockSeconds` > 0 = login dikunci server (R-21).
  */
-export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds }: {
+export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds, showSetupLink = false }: {
   admin: boolean;
   form: UseFormReturn<LoginValues>;
   onSubmit: () => void;
@@ -28,6 +29,8 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
   /** Kode galat API (mis. NOT_OFFICE_ACCOUNT, MAX_DEVICES_REACHED) untuk petunjuk tambahan di bawah pesan. */
   formErrorCode?: string | null;
   lockSeconds: number;
+  /** Tautan ke penyiapan awal; hanya bila server belum punya Super Admin. */
+  showSetupLink?: boolean;
 }) {
   const { register, formState: { errors, isSubmitting } } = form;
   const [helpOpen, setHelpOpen] = useState(false);
@@ -88,6 +91,12 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
                 {isSubmitting ? "Memproses..." : lockSeconds > 0 ? `Tunggu ${mmss(lockSeconds)}` : "Masuk"}
               </ActionButton>
             </FormBlock>
+            {showSetupLink && (
+              <TextBlock className="mt-4 text-center text-sm">
+                Instalasi baru?{" "}
+                <InlineLink to="/setup" className="font-medium text-brand-700 underline">Siapkan akun admin pertama</InlineLink>
+              </TextBlock>
+            )}
           </PanelContent>
           <TextBlock className="text-center text-xs text-muted-foreground">Versi {__APP_VERSION__}</TextBlock>
         </Panel>

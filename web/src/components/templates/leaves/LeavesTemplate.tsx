@@ -2,6 +2,7 @@ import type { UseQueryResult } from "@tanstack/react-query";
 import { LeaveApplyButton } from "@/components/organisms/leaves/LeaveApplyButton";
 import { LeaveApplyDialog } from "@/components/organisms/leaves/LeaveApplyDialog";
 import { LeaveReviewDialog } from "@/components/organisms/leaves/LeaveReviewDialog";
+import { WithdrawLeaveDialog } from "@/components/organisms/leaves/WithdrawLeaveDialog";
 import { CancelLeaveDialog } from "@/components/organisms/leaves/CancelLeaveDialog";
 import { LeaveBalanceCard } from "@/components/organisms/leaves/LeaveBalanceCard";
 import { LeaveList } from "@/components/organisms/leaves/LeaveList";
@@ -95,7 +96,10 @@ export function LeavesTemplate({
       {reviewing && (
         <LeaveReviewDialog leave={reviewing} onClose={onCloseReview} />
       )}
-      {cancelling && <CancelLeaveDialog leave={cancelling} onClose={onCloseCancel} />}
+      {cancelling && cancelling.status === "PENDING" && (
+        <WithdrawLeaveDialog leave={cancelling} onClose={onCloseCancel} />
+      )}
+      {cancelling && cancelling.status !== "PENDING" && <CancelLeaveDialog leave={cancelling} onClose={onCloseCancel} />}
     </PageTemplate>
   );
 }

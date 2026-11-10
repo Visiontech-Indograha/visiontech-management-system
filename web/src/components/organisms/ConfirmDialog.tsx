@@ -1,4 +1,5 @@
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 
@@ -10,6 +11,7 @@ export function ConfirmDialog({
   confirmLabel = "Ya, lanjutkan",
   busy = false,
   danger = false,
+  error,
   onConfirm,
   onClose,
 }: {
@@ -19,6 +21,8 @@ export function ConfirmDialog({
   confirmLabel?: string;
   busy?: boolean;
   danger?: boolean;
+  /** Galat dari aksi sebelumnya; ditampilkan di dalam dialog. */
+  error?: string | null;
   onConfirm: () => void;
   onClose: () => void;
 }) {
@@ -38,6 +42,7 @@ export function ConfirmDialog({
         </div>
       }
     >
+      <FormErrorText message={error} />
       <TextBlock className="text-sm text-mist">{message}</TextBlock>
     </VmsDialog>
   );

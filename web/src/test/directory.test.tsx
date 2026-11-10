@@ -416,8 +416,9 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
     renderRoute(`/directory/${ID}`, { role: "HR" });
     const simpan = await screen.findByRole("button", { name: "Simpan peran" });
     expect(simpan).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Peran"), { target: { value: "TEAM_LEADER" } });
+    fireEvent.change(screen.getByLabelText("Peran utama"), { target: { value: "TEAM_LEADER" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, ubah peran" }));
     await waitFor(() => expect(calls.find((c) => c.url === `${ACCOUNT}/role`)).toBeDefined());
     expect(calls.find((c) => c.url === `${ACCOUNT}/role`)!.data).toEqual({ system_role: "TEAM_LEADER" });
   });
@@ -431,8 +432,9 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
         return apiError(409, "LEADER_ACTIVE_TEAM", "Karyawan ini masih memimpin tim; ganti ketua tim sebelum menurunkan perannya.");
     });
     renderRoute(`/directory/${ID}`, { role: "HR" });
-    fireEvent.change(await screen.findByLabelText("Peran"), { target: { value: "EMPLOYEE" } });
+    fireEvent.change(await screen.findByLabelText("Peran utama"), { target: { value: "EMPLOYEE" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, ubah peran" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("masih memimpin tim");
   });
 
@@ -444,6 +446,6 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
     });
     renderRoute(`/directory/${ID}`, { role: "HR" });
     expect(await screen.findByText(/Peran kantor: PROJECT_MANAGER/)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Peran")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Peran utama")).not.toBeInTheDocument();
   });
 });

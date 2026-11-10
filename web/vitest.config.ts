@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   define: { __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')).version) },
   test: {
-    exclude: ['legacy_ref/**', 'node_modules/**', 'dist/**'],
+    exclude: ['legacy_ref/**', 'node_modules/**', 'dist/**', 'e2e/**'],
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

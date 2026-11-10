@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/apiClient";
 import { LoginTemplate } from "@/components/templates/auth/LoginTemplate";
 import { loginSchema, type LoginValues } from "@/schemas/loginSchema";
 import { safeRedirectPath } from "@/lib/safeRedirect";
+import { useSetupStatus } from "@/services/setupService";
 import { useLockCountdown } from "@/hooks/useLockCountdown";
 
 /** Kedua halaman login memakai endpoint auth yang sama. */
@@ -14,6 +15,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
   const { me, login } = useSession();
   const [formError, setFormError] = useState<string | null>(null);
   const [formErrorCode, setFormErrorCode] = useState<string | null>(null);
+  const setupStatus = useSetupStatus();
   const lockLeft = useLockCountdown();
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
   const { handleSubmit } = form;
@@ -42,6 +44,7 @@ export function LoginPage({ admin = false }: { admin?: boolean }) {
       formError={formError}
       formErrorCode={formErrorCode}
       lockSeconds={lockLeft.seconds}
+      showSetupLink={!!setupStatus.data?.needs_setup}
     />
   );;
 }

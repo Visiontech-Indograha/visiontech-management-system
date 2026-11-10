@@ -131,12 +131,17 @@
     "type": "object"
    },
    "AccountRoleUpdate": {
-    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).",
+    "description": "Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN.",
     "properties": {
      "system_role": {
       "enum": [
-       "EMPLOYEE",
-       "TEAM_LEADER"
+       "OPERATIONAL_MANAGER",
+       "PROJECT_MANAGER",
+       "HSE",
+       "ADMIN_HR_GA",
+       "FINANCE",
+       "TEAM_LEADER",
+       "EMPLOYEE"
       ],
       "title": "System Role",
       "type": "string"
@@ -1525,6 +1530,33 @@
       },
       "title": "Managed Divisions",
       "type": "array"
+     },
+     "must_change_password": {
+      "default": false,
+      "title": "Must Change Password",
+      "type": "boolean"
+     },
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
      },
      "permissions": {
       "items": {
@@ -13297,6 +13329,79 @@
     "title": "RolloverRequest",
     "type": "object"
    },
+   "SetupAdminIn": {
+    "properties": {
+     "email": {
+      "maxLength": 254,
+      "minLength": 5,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Email",
+      "type": "string"
+     },
+     "full_name": {
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Full Name",
+      "type": "string"
+     },
+     "password": {
+      "maxLength": 128,
+      "minLength": 12,
+      "title": "Password",
+      "type": "string"
+     },
+     "setup_token": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Setup Token",
+      "type": "string"
+     }
+    },
+    "required": [
+     "setup_token",
+     "full_name",
+     "email",
+     "password"
+    ],
+    "title": "SetupAdminIn",
+    "type": "object"
+   },
+   "SetupAdminOut": {
+    "properties": {
+     "email": {
+      "title": "Email",
+      "type": "string"
+     },
+     "user_id": {
+      "title": "User Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "user_id",
+     "email"
+    ],
+    "title": "SetupAdminOut",
+    "type": "object"
+   },
+   "SetupStatusOut": {
+    "properties": {
+     "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+     },
+     "needs_setup": {
+      "title": "Needs Setup",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "needs_setup",
+     "enabled"
+    ],
+    "title": "SetupStatusOut",
+    "type": "object"
+   },
    "SlotOut": {
     "properties": {
      "example_file_id": {
@@ -14022,6 +14127,91 @@
      "results"
     ],
     "title": "SyncResponse",
+    "type": "object"
+   },
+   "SystemSettingOut": {
+    "properties": {
+     "description": {
+      "title": "Description",
+      "type": "string"
+     },
+     "env_default": {
+      "title": "Env Default",
+      "type": "boolean"
+     },
+     "key": {
+      "title": "Key",
+      "type": "string"
+     },
+     "label": {
+      "title": "Label",
+      "type": "string"
+     },
+     "locked": {
+      "title": "Locked",
+      "type": "boolean"
+     },
+     "source": {
+      "enum": [
+       "env_force",
+       "db",
+       "env_default"
+      ],
+      "title": "Source",
+      "type": "string"
+     },
+     "type": {
+      "const": "bool",
+      "default": "bool",
+      "title": "Type",
+      "type": "string"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     },
+     "value": {
+      "title": "Value",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "key",
+     "label",
+     "description",
+     "value",
+     "source",
+     "env_default",
+     "locked"
+    ],
+    "title": "SystemSettingOut",
+    "type": "object"
+   },
+   "SystemSettingsUpdate": {
+    "description": "Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka).",
+    "properties": {
+     "values": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "maxProperties": 20,
+      "minProperties": 1,
+      "title": "Values",
+      "type": "object"
+     }
+    },
+    "required": [
+     "values"
+    ],
+    "title": "SystemSettingsUpdate",
     "type": "object"
    },
    "TeamAvailabilityItem": {
@@ -23438,7 +23628,7 @@
   },
   "/api/v1/employees/{emp_id}/account/role": {
    "post": {
-    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "description": "Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN\n(bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.",
     "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
     "parameters": [
      {
@@ -29758,6 +29948,70 @@
     ]
    }
   },
+  "/api/v1/setup/admin": {
+   "post": {
+    "description": "Buat Super Admin pertama. 404 bila SETUP_TOKEN tidak diisi, 403 kode salah, 409 bila sudah ada admin.",
+    "operationId": "setup_admin_api_v1_setup_admin_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SetupAdminIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupAdminOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Setup Admin",
+    "tags": [
+     "Setup"
+    ]
+   }
+  },
+  "/api/v1/setup/status": {
+   "get": {
+    "description": "Apakah instalasi ini belum punya admin (perlu penyiapan awal).",
+    "operationId": "setup_status_api_v1_setup_status_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupStatusOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Setup Status",
+    "tags": [
+     "Setup"
+    ]
+   }
+  },
   "/api/v1/sync/operations": {
    "post": {
     "description": "Idempoten per client_op_id; dijalankan sesuai urutan kiriman perangkat (dok 04 §7).",
@@ -29862,6 +30116,86 @@
     "summary": "Sync Status",
     "tags": [
      "Offline Sync"
+    ]
+   }
+  },
+  "/api/v1/system/settings": {
+   "get": {
+    "description": "Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).",
+    "operationId": "list_system_settings_api_v1_system_settings_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "title": "Response List System Settings Api V1 System Settings Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List System Settings",
+    "tags": [
+     "System"
+    ]
+   },
+   "put": {
+    "description": "Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.",
+    "operationId": "update_system_settings_api_v1_system_settings_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SystemSettingsUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "title": "Response Update System Settings Api V1 System Settings Put",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Update System Settings",
+    "tags": [
+     "System"
     ]
    }
   },

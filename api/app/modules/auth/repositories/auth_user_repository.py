@@ -7,7 +7,7 @@ Organisasi pengguna = kantor karyawannya (`employee.office_id`); akun tanpa kary
 from typing import Any
 from uuid import UUID
 
-from app.core.config import settings
+from app.core import system_settings
 from app.core.repository import BaseRepository
 
 # Peran kantor (masuk lewat web) vs lapangan (masuk lewat aplikasi HP) — docs/35 §1.
@@ -70,7 +70,7 @@ class AuthUserRepository(BaseRepository):
         Dengan ROLE_ASSIGNMENT_ENABLED, peran utama diikuti peran tambahan aktif (ADR 0002); peran utama tetap
         urutan pertama. Penugasan di kantor yang sudah dihapus diabaikan."""
         roles_sql = "ARRAY[u.system_role::text]"
-        if settings.ROLE_ASSIGNMENT_ENABLED:
+        if system_settings.role_assignment_enabled():
             roles_sql = """ARRAY[u.system_role::text] || COALESCE((
                     SELECT array_agg(DISTINCT a.role::text ORDER BY a.role::text)
                     FROM user_role_assignment a
@@ -86,6 +86,7 @@ class AuthUserRepository(BaseRepository):
                 u.email AS login,
                 u.email,
                 u.is_active,
+                u.must_change_password,
                 COALESCE(e.office_id, {_MAIN_OFFICE}) AS organization_id,
                 {roles_sql} AS roles
             FROM users u
@@ -111,11 +112,14 @@ class AuthUserRepository(BaseRepository):
             )
         )
 
-    async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
+    async def update_password_hash(
+        self, user_id: UUID | str, password_hash: str, must_change: bool = False
+    ) -> None:
+        """`must_change=True` untuk sandi sementara dari admin; False bila pengguna mengganti sandinya sendiri."""
         await self.execute(
-            "UPDATE users SET password_hash = :hash, update_at = now() "
+            "UPDATE users SET password_hash = :hash, must_change_password = :mc, update_at = now() "
             "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
-            {"hash": password_hash, "id": user_id},
+            {"hash": password_hash, "id": user_id, "mc": must_change},
         )
 
     async def get_employee_id(self, user_id: UUID | str) -> UUID | None:
@@ -126,14 +130,22 @@ class AuthUserRepository(BaseRepository):
         )
         return emp
 
-    async def full_name(self, user_id: UUID | str) -> str | None:
-        """Nama lengkap karyawan yang tertaut ke akun ini (untuk sapaan di aplikasi)."""
-        name = await self.scalar(
-            "SELECT e.full_name FROM users u JOIN employee e ON e.employee_id = u.employee_id "
+    async def employee_identity(self, user_id: UUID | str) -> tuple[str | None, str | None, str | None]:
+        """Nama lengkap + kantor asal (id, nama) karyawan tertaut; satu query (JOIN), None bila tak ada."""
+        row = await self.fetchone(
+            "SELECT e.full_name, e.office_id, o.name AS office_name FROM users u "
+            "JOIN employee e ON e.employee_id = u.employee_id "
+            "LEFT JOIN office o ON o.office_id = e.office_id AND o.delete_at IS NULL "
             "WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL",
             {"uid": user_id},
         )
-        return str(name) if name else None
+        if row is None:
+            return None, None, None
+        return (
+            str(row[0]) if row[0] else None,
+            str(row[1]) if row[1] and row[2] else None,
+            str(row[2]) if row[2] else None,
+        )
 
     async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
         """ID berkas (file_object.id) foto profil karyawan milik akun ini; None bila belum ada/bukan unggahan.
@@ -259,8 +271,9 @@ class AuthUserRepository(BaseRepository):
         """Akun baru untuk seorang karyawan."""
         return await self.fetchone(
             """
-            INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
-            VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true)
+            INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active,
+                               must_change_password)
+            VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true, true)
             RETURNING user_id AS id, email AS login, is_active, CAST(NULL AS timestamptz) AS last_login_at,
                       system_role::text AS role
             """,

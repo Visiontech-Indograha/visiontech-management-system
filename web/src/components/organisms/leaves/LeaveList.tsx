@@ -233,9 +233,9 @@ export function LeaveList({
                         variant="outline"
                         size="sm"
                         onClick={() => onCancel(l)}
-                        aria-label={`Batalkan cuti ${l.employee_name}`}
+                        aria-label={`${l.status === "PENDING" ? "Batalkan pengajuan" : "Batalkan cuti"} ${l.employee_name}`}
                       >
-                        Batalkan cuti
+                        {l.status === "PENDING" ? "Batalkan pengajuan" : "Batalkan cuti"}
                       </ActionButton>
                     )}
                   </div>

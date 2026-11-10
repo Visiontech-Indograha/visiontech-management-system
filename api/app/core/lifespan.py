@@ -34,9 +34,21 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             except Exception:
                 logger.exception("Pemeliharaan partisi app_activity_logs gagal")
 
+    from app.core import system_settings
+
+    await system_settings.refresh_safely()
+
+    async def _refresh_settings() -> None:
+        # Setelan sistem diubah lewat proses lain: cache per proses disegarkan tiap REFRESH_SECONDS (<= 30 dtk).
+        while True:
+            await asyncio.sleep(system_settings.REFRESH_SECONDS)
+            await system_settings.refresh_safely()
+
     task = asyncio.create_task(_keep_partitions())
+    settings_task = asyncio.create_task(_refresh_settings())
     try:
         yield
     finally:
         task.cancel()
+        settings_task.cancel()
     logger.info("Aplikasi VMS FastAPI menyelesaikan lifecycle shutdown.")

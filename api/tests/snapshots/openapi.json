@@ -13307,6 +13307,79 @@
     "title": "RolloverRequest",
     "type": "object"
    },
+   "SetupAdminIn": {
+    "properties": {
+     "email": {
+      "maxLength": 254,
+      "minLength": 5,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Email",
+      "type": "string"
+     },
+     "full_name": {
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Full Name",
+      "type": "string"
+     },
+     "password": {
+      "maxLength": 128,
+      "minLength": 12,
+      "title": "Password",
+      "type": "string"
+     },
+     "setup_token": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Setup Token",
+      "type": "string"
+     }
+    },
+    "required": [
+     "setup_token",
+     "full_name",
+     "email",
+     "password"
+    ],
+    "title": "SetupAdminIn",
+    "type": "object"
+   },
+   "SetupAdminOut": {
+    "properties": {
+     "email": {
+      "title": "Email",
+      "type": "string"
+     },
+     "user_id": {
+      "title": "User Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "user_id",
+     "email"
+    ],
+    "title": "SetupAdminOut",
+    "type": "object"
+   },
+   "SetupStatusOut": {
+    "properties": {
+     "enabled": {
+      "title": "Enabled",
+      "type": "boolean"
+     },
+     "needs_setup": {
+      "title": "Needs Setup",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "needs_setup",
+     "enabled"
+    ],
+    "title": "SetupStatusOut",
+    "type": "object"
+   },
    "SlotOut": {
     "properties": {
      "example_file_id": {
@@ -29850,6 +29923,70 @@
     "summary": "Overtime Recap",
     "tags": [
      "Overtime"
+    ]
+   }
+  },
+  "/api/v1/setup/admin": {
+   "post": {
+    "description": "Buat Super Admin pertama. 404 bila SETUP_TOKEN tidak diisi, 403 kode salah, 409 bila sudah ada admin.",
+    "operationId": "setup_admin_api_v1_setup_admin_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SetupAdminIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupAdminOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Setup Admin",
+    "tags": [
+     "Setup"
+    ]
+   }
+  },
+  "/api/v1/setup/status": {
+   "get": {
+    "description": "Apakah instalasi ini belum punya admin (perlu penyiapan awal).",
+    "operationId": "setup_status_api_v1_setup_status_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupStatusOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Setup Status",
+    "tags": [
+     "Setup"
     ]
    }
   },

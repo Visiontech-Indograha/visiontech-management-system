@@ -26,6 +26,7 @@ from app.modules.offices.routes import router as offices_router
 from app.modules.overtime.routes import overtime_recaps_router, overtime_router
 from app.modules.projects.routes import router as projects_router
 from app.modules.role_assignments.routes import router as role_assignments_router
+from app.modules.setup.routes import router as setup_router
 from app.modules.system.routes import (
     app_releases_router,
     dev_clock_router,
@@ -85,6 +86,7 @@ api_router.include_router(divisions_router)
 api_router.include_router(accounts_router)
 api_router.include_router(sync_router)
 api_router.include_router(system_settings_router)
+api_router.include_router(setup_router)
 api_router.include_router(dev_clock_router)
 api_router.include_router(monitoring_router)
 api_router.include_router(attendance_router)

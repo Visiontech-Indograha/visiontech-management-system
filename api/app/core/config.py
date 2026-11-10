@@ -178,6 +178,11 @@ class Settings(BaseSettings):
     RATE_LIMIT_FILE_URL_PER_MIN: int = 120
     RATE_LIMIT_UPLOAD_PER_MIN: int = 60
     RATE_LIMIT_FACE_PER_MIN: int = 60
+    # Penyiapan awal (POST /setup/admin): selalu ditegakkan (tidak ikut RATE_LIMIT_ENFORCE).
+    RATE_LIMIT_SETUP_PER_MIN: int = 10
+    # Kode penyiapan sekali pakai untuk membuat admin pertama lewat web. Kosong (atau < 24 karakter) = endpoint
+    # POST /setup/admin mati (404). Isi hanya saat memasang instalasi baru; kosongkan lagi sesudahnya.
+    SETUP_TOKEN: str = ""
     # Proxy tepercaya (IP atau CIDR, dipisah koma). X-Forwarded-For hanya dibaca bila koneksi datang dari sini.
     # Kosong = abaikan X-Forwarded-For (sama seperti login: pakai IP koneksi langsung).
     TRUSTED_PROXY_IPS: str = ""

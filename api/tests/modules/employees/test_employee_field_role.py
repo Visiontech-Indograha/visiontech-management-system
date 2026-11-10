@@ -75,7 +75,8 @@ def test_only_employee_and_team_leader_are_accepted(client, world: World, role: 
 
     emp2 = _new_employee(client, world, f"PR-{world.tag}-422b-{len(role)}")
     assert _create(client, world, "hr", emp2, None).status_code == 201
-    assert _set_role(client, world, "hr", emp2, role).status_code == 422
+    expected = 403 if role in ("PROJECT_MANAGER", "OPERATIONAL_MANAGER", "ADMIN_HR_GA", "FINANCE") else 422
+    assert _set_role(client, world, "hr", emp2, role).status_code == expected
     assert _role_of(emp2) == "EMPLOYEE"
 
 
@@ -95,8 +96,8 @@ def test_hr_changes_field_role_and_audit_records_it(client, world: World):
 def test_office_account_role_cannot_be_changed_here(client, world: World):
     """Akun peran kantor (mis. PROJECT_MANAGER) bukan peran lapangan: tidak bisa diturunkan/dinaikkan lewat sini."""
     pm_emp = world.employees["pm"]
-    assert _set_role(client, world, "hr", pm_emp, "EMPLOYEE").status_code == 409
-    assert _set_role(client, world, "hr", pm_emp, "TEAM_LEADER").status_code == 409
+    assert _set_role(client, world, "hr", pm_emp, "EMPLOYEE").status_code == 403
+    assert _set_role(client, world, "hr", pm_emp, "TEAM_LEADER").status_code == 403
     assert _role_of(pm_emp) == "PROJECT_MANAGER"
 
 
@@ -105,3 +106,33 @@ def test_active_team_leader_cannot_be_demoted(client, world: World):
     blocked = _set_role(client, world, "hr", leader, "EMPLOYEE")
     assert blocked.status_code == 409 and blocked.json()["error"]["code"] == "LEADER_ACTIVE_TEAM"
     assert _role_of(leader) == "TEAM_LEADER"
+
+
+@pytest.mark.parametrize("role", ["OPERATIONAL_MANAGER", "PROJECT_MANAGER", "HSE", "ADMIN_HR_GA", "FINANCE",
+                                  "TEAM_LEADER", "EMPLOYEE"])
+def test_super_admin_sets_primary_role_and_audits_before_after(client, world: World, role: str):
+    emp = _new_employee(client, world, f"PR-{world.tag}-sa-{role[:4]}")
+    assert _create(client, world, "hr", emp, None).status_code == 201
+    r = _set_role(client, world, "admin", emp, role)
+    assert r.status_code == 200, r.text
+    assert _role_of(emp) == role
+    uid = sync_query("SELECT user_id FROM users WHERE employee_id = %s", (emp,))[0][0]
+    assert sync_query("SELECT count(*) FROM app_activity_logs WHERE entity_id = %s AND action = 'ROLE_CHANGE'",
+                      (uid,)) == [(1,)] or role == "EMPLOYEE"
+
+
+@pytest.mark.parametrize("who", ["hr", "pm", "ops", "leader", "member"])
+def test_non_super_admin_cannot_set_manager_role(client, world: World, who: str):
+    emp = _new_employee(client, world, f"PR-{world.tag}-nsa-{who}")
+    assert _create(client, world, "hr", emp, None).status_code == 201
+    assert _set_role(client, world, who, emp, "PROJECT_MANAGER").status_code in (403,)
+    assert _role_of(emp) == "EMPLOYEE"
+
+
+def test_super_admin_cannot_assign_super_admin_or_touch_one(client, world: World):
+    emp = _new_employee(client, world, f"PR-{world.tag}-sa2")
+    assert _create(client, world, "hr", emp, None).status_code == 201
+    assert _set_role(client, world, "admin", emp, "SUPER_ADMIN").status_code == 422
+    sync_query("UPDATE users SET system_role = 'SUPER_ADMIN' WHERE employee_id = %s RETURNING 1", (emp,))
+    assert _set_role(client, world, "admin", emp, "EMPLOYEE").status_code == 409
+    assert _role_of(emp) == "SUPER_ADMIN"

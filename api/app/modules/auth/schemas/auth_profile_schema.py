@@ -44,6 +44,8 @@ class AuthUserMeResponseSchema(BaseModel):
     # Opsional (klien lama mengabaikan): peran efektif (utama + tambahan aktif) dan kantor penugasannya.
     effective_roles: list[str] = Field(default_factory=list)
     role_scopes: list[RoleScopeOut] = Field(default_factory=list)
+    # Opsional (klien lama mengabaikan): True = pengguna wajib mengganti sandi sementara lebih dulu.
+    must_change_password: bool = False
 
 
 class AuthChangePasswordRequestSchema(BaseModel):

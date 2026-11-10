@@ -1,27 +1,35 @@
 #!/usr/bin/env bash
-# Mengalihkan koneksi API produksi ke peran runtime `vms_api` agar RLS benar-benar berlaku (P9-2, Alembic 0024).
+# Mengalihkan koneksi API ke peran runtime `vms_api` (non-superuser, NOBYPASSRLS) agar RLS kelak berlaku.
 # Temuan 2026-10-08: API tersambung sebagai `vms_app` = superuser + pemilik tabel, sehingga RLS terlewati.
+# Peran dibuat/diselaraskan oleh deploy/peran-runtime.sql (idempoten), BUKAN migrasi Alembic.
 #
-# Jalankan dari komputer pemilik SETELAH rilis yang memuat migrasi 0024_runtime_role ter-deploy (peran sudah ada):
-#   ssh ageng@192.168.88.160 "bash -s" < deploy/pakai-peran-runtime.sh             # pakai vms_api
-#   ssh ageng@192.168.88.160 "bash -s -- kembalikan" < deploy/pakai-peran-runtime.sh # rollback ke URL lama
+# Mode (argumen pertama), dijalankan di server dari komputer pemilik:
+#   ssh ageng@192.168.88.160 "bash -s -- cek"        < deploy/pakai-peran-runtime.sh   # hanya baca, tidak mengubah
+#   ssh ageng@192.168.88.160 "bash -s -- terapkan"   < deploy/pakai-peran-runtime.sh   # (nama lama: pakai)
+#   ssh ageng@192.168.88.160 "bash -s -- kembalikan" < deploy/pakai-peran-runtime.sh   # rollback ke api.env lama
+# Variabel env: VMS_DIR (default ~/deploy/vms-mvp), VMS_DB_CONTAINER (default vms_db_prod),
+#               VMS_API_CONTAINER (default vms_api), VMS_PORT (default 8000), VMS_OWNERS (default "vms_migrator,vms_app").
 #
-# Yang dikerjakan (mode pakai):
-#   1. periksa: api.env ada, peran vms_api ada & bukan superuser, alembic di 0024 atau lebih baru
-#   2. salin api.env → api.env.sebelum-vms_api.<waktu> (chmod 600) — bahan rollback
-#   3. sandi acak baru untuk vms_api (dibuat & dipakai di server, TIDAK pernah dicetak)
-#   4. api.env: MIGRATION_DATABASE_URL = URL lama (pemilik, untuk alembic), DATABASE_URL = URL yang sama dengan vms_api
-#   5. buat ulang kontainer api; /ready harus 200 dan API harus tersambung sebagai vms_api — gagal → rollback otomatis
+# terapkan: (1) periksa api.env & DB (2) salin api.env -> api.env.sebelum-vms_api.<waktu> (chmod 600)
+#   (3) jalankan peran-runtime.sql dengan sandi acak (dibuat & dipakai di server, TIDAK pernah dicetak)
+#   (4) api.env: MIGRATION_DATABASE_URL = URL lama (pemilik), DATABASE_URL = URL yang sama dengan vms_api
+#   (5) buat ulang kontainer api; /ready harus 200 dan API tersambung sebagai vms_api, jika tidak rollback otomatis.
+# Cadangan DB WAJIB dibuat pemilik sebelum `terapkan` (deploy/backup.sh); lihat deploy/PERAN-RUNTIME.md.
 set -euo pipefail
-BASE="$HOME/deploy/vms-mvp"
+BASE="${VMS_DIR:-$HOME/deploy/vms-mvp}"
+DB_CTR="${VMS_DB_CONTAINER:-vms_db_prod}"
+API_CTR="${VMS_API_CONTAINER:-vms_api}"
+PORT="${VMS_PORT:-8000}"
+OWNERS="${VMS_OWNERS:-vms_migrator,vms_app}"
 cd "$BASE"
-MODE="${1:-pakai}"
+MODE="${1:-cek}"
 ENV_FILE=api.env
+SQL_FILE="$BASE/peran-runtime.sql"
 
 recreate_and_wait() {
   docker compose up -d --force-recreate api >/dev/null
   for _ in $(seq 1 24); do
-    [ "$(curl -s -o /dev/null -w '%{http_code}' localhost:8000/ready)" = 200 ] && return 0
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "localhost:$PORT/ready")" = 200 ] && return 0
     sleep 5
   done
   return 1
@@ -33,7 +41,7 @@ restore_latest() {
   [ -n "$backup" ] || { echo "GAGAL: tidak ada salinan api.env.sebelum-vms_api.*"; exit 1; }
   cp -p "$backup" "$ENV_FILE"
   echo "   api.env dikembalikan dari $backup"
-  recreate_and_wait && echo "   api /ready: $(curl -s localhost:8000/ready)" || echo "PERINGATAN: /ready belum 200"
+  recreate_and_wait && echo "   api /ready: $(curl -s "localhost:$PORT/ready")" || echo "PERINGATAN: /ready belum 200"
 }
 
 if [ "$MODE" = kembalikan ]; then
@@ -41,36 +49,44 @@ if [ "$MODE" = kembalikan ]; then
   restore_latest
   exit 0
 fi
+case "$MODE" in cek|terapkan|pakai) ;; *) echo "Mode tidak dikenal: $MODE (cek|terapkan|kembalikan)"; exit 2 ;; esac
 
-echo "== 1/5 pemeriksaan"
+echo "== 1 pemeriksaan ($MODE)"
 [ -f "$ENV_FILE" ] || { echo "GAGAL: $BASE/$ENV_FILE tidak ada"; exit 1; }
 OLD_URL=$(grep -E '^DATABASE_URL=' "$ENV_FILE" | head -1 | cut -d= -f2-)
 [ -n "$OLD_URL" ] || { echo "GAGAL: DATABASE_URL tidak ada di api.env"; exit 1; }
 DB_NAME=$(printf '%s' "$OLD_URL" | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#')
-case "$OLD_URL" in
-  *://vms_api:*) echo "   API sudah memakai vms_api — tidak ada yang diubah"; exit 0 ;;
-esac
-psql_owner() { docker exec -i vms_db_prod sh -c "psql -v ON_ERROR_STOP=1 -qAt -U \"\$POSTGRES_USER\" -d '$DB_NAME'"; }
+CUR_USER=$(printf '%s' "$OLD_URL" | sed -E 's#^[^:]+://([^:@]+).*#\1#')
+psql_owner() { docker exec -i "$DB_CTR" sh -c "psql -v ON_ERROR_STOP=1 -qAt -U \"\$POSTGRES_USER\" -d '$DB_NAME'"; }
+echo "   DATABASE_URL sekarang memakai peran: $CUR_USER (db $DB_NAME)"
+echo "SELECT rolname || ' super=' || rolsuper::text || ' bypassrls=' || rolbypassrls::text || ' login=' || rolcanlogin::text FROM pg_roles WHERE rolname IN ('vms_api','vms_app','vms_migrator','vms_readonly') ORDER BY 1;" | psql_owner | sed 's/^/   peran: /'
+echo "SELECT 'policy RLS: ' || count(*) FROM pg_policies;" | psql_owner | sed 's/^/   /'
 ROLE=$(echo "SELECT rolsuper::text || ' ' || rolbypassrls::text FROM pg_roles WHERE rolname = 'vms_api';" | psql_owner)
-[ "$ROLE" = "false false" ] || { echo "GAGAL: peran vms_api belum ada / tidak aman ($ROLE) — deploy rilis berisi 0024 dulu"; exit 1; }
-REV=$(docker exec vms_api alembic current 2>/dev/null | tail -1)
-case "$REV" in
-  v2_*|0024_runtime_role*|0025*|0026*|0027*|0028*|0029*|003*) echo "   alembic: $REV" ;;
-  *) echo "GAGAL: alembic belum di 0024 ($REV)"; exit 1 ;;
+if [ -n "$ROLE" ] && [ "$ROLE" != "false false" ]; then
+  echo "GAGAL: peran vms_api ada tetapi tidak aman ($ROLE) — jalankan mode terapkan untuk menyelaraskan, atau perbaiki manual"
+  [ "$MODE" = cek ] || exit 1
+fi
+[ -n "$ROLE" ] && echo "   vms_api: ada, bukan superuser, tanpa BYPASSRLS" || echo "   vms_api: BELUM ada (dibuat oleh mode terapkan)"
+REV=$(docker exec "$API_CTR" alembic current 2>/dev/null | tail -1 || true)
+echo "   alembic: ${REV:-tidak terbaca}"
+case "$CUR_USER" in
+  vms_api) echo "   API sudah memakai vms_api"; [ "$MODE" = cek ] || { echo "   tidak ada yang diubah"; exit 0; } ;;
+  *) echo "   API BELUM memakai vms_api (peran $CUR_USER)" ;;
 esac
-echo "   peran vms_api siap (bukan superuser, tanpa BYPASSRLS)"
+if [ "$MODE" = cek ]; then echo "Mode cek selesai (tidak ada perubahan)."; exit 0; fi
+[ -f "$SQL_FILE" ] || { echo "GAGAL: $SQL_FILE tidak ada (salin deploy/peran-runtime.sql ke $BASE/ lebih dulu)"; exit 1; }
 
-echo "== 2/5 salinan api.env"
+echo "== 2 salinan api.env"
 BACKUP="api.env.sebelum-vms_api.$(date +%Y%m%d-%H%M%S)"
 cp -p "$ENV_FILE" "$BACKUP" && chmod 600 "$BACKUP"
 echo "   $BACKUP"
 
-echo "== 3/5 sandi baru vms_api (tidak dicetak)"
+echo "== 3 peran vms_api + hak minimal (sandi baru tidak dicetak)"
 PW=$(openssl rand -hex 24)
-printf "ALTER ROLE vms_api WITH LOGIN PASSWORD '%s';\n" "$PW" | psql_owner
+docker exec -i -e VMS_API_PASSWORD="$PW" "$DB_CTR" sh -c "psql -v ON_ERROR_STOP=1 -q -U \"\$POSTGRES_USER\" -d '$DB_NAME' -v owners='$OWNERS'" < "$SQL_FILE" >/dev/null
 echo "   disetel"
 
-echo "== 4/5 api.env"
+echo "== 4 api.env"
 OLD_URL="$OLD_URL" PW="$PW" python3 - "$ENV_FILE" <<'PY'
 import os, sys, urllib.parse
 
@@ -128,15 +144,15 @@ print(f"   host terverifikasi: {host} (sandi ter-encode, '@' tidak merusak parsi
 PY
 unset PW
 chmod 600 "$ENV_FILE"
-echo "   DATABASE_URL → vms_api; MIGRATION_DATABASE_URL → pemilik (alembic)"
+echo "   DATABASE_URL -> vms_api; MIGRATION_DATABASE_URL -> pemilik (alembic)"
 
-echo "== 5/5 buat ulang api dan periksa"
+echo "== 5 buat ulang api dan periksa"
 if ! recreate_and_wait; then
   echo "GAGAL: /ready tidak 200 — rollback otomatis"
   restore_latest
   exit 1
 fi
-WHO=$(docker exec vms_api python -c "
+WHO=$(docker exec "$API_CTR" python -c "
 import asyncio, asyncpg
 from app.core.config import settings
 async def m():
@@ -150,6 +166,6 @@ if [ "$WHO" != "vms_api False False" ]; then
   restore_latest
   exit 1
 fi
-echo "   api /ready: $(curl -s localhost:8000/ready)"
-echo "   API tersambung sebagai vms_api (RLS berlaku)"
-echo "SELESAI. Uji login web & HP, absen, buka SK. Ada masalah → jalankan mode 'kembalikan'."
+echo "   api /ready: $(curl -s "localhost:$PORT/ready")"
+echo "   API tersambung sebagai vms_api (non-superuser, tanpa BYPASSRLS)"
+echo "SELESAI. Uji login web & HP, absen, buka SK. Ada masalah -> jalankan mode 'kembalikan'."

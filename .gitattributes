@@ -3,3 +3,5 @@
 # Hook git dijalankan bash (juga Git Bash di Windows): selalu LF.
 .githooks/* text eol=lf
 *.bat text eol=crlf
+# psql meta-perintah (\getenv) rusak bila ada CR.
+deploy/*.sql text eol=lf

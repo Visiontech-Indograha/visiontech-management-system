@@ -6,6 +6,7 @@ Penggantian foto dan hapus dokumen juga tidak boleh meninggalkan varian yatim.
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -15,6 +16,8 @@ from tests.conftest import World, requires_db, sync_query
 from tests.modules.attendance.test_attendance_channel import _check_in, _storage  # noqa: F401
 
 pytestmark = requires_db
+
+_SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "bersihkan_berkas_yatim.py"
 
 
 def _upload(client, world: World, who: str, color: int, as_user: str | None = None) -> tuple[str, str]:
@@ -85,12 +88,11 @@ def test_purge_keys_idempoten(fake_storage):
 @pytest.mark.anyio
 async def test_skrip_operator_yatim_cek_lalu_hapus(world, fake_storage, monkeypatch, capsys):
     import importlib.util
-    from pathlib import Path
 
     from app.core import storage
 
     spec = importlib.util.spec_from_file_location(
-        "bersihkan_berkas_yatim", Path(__file__).resolve().parents[3] / "scripts" / "bersihkan_berkas_yatim.py")
+        "bersihkan_berkas_yatim", _SCRIPT)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

@@ -28,7 +28,10 @@ jobs:
     timeout-minutes: 15
     env:
       # Kredensial khusus container CI sekali pakai — bukan rahasia.
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
+      # Runtime/pytest = peran non-superuser `vms_api` (dibuat deploy/peran-runtime.sql); setup & Alembic = pemilik.
+      DATABASE_URL: postgresql+asyncpg://vms_api:ci-vms-api@localhost:5432/visiontech_db
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
+      TEST_SETUP_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/visiontech_db
       VMS_REQUIRE_DB: "1"   # uji DB gagal (bukan dilewati) bila DB tak terjangkau
       PYTHONPATH: .
     defaults:
@@ -71,6 +74,14 @@ jobs:
 
       - name: Terapkan migrasi Master Schema V2
         run: python -m alembic upgrade head
+
+      - name: Peran runtime vms_api (non-superuser, NOBYPASSRLS) + hak minimal
+        env:
+          PGPASSWORD: postgres
+          VMS_API_PASSWORD: ci-vms-api
+        run: |
+          psql -h localhost -U postgres -d visiontech_db -v ON_ERROR_STOP=1 -q -v owners=postgres -f ../deploy/peran-runtime.sql
+          psql -h localhost -U postgres -d visiontech_db -Atc "select rolsuper, rolbypassrls from pg_roles where rolname='vms_api'" | grep -qx 'f|f'
 
       - name: Galat fatal — sintaks & nama tak terdefinisi (semua berkas, tanpa garis dasar)
         run: ruff check --isolated --select E9,F63,F7,F82 app tests

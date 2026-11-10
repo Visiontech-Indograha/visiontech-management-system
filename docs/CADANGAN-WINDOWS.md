@@ -16,6 +16,11 @@ Jangan tempel ke server tanpa membaca; perubahan di server dicadangkan dulu (iku
   Rumus: `TOTAL = 1.3 x [ 34 x 0.35 x (DBprod+DBbeta) + 6 x (1+6c) x (MinIOprod+MinIObeta) ]`, c = laju ubah harian (bawaan 0.02).
   Disk Linux juga butuh: mirror kerja MinIO (= ukuran bucket, per lingkungan) + 3 hari arsip terenkripsi.
 
+## 0b. Verifikasi pertama oleh pemilik (sebelum dijadwalkan)
+1. `age --version` terpasang di Linux dan `age.exe --version` di Windows.
+2. Satu siklus nyata: buat (bagian 4 Linux) -> tarik (`Tarik-Cadangan.ps1`, sha256 cocok di log) -> `Uji-Pulih.ps1` (dekripsi + `pg_restore --list` > 0 entri
+   + hitungan berkas MinIO). Jadwalkan HANYA bila ketiganya lulus.
+
 ## 1. Windows: volume, akun, kunci age (Administrator PowerShell)
 ```powershell
 # BitLocker pada volume cadangan (mis. D:); simpan recovery key DI LUAR mesin ini
@@ -93,8 +98,8 @@ Windows (Administrator): `.\Daftar-Tugas.ps1 -ServerHost <ip-linux> -KunciSsh D:
 Retensi: DB harian 14 + mingguan 8 + bulanan 12; MinIO 35 hari (set mingguan penuh+inkremental). Kebijakan bisa diubah lewat parameter.
 
 Penghapusan tuntas: salinan kerja Linux memakai `mc mirror --remove`; inkremental `tar` mencatat penghapusan. Berkas yang dihapus di
-sistem tetap ada di arsip lama sampai set mingguannya dibuang: paling lambat sekitar 35 hari + panjang set (<= 7 hari) = ~42 hari.
-Pilih 28 hari retensi (`-RetensiMinioHari 28`) bila batas keras 35 hari harus dijamin.
+sistem tetap ada di arsip lama sampai set mingguannya dibuang. Bawaan `-RetensiMinioHari 28` (+ panjang set <= 7 hari) menjamin berkas
+terhapus hilang paling lambat 35 hari (keputusan pemilik). Konsekuensi: titik pulih MinIO yang terjamin ~28 hari.
 
 ## 6. Uji pulih bulanan (Administrator, kunci privat dipasang)
 ```powershell

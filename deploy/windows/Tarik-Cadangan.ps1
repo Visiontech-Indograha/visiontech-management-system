@@ -18,7 +18,7 @@ param(
     [string[]]$Lingkungan = @('prod', 'beta'),
     [string]$Pengguna = 'backup-reader',
     [int]$MaksUsiaJam = 26,
-    [int]$RetensiMinioHari = 35,
+    [int]$RetensiMinioHari = 28,   # 28 + set 7 hari = berkas terhapus pasti hilang <= 35 hari
     [int]$HarianDb = 14,
     [int]$MingguanDb = 8,
     [int]$BulananDb = 12,
@@ -68,7 +68,7 @@ function Tarik-Lingkungan {
         Tulis-Log ("Ditarik {0} ({1:N1} MB), sha256 cocok" -f "$Env/$a", ((Get-Item (Join-Path $lokal $a)).Length / 1MB))
         $baru++
     }
-    Tulis-Log "$Env: $baru berkas baru"
+    Tulis-Log "${Env}: $baru berkas baru"
 }
 
 function Hapus-Cadangan($o) {

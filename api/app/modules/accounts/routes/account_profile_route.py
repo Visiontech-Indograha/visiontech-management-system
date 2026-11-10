@@ -63,7 +63,8 @@ async def set_field_role(
     controller: AccountProfileController = Depends(),
 ) -> AccountOut:
     """
-    Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.
+    Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN
+    (bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.
     """
     return await controller.handle_set_role(emp_id, current_user, data)
 

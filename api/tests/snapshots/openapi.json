@@ -131,12 +131,17 @@
     "type": "object"
    },
    "AccountRoleUpdate": {
-    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).",
+    "description": "Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN.",
     "properties": {
      "system_role": {
       "enum": [
-       "EMPLOYEE",
-       "TEAM_LEADER"
+       "OPERATIONAL_MANAGER",
+       "PROJECT_MANAGER",
+       "HSE",
+       "ADMIN_HR_GA",
+       "FINANCE",
+       "TEAM_LEADER",
+       "EMPLOYEE"
       ],
       "title": "System Role",
       "type": "string"
@@ -23438,7 +23443,7 @@
   },
   "/api/v1/employees/{emp_id}/account/role": {
    "post": {
-    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "description": "Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN\n(bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.",
     "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
     "parameters": [
      {

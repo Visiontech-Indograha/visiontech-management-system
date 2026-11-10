@@ -41,6 +41,9 @@ class AuthUserMeResponseSchema(BaseModel):
     managed_divisions: list[ManagedDivisionOut] = Field(default_factory=list)
     photo_file_id: str | None = None
     full_name: str | None = None
+    # Kantor asal karyawan (employee.office_id); null bila akun tanpa karyawan/kantor.
+    office_id: str | None = None
+    office_name: str | None = None
     # Opsional (klien lama mengabaikan): peran efektif (utama + tambahan aktif) dan kantor penugasannya.
     effective_roles: list[str] = Field(default_factory=list)
     role_scopes: list[RoleScopeOut] = Field(default_factory=list)

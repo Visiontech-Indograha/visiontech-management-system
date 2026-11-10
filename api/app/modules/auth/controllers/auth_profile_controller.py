@@ -37,13 +37,16 @@ class AuthProfileController:
         # bertanda tangan diambil klien lewat GET /files/{id}/url.
         photo_file_id = await self.flow_service.profile_photo_file_id(current_user.user_id)
         extra = await self.flow_service.role_scopes(current_user.user_id)
+        full_name, office_id, office_name = await self.flow_service.employee_identity(current_user.user_id)
         scopes = [RoleScopeOut(role=res.role, primary=True), *extra]
         return AuthUserMeResponseSchema(
             effective_roles=list(dict.fromkeys(s.role for s in scopes)),
             role_scopes=scopes if extra else [],
             photo_file_id=photo_file_id,
             must_change_password=current_user.must_change_password,
-            full_name=await self.flow_service.full_name(current_user.user_id),
+            full_name=full_name,
+            office_id=office_id,
+            office_name=office_name,
             user_id=res.user_id,
             email=res.email,
             role=res.role,

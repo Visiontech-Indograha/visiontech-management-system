@@ -1536,6 +1536,28 @@
       "title": "Must Change Password",
       "type": "boolean"
      },
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
      "permissions": {
       "items": {
        "type": "string"

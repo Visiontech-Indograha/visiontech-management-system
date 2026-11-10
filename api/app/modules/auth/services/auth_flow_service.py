@@ -114,9 +114,9 @@ class AuthFlowService:
             for r in await self.users.role_scopes(user_id)
         ]
 
-    async def full_name(self, user_id: str) -> str | None:
-        """Nama lengkap karyawan pemilik akun (None bila akun belum tertaut)."""
-        return await self.users.full_name(user_id)
+    async def employee_identity(self, user_id: str) -> tuple[str | None, str | None, str | None]:
+        """(nama lengkap, office_id, office_name) karyawan pemilik akun; None bila belum tertaut."""
+        return await self.users.employee_identity(user_id)
 
     async def profile_photo_file_id(self, user_id: str) -> str | None:
         """ID berkas foto profil karyawan milik pengguna (None bila belum ada)."""

@@ -86,6 +86,7 @@ class AuthUserRepository(BaseRepository):
                 u.email AS login,
                 u.email,
                 u.is_active,
+                u.must_change_password,
                 COALESCE(e.office_id, {_MAIN_OFFICE}) AS organization_id,
                 {roles_sql} AS roles
             FROM users u
@@ -111,11 +112,14 @@ class AuthUserRepository(BaseRepository):
             )
         )
 
-    async def update_password_hash(self, user_id: UUID | str, password_hash: str) -> None:
+    async def update_password_hash(
+        self, user_id: UUID | str, password_hash: str, must_change: bool = False
+    ) -> None:
+        """`must_change=True` untuk sandi sementara dari admin; False bila pengguna mengganti sandinya sendiri."""
         await self.execute(
-            "UPDATE users SET password_hash = :hash, update_at = now() "
+            "UPDATE users SET password_hash = :hash, must_change_password = :mc, update_at = now() "
             "WHERE user_id = CAST(:id AS uuid) AND delete_at IS NULL",
-            {"hash": password_hash, "id": user_id},
+            {"hash": password_hash, "id": user_id, "mc": must_change},
         )
 
     async def get_employee_id(self, user_id: UUID | str) -> UUID | None:
@@ -259,8 +263,9 @@ class AuthUserRepository(BaseRepository):
         """Akun baru untuk seorang karyawan."""
         return await self.fetchone(
             """
-            INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active)
-            VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true)
+            INSERT INTO users (employee_id, username, email, password_hash, system_role, is_active,
+                               must_change_password)
+            VALUES (CAST(:emp AS uuid), :username, :email, :hash, CAST(:role AS system_role_enum), true, true)
             RETURNING user_id AS id, email AS login, is_active, CAST(NULL AS timestamptz) AS last_login_at,
                       system_role::text AS role
             """,

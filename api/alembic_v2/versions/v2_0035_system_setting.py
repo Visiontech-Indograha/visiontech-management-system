@@ -3,16 +3,16 @@
 Expand murni: tabel baru, kosong. Tanpa baris, nilai efektif = env (perilaku produksi tidak berubah).
 Prioritas nilai: SYSTEM_SETTINGS_FORCE (env) > tabel ini > env biasa. Lihat app/core/system_settings.py.
 
-Revision ID: v2_0034
-Revises: v2_0033
+Revision ID: v2_0035
+Revises: v2_0034
 """
 
 from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "v2_0034"
-down_revision: str | None = "v2_0033"
+revision: str = "v2_0035"
+down_revision: str | None = "v2_0034"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

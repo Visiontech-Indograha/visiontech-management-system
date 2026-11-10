@@ -4,10 +4,6 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.api.deps import get_db_with_user
 from app.core import system_settings
 from app.core.errors import AppError, ValidationError
 from app.core.hard_delete import write_delete_audit
@@ -65,7 +61,3 @@ class SystemSettingsService:
             entity_type="system_setting", entity_id=uuid.uuid5(_NS, key), action="SYSTEM_SETTING_UPDATE",
             detail={"key": key, "before": before, "after": after},
         )
-
-
-def get_system_settings_service(db: AsyncSession = Depends(get_db_with_user)) -> SystemSettingsService:
-    return SystemSettingsService(SystemSettingsRepository(db))

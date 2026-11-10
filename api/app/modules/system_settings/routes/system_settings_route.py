@@ -6,11 +6,9 @@ from fastapi import APIRouter, Depends
 from app.api.deps import require_permission
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
+from app.modules.system_settings.dependencies import get_system_settings_service
 from app.modules.system_settings.schemas.system_settings_schema import SystemSettingOut, SystemSettingsUpdate
-from app.modules.system_settings.services.system_settings_service import (
-    SystemSettingsService,
-    get_system_settings_service,
-)
+from app.modules.system_settings.services.system_settings_service import SystemSettingsService
 
 router = APIRouter(prefix="/system/settings", tags=["System"])
 _ADMIN = Depends(require_permission(Permission.MANAGE_SYSTEM_SETTINGS))

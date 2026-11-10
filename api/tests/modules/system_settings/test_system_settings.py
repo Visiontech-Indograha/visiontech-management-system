@@ -5,6 +5,8 @@ tidak mengubah ROLE_ASSIGNMENT_ENABLED/RATE_LIMIT_ENFORCE milik tes yang berjala
 """
 from __future__ import annotations
 
+import uuid
+
 import pytest
 
 from app.core import system_settings
@@ -13,7 +15,7 @@ from tests.conftest import login_headers, requires_db, sync_query
 
 pytestmark = requires_db
 
-KEY = "TEST_FLAG"
+KEY = "TEST_FLAG_" + uuid.uuid4().hex[:8]  # unik per proses xdist: worker lain tidak saling mengganggu
 
 
 @pytest.fixture(autouse=True)

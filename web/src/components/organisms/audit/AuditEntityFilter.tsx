@@ -1,4 +1,4 @@
-import { AUDIT_ENTITIES } from "@/lib/auditLabels";
+import { AUDIT_FILTER_ENTITIES } from "@/lib/auditLabels";
 import { ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
 
 /** Saring audit log per entitas (tabel yang diaudit). */
@@ -11,7 +11,7 @@ export function AuditEntityFilter({ entity, onEntityChange }: { entity: string; 
         onChange={(e) => onEntityChange(e.target.value)}
       >
         <ControlOption value="">Semua entitas</ControlOption>
-        {Object.entries(AUDIT_ENTITIES).map(([value, label]) => (
+        {Object.entries(AUDIT_FILTER_ENTITIES).map(([value, label]) => (
           <ControlOption key={value} value={value}>
             {label}
           </ControlOption>

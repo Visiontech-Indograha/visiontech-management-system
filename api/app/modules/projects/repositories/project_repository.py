@@ -42,8 +42,8 @@ class ProjectRepository(BaseRepository):
               AND (CAST(:div AS uuid) IS NULL OR p.division_id = CAST(:div AS uuid))
               AND (CAST(:client AS uuid) IS NULL OR p.client_id = CAST(:client AS uuid))
               AND (CAST(:status AS varchar) IS NULL OR p.status = CAST(:status AS varchar))
-              AND (CAST(:q AS varchar) IS NULL OR p.project_title ILIKE CAST(:q AS varchar) || '%'
-                   OR p.spk_number ILIKE CAST(:q AS varchar) || '%')
+              AND (CAST(:q AS varchar) IS NULL OR p.project_title ILIKE '%' || CAST(:q AS varchar) || '%'
+                   OR p.spk_number ILIKE '%' || CAST(:q AS varchar) || '%')
             ORDER BY (p.status = 'ONGOING') DESC, p.start_date DESC
             LIMIT :cap
             """,

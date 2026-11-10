@@ -93,3 +93,9 @@ Periksa penanda APK: `apksigner verify --print-certs app-release.apk`.
   kirim, atau diantrikan bila offline) dan lewat tombol manual di halaman
   Profil. Sync otomatis saat app di-background bisa jadi peningkatan
   lanjutan.
+
+## Versi Flutter CI (pin tunggal)
+Versi Flutter di CI dipatok di `environment.flutter` pada `pubspec.yaml`; `apk.yml`, `ci.yml`, dan `golden.yml` membacanya lewat `flutter-version-file`. Cara menaikkan:
+1. Ubah `environment.flutter` di `mobile/pubspec.yaml` (dan `sdk` bila perlu).
+2. Jalankan workflow Golden mobile (cabang `golden-update/*`) agar PNG dibuat ulang di Linux CI.
+3. Tinjau dan commit PNG baru, lalu pastikan CI mobile dan build APK hijau.

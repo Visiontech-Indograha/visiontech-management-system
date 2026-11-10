@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: "Golden layar utama; PNG dibuat di Linux (runner CI), lihat test/goldens/README.md"

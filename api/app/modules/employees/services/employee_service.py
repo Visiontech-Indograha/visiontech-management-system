@@ -9,6 +9,7 @@ Karyawan V2 (Milestone 10).
 """
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -16,14 +17,16 @@ from uuid import UUID
 
 from app.core.audit_log import record_audit
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.file_cleanup import employee_keys, release_keys
 from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
-from app.core.storage import delete_object
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
 from app.shared.access.office_scope import ensure_office_in_scope
 from app.shared.access.scope_rules import employee_params_scoped, sees_sensitive_employee_fields
+
+logger = logging.getLogger(__name__)
 
 ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
 RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
@@ -162,7 +165,10 @@ class EmployeeService:
         for required in ("employee_no", "full_name", "office_id", "join_date"):
             if required in fields and fields[required] is None:
                 raise ValidationError("No. karyawan, nama, kantor, dan tanggal bergabung tidak boleh dikosongkan.")
-        await self.repo.update(employee_id, await self._validate(fields, current))
+        validated = await self._validate(fields, current)
+        old_keys = await self.repo.photo_keys(employee_id) if "photo_path" in validated else []
+        await self.repo.update(employee_id, validated)
+        await release_keys(self.repo.db, old_keys)  # foto lama (semua varian) hilang bila tak dipakai lagi
         await self._audit(user, "EMPLOYEE_UPDATE", employee_id, current, await self.get(employee_id),
                           skip_if_empty=True)
         return await self.detail(employee_id)
@@ -177,7 +183,9 @@ class EmployeeService:
             key = await self.repo.uploaded_image_key(file_id, user.user_id)
             if key is None:
                 raise ValidationError("Foto harus berupa gambar yang Anda unggah sendiri.")
+        old_keys = await self.repo.photo_keys(employee_id)
         await self.repo.update(employee_id, {"photo_path": key})
+        await release_keys(self.repo.db, old_keys)
         return await self.repo.profile_photo_file_id(employee_id)
 
     # ── Alamat ────────────────────────────────────────────────────────────────
@@ -215,15 +223,16 @@ class EmployeeService:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
             raise AppError("NOT_ARCHIVED", "Arsipkan karyawan ini dulu sebelum menghapus permanen.", status=409)
-        photo_keys = await self.repo.photo_keys(employee_id)
+        keys = await employee_keys(self.repo.db, employee_id)  # semua berkas pribadi, sebelum barisnya hilang
+        await self.repo.clear_face_embedding(employee_id)
         await self.repo.hard_delete(employee_id)
+        released = await release_keys(self.repo.db, keys)  # objek + varian dihapus SETELAH commit
         await write_delete_audit(
             self.repo.db, actor_user_id=actor.user_id,
             actor_role=actor.role,
             actor_email=actor.email, entity_type="employee", entity_id=employee_id,
         )
-        for key in photo_keys:
-            delete_object(key)
+        logger.info("Hapus permanen karyawan: %d berkas dijadwalkan dihapus", released)
 
     async def restore(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)

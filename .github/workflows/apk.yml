@@ -46,7 +46,7 @@ jobs:
 
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          channel: stable
+          flutter-version-file: mobile/pubspec.yaml
           cache: true
 
       - name: Pasang kunci tanda tangan (dari secret, tidak pernah dicetak)
@@ -78,7 +78,17 @@ jobs:
           fi
           flutter pub get
           flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 \
-            -Pforce-version-code-ignoring-abi=true --dart-define=API_BASE_URL="$URL" $EXTRA
+            -Pforce-version-code-ignoring-abi=true --dart-define=API_BASE_URL="$URL" $EXTRA \
+            --obfuscate --split-debug-info="$RUNNER_TEMP/sym"
+
+      # Simbol debug untuk mendekode stack trace (flutter symbolize). Hanya artefak workflow, tidak dipublikasikan.
+      - name: Simpan simbol debug (artefak privat)
+        uses: actions/upload-artifact@v4
+        with:
+          name: simbol-debug-${{ github.run_id }}
+          path: ${{ runner.temp }}/sym
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Verifikasi tanda tangan = kunci rilis Visiontech & tulis latest.json
         env:

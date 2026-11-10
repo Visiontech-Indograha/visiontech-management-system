@@ -41,8 +41,8 @@ _FILTER = """
       AND (CAST(:div AS uuid) IS NULL OR e.division_id = CAST(:div AS uuid))
       AND (CAST(:office AS uuid) IS NULL OR e.office_id = CAST(:office AS uuid))
       AND (CAST(:pos AS uuid) IS NULL OR e.position_id = CAST(:pos AS uuid))
-      AND (CAST(:q AS varchar) IS NULL OR e.full_name ILIKE CAST(:q AS varchar) || '%'
-           OR e.employee_no ILIKE CAST(:q AS varchar) || '%' OR u.email ILIKE CAST(:q AS varchar) || '%')
+      AND (CAST(:q AS varchar) IS NULL OR e.full_name ILIKE '%' || CAST(:q AS varchar) || '%'
+           OR e.employee_no ILIKE '%' || CAST(:q AS varchar) || '%' OR u.email ILIKE '%' || CAST(:q AS varchar) || '%')
       AND (CAST(:dir_all AS boolean) OR """ + employee_visible_sql("e.employee_id") + """)
 """
 _UUIDS = ("office_id", "division_id", "position_id")
@@ -241,6 +241,11 @@ class EmployeeRepository(BaseRepository):
         row = await self.fetchone("SELECT photo_path, profile_photo_path FROM employee "
                                   "WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
         return [k for k in (row or ()) if k]
+
+    async def clear_face_embedding(self, employee_id: UUID) -> None:
+        """Kosongkan data biometrik (embedding wajah) sebelum baris dihapus."""
+        await self.execute("UPDATE employee SET face_embedding = NULL WHERE employee_id = CAST(:id AS uuid)",
+                           {"id": str(employee_id)})
 
     async def hard_delete(self, employee_id: UUID) -> None:
         """Hapus permanen: akun login (beserta sesinya) dulu, lalu karyawan beserta semua rujukannya."""

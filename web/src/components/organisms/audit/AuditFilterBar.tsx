@@ -17,7 +17,7 @@ export function AuditFilterBar({ controls, entity, dateFrom, dateTo, invalidRang
       <ListToolbar
         value={controls.input}
         onChange={controls.setInput}
-        placeholder="Cari aksi atau nama pelaku"
+        placeholder="Cari aksi (mis. Menambah klien) atau nama pelaku"
         active={controls.active}
         onReset={controls.reset}
       >

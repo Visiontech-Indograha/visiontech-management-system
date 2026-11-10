@@ -8,6 +8,7 @@
 #   VMS_BACKUP_DIR/NAME : sama dengan backup.sh (bawaan "backups" dan nama DB/prod).
 #   VMS_MINIO_BUCKETS   : daftar bucket dipisah spasi (bawaan: semua kecuali vms-backups).
 #   VMS_MINIO_KEEP      : jumlah rekaman manifest yang disimpan (bawaan 14).
+#   VMS_MINIO_REMOVE=1  : salinan juga menghapus berkas yang sudah dihapus di sumber (dipakai backup-terenkripsi.sh).
 #   VMS_MC_IMAGE        : citra mc (bawaan quay.io/minio/mc, SEBAIKNYA dipin ke digest).
 # Hasil: $BKDIR/<NAME>-berkas/<bucket>/... (salinan terkini) + <NAME>-berkas-<stempel>.manifest (hitungan objek/bita).
 set -euo pipefail
@@ -43,7 +44,7 @@ fi
 MAN="$BKDIR/$BKNAME-berkas-$(date +%Y%m%d-%H%M%S).manifest"
 : > "$MAN"
 for b in $BUCKETS; do
-  mc mirror --overwrite --quiet "src/$b" "/backup/$b" >&2 || { echo "Mirror bucket $b gagal" >&2; rm -f "$MAN"; exit 4; }
+  mc mirror --overwrite ${VMS_MINIO_REMOVE:+--remove} --quiet "src/$b" "/backup/$b" >&2 || { echo "Mirror bucket $b gagal" >&2; rm -f "$MAN"; exit 4; }
   n=$(find "$DEST/$b" -type f | wc -l | tr -d ' ')
   s=$(du -sb "$DEST/$b" 2>/dev/null | cut -f1)
   echo "$b objek=$n bita=${s:-0} label=$LABEL" >> "$MAN"

@@ -161,7 +161,7 @@ export function WorkOrderList({
         <div className="relative flex-1 w-full">
           <TextField
             label=""
-            placeholder="Cari awal nomor WO, nama klien, lokasi, atau judul tugas..."
+            placeholder="Cari nomor WO, nama klien, lokasi site, atau judul tugas..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />

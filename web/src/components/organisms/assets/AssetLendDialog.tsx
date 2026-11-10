@@ -105,7 +105,7 @@ export function AssetLendDialog({ kind, assetId, assetName, onClose, preset }: {
           Bentrok: aset ini dipakai {row?.used_by_team_name ?? "tim lain"} pada {workDate}. Pilih tanggal lain atau kembalikan dulu.
         </TextBlock>
       )}
-      <TextField label="Cari karyawan" value={q} onChange={(e) => setQ(e.target.value)} hint="Ketik awal nama, nomor, atau email." />
+      <TextField label="Cari karyawan" value={q} onChange={(e) => setQ(e.target.value)} hint="Nama, NIK, atau email" />
       <SelectField label="Karyawan penerima" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
         <ControlOption value="">Pilih karyawan</ControlOption>
         {employees.data?.items.map((emp) => (

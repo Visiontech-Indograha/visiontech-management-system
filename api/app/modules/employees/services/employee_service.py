@@ -232,7 +232,7 @@ class EmployeeService:
             actor_role=actor.role,
             actor_email=actor.email, entity_type="employee", entity_id=employee_id,
         )
-        logger.info("Hapus permanen karyawan %s: %d berkas dijadwalkan dihapus", employee_id, released)
+        logger.info("Hapus permanen karyawan: %d berkas dijadwalkan dihapus", released)
 
     async def restore(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)

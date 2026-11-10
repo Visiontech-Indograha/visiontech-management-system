@@ -6,6 +6,7 @@ Penggantian foto dan hapus dokumen juga tidak boleh meninggalkan varian yatim.
 from __future__ import annotations
 
 import io
+import time
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,10 @@ def _upload(client, world: World, who: str, color: int, as_user: str | None = No
 
 
 def _alive(stored: dict, key: str) -> list[str]:
+    for _ in range(100):  # penghapusan objek berjalan sebagai task setelah respons: tunggu singkat
+        if not any(n in stored for n in object_variants(key)):
+            break
+        time.sleep(0.05)
     return [n for n in object_variants(key) if n in stored]
 
 
@@ -109,3 +114,35 @@ async def test_skrip_operator_yatim_cek_lalu_hapus(world, fake_storage, monkeypa
     assert await mod.main(hapus=True) == 0
     assert fake_storage == {}
     assert await mod.main(hapus=True) == 0  # idempoten
+
+
+@pytest.mark.anyio
+async def test_hapus_objek_tidak_memblokir_event_loop(monkeypatch):
+    import asyncio
+    import threading
+
+    from app.core import storage
+    from app.core.file_cleanup import purge_keys_async
+
+    threads: set[int] = set()
+
+    def slow_delete(name: str) -> bool:
+        threads.add(threading.get_ident())
+        time.sleep(0.05)
+        return True
+
+    monkeypatch.setattr(storage, "delete_object", slow_delete)
+    ticks = 0
+
+    async def ticker():
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    t = asyncio.create_task(ticker())
+    done, failed = await purge_keys_async([f"o/{i}.png" for i in range(6)])
+    t.cancel()
+    assert (done, failed) == (24, 0)
+    assert threading.get_ident() not in threads  # tidak di thread event loop
+    assert ticks >= 5  # loop tetap melayani tugas lain selama penghapusan

@@ -12,6 +12,7 @@ Aturan:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from collections.abc import Iterable
@@ -72,8 +73,31 @@ def purge_keys(keys: Iterable[str]) -> tuple[int, int]:
     return done, failed
 
 
+PURGE_CONCURRENCY = 4
+_tasks: set[asyncio.Task[tuple[int, int]]] = set()  # rujukan kuat agar task tidak dibuang GC sebelum selesai
+
+
+async def purge_keys_async(keys: list[str]) -> tuple[int, int]:
+    """Hapus di luar event loop (thread), maksimal PURGE_CONCURRENCY panggilan MinIO sekaligus."""
+    sem = asyncio.Semaphore(PURGE_CONCURRENCY)
+
+    async def one(key: str) -> tuple[int, int]:
+        async with sem:
+            return await asyncio.to_thread(purge_keys, [key])
+
+    results = await asyncio.gather(*(one(k) for k in dict.fromkeys(keys)))
+    return sum(r[0] for r in results), sum(r[1] for r in results)
+
+
 def _purge_later(keys: list[str]) -> None:
-    purge_keys(keys)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:  # konteks sinkron (skrip): tidak ada event loop untuk diblokir
+        purge_keys(keys)
+        return
+    task = loop.create_task(purge_keys_async(keys))
+    _tasks.add(task)
+    task.add_done_callback(_tasks.discard)
 
 
 def queue_purge(db: AsyncSession, keys: Iterable[str]) -> None:

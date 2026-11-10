@@ -9,7 +9,7 @@ from tests.conftest import requires_db
 
 
 @requires_db
-@pytest.mark.skipif(not os.getenv("VMS_REQUIRE_DB"), reason="hanya di CI (VMS_REQUIRE_DB) peran runtime dipaksa non-superuser")
+@pytest.mark.skipif(not os.getenv("VMS_REQUIRE_DB"), reason="hanya di CI (VMS_REQUIRE_DB) peran runtime non-superuser")
 def test_runtime_connection_is_not_superuser_and_has_no_bypassrls() -> None:
     import psycopg2
 

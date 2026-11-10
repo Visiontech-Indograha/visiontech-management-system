@@ -72,12 +72,28 @@ def test_attendance_search_contains_name(client, world: World):
     assert res.json()["items"] == [] and res.json()["total"] == 0
 
 
-def test_offices_search_is_prefix_only(client, world: World):
+def test_offices_search_contains_word(client, world: World):
     h = world.headers(client, "ops")
     name = f"Kantor Awalan{world.tag}"
     body = {"name": name, "address": "Jl. Uji 1", "location": {"lat": -6.2, "lng": 106.8}, "radius_m": 150}
     assert client.post("/offices", headers=h, json=body).status_code == 201
     hit = client.get(f"/offices?q=kantor awalan{world.tag}", headers=h)
     assert any(o["name"] == name for o in hit.json())
-    miss = client.get(f"/offices?q=awalan{world.tag}", headers=h)  # tengah nama: tidak cocok
+    mid = client.get(f"/offices?q=awalan{world.tag}", headers=h)  # tengah nama: cocok (daftar lama)
+    assert any(o["name"] == name for o in mid.json())
+    miss = client.get(f"/offices?q=tidak-ada-{world.tag}", headers=h)
     assert not any(o["name"] == name for o in miss.json())
+
+
+def test_apply_list_prefix_option_is_opt_in():
+
+    from fastapi import Response
+
+    from app.core.list_params import ListParams, apply_list
+
+    rows = ["Kantor Pusat", "Pusat Data"]
+    params = ListParams(q="pusat", page=None, size=None)
+    contains = apply_list(rows, params, Response(), lambda r: (r,))
+    assert contains == rows  # bawaan: mengandung kata
+    only = apply_list(rows, params, Response(), lambda r: (r,), prefix=True)
+    assert only == ["Pusat Data"]

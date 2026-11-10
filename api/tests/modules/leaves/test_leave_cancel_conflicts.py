@@ -122,6 +122,71 @@ def test_cancel_without_body_still_works_for_older_field_apps(client, world: Wor
     assert cancelled.json()["cancel_note"] is None
 
 
+def _balance(world: World) -> tuple:
+    rows = sync_query("SELECT used_quota FROM leave_balance WHERE employee_id = %s", (world.employees["member"],))
+    return tuple(rows[0]) if rows else (0,)  # baris saldo baru dibuat saat pengajuan pertama
+
+
+def test_owner_cancels_pending_leave_without_touching_balance_and_is_audited(client, world: World):
+    start = _next_workday(70)
+    before = _balance(world)
+    applied = client.post(
+        "/leaves", headers=world.headers(client, "member"),
+        json={"leave_type": "ANNUAL", "start_date": start, "end_date": start, "reason": "Keperluan keluarga"},
+    )
+    assert applied.status_code == 201, applied.text
+    leave_id = applied.json()["leave_id"]
+    assert _balance(world) == before
+
+    cancelled = client.post(f"/leaves/{leave_id}/cancel", headers=world.headers(client, "member"))
+    assert cancelled.status_code == 200, cancelled.text
+    assert cancelled.json()["status"] == "CANCELLED"
+    assert _balance(world) == before
+    audit = sync_query(
+        "SELECT changed_diff->>'before', changed_diff->>'after' FROM app_activity_logs "
+        "WHERE action = 'LEAVE_CANCEL' AND entity_id = %s", (leave_id,),
+    )
+    assert [tuple(r) for r in audit] == [("PENDING", "CANCELLED")]
+
+
+def test_other_employee_cannot_cancel_someones_pending_leave(client, world: World):
+    leave_id = _apply_sick(client, world, _next_workday(71))
+    refused = client.post(f"/leaves/{leave_id}/cancel", headers=world.headers(client, "leader"))
+    assert refused.status_code == 403, refused.text
+    assert client.get(f"/leaves/{leave_id}", headers=world.headers(client, "hr")).json()["status"] == "PENDING"
+
+
+def test_cancel_and_approve_at_the_same_time_leave_one_consistent_outcome(client, world: World):
+    from tests.concurrency import dua_bersamaan
+
+    start = _next_workday(72)
+    before = _balance(world)
+    applied = client.post(
+        "/leaves", headers=world.headers(client, "member"),
+        json={"leave_type": "ANNUAL", "start_date": start, "end_date": start, "reason": "Balapan uji"},
+    )
+    assert applied.status_code == 201, applied.text
+    leave_id = applied.json()["leave_id"]
+    member, hr = world.headers(client, "member"), world.headers(client, "hr")
+
+    def aksi(i: int):
+        if i == 0:
+            return client.post(f"/leaves/{leave_id}/cancel", headers=member)
+        return client.post(f"/leaves/{leave_id}/review", headers=hr, json={"decision": "APPROVED"})
+
+    cancel, review = dua_bersamaan(aksi)
+    assert cancel.status_code in (200, 409) and review.status_code in (200, 409), (cancel.text, review.text)
+    final = client.get(f"/leaves/{leave_id}", headers=hr).json()["status"]
+    if cancel.status_code == 200:
+        assert final == "CANCELLED"
+        if review.status_code == 409:
+            assert review.json()["error"]["code"] == "ALREADY_DECIDED"
+    else:
+        assert final == "APPROVED_BY_HR"
+    # kuota tidak bocor: batal => kembali ke semula; setuju tanpa batal => terpotong
+    assert (_balance(world) == before) == (final == "CANCELLED")
+
+
 def test_approval_note_is_not_reported_as_rejection(client, world: World):
     """T-8: catatan persetujuan (kolom rejection_note bersama) muncul sebagai review_note, bukan penolakan."""
     hr = world.headers(client, "hr")

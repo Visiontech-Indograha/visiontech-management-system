@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
@@ -257,6 +258,14 @@ class LeaveService:
         # Kuota tahunan sudah dipotong saat persetujuan pertama; kembalikan sesuai status sebelum dibatalkan
         if leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES:
             await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
+        await write_delete_audit(
+            self.repo.db, actor_user_id=user.user_id, actor_role=user.role, actor_email=user.email,
+            entity_type="leave_request", entity_id=leave_id, action="LEAVE_CANCEL",
+            detail={
+                "before": leave.status, "after": "CANCELLED", "by_owner": is_owner,
+                "quota_refunded": leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES,
+            },
+        )
 
         notifier = self._notify()
         who = await notifier.employee_name(leave.employee_id)

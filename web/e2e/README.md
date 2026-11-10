@@ -35,5 +35,5 @@ Awalan `QA-E2E-`. Tes membersihkan datanya lewat UI (blok `finally`). Sandi sala
 
 ## Catatan
 - Setiap login membuka satu perangkat (batas 4 per akun); fixture di `fixtures.ts` mengeluarkan sesi tiap tes.
-  Itu pemanggilan keluar (logout) milik aplikasi, bukan penyuntikan data.
+  Keluar dilakukan lewat UI (Keluar di sidebar + konfirmasi).
 - Jangan menjalankan dua `npm run e2e` bersamaan.

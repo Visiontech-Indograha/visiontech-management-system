@@ -7,15 +7,20 @@ import { test as base, expect } from "@playwright/test";
 export const test = base.extend({
   page: async ({ page }, pakai) => {
     await pakai(page);
+    const url = page.url();
+    if (url === "about:blank" || /\/(admin-)?login/.test(url)) return;
     const keluar = page.getByRole("button", { name: "Keluar", exact: true });
-    if (await keluar.isVisible().catch(() => false)) {
-      await keluar.click();
-      // Tunggu permintaan keluar selesai (hanya mengamati), agar sesi benar-benar dilepas sebelum konteks ditutup.
-      const selesai = page.waitForResponse((r) => r.url().includes("/auth/logout"), { timeout: 8000 });
-      await page.getByRole("dialog").getByRole("button", { name: "Keluar", exact: true }).click();
-      await selesai;
-      await page.waitForURL(/login/, { timeout: 8000 });
+    // Halaman tanpa sidebar (mis. ganti sandi) atau yang sedang memuat: buka Beranda agar tombol Keluar ada.
+    if (!(await keluar.isVisible().catch(() => false))) {
+      await page.goto("/").catch(() => undefined);
     }
+    await keluar.waitFor({ timeout: 10_000 });
+    // Tunggu permintaan keluar selesai (hanya mengamati), agar sesi benar-benar dilepas sebelum konteks ditutup.
+    const selesai = page.waitForResponse((r) => r.url().includes("/auth/logout"), { timeout: 8000 });
+    await keluar.click();
+    await page.getByRole("dialog").getByRole("button", { name: "Keluar", exact: true }).click();
+    await selesai;
+    await page.waitForURL(/login/, { timeout: 8000 });
   },
 });
 

@@ -41,10 +41,56 @@ class AuthController extends Notifier<AuthState> {
     ref.read(apiClientProvider).onSessionExpired = () async {
       state = AuthUnauthenticated(error: await _expiredMessage());
     };
+    ref.read(apiClientProvider).onMustChangePassword = _markMustChange;
     ref.onDispose(() => _exchangeTimer?.cancel());
     ref.read(apiClientProvider).sessionPending = () => _sessionPending;
     _restoreSession();
     return const AuthInitial();
+  }
+
+  /// Server menolak dengan MUST_CHANGE_PASSWORD: tandai pengguna wajib ganti sandi (router mengarahkan).
+  void _markMustChange() {
+    final s = state;
+    if (s is AuthAuthenticated && !s.user.mustChangePassword) {
+      state = AuthAuthenticated(s.user.withMustChange(true));
+    } else if (s is AuthLocked && !s.user.mustChangePassword) {
+      state = AuthLocked(s.user.withMustChange(true));
+    }
+  }
+
+  /// Ganti sandi (POST /auth/change-password). Mengembalikan pesan galat awam, atau null bila berhasil.
+  /// Server mengeluarkan token baru dan mencabut sesi perangkat lain.
+  Future<String?> changePassword({required String current, required String next}) async {
+    final s = state;
+    if (s is! AuthAuthenticated) return 'Masuk dulu untuk mengganti sandi.';
+    final storage = ref.read(tokenStorageProvider);
+    try {
+      final r = await ref.read(apiClientProvider).dio.post(
+        '/api/v1/auth/change-password',
+        data: {'current_password': current, 'new_password': next},
+      );
+      final access = (r.data as Map)['access_token'] as String;
+      await storage.saveTokens(accessToken: access, refreshToken: refreshTokenFromResponse(r.headers));
+      final authTime = SessionPolicy.authTimeFromJwt(access);
+      if (authTime != null) await storage.saveAuthTime(authTime);
+      final cached = await storage.readCachedProfile();
+      if (cached != null) {
+        try {
+          final m = jsonDecode(cached) as Map<String, dynamic>;
+          m['must_change_password'] = false;
+          await storage.saveCachedProfile(jsonEncode(m));
+        } catch (_) {}
+      }
+      state = AuthAuthenticated(s.user.withMustChange(false));
+      return null;
+    } on DioException catch (e) {
+      if (isNetworkFailure(e)) {
+        return 'Butuh sinyal untuk mengganti sandi. Coba lagi saat ada sinyal.';
+      }
+      return apiErrorMessage(e, fallback: 'Sandi belum bisa diganti. Coba lagi.');
+    } catch (_) {
+      return 'Sandi belum bisa diganti. Coba lagi.';
+    }
   }
 
   /// Restore sesi saat aplikasi dibuka. SETIAP cabang di sini WAJIB berakhir

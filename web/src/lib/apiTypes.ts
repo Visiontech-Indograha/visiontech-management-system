@@ -3463,7 +3463,8 @@ export interface paths {
         put?: never;
         /**
          * Set Field Role
-         * @description Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.
+         * @description Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN
+         *     (bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.
          */
         post: operations["set_field_role_api_v1_employees__emp_id__account_role_post"];
         delete?: never;
@@ -3686,6 +3687,46 @@ export interface paths {
         get: operations["sync_status_api_v1_sync_status_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Setup Status
+         * @description Apakah instalasi ini belum punya admin (perlu penyiapan awal).
+         */
+        get: operations["setup_status_api_v1_setup_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Setup Admin
+         * @description Buat Super Admin pertama. 404 bila SETUP_TOKEN tidak diisi, 403 kode salah, 409 bila sudah ada admin.
+         */
+        post: operations["setup_admin_api_v1_setup_admin_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4951,14 +4992,14 @@ export interface components {
         };
         /**
          * AccountRoleUpdate
-         * @description Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).
+         * @description Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN.
          */
         AccountRoleUpdate: {
             /**
              * System Role
              * @enum {string}
              */
-            system_role: "EMPLOYEE" | "TEAM_LEADER";
+            system_role: "OPERATIONAL_MANAGER" | "PROJECT_MANAGER" | "HSE" | "ADMIN_HR_GA" | "FINANCE" | "TEAM_LEADER" | "EMPLOYEE";
         };
         /**
          * AccountSessionsRevoked
@@ -5453,6 +5494,11 @@ export interface components {
             effective_roles?: string[];
             /** Role Scopes */
             role_scopes?: components["schemas"]["RoleScopeOut"][];
+            /**
+             * Must Change Password
+             * @default false
+             */
+            must_change_password: boolean;
         };
         /** AvailableMemberOut */
         AvailableMemberOut: {
@@ -9908,6 +9954,31 @@ export interface components {
             delay_reason: string;
             /** Completed Qty */
             completed_qty: number | string;
+        };
+        /** SetupAdminIn */
+        SetupAdminIn: {
+            /** Setup Token */
+            setup_token: string;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** SetupAdminOut */
+        SetupAdminOut: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+        };
+        /** SetupStatusOut */
+        SetupStatusOut: {
+            /** Needs Setup */
+            needs_setup: boolean;
+            /** Enabled */
+            enabled: boolean;
         };
         /** SlotOut */
         SlotOut: {
@@ -19368,6 +19439,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationStatus"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_status_api_v1_setup_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatusOut"];
+                };
+            };
+        };
+    };
+    setup_admin_api_v1_setup_admin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupAdminIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupAdminOut"];
                 };
             };
             /** @description Validation Error */

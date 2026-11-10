@@ -4,6 +4,7 @@ import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
 import { TitleLayout } from "@/components/templates/TitleLayout";
+import { SetupPage } from "@/pages/auth/SetupPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { HomePage } from "@/pages/home/HomePage";
 import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
@@ -71,6 +72,7 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { path: "/login", element: <LoginPage /> },
+      { path: "/setup", element: <SetupPage /> }, // publik; isinya menyesuaikan GET /setup/status
       { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
       // QR BAST resmi, publik
       {

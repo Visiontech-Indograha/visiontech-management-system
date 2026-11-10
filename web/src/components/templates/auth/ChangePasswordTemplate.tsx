@@ -7,6 +7,8 @@ export function ChangePasswordTemplate(props: {
   form: UseFormReturn<ChangePasswordValues>;
   onSubmit: () => void;
   formError: string | null;
+  forced?: boolean;
+  onLogout?: () => void;
 }) {
   return (
     <main className="mx-auto mt-16 w-full max-w-sm px-4">

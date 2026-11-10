@@ -1,5 +1,11 @@
 import { create } from "zustand";
-import { getAccessToken, refreshAccessToken, setAccessToken, setSessionExpiredHandler } from "@/lib/apiClient";
+import {
+  getAccessToken,
+  refreshAccessToken,
+  setAccessToken,
+  setMustChangePasswordHandler,
+  setSessionExpiredHandler,
+} from "@/lib/apiClient";
 import type { Me, TokenOut } from "@/lib/types";
 import { mockMe } from "../app/mockSession";
 import { queryClient } from "@/lib/queryClient";
@@ -55,6 +61,11 @@ export const useSession = create<SessionState>((set, get) => {
   };
 
   setSessionExpiredHandler(clear);
+  // Server menjawab 403 MUST_CHANGE_PASSWORD: tandai sesi agar RequireAuth mengarahkan ke ganti sandi.
+  setMustChangePasswordHandler(() => {
+    const current = get().me;
+    if (current && !current.must_change_password) set({ me: { ...current, must_change_password: true } });
+  });
 
   // Monitor periodik & fokus jendela untuk auto-logout saat sesi melampaui 24 jam
   if (typeof window !== "undefined" && import.meta.env.MODE !== "test") {
@@ -132,7 +143,10 @@ export const useSession = create<SessionState>((set, get) => {
         } catch {
           /* belum login atau refresh cookie tidak valid */
           if (!getAccessToken() && !get().me) {
-            clear();
+            // Tidak ada sesi: jangan queryClient.clear() — itu memutus query publik yang sedang berjalan
+            // (mis. GET /setup/status di halaman masuk dan /setup) sehingga tertahan "memuat" selamanya.
+            setAccessToken(null);
+            set({ me: null, activeDivisionId: null });
           }
         } finally {
           set({ ready: true });

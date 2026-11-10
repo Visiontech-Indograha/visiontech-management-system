@@ -32,6 +32,13 @@ export const setSessionExpiredHandler = (fn: (() => void) | null) => {
   onSessionExpired = fn;
 };
 
+/** Penanda kemampuan klien: server baru menjawab 403 MUST_CHANGE_PASSWORD bila sandi sementara belum diganti. */
+export const APP_CAPABILITIES = "must-change-password";
+let onMustChangePassword: (() => void) | null = null;
+export const setMustChangePasswordHandler = (fn: (() => void) | null) => {
+  onMustChangePassword = fn;
+};
+
 function getOrCreateDeviceFingerprint(): string {
   if (typeof window === "undefined") return "web-client";
   try {
@@ -71,6 +78,7 @@ api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   config.headers["X-Device-Fingerprint"] = getOrCreateDeviceFingerprint();
   config.headers["X-Device-Label"] = getDeviceLabel();
+  config.headers["X-App-Capabilities"] = APP_CAPABILITIES;
   return config;
 });
 
@@ -105,6 +113,7 @@ export async function refreshAccessToken(): Promise<string> {
         headers: {
           "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
           "X-Device-Label": getDeviceLabel(),
+          "X-App-Capabilities": APP_CAPABILITIES,
         },
       },
     )
@@ -137,6 +146,8 @@ api.interceptors.response.use(
         onSessionExpired?.();
       }
     }
-    return Promise.reject(toApiError(error));
+    const apiError = toApiError(error);
+    if (apiError.status === 403 && apiError.code === "MUST_CHANGE_PASSWORD") onMustChangePassword?.();
+    return Promise.reject(apiError);
   },
 );

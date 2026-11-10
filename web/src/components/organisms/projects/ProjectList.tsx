@@ -47,7 +47,7 @@ export function ProjectList({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <TextField
           label=""
-          placeholder="Cari awal nomor SPK atau judul proyek..."
+          placeholder="Cari SPK atau judul proyek..."
           value={filter.q ?? ""}
           onChange={(e) => onFilterChange({ q: e.target.value })}
         />

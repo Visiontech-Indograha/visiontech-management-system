@@ -80,7 +80,7 @@ export function TeamDetailDialog({ team, canManage, onClose }: { team: Team; can
         </ListBlock>
         {canManage && (
         <div className="flex flex-wrap items-end gap-2">
-          <TextField label="Cari karyawan" placeholder="Cari awal nama atau nomor..." value={q} onChange={(e) => setQ(e.target.value)} />
+          <TextField label="Cari karyawan" placeholder="Nama / NIK" value={q} onChange={(e) => setQ(e.target.value)} />
           <SelectField label="Tambah anggota (karyawan divisi ini)" value={pick} onChange={(e) => setPick(e.target.value)}>
             <ControlOption value="">Pilih karyawan</ControlOption>
             {options.map((e) => (

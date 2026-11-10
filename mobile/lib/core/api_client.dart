@@ -39,6 +39,7 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          options.headers['X-App-Capabilities'] = 'must-change-password';
           final agent = await appUserAgent();
           if (agent != null) options.headers['User-Agent'] = agent;
           final token = await _tokenStorage.readAccessToken();
@@ -53,6 +54,11 @@ class ApiClient {
         },
         onError: (error, handler) async {
           if (isNetworkFailure(error)) NetworkHint.markOffline();
+          if (error.response?.statusCode == 403) {
+            final data = error.response?.data;
+            final code = data is Map && data['error'] is Map ? (data['error'] as Map)['code'] : null;
+            if (code == 'MUST_CHANGE_PASSWORD') onMustChangePassword?.call();
+          }
           final isUnauthorized = error.response?.statusCode == 401;
           final alreadyRetried =
               error.requestOptions.extra['retriedAfterRefresh'] == true;
@@ -114,6 +120,9 @@ class ApiClient {
   /// Diisi oleh authControllerProvider setelah ApiClient dibuat.
   VoidCallback? onSessionExpired;
 
+  /// Dipanggil saat server menjawab 403 MUST_CHANGE_PASSWORD (sandi sementara belum diganti).
+  VoidCallback? onMustChangePassword;
+
   Completer<_RefreshOutcome>? _refreshInFlight;
 
   /// Mencegah beberapa request 401 sekaligus memicu refresh berkali-kali --
@@ -142,6 +151,7 @@ class ApiClient {
           connectTimeout: ApiConfig.connectTimeout,
           receiveTimeout: ApiConfig.receiveTimeout,
           sendTimeout: ApiConfig.sendTimeout,
+          headers: {'X-App-Capabilities': 'must-change-password'},
         ),
       );
       final response = await freshDio.post(

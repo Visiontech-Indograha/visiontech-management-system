@@ -26,6 +26,21 @@ ssh ageng@192.168.88.160 "cd ~/deploy/vms-mvp && ./backup.sh"   # atau deploy/ba
 ssh ageng@192.168.88.160 "cd ~/deploy/vms-mvp && cp -p api.env api.env.cadangan-manual && chmod 600 api.env.cadangan-manual"
 ```
 
+## 2b. Prasyarat partisi audit dan pemilik tabel (SEBELUM terapkan)
+Peran `vms_api` bukan pemilik tabel, jadi API tidak lagi membuat partisi `app_activity_logs` saat startup (dilewati diam-diam).
+Partisi dibuat oleh peran pemilik:
+```
+ssh ageng@192.168.88.160 "docker exec vms_api alembic upgrade head"   # v2_0033: partisi 12 bulan + DEFAULT
+ssh ageng@192.168.88.160 "docker exec vms_api python -m app.cli buat-partisi --bulan 6"   # uji; memakai MIGRATION_DATABASE_URL
+```
+Cron host bulanan (pemilik), mis. tanggal 1 jam 02:00: `docker exec vms_api python -m app.cli buat-partisi --bulan 6`.
+Bila `MIGRATION_DATABASE_URL` belum ada di api.env (sebelum terapkan), CLI memakai `DATABASE_URL` lama (pemilik) - itu benar untuk langkah ini.
+Cek pemilik tabel (menentukan `VMS_OWNERS`, default `vms_migrator,vms_app`):
+```
+echo "SELECT tableowner, count(*) FROM pg_tables WHERE schemaname IN ('public','vms') GROUP BY 1;" | ssh ageng@192.168.88.160 "docker exec -i vms_db_prod sh -c 'psql -U \$POSTGRES_USER -d vms_v2 -At'"
+```
+Pemilik selain default: `VMS_OWNERS=<peran1,peran2>` di depan perintah terapkan.
+
 ## 3. Terapkan
 ```
 ssh ageng@192.168.88.160 "bash -s -- terapkan" < deploy/pakai-peran-runtime.sh

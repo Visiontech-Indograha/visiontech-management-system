@@ -19,3 +19,14 @@ def test_runtime_connection_is_not_superuser_and_has_no_bypassrls() -> None:
         cur.execute("SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
         row = cur.fetchone()
     assert row == ("vms_api", False, False)
+
+
+@requires_db
+@pytest.mark.skipif(not os.getenv("VMS_REQUIRE_DB"), reason="hanya di CI (VMS_REQUIRE_DB) peran runtime non-superuser")
+def test_startup_partition_ddl_is_skipped_silently_for_non_owner(caplog: pytest.LogCaptureFixture) -> None:
+    import asyncio
+
+    from app.database.migration_v3 import ensure_activity_log_partitions
+
+    assert asyncio.run(ensure_activity_log_partitions()) == 0
+    assert "tidak dibuat" not in caplog.text

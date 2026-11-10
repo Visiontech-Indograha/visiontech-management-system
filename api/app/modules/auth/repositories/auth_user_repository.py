@@ -130,14 +130,22 @@ class AuthUserRepository(BaseRepository):
         )
         return emp
 
-    async def full_name(self, user_id: UUID | str) -> str | None:
-        """Nama lengkap karyawan yang tertaut ke akun ini (untuk sapaan di aplikasi)."""
-        name = await self.scalar(
-            "SELECT e.full_name FROM users u JOIN employee e ON e.employee_id = u.employee_id "
+    async def employee_identity(self, user_id: UUID | str) -> tuple[str | None, str | None, str | None]:
+        """Nama lengkap + kantor asal (id, nama) karyawan tertaut; satu query (JOIN), None bila tak ada."""
+        row = await self.fetchone(
+            "SELECT e.full_name, e.office_id, o.name AS office_name FROM users u "
+            "JOIN employee e ON e.employee_id = u.employee_id "
+            "LEFT JOIN office o ON o.office_id = e.office_id AND o.delete_at IS NULL "
             "WHERE u.user_id = CAST(:uid AS uuid) AND u.delete_at IS NULL",
             {"uid": user_id},
         )
-        return str(name) if name else None
+        if row is None:
+            return None, None, None
+        return (
+            str(row[0]) if row[0] else None,
+            str(row[1]) if row[1] and row[2] else None,
+            str(row[2]) if row[2] else None,
+        )
 
     async def profile_photo_file_id(self, user_id: UUID | str) -> str | None:
         """ID berkas (file_object.id) foto profil karyawan milik akun ini; None bila belum ada/bukan unggahan.

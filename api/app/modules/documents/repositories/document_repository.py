@@ -130,6 +130,12 @@ class DocumentRepository(BaseRepository):
         )
         return int(result.rowcount or 0)
 
+    async def path_of(self, doc_id: UUID | str) -> str | None:
+        """Kunci objek (`path_file`) dokumen ini."""
+        value = await self.scalar("SELECT path_file FROM employee_file WHERE employee_file_id = CAST(:id AS uuid)",
+                                  {"id": str(doc_id)})
+        return str(value) if value else None
+
     async def archive(self, doc_id: UUID | str) -> None:
         """Soft delete — untuk dokumen yang salah unggah."""
         await self.execute(

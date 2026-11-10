@@ -242,6 +242,11 @@ class EmployeeRepository(BaseRepository):
                                   "WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
         return [k for k in (row or ()) if k]
 
+    async def clear_face_embedding(self, employee_id: UUID) -> None:
+        """Kosongkan data biometrik (embedding wajah) sebelum baris dihapus."""
+        await self.execute("UPDATE employee SET face_embedding = NULL WHERE employee_id = CAST(:id AS uuid)",
+                           {"id": str(employee_id)})
+
     async def hard_delete(self, employee_id: UUID) -> None:
         """Hapus permanen: akun login (beserta sesinya) dulu, lalu karyawan beserta semua rujukannya."""
         for (uid,) in (await self.fetchall("SELECT user_id FROM users WHERE employee_id = CAST(:id AS uuid)",

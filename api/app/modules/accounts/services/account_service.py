@@ -168,7 +168,7 @@ class AccountService:
         account = await self._account(employee_id, org_id)
         password = temporary_password()
         password_hash = await asyncio.to_thread(hash_password, password)
-        await self.users.update_password_hash(account.id, password_hash)
+        await self.users.update_password_hash(account.id, password_hash, must_change=True)
         # Menghentikan paksa (revoke) semua sesi terbuka agar pemilik tidak menggunakan sesi yang rentan (compromised).
         await self.sessions.revoke_all_for_user(account.id, "PASSWORD_RESET")
         # Reset oleh HR/admin sekaligus membuka kunci kegagalan login.

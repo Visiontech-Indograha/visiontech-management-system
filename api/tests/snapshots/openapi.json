@@ -1526,6 +1526,11 @@
       "title": "Managed Divisions",
       "type": "array"
      },
+     "must_change_password": {
+      "default": false,
+      "title": "Must Change Password",
+      "type": "boolean"
+     },
      "permissions": {
       "items": {
        "type": "string"

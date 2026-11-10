@@ -41,7 +41,7 @@ class SystemSettingsService:
         if locked:
             raise AppError(
                 "SETTING_LOCKED",
-                f"Setelan dikunci oleh konfigurasi server dan tidak bisa diubah di sini: {', '.join(locked)}.",
+                f"Setelan dikunci oleh pengaturan pemasangan dan tidak bisa diubah di sini: {', '.join(locked)}.",
                 status=409,
             )
         keys = sorted(values)

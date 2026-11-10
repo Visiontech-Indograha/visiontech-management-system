@@ -244,7 +244,10 @@ def test_hr_plus_pm_leave_review_keeps_hr_path(client, world: World, flag_on):
     from datetime import timedelta
 
     from app.core.time import jakarta_now
-    start = (jakarta_now().date() + timedelta(days=20)).isoformat()
+    day = jakarta_now().date() + timedelta(days=20)
+    while day.weekday() == 6:   # cuti 1 hari di hari Minggu ditolak (422 'hari kerja efektif')
+        day += timedelta(days=1)
+    start = day.isoformat()
     sent = client.post("/leaves", headers=world.headers(client, "leader"), json={
         "leave_type": "OTHER", "start_date": start, "end_date": start, "reason": "Urusan keluarga"})
     assert sent.status_code in (200, 201), sent.text

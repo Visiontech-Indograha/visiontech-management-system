@@ -1,49 +1,87 @@
 import { test, expect } from "./fixtures";
-import { akun, API_URL, PREFIX } from "./env";
-import { bearer, masukLewatUI, tanggalWib, tokenApi } from "./helpers";
+import { akun, PREFIX } from "./env";
+import { masukLewatUI, tanggalWib } from "./helpers";
 
-const staff = akun("STAFF");
 const admin = akun("ADMIN");
 
-test("ganti sandi: sandi baru sama dengan sandi lama ditolak", async ({ page }) => {
-  test.skip(!staff, "Isi E2E_STAFF_*");
-  await masukLewatUI(page, staff!);
+test("ganti sandi: sandi baru sama dengan sandi lama ditolak dengan pesan", async ({ page }) => {
+  test.skip(!admin, "Isi E2E_ADMIN_*");
+  await masukLewatUI(page, admin!, true);
   await page.goto("/change-password");
-  await page.getByLabel("Sandi saat ini").fill(staff!.password);
-  await page.getByLabel("Sandi baru", { exact: true }).fill(staff!.password);
-  await page.getByLabel("Ulangi sandi baru").fill(staff!.password);
+  await page.getByLabel("Sandi saat ini").fill(admin!.password);
+  await page.getByLabel("Sandi baru", { exact: true }).fill(admin!.password);
+  await page.getByLabel("Ulangi sandi baru").fill(admin!.password);
   await page.locator("form").getByRole("button").last().click();
-  // Tetap di halaman ganti sandi (ditolak), sandi tidak berubah.
   await expect(page).toHaveURL(/change-password/);
+  // Pesan galat harus tampil di layar (bukan hanya tetap di halaman).
+  await expect(page.getByText(/sandi baru.*(berbeda|sama)|(berbeda|sama).*sandi/i).first()).toBeVisible();
 });
 
-test("admin mereset sandi karyawan (reset-password) lewat UI", async ({ page, request }) => {
+test("ganti sandi: sandi saat ini salah ditolak dengan pesan", async ({ page }) => {
   test.skip(!admin, "Isi E2E_ADMIN_*");
-  const h = bearer(await tokenApi(request, admin!));
-  const o = await (await request.get(`${API_URL}/offices`, { headers: h })).json();
-  const daftar = (Array.isArray(o) ? o : o.items) as Record<string, string>[];
-  const officeId = daftar[0].office_id ?? daftar[0].id;
-  const nomor = `${PREFIX}${Date.now()}`;
-  const emp = await request.post(`${API_URL}/employees`, {
-    headers: h,
-    data: { employee_no: nomor, full_name: `${PREFIX}Karyawan Uji`, office_id: officeId, join_date: tanggalWib(0) },
-  });
-  expect(emp.ok()).toBeTruthy();
-  const eb = (await emp.json()) as Record<string, string>;
-  const empId = eb.employee_id ?? eb.id;
-  try {
-    const ak = await request.post(`${API_URL}/employees/${empId}/account`, {
-      headers: h,
-      data: { login: `${nomor.toLowerCase()}@visiontech.id`, system_role: "EMPLOYEE" },
-    });
-    expect(ak.ok()).toBeTruthy();
+  await masukLewatUI(page, admin!, true);
+  await page.goto("/change-password");
+  await page.getByLabel("Sandi saat ini").fill(admin!.password + "-salah");
+  await page.getByLabel("Sandi baru", { exact: true }).fill(admin!.password + "-Baru1");
+  await page.getByLabel("Ulangi sandi baru").fill(admin!.password + "-Baru1");
+  await page.locator("form").getByRole("button").last().click();
+  await expect(page).toHaveURL(/change-password/);
+  await expect(page.getByText(/sandi.*(salah|tidak benar|tidak sesuai|keliru)/i).first()).toBeVisible();
+});
 
-    await masukLewatUI(page, admin!, true);
-    await page.goto(`/directory/${empId}`);
+test("admin membuat karyawan dan akun, mereset sandi, lalu menghapus semuanya lewat UI", async ({ page }) => {
+  test.skip(!admin, "Isi E2E_ADMIN_*");
+  test.setTimeout(150_000);
+  const nomor = `${PREFIX}${Date.now()}`;
+  const nama = `${PREFIX}Karyawan Uji`;
+  await masukLewatUI(page, admin!, true);
+
+  await page.goto("/directory");
+  await page.getByRole("button", { name: "Tambah karyawan" }).click();
+  const dlg = page.getByRole("dialog");
+  await dlg.getByLabel("No. karyawan").fill(nomor);
+  await dlg.getByLabel("Nama lengkap").fill(nama);
+  await dlg.getByLabel("Kantor").selectOption({ index: 1 });
+  await dlg.getByLabel("Tanggal bergabung").fill(tanggalWib(0));
+  await dlg.getByRole("button", { name: "Simpan" }).click();
+  await page.waitForURL(/\/directory\/[0-9a-f-]{36}/);
+  const urlKaryawan = new URL(page.url()).pathname;
+
+  try {
+    await page.getByLabel("Email login").fill(`${nomor.toLowerCase()}@visiontech.id`);
+    await page.getByRole("button", { name: "Buat akun" }).click();
+    await expect(page.getByText("Aktif", { exact: true }).first()).toBeVisible();
+
     await page.getByRole("button", { name: "Reset sandi" }).click();
     await expect(page.getByText(/Sandi sementara/)).toBeVisible();
   } finally {
-    await request.delete(`${API_URL}/employees/${empId}/account`, { headers: h });
-    await request.delete(`${API_URL}/employees/${empId}`, { headers: h });
+    // Pembersihan lewat UI: hapus akun, hapus karyawan, hapus permanen.
+    const hapusAkun = page.getByRole("button", { name: "Hapus akun login" });
+    if (await hapusAkun.isVisible().catch(() => false)) {
+      await hapusAkun.click();
+      await page.getByLabel("Ketik HAPUS untuk melanjutkan").fill("HAPUS");
+      await page.getByRole("dialog").getByRole("button", { name: "Hapus permanen" }).click();
+      await expect(page.getByText("Karyawan ini belum punya akun login.")).toBeVisible();
+    }
+    // Karyawan baru boleh dihapus setelah offboarding selesai (mulai, setujui PM, setujui HR).
+    await page.goto(urlKaryawan);
+    await page.getByRole("button", { name: "Offboarding", exact: true }).click();
+    await page.getByRole("dialog").getByLabel("Tanggal efektif").fill(tanggalWib(0));
+    await page.getByRole("button", { name: "Mulai offboarding" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.goto("/offboarding");
+    await page.getByRole("button", { name: new RegExp(nama) }).first().click();
+    for (const peran of ["PM", "HR"]) {
+      await page.getByRole("button", { name: `Setujui sebagai ${peran}` }).click();
+      await page.getByRole("dialog").last().getByRole("button", { name: "Setujui", exact: true }).click();
+      await expect(page.getByText(peran === "PM" ? /PM\/OM: (?!belum)/ : /HR: (?!belum)/).first()).toBeVisible();
+    }
+    await page.goto(urlKaryawan);
+    await page.getByRole("button", { name: "Hapus karyawan", exact: true }).click();
+    await page.getByRole("button", { name: "Ya, hapus" }).click();
+    await page.getByRole("button", { name: "Hapus permanen", exact: true }).first().click();
+    await page.getByLabel("Ketik HAPUS untuk melanjutkan").fill("HAPUS");
+    await page.getByRole("dialog").getByRole("button", { name: "Hapus permanen" }).click();
+    await expect(page).toHaveURL(/\/directory$/);
   }
 });

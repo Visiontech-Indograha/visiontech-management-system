@@ -8,7 +8,7 @@ export const test = base.extend({
   page: async ({ page }, pakai) => {
     await pakai(page);
     const url = page.url();
-    if (url === "about:blank" || /\/(admin-)?login/.test(url)) return;
+    if (url === "about:blank" || /\/(admin-)?login|\/setup/.test(url)) return;
     const keluar = page.getByRole("button", { name: "Keluar", exact: true });
     // Halaman tanpa sidebar (mis. ganti sandi) atau yang sedang memuat: buka Beranda agar tombol Keluar ada.
     if (!(await keluar.isVisible().catch(() => false))) {

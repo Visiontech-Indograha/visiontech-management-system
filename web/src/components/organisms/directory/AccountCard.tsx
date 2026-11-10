@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { TextField } from "@/components/molecules/Field";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { AccountRoleControl } from "@/components/organisms/directory/AccountRoleControl";
 import { RoleSelectField } from "@/components/molecules/RoleSelectField";
 import { errorMessage } from "@/lib/errors";
+import { pesanGalatPeran } from "@/lib/roleErrors";
 import { formatDateTime } from "@/lib/format";
 import { useSession } from "@/stores/sessionStore";
 import {
@@ -12,6 +15,7 @@ import {
   useDeleteAccount,
   type Employee,
   type FieldRole,
+  type PrimaryRole,
 } from "@/services/employeeService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
 import { Pill } from "@/components/molecules/Pill";
@@ -34,12 +38,14 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const deleteAccount = useDeleteAccount(employee.employee_id);
   const [login, setLogin] = useState(employee.email ?? "");
   const [peranBaru, setPeranBaru] = useState<FieldRole>("EMPLOYEE");
-  const [peranAkun, setPeranAkun] = useState<FieldRole | null>(null);
+  const [konfirmReset, setKonfirmReset] = useState(false);
+  const [errorPeran, setErrorPeran] = useState<string | null>(null);
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Peran lapangan hanya bisa dipilih HR/SUPER_ADMIN (keduanya memegang manage:users); API tetap memeriksa.
   const permissions = useSession().me?.permissions ?? [];
   const canSetRole = permissions.includes("manage:users");
+  const superAdmin = useSession().me?.role === "SUPER_ADMIN";
   // Hapus akun hanya untuk SUPER_ADMIN (delete:any); API tetap memeriksa.
   const canDelete = permissions.includes("delete:any");
 
@@ -60,7 +66,17 @@ export function AccountCard({ employee }: { employee: Employee }) {
   const a = account.data;
   const roleAkun: FieldRole | null =
     a?.system_role === "EMPLOYEE" || a?.system_role === "TEAM_LEADER" ? a.system_role : null;
-  const peranDipilih = peranAkun;
+  const ubahPeran = async (role: PrimaryRole): Promise<boolean> => {
+    setErrorPeran(null);
+    try {
+      await action.mutateAsync({ kind: "role", systemRole: role });
+      toast.success("Peran akun diperbarui. Sesi orang ini sudah keluar.");
+      return true;
+    } catch (err) {
+      setErrorPeran(pesanGalatPeran(err));
+      return false;
+    }
+  };
   const terkunci = !!a?.locked_until && new Date(a.locked_until) > new Date();
   return (
     <section aria-label="Akun login" className="mb-8 max-w-xl">
@@ -165,45 +181,38 @@ export function AccountCard({ employee }: { employee: Employee }) {
                 Buka kunci akun
               </ActionButton>
             )}
-            {canSetRole && roleAkun && (
-              <div className="flex flex-wrap items-end gap-2">
-                <div className="min-w-48">
-                  <RoleSelectField
-                    label="Peran"
-                    value={peranDipilih ?? roleAkun}
-                    options={FIELD_ROLE_LABEL}
-                    onChange={(v) => setPeranAkun(v as FieldRole)}
-                  />
-                </div>
-                <ActionButton
-                  variant="outline"
-                  disabled={action.isPending || (peranDipilih ?? roleAkun) === roleAkun}
-                  onClick={() =>
-                    run({ kind: "role", systemRole: peranDipilih ?? roleAkun }, "Peran akun diperbarui.").then(() =>
-                      setPeranAkun(null),
-                    )
-                  }
-                >
-                  Simpan peran
-                </ActionButton>
-              </div>
+            {a.system_role && a.system_role !== "SUPER_ADMIN" && (superAdmin || roleAkun) && canSetRole && (
+              <AccountRoleControl
+                current={a.system_role as PrimaryRole}
+                superAdmin={superAdmin}
+                busy={action.isPending}
+                error={errorPeran}
+                onConfirm={ubahPeran}
+              />
             )}
-            {a.system_role && !roleAkun && (
-              <TextBlock className="text-mist">Peran kantor: {a.system_role} (diatur di menu peran).</TextBlock>
+            {a.system_role && !roleAkun && !superAdmin && (
+              <TextBlock className="text-mist">Peran kantor: {a.system_role} (hanya Super Admin yang bisa mengubahnya).</TextBlock>
             )}
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 variant="outline"
                 disabled={action.isPending}
-                onClick={() =>
-                  run(
-                    { kind: "reset" },
-                    "Sandi direset; semua sesi akun ini dikeluarkan.",
-                  )
-                }
+                onClick={() => setKonfirmReset(true)}
               >
                 Reset sandi
               </ActionButton>
+              <ConfirmDialog
+                open={konfirmReset}
+                title="Reset sandi karyawan?"
+                message="Sandi lama tidak berlaku lagi dan semua perangkat orang ini akan keluar. Anda akan mendapat sandi sementara untuk disampaikan kepadanya."
+                confirmLabel="Ya, reset sandi"
+                busy={action.isPending}
+                onClose={() => setKonfirmReset(false)}
+                onConfirm={() => {
+                  setKonfirmReset(false);
+                  void run({ kind: "reset" }, "Sandi direset; semua sesi akun ini dikeluarkan.");
+                }}
+              />
               {a.is_active ? (
                 <ActionButton
                   variant="outline"

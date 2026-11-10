@@ -25,6 +25,7 @@ export function LeavesPage() {
 
   // Pemohon sendiri, HR, atau OM dapat membatalkan cuti yang sudah disetujui selama hari cutinya belum lewat
   const canCancelLeave = (l: LeaveRequest) =>
+    (l.status === "PENDING" && l.employee_id === me?.employee_id) || // pengajuan sendiri yang masih menunggu
     (l.status === "APPROVED_BY_PM" || l.status === "APPROVED_BY_HR") &&
     String(l.end_date).slice(0, 10) >= today &&
     (l.employee_id === me?.employee_id ||

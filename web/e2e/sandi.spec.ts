@@ -53,6 +53,7 @@ test("admin membuat karyawan dan akun, mereset sandi, lalu menghapus semuanya le
     await expect(page.getByText("Aktif", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Reset sandi" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Ya, reset sandi" }).click();
     await expect(page.getByText(/Sandi sementara/)).toBeVisible();
   } finally {
     // Pembersihan lewat UI: hapus akun, hapus karyawan, hapus permanen.

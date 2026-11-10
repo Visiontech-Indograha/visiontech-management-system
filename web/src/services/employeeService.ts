@@ -235,6 +235,19 @@ export const FIELD_ROLE_LABEL: Record<FieldRole, string> = {
   TEAM_LEADER: "Ketua tim",
 };
 
+/** Peran utama yang bisa ditetapkan dari kartu akun (Super Admin semua; HR hanya dua peran lapangan). */
+export type PrimaryRole =
+  | "OPERATIONAL_MANAGER" | "PROJECT_MANAGER" | "HSE" | "ADMIN_HR_GA" | "FINANCE" | "TEAM_LEADER" | "EMPLOYEE";
+export const PRIMARY_ROLE_LABEL: Record<PrimaryRole, string> = {
+  OPERATIONAL_MANAGER: "OM (Operational Manager)",
+  PROJECT_MANAGER: "PM (Project Manager)",
+  HSE: "HSE",
+  ADMIN_HR_GA: "HR/GA",
+  FINANCE: "Finance",
+  TEAM_LEADER: "Ketua tim",
+  EMPLOYEE: "Karyawan lapangan",
+};
+
 /** Buat akun / reset sandi / nonaktifkan / aktifkan / ubah peran lapangan. Sandi sementara hanya ada di respons. */
 export function useAccountAction(employeeId: string) {
   const qc = useQueryClient();
@@ -273,7 +286,7 @@ export function useAccountAction(employeeId: string) {
 /** Aksi HR/admin atas akun karyawan; sandi sementara hanya ada di respons `create` & `reset`. */
 export type AccountAction =
   | { kind: "create"; login: string; systemRole: FieldRole }
-  | { kind: "role"; systemRole: FieldRole }
+  | { kind: "role"; systemRole: PrimaryRole }
   | { kind: "login"; login: string }
   | { kind: "revoke-session"; sessionId: string }
   | { kind: "revoke-all-sessions" | "reset-device-slots" | "unlock" | "reset" | "deactivate" | "activate" };

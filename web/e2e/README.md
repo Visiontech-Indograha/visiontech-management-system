@@ -20,15 +20,18 @@ itu ditandai `test.fixme` dengan alasan "jalur UI belum ada: ..." (bukan dikerja
 Tes tanpa kredensial yang dibutuhkan dilewati (skipped).
 
 ## Prasyarat lingkungan (bukan data uji)
-Server uji lokal itu sendiri: DB uji pribadi dan proses API/web. Akun admin awal adalah masukan lingkungan
-(kredensial `E2E_ADMIN_*`); ia ada karena DB tidak punya jalur UI untuk akun pertama. Jalur UI yang dibutuhkan:
-halaman penyiapan awal yang hanya muncul bila belum ada admin (peran: pemilik/operator server).
+Server uji lokal itu sendiri: DB uji pribadi (dibuat dari template `vms_test`, tanpa Super Admin aktif) dan proses
+API/web. API uji diberi `SETUP_TOKEN` (minimal 24 karakter). Admin awal dibuat lewat halaman `/setup` oleh
+`00-setup.spec.ts`; kredensialnya masukan lingkungan: `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD` (12-128 karakter)
+dan `E2E_SETUP_TOKEN` (sama dengan `SETUP_TOKEN` server uji). Bila DB sudah punya admin, tes penyiapan dilewati
+(skipped) dan tes lain memakai kredensial yang sama.
+
+Peran kantor untuk tes (HR/GA) diberikan admin lewat Direktori > Akun login > Peran utama (dengan konfirmasi), lalu
+sandi direset agar akun wajib ganti sandi saat masuk pertama.
 
 ## Tes yang ditunda (`test.fixme`)
-| Langkah | Layar yang dibutuhkan | Peran |
-|---|---|---|
-| Memberi peran kantor ke akun baru (tes menu STAFF) | Direktori > Akun login > Peran, dengan peran kantor tersedia tanpa flag server `ROLE_ASSIGNMENT_ENABLED` | SUPER_ADMIN |
-| Cuti: pemeriksa kedua (pemohon tak boleh menyetujui cuti sendiri) dan hapus/batalkan pengajuan yang masih menunggu | Cuti dan Izin (tombol batal untuk pengajuan menunggu) + peran kantor seperti di atas | SUPER_ADMIN |
+Tidak ada. Pemeriksa kedua cuti (persetujuan oleh orang lain) belum dicakup: tes cuti hanya mengajukan lalu
+membatalkan pengajuan yang menunggu.
 
 ## Data uji
 Awalan `QA-E2E-`. Tes membersihkan datanya lewat UI (blok `finally`). Sandi salah hanya dicoba satu kali.

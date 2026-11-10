@@ -25,6 +25,10 @@ _ALPHABET = string.ascii_letters + string.digits
 
 # Peran lapangan yang boleh dipilih pada akun karyawan, dan siapa yang boleh memilihnya (HR & SUPER_ADMIN saja).
 FIELD_ROLES = ("EMPLOYEE", "TEAM_LEADER")
+# Peran utama yang boleh ditetapkan SUPER_ADMIN (SUPER_ADMIN sendiri tidak pernah bisa ditetapkan lewat API).
+ASSIGNABLE_ROLES = (
+    "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "HSE", "ADMIN_HR_GA", "FINANCE", "TEAM_LEADER", "EMPLOYEE",
+)
 _ACCOUNT_MANAGERS = (SystemRole.SUPER_ADMIN, SystemRole.ADMIN_HR_GA)
 
 
@@ -130,16 +134,22 @@ class AccountService:
         ketua tim yang masih memimpin tim tidak bisa diturunkan. Perubahan dicatat di audit.
         """
         _require_account_manager(actor)
-        if system_role not in FIELD_ROLES:
-            raise AppError("ROLE_NOT_FIELD", "Peran akun hanya Karyawan Lapangan atau Team Leader.", status=422)
+        if system_role not in ASSIGNABLE_ROLES:
+            raise AppError("ROLE_NOT_ASSIGNABLE", "Peran tersebut tidak dapat ditetapkan dari sini.", status=422)
         account = await self._account(employee_id, actor.organization_id)
-        if account.role not in FIELD_ROLES:
-            raise AppError(
-                "ROLE_NOT_FIELD", "Akun ini bukan peran lapangan; peran kantor tidak diubah dari sini.", status=409
-            )
+        is_super = actor.has_role(SystemRole.SUPER_ADMIN)
+        if str(account.id) == str(actor.user_id):
+            raise AppError("ROLE_SELF_CHANGE", "Anda tidak dapat mengubah peran akun Anda sendiri.", status=409)
+        if account.role == "SUPER_ADMIN":
+            raise AppError("ROLE_PROTECTED", "Peran SUPER_ADMIN tidak dapat diubah dari sini.", status=409)
+        if not is_super and (system_role not in FIELD_ROLES or account.role not in FIELD_ROLES):
+            raise ForbiddenError("Hanya SUPER_ADMIN yang dapat menetapkan atau mengubah peran kantor/manajer.")
         if account.role == system_role:
             return await self._with_login_state(account)
-        if system_role == "EMPLOYEE" and await self.users.leads_a_team(employee_id):
+        if (
+            account.role == "TEAM_LEADER" and system_role != "TEAM_LEADER"
+            and await self.users.leads_a_team(employee_id)
+        ):
             raise AppError(
                 "LEADER_ACTIVE_TEAM",
                 "Karyawan ini masih memimpin tim; ganti ketua tim sebelum menurunkan perannya.",

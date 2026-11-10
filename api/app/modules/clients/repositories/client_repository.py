@@ -21,8 +21,8 @@ class ClientRepository(BaseRepository):
         return list(await self.fetchall(
             _SELECT + """
             WHERE c.delete_at IS NULL AND (NOT CAST(:active AS boolean) OR c.status)
-              AND (CAST(:q AS varchar) IS NULL OR c.name ILIKE CAST(:q AS varchar) || '%'
-                   OR c.client_code ILIKE CAST(:q AS varchar) || '%')
+              AND (CAST(:q AS varchar) IS NULL OR c.name ILIKE '%' || CAST(:q AS varchar) || '%'
+                   OR c.client_code ILIKE '%' || CAST(:q AS varchar) || '%')
             ORDER BY c.name
             LIMIT :cap
             """,

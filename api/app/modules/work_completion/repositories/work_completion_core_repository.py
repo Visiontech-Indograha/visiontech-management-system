@@ -157,7 +157,7 @@ class WorkCompletionCoreRepository(BaseRepository):
                 "(wc.client_name ILIKE :search OR wc.project_title ILIKE :search OR wc.order_number ILIKE :search)"
             )
             filters.append(search_clause)
-            params["search"] = f"{escape_like(search)}%"
+            params["search"] = f"%{escape_like(search)}%"
 
         where_clause = " AND ".join(filters)
 
@@ -282,7 +282,7 @@ class WorkCompletionCoreRepository(BaseRepository):
                 "(wc.client_name ILIKE :search OR wc.project_title ILIKE :search OR wc.order_number ILIKE :search)"
             )
             filters.append(search_clause)
-            params["search"] = f"{escape_like(search)}%"
+            params["search"] = f"%{escape_like(search)}%"
 
         where_clause = " AND ".join(filters)
         sql = f"SELECT COUNT(*) FROM work_completion wc WHERE {where_clause}"

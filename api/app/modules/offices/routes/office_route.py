@@ -31,7 +31,7 @@ async def get_offices(
     Daftar kantor aktif (GET). Terbuka untuk semua pengguna; `can_manage` menandai hak kelola.
     """
     rows = await controller.handle_list_offices(current_user, for_attendance)
-    return list(apply_list(rows, params, response, lambda o: (o.name, o.address), prefix=True))
+    return list(apply_list(rows, params, response, lambda o: (o.name, o.address)))
 
 _MANAGE_TARGET = Depends(require_permission_for_office(Permission.MANAGE_SITES, "office_id"))
 

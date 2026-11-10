@@ -1,4 +1,4 @@
-"""Putusan pemilik: pencarian `q` = awalan (bukan 'mengandung'); % dan _ dibaca harfiah."""
+"""Putusan pemilik (10 Nov 2026): daftar LAMA tetap 'mengandung kata'; % dan _ dibaca harfiah."""
 from __future__ import annotations
 
 import uuid
@@ -21,7 +21,7 @@ def _client(client, world: World, name: str, code: str) -> None:
     assert made.status_code == 201, made.text
 
 
-def test_client_search_is_prefix_and_literal(client, world: World):
+def test_client_search_contains_and_literal(client, world: World):
     tag = uuid.uuid4().hex[:6]
     _client(client, world, f"Zeta{tag} Mandiri", f"ZK{tag}")
     _client(client, world, f"Yota{tag}_100%", f"YK{tag}")
@@ -31,15 +31,17 @@ def test_client_search_is_prefix_and_literal(client, world: World):
         return _names(client.get("/clients", headers=h, params={"q": q}))
 
     assert find(f"zeta{tag}") == [f"Zeta{tag} Mandiri"]
-    assert find("mandiri") == []  # tengah nama tak cocok
+    assert f"Zeta{tag} Mandiri" in find("mandiri")  # tengah nama cocok
     assert find(f"YK{tag}") == [f"Yota{tag}_100%"]  # awalan kode
     assert find(f"Yota{tag}_1") == [f"Yota{tag}_100%"]
     assert find(f"Yota{tag}x") == []
-    assert find("%") == []
-    assert find("_") == []
+    assert find(f"{tag}_1") == [f"Yota{tag}_100%"]  # _ harfiah di tengah
+    assert f"Yota{tag}_100%" in find("0%")
+    assert all("%" in n for n in find("%"))  # harfiah, bukan wildcard
+    assert all("_" in n for n in find("_"))  # harfiah, bukan wildcard
 
 
-def test_employee_search_is_prefix(client, world: World):
+def test_employee_search_contains(client, world: World):
     h = world.headers(client, "hr")
     params = {"office_id": world.org_id, "size": 100}
 
@@ -47,8 +49,8 @@ def test_employee_search_is_prefix(client, world: World):
         return _names(client.get("/employees", headers=h, params={**params, "q": q}))
 
     assert len(find("karyawan uji pm")) == 1  # awalan cocok
-    assert find("uji pm") == []  # tengah nama tak cocok
+    assert len(find("uji pm")) == 1  # tengah nama cocok
     assert len(find(world.logins["pm"][:8])) >= 1  # awalan email
-    assert find(world.logins["pm"].split("@")[1]) == []  # bagian tengah/belakang email
-    assert find("%") == []
+    assert find("%") == []  # harfiah, bukan wildcard
     assert find("_") == []
+    assert all("_" in n for n in find("_"))  # harfiah, bukan wildcard

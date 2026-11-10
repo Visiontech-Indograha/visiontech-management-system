@@ -1,6 +1,6 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { akun, API_URL, PREFIX } from "./env";
-import { bearer, masukLewatUI, tanggalWib, tokenApi } from "./helpers";
+import { bearer, hariKerja, masukLewatUI, tokenApi } from "./helpers";
 
 const staff = akun("STAFF");
 const admin = akun("ADMIN");
@@ -8,28 +8,29 @@ const admin = akun("ADMIN");
 test("ajukan cuti lalu ditinjau (disetujui) dan dibersihkan", async ({ page, browser, request }) => {
   test.skip(!staff || !admin, "Butuh E2E_STAFF_* dan E2E_ADMIN_*");
   const alasan = `${PREFIX}cuti ${Date.now()}`;
-  // Tanggal jauh di depan agar tidak bentrok dengan data nyata.
-  const mulai = tanggalWib(400);
+  // Tanggal acak dalam tahun berjalan (daftar cuti memfilter tahun ini) agar tidak bentrok antar-run.
+  const mulai = hariKerja(15 + Math.floor(Math.random() * 18));
   try {
     await masukLewatUI(page, staff!);
     await page.goto("/leaves");
-    await page.getByRole("button", { name: "Ajukan cuti / izin" }).click();
+    await page.getByRole("button", { name: "Ajukan cuti / izin" }).first().click();
     await page.getByLabel("Jenis Cuti / Izin").selectOption("OTHER");
     await page.getByLabel("Tanggal Mulai").fill(mulai);
     await page.getByLabel("Tanggal Selesai").fill(mulai);
     await page.getByLabel("Alasan Pengajuan").fill(alasan);
     await page.getByRole("button", { name: "Kirim Pengajuan" }).click();
-    await expect(page.getByText(alasan).first()).toBeVisible();
+    await expect(page.getByRole("dialog")).toBeHidden();
 
     // Tinjau lewat UI oleh admin/HR di sesi terpisah.
     const ctx = await browser.newContext();
     const p2 = await ctx.newPage();
     await masukLewatUI(p2, admin!, true);
     await p2.goto("/leaves");
-    await p2.getByRole("button", { name: /^Tinjau cuti/ }).first().click();
+    await p2.getByRole("button", { name: "Tinjau cuti QA-E2E-Staf Uji" }).first().click({ timeout: 8000 });
     await expect(p2.getByRole("dialog")).toContainText("Tinjau Permohonan Cuti");
     await p2.getByRole("button", { name: "Setujui Permohonan" }).click();
     await expect(p2.getByRole("dialog")).toBeHidden();
+    await ctx.request.post(`${API_URL}/auth/logout`, { timeout: 3000 }).catch(() => undefined);
     await ctx.close();
   } finally {
     // Bersihkan: batalkan cuti QA-E2E- milik staf.

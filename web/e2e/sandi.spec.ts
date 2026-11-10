@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { akun, API_URL, PREFIX } from "./env";
 import { bearer, masukLewatUI, tanggalWib, tokenApi } from "./helpers";
 

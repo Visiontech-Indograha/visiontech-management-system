@@ -18,3 +18,8 @@ Tes tanpa kredensial yang dibutuhkan dilewati (skipped).
 ## Data uji
 Semua data buatan tes berawalan `QA-E2E-` dan dihapus/dibatalkan oleh tes itu sendiri (blok `finally`).
 Sandi salah hanya dicoba satu kali agar akun tidak terkunci.
+
+## Catatan
+- Setiap login membuka satu perangkat (batas 4 per akun); fixture di `fixtures.ts` mengeluarkan sesi tiap tes.
+- Akun STAFF harus peran kantor (mis. Finance); akun lapangan ditolak di web.
+- Jangan menjalankan dua `npm run e2e` bersamaan (data dan sesi bersama).

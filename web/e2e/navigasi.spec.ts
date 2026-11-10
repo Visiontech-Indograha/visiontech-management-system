@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { akun, type Peran } from "./env";
 import { masukLewatUI } from "./helpers";
 

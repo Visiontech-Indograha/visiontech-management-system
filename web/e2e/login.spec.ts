@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { akun } from "./env";
 import { masukLewatUI } from "./helpers";
 
@@ -14,7 +14,7 @@ test.describe("login", () => {
 
   test("sandi salah (sekali saja) ditolak dengan pesan", async ({ page }) => {
     // Hanya SATU percobaan gagal agar akun tidak terkunci.
-    await masukLewatUI(page, { email: a!.email, password: a!.password + "-salah" }, !akun("STAFF"));
+    await masukLewatUI(page, { email: a!.email, password: a!.password + "-salah" }, !akun("STAFF"), false);
     await expect(page.getByTestId("login-error")).toBeVisible();
     await expect(page).toHaveURL(/login/);
   });

@@ -5,8 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, status
 
 from app.core.rate_limit import GROUP_SETUP, rate_limit
+from app.modules.setup.dependencies import get_setup_service
 from app.modules.setup.schemas.setup_schema import SetupAdminIn, SetupAdminOut, SetupStatusOut
-from app.modules.setup.services.setup_service import SetupService, get_setup_service
+from app.modules.setup.services.setup_service import SetupService
 
 router = APIRouter(prefix="/setup", tags=["Setup"], dependencies=[Depends(rate_limit(GROUP_SETUP, always=True))])
 

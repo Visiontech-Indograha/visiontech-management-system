@@ -5,6 +5,8 @@ dipersempit ke akun uji berawalan `setup-test-` (kunci advisory, transaksi, dan 
 """
 from __future__ import annotations
 
+import secrets
+
 import pytest
 
 from app.core.config import settings
@@ -15,13 +17,16 @@ from tests.conftest import requires_db, sync_query
 
 pytestmark = requires_db
 
-TOKEN = "kode-penyiapan-uji-0123456789abcdef"
+# Nilai acak per proses uji (tidak ada rahasia/contoh rahasia di kode).
+TOKEN = secrets.token_urlsafe(24)
+WRONG_TOKEN = secrets.token_urlsafe(24)
+PASSWORD = secrets.token_urlsafe(18)
 PREFIX = "setup-test-"
 
 
 def _body(n: int = 1, token: str = TOKEN) -> dict:
     return {"setup_token": token, "full_name": "Admin Uji Setup", "email": f"{PREFIX}{n}@example.com",
-            "password": "SandiUjiSetup-12345"}
+            "password": PASSWORD}
 
 
 def _cleanup() -> None:
@@ -66,7 +71,7 @@ def test_disabled_without_token_is_404(client, monkeypatch):
 
 
 def test_wrong_token_is_403_and_creates_nothing(client):
-    r = client.post("/setup/admin", json=_body(token="kode-salah-kode-salah-kode-salah"))
+    r = client.post("/setup/admin", json=_body(token=WRONG_TOKEN))
     assert r.status_code == 403
     assert r.json()["error"]["code"] == "SETUP_TOKEN_INVALID"
     assert sync_query("SELECT 1 FROM users WHERE starts_with(email, %s)", (PREFIX,)) == []
@@ -87,7 +92,7 @@ def test_creates_admin_then_locks_forever_and_audits(client):
     assert again.status_code == 409
     assert again.json()["error"]["code"] == "SETUP_LOCKED"
     assert client.get("/setup/status").json()["needs_setup"] is False
-    login = client.post("/auth/login", json={"email": f"{PREFIX}1@example.com", "password": "SandiUjiSetup-12345"})
+    login = client.post("/auth/login", json={"email": f"{PREFIX}1@example.com", "password": PASSWORD})
     assert login.status_code == 200, login.text
     role = sync_query("SELECT system_role::text FROM users WHERE user_id = %s", (user_id,))
     assert role == [("SUPER_ADMIN",)]

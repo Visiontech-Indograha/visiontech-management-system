@@ -5,14 +5,9 @@ import asyncio
 import hmac
 import logging
 
-from fastapi import Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.api.deps import get_db
 from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.hard_delete import write_delete_audit
-from app.core.rate_limit import client_ip
 from app.core.security import hash_password
 from app.modules.setup.repositories.setup_repository import SetupRepository
 from app.modules.setup.schemas.setup_schema import SetupAdminIn, SetupAdminOut, SetupStatusOut
@@ -57,7 +52,3 @@ class SetupService:
         )
         logger.info("penyiapan awal: admin pertama dibuat user_id=%s", user_id)
         return SetupAdminOut(user_id=str(user_id), email=email)
-
-
-def get_setup_service(request: Request, db: AsyncSession = Depends(get_db)) -> SetupService:
-    return SetupService(SetupRepository(db), client_ip(request))

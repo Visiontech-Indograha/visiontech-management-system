@@ -182,3 +182,10 @@ def get_presigned_url(object_name: str, expires: timedelta = timedelta(minutes=5
         # Gagal membuat presigned URL
         logger.error(f"Gagal membuat URL bertanda tangan untuk {object_name}: {e}")
         return ""
+
+
+def list_object_keys() -> list[str]:
+    """Semua kunci objek di bucket (untuk skrip operator; tidak dipakai di jalur permintaan)."""
+    if not ensure_bucket():
+        return []
+    return [o.object_name for o in minio_client.list_objects(settings.MINIO_BUCKET, recursive=True) if o.object_name]

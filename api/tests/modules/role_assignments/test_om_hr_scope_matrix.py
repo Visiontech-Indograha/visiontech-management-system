@@ -31,16 +31,16 @@ VIEW_B = {"om_hr": 200, "hr_two": 200, "hr_one": 404, "om_one": 200}
 MANAGE_B = {"om_hr": 404, "hr_two": 200, "hr_one": 404, "om_one": 403}
 
 
-def _weekday(offset: int) -> str:
-    """Hari kerja (Sen-Jum) pada/setelah offset: cuti di akhir pekan ditolak 422 (flake bergantung tanggal)."""
-    d = jakarta_now().date() + timedelta(days=offset)
-    while d.weekday() >= 5:
-        d += timedelta(days=1)
-    return d.isoformat()
-
-
 def _day(offset: int) -> str:
     return (jakarta_now().date() + timedelta(days=offset)).isoformat()
+
+
+def _workday(offset: int) -> str:
+    """Hari kerja (bukan Minggu) pada/setelah offset: cuti 1 hari di hari Minggu ditolak (422)."""
+    day = jakarta_now().date() + timedelta(days=offset)
+    while day.weekday() == 6:
+        day += timedelta(days=1)
+    return day.isoformat()
 
 
 @pytest.fixture
@@ -138,7 +138,7 @@ def test_offboarding_flag_off_parity(client, world: World, other_world: World, f
 @pytest.fixture
 def leave_b(client, other_world: World):
     r = client.post("/leaves", headers=other_world.headers(client, "member"), json={
-        "leave_type": "SICK", "start_date": _weekday(40), "end_date": _weekday(40), "reason": "Uji matriks cakupan"})
+        "leave_type": "SICK", "start_date": _workday(40), "end_date": _workday(40), "reason": "Uji matriks cakupan"})
     assert r.status_code == 201, r.text
     return r.json()["leave_id"]
 

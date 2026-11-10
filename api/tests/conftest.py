@@ -396,7 +396,12 @@ def fake_storage(monkeypatch) -> dict[str, bytes]:
 
     import app.core.storage as storage_core
 
+    def delete(object_name: str) -> bool:
+        stored.pop(object_name, None)
+        return True
+
     monkeypatch.setattr(storage_core, "upload_file", upload)
+    monkeypatch.setattr(storage_core, "delete_object", delete)
     monkeypatch.setattr(storage_core, "get_presigned_url", lambda name, expires=None: f"https://minio.uji/{name}")
 
     try:

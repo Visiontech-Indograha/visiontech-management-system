@@ -14,6 +14,22 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+    build: {
+      rollupOptions: {
+        output: {
+          // Vendor besar dipisah agar cache browser awet antar rilis.
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined
+            if (/node_modules\/(react-leaflet|@react-leaflet|leaflet)\//.test(id)) return 'leaflet'
+            if (/node_modules\/(react|react-dom|scheduler|react-router|react-router-dom)\//.test(id)) return 'vendor-react'
+            if (/node_modules\/@tanstack\//.test(id)) return 'vendor-tanstack'
+            if (/node_modules\/(zod|react-hook-form|@hookform)\//.test(id)) return 'vendor-form'
+            if (/node_modules\/(radix-ui|@radix-ui)\//.test(id)) return 'vendor-radix'
+            return undefined
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       fs: {

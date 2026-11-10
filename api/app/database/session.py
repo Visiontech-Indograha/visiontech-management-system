@@ -3,7 +3,7 @@ app/database/session.py
 
 Database connections and sessions.
 Configures async engine, session makers, transaction boundaries, and request
-context (Row Level Security - RLS).
+context (variabel sesi untuk audit; RLS BELUM aktif, lihat catatan di bawah).
 """
 from __future__ import annotations
 
@@ -37,6 +37,8 @@ def make_engine(url: str | None = None, **kwargs: Any) -> AsyncEngine:
     """
     engine_kwargs: dict[str, Any] = {
         "echo": False,
+        # Nilai parameter SQL (NIK, rekening, sandi, token) tidak boleh tercetak di galat/log.
+        "hide_parameters": True,
         "connect_args": {
             "server_settings": {
                 "search_path": SEARCH_PATH,
@@ -102,8 +104,9 @@ async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
         flush_events(db)
 
 
-# ── Request context (RLS & audit) ────────────────────────────────────────────
-# Menetapkan variabel lingkungan PostgreSQL untuk RLS dan pelacakan audit.
+# ── Request context (audit; RLS belum aktif) ─────────────────────────────────
+# Menetapkan variabel sesi PostgreSQL untuk pelacakan audit. RLS BELUM diaktifkan (belum ada kebijakan);
+# variabel ini disiapkan agar kebijakan RLS kelak bisa memakainya.
 # Menggunakan SET LOCAL agar efeknya terbatas pada sesi transaksi saat ini.
 _SET_CONTEXT = text(
     """
@@ -123,9 +126,9 @@ async def set_request_context(
 ) -> None:
     """
     Set context variables (user_id, organization_id, actor_label) in the
-    PostgreSQL session to support Row Level Security (RLS) and audit triggers.
+    PostgreSQL session for audit triggers (siap dipakai RLS kelak; RLS belum aktif).
     """
-    # Mengeksekusi penyiapan variabel RLS secara lokal
+    # Mengeksekusi penyiapan variabel sesi secara lokal (SET LOCAL)
     await db.execute(
         _SET_CONTEXT,
         {"user_id": user_id, "organization_id": organization_id, "actor_label": actor_label},

@@ -11,13 +11,17 @@ peristiwa dibuang. Isi peristiwa tidak membawa data pribadi selain yang sudah ad
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Iterable
+import logging
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
+
 QUEUE_SIZE = 100
 PENDING_KEY = "pending_events"
+AFTER_COMMIT_KEY = "after_commit_callbacks"
 
 
 class EventBroker:
@@ -61,8 +65,18 @@ def queue_event(db: AsyncSession, user_ids: Iterable[str], topic: str, data: dic
         db.info.setdefault(PENDING_KEY, []).append((users, {"topic": topic, "data": data}))
 
 
+def queue_after_commit(db: AsyncSession, callback: Callable[[], None]) -> None:
+    """Jalankan `callback` hanya setelah transaksi commit (mis. hapus objek MinIO). Rollback = dibuang."""
+    db.info.setdefault(AFTER_COMMIT_KEY, []).append(callback)
+
+
 def flush_events(db: AsyncSession) -> None:
-    """Siarkan peristiwa tertunda setelah commit berhasil."""
+    """Siarkan peristiwa tertunda dan jalankan callback pasca-commit setelah commit berhasil."""
+    for callback in db.info.pop(AFTER_COMMIT_KEY, []):
+        try:
+            callback()
+        except Exception:
+            logger.exception("Callback pasca-commit gagal")
     for users, event in db.info.pop(PENDING_KEY, []):
         broker.publish(users, event)
 
@@ -70,3 +84,4 @@ def flush_events(db: AsyncSession) -> None:
 def discard_events(db: AsyncSession) -> None:
     """Buang peristiwa tertunda (rollback)."""
     db.info.pop(PENDING_KEY, None)
+    db.info.pop(AFTER_COMMIT_KEY, None)

@@ -27,7 +27,7 @@ from app.core.security import CurrentUser
 from app.shared.access.daily_access_repository import DailyAccessRepository
 from app.shared.access.file_access_repository import FileAccessRepository
 from app.shared.access.org_ref_repository import CRUDOrgRef
-from app.shared.access.scope_rules import asset_file_visible, employee_directory_visible
+from app.shared.access.scope_rules import asset_file_visible, employee_directory_visible, is_pm, sees_all_work_orders
 
 # Jadwal yang sudah boleh dilihat & dikerjakan tim lapangan.
 RELEASED = ("APPROVED", "ONGOING", "COMPLETED")
@@ -129,8 +129,9 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     - foto profil: pemiliknya & karyawan yang terlihat di direktori pengguna (`employee_directory_visible`);
     - dokumen karyawan: pemilik & pengelola dokumen (manage:employee_documents);
     - swafoto absensi: pemilik & peninjau absensi (review/view all attendance);
+    - foto titik survei WO: tim WO, PM pengelola, SA/OM;
     - lampiran jadwal harian / bukti item: siapa pun yang boleh melihat jadwal itu."""
-    row = await FileAccessRepository(db).links(file_id, user.employee_id)
+    row = await FileAccessRepository(db).links(file_id, user.employee_id, is_pm=is_pm(user))
     if row is None:
         raise NotFoundError("Berkas")
     perms = set(user.permissions)
@@ -145,6 +146,10 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     # Swafoto: pemilik; pemegang VIEW_ALL (OM, Finance, OPS); atau PM yang memimpin divisi karyawan itu.
     if row.selfie and (row.own_selfie or (Permission.VIEW_ALL_ATTENDANCE.value in perms and row.selfie_office)
                        or (Permission.REVIEW_ATTENDANCE.value in perms and row.selfie_pm)):
+        return row
+    # Foto titik survei WO: tim surveyor (ketua/anggota), PM pengelola, SA/OM (cakupan sama dengan detail WO).
+    if getattr(row, "survey_point_file", False) and (
+            sees_all_work_orders(user) or getattr(row, "survey_point_visible", False)):
         return row
     for daily_plan_id in row.daily_plan_ids or []:
         try:

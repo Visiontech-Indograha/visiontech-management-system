@@ -218,7 +218,7 @@ def _file_row(**overrides: Any) -> SimpleNamespace:
 
 
 def _patch_links(monkeypatch: pytest.MonkeyPatch, row: Any) -> None:
-    async def fake_links(self: Any, file_id: Any, employee_id: Any) -> Any:
+    async def fake_links(self: Any, file_id: Any, employee_id: Any, **kw: Any) -> Any:
         return row
 
     monkeypatch.setattr(FileAccessRepository, "links", fake_links)

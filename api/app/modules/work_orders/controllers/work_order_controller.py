@@ -15,6 +15,7 @@ from app.core.security import CurrentUser
 from app.modules.work_orders.dependencies import get_work_order_service
 from app.modules.work_orders.schemas.work_order_schema import (
     SurveySubmitIn,
+    TeamSurveyOut,
     WorkOrderAssignSurvey,
     WorkOrderCreate,
     WorkOrderDetailOut,
@@ -55,6 +56,10 @@ class WorkOrderController:
             WorkOrderOut(**(dict(r._mapping) if hasattr(r, "_mapping") else dict(r)))
             for r in rows
         ]
+
+    async def list_team_surveys(self, current_user: CurrentUser) -> list[TeamSurveyOut]:
+        rows = await self.service.list_team_surveys(current_user)
+        return [TeamSurveyOut(**(dict(r._mapping) if hasattr(r, "_mapping") else dict(r))) for r in rows]
 
     async def get_work_order(self, current_user: CurrentUser, work_order_id: UUID) -> WorkOrderDetailOut:
         data = await self.service.get_work_order(work_order_id, current_user)

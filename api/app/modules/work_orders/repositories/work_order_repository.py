@@ -201,6 +201,42 @@ class WorkOrderRepository(BaseRepository):
         """
         return await self.fetchone(sql, {"id": str(work_order_id), **viewer})
 
+    async def list_team_surveys(self, viewer: dict[str, Any], limit: int) -> Sequence[Any]:
+        """Survei WO aktif (WO SURVEY_IN_PROGRESS, survei belum dikirim/disetujui) milik tim yang diikuti
+        pemanggil (ketua atau anggota aktif). Satu kueri, tanpa N+1; jumlah titik lewat subkueri terindeks."""
+        return await self.fetchall(
+            f"""
+            SELECT
+                s.survey_id, wo.work_order_id, wo.wo_number, wo.title,
+                c.name AS client_name,
+                cs.site_name, cs.latitude AS site_lat, cs.longitude AS site_lng,
+                cs.geofence_radius_meters AS site_radius_m,
+                s.survey_date, s.status AS survey_status,
+                s.surveyor_team_id, t.name AS surveyor_team_name,
+                (SELECT COUNT(*)::int FROM work_order_survey_points p
+                 WHERE p.work_order_id = wo.work_order_id AND p.survey_id = s.survey_id
+                   AND p.delete_at IS NULL) AS filled_points
+            FROM work_order_surveys s
+            JOIN client_work_orders wo ON wo.work_order_id = s.work_order_id AND wo.delete_at IS NULL
+            JOIN team t ON t.team_id = wo.lead_team_id AND t.delete_at IS NULL
+            LEFT JOIN client c ON c.client_id = wo.client_id AND c.delete_at IS NULL
+            LEFT JOIN client_sites cs ON cs.site_id = wo.client_site_id AND cs.delete_at IS NULL
+            WHERE s.delete_at IS NULL
+              AND wo.status = 'SURVEY_IN_PROGRESS'
+              AND s.status NOT IN ('SUBMITTED', 'APPROVED')
+              AND {work_order_team_sql('wo')}
+            ORDER BY s.survey_date, s.create_at, s.survey_id
+            LIMIT :limit
+            """,
+            {**viewer, "limit": limit},
+        )
+
+    async def team_name(self, team_id: UUID | str) -> str | None:
+        name: str | None = await self.scalar(
+            "SELECT name FROM team WHERE team_id = CAST(:id AS uuid) AND delete_at IS NULL", {"id": str(team_id)}
+        )
+        return name
+
     async def work_order_of_item(self, item_id: UUID | str) -> UUID | None:
         found: UUID | None = await self.scalar(
             "SELECT work_order_id FROM work_order_items WHERE item_id = CAST(:id AS uuid)", {"id": str(item_id)}
@@ -248,7 +284,17 @@ class WorkOrderRepository(BaseRepository):
             "SELECT survey_id FROM work_order_surveys WHERE work_order_id = CAST(:wo_id AS uuid) AND delete_at IS NULL",
             {"wo_id": str(work_order_id)},
         )
-        if not existing_survey:
+        if existing_survey:
+            # Penugasan ulang: draf ikut pindah ke tim/tanggal baru (survei yang sudah dikirim tidak diubah).
+            await self.execute(
+                """
+                UPDATE work_order_surveys
+                SET surveyor_team_id = CAST(:team_id AS uuid), survey_date = CAST(:sdate AS date), update_at = NOW()
+                WHERE survey_id = CAST(:sid AS uuid) AND status = 'DRAFT'
+                """,
+                {"sid": str(existing_survey), "team_id": str(lead_team_id), "sdate": survey_date},
+            )
+        else:
             await self.execute(
                 """
                 INSERT INTO work_order_surveys (

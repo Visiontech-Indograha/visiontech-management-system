@@ -14619,6 +14619,131 @@
     "title": "TeamOption",
     "type": "object"
    },
+   "TeamSurveyOut": {
+    "description": "Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim).",
+    "properties": {
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "filled_points": {
+      "default": 0,
+      "title": "Filled Points",
+      "type": "integer"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_radius_m": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Radius M"
+     },
+     "survey_date": {
+      "format": "date",
+      "title": "Survey Date",
+      "type": "string"
+     },
+     "survey_id": {
+      "format": "uuid",
+      "title": "Survey Id",
+      "type": "string"
+     },
+     "survey_status": {
+      "title": "Survey Status",
+      "type": "string"
+     },
+     "surveyor_team_id": {
+      "anyOf": [
+       {
+        "format": "uuid",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Id"
+     },
+     "surveyor_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Name"
+     },
+     "title": {
+      "title": "Title",
+      "type": "string"
+     },
+     "wo_number": {
+      "title": "Wo Number",
+      "type": "string"
+     },
+     "work_order_id": {
+      "format": "uuid",
+      "title": "Work Order Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "survey_id",
+     "work_order_id",
+     "wo_number",
+     "title",
+     "survey_date",
+     "survey_status"
+    ],
+    "title": "TeamSurveyOut",
+    "type": "object"
+   },
    "TeamUpdate": {
     "properties": {
      "division_id": {
@@ -17584,6 +17709,7 @@
      "notes": {
       "anyOf": [
        {
+        "maxLength": 2000,
         "type": "string"
        },
        {
@@ -17602,6 +17728,7 @@
         "type": "null"
        }
       ],
+      "description": "Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP",
       "title": "Survey Date"
      }
     },
@@ -17968,6 +18095,18 @@
        }
       ],
       "title": "Survey Assigned At"
+     },
+     "survey_assignment_summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'",
+      "title": "Survey Assignment Summary"
      },
      "survey_points": {
       "items": {
@@ -32558,6 +32697,108 @@
      }
     ],
     "summary": "Update Item Progress",
+    "tags": [
+     "Work Orders"
+    ]
+   }
+  },
+  "/api/v1/work-orders/team-surveys": {
+   "get": {
+    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim.",
+    "operationId": "list_team_surveys_api_v1_work_orders_team_surveys_get",
+    "parameters": [
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/TeamSurveyOut"
+         },
+         "title": "Response List Team Surveys Api V1 Work Orders Team Surveys Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Team Surveys",
     "tags": [
      "Work Orders"
     ]

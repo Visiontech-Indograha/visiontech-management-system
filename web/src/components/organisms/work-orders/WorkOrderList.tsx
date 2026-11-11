@@ -174,7 +174,7 @@ export function WorkOrderList({
             onChange={(e) => onDivisionChange(e.target.value)}
             className="w-full sm:w-56"
           >
-            <ControlOption value="">Semua Divisi</ControlOption>
+            <ControlOption value="">Semua divisi saya</ControlOption>
             {divisions.map((d) => (
               <ControlOption key={d.id} value={d.id}>
                 {d.name}

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, fireEvent, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   slideIntervalMs,
   remainingSeconds,
@@ -247,5 +248,20 @@ describe("HseMandatoryPopupGate: tombol konfirmasi terkunci sampai waktu habis",
     advance(1_500);
     const confirm = (await screen.findByText("Saya Telah Membaca dan Memahami Panduan Ini")).closest("button");
     expect(confirm).toBeEnabled();
+  });
+
+  it("U-25: ketika fetchActiveHsePopup gagal, tidak memicu toast.error global yang nyasar", async () => {
+    const toastErrorSpy = vi.spyOn(toast, "error");
+    vi.mocked(fetchActiveHsePopup).mockRejectedValue(new Error("Network Error"));
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <HseMandatoryPopupGate />
+      </QueryClientProvider>,
+    );
+
+    expect(toastErrorSpy).not.toHaveBeenCalled();
+    toastErrorSpy.mockRestore();
   });
 });

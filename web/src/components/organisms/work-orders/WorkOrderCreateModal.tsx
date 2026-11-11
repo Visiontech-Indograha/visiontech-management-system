@@ -171,7 +171,7 @@ export function WorkOrderCreateModal({
             }}
             required
           >
-            <ControlOption value="">-- Pilih Klien --</ControlOption>
+            <ControlOption value="">Pilih klien</ControlOption>
             {clients.map((c) => (
               <ControlOption key={c.client_id} value={c.client_id}>
                 {c.name}
@@ -186,7 +186,7 @@ export function WorkOrderCreateModal({
               onChange={(e) => setClientSiteId(e.target.value)}
               hint={sites.length === 0 ? "Klien belum memiliki daftar lokasi cabang/site." : undefined}
             >
-              <ControlOption value="">-- Pilih Lokasi Site (Opsional) --</ControlOption>
+              <ControlOption value="">Pilih lokasi cabang (opsional)</ControlOption>
               {sites.map((s) => (
                 <ControlOption key={s.site_id} value={s.site_id}>
                   {s.site_name} - {s.address}
@@ -202,7 +202,7 @@ export function WorkOrderCreateModal({
               onChange={(e) => setDivisionId(e.target.value)}
               required
             >
-              <ControlOption value="">-- Pilih Divisi --</ControlOption>
+              <ControlOption value="">Pilih divisi</ControlOption>
               {divisions.map((d) => (
                 <ControlOption key={d.id} value={d.id}>
                   {d.name}
@@ -216,7 +216,7 @@ export function WorkOrderCreateModal({
               onChange={(e) => setPmId(e.target.value)}
               required
             >
-              <ControlOption value="">-- Pilih PM --</ControlOption>
+              <ControlOption value="">Pilih PM</ControlOption>
               {pmOptions.map((emp) => (
                 <ControlOption key={emp.employee_id} value={emp.employee_id}>
                   {emp.full_name}
@@ -231,7 +231,7 @@ export function WorkOrderCreateModal({
             onChange={(e) => setLeadTeamId(e.target.value)}
             hint="Bisa ditentukan sekarang atau saat statusnya menunggu survei"
           >
-            <ControlOption value="">-- Belum Ditugaskan --</ControlOption>
+            <ControlOption value="">Belum ditugaskan</ControlOption>
             {teams.map((t) => (
               <ControlOption key={t.team_id} value={t.team_id}>
                 {t.name} (Ketua: {t.leader_name || "-"})

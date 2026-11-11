@@ -77,12 +77,12 @@ export function ClientList({
             >
               <div>
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-2">
                       <TextBlock as="span" className="shrink-0 rounded-control bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
                         {c.client_code}
                       </TextBlock>
-                      <TextBlock className="min-w-0 break-words font-semibold text-foreground">{c.name}</TextBlock>
+                      <TextBlock className="min-w-0 break-words font-semibold text-foreground" title={c.name}>{c.name}</TextBlock>
                     </div>
                   </div>
                   {!c.status && (

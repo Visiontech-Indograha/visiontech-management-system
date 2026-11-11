@@ -13,7 +13,6 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/403$/, "Tidak berwenang"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
   [/^\/surveys\/[^/]+$/, "Detail survei"],
-  [/^\/clients$/, "Master Klien"],
   [/^\/projects$/, "Master Proyek (SPK)"],
 ];
 

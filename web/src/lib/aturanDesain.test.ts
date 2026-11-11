@@ -75,7 +75,6 @@ const ATURAN: Aturan[] = [
   } },
   { id: "R3", aturan: "Setiap catch memakai variabel galat dan errorMessage(err, cadangan): catch tanpa parameter", re: /catch\s*\{/g, jenis: "ts", baseline: {
     "components/molecules/SignaturePad.tsx": 1,
-    "components/organisms/hse/HseMandatoryPopupGate.tsx": 2,
     "hooks/useLiveEvents.ts": 3,
     "lib/apiClient.ts": 2,
     "lib/tabSync.ts": 3,
@@ -87,7 +86,6 @@ const ATURAN: Aturan[] = [
     "components/organisms/directory/AccountCard.tsx": 1,
     "components/organisms/directory/EmployeeAddressesPanel.tsx": 2,
     "components/organisms/hse/HseCampaignsPanel.tsx": 1,
-    "components/organisms/hse/HseMandatoryPopupGate.tsx": 2,
     "components/organisms/offboarding/OffboardingDetailDialog.tsx": 1,
     "components/organisms/surveys/SurveyBomPanel.tsx": 1,
     "components/organisms/surveys/SurveyPlanDialog.tsx": 1,
@@ -125,7 +123,6 @@ const ATURAN: Aturan[] = [
     "components/organisms/work-orders/WorkOrderCreateModal.tsx": 1,
     "components/organisms/work-plans/WeeklyPresentationDialog.tsx": 1,
     "components/organisms/work-types/WorkTypeMaterialsDialog.tsx": 4,
-    "components/templates/clients/ClientsTemplate.tsx": 1,
     "components/templates/mess/MessTemplate.tsx": 2,
     "components/templates/teams/TeamsTemplate.tsx": 1,
     "components/templates/work-orders/WorkOrdersTemplate.tsx": 1,
@@ -147,8 +144,6 @@ const ATURAN: Aturan[] = [
     "components/organisms/projects/ProjectList.tsx": 3,
     "components/organisms/work-completions/WorkCompletionFormDialog.tsx": 3,
     "components/organisms/work-orders/WorkOrderAssignModal.tsx": 1,
-    "components/organisms/work-orders/WorkOrderCreateModal.tsx": 5,
-    "components/organisms/work-types/WorkTypeFormDialog.tsx": 1,
   } },
 ];
 

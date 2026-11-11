@@ -47,9 +47,9 @@ export function SiteList({ controls, sites, onAdd, onRemove, onEdit }: {
             <ListEntry key={s.id} className="flex items-start gap-3 rounded-panel border border-line bg-surface shadow-card p-4">
               <MapPin className="mt-0.5 shrink-0 text-lens" size={20} aria-hidden />
               <div className="min-w-0 flex-1">
-                <TextBlock className="font-medium">{s.name}</TextBlock>
+                <TextBlock className="min-w-0 break-words font-medium" title={s.name}>{s.name}</TextBlock>
                 <TextBlock className="text-xs text-mist">{s.unit_id ? "Lokasi proyek" : "Lokasi kantor"}</TextBlock>
-                {s.address && <TextBlock className="text-sm text-mist">{s.address}</TextBlock>}
+                {s.address && <TextBlock className="min-w-0 break-words line-clamp-2 text-sm text-mist" title={s.address}>{s.address}</TextBlock>}
                 <TextBlock className="text-sm text-mist">
                   {s.location?.lat != null && s.location?.lng != null ? `${s.location.lat.toFixed(6)}, ${s.location.lng.toFixed(6)}` : "Koordinat belum diatur"} · radius {s.radius_m} m
                 </TextBlock>

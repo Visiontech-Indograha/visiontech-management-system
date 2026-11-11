@@ -186,6 +186,8 @@ class CurrentUser(BaseModel):
     session_id: str
     permissions: list[str]
     employee_id: str | None = None
+    office_id: str | None = None
+    division_id: str | None = None
     # Sandi sementara dari admin: sampai diganti, hampir semua endpoint 403 MUST_CHANGE_PASSWORD (klien yang opt-in).
     must_change_password: bool = False
 

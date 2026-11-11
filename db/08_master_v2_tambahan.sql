@@ -333,3 +333,14 @@ CREATE TABLE IF NOT EXISTS work_order_bom (
 );
 CREATE INDEX IF NOT EXISTS idx_wo_bom_wo ON work_order_bom(work_order_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wo_bom_item ON work_order_bom(work_order_item_id) WHERE delete_at IS NULL;
+
+-- Hak untuk peran runtime vms_api bila sudah ada (idempoten)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vms_api') THEN
+        GRANT USAGE ON SCHEMA public TO vms_api;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO vms_api;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO vms_api;
+    END IF;
+END $$;
+

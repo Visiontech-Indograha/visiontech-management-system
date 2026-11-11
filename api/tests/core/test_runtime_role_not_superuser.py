@@ -5,7 +5,38 @@ import os
 
 import pytest
 
-from tests.conftest import requires_db
+from tests.conftest import _sync_conn, requires_db
+
+
+@requires_db
+def test_vms_api_role_exists_and_is_not_superuser_and_no_bypassrls() -> None:
+    """Memastikan peran vms_api sudah dibuat dan bukan superuser serta tidak BYPASSRLS (B-06)."""
+    with _sync_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT rolname, rolsuper, rolbypassrls, rolcreatedb, rolcreaterole "
+            "FROM pg_roles WHERE rolname = 'vms_api'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "Role vms_api belum dibuat di database"
+    assert row[0] == "vms_api"
+    assert row[1] is False, "vms_api tidak boleh superuser"
+    assert row[2] is False, "vms_api tidak boleh BYPASSRLS"
+    assert row[3] is False, "vms_api tidak boleh CREATEDB"
+    assert row[4] is False, "vms_api tidak boleh CREATEROLE"
+
+
+@requires_db
+def test_vms_api_role_has_schema_and_table_privileges() -> None:
+    """Memastikan peran vms_api memiliki hak minimal skema & tabel (USAGE, SELECT, INSERT, UPDATE, DELETE)."""
+    with _sync_conn() as conn, conn.cursor() as cur:
+        cur.execute("SELECT has_schema_privilege('vms_api', 'public', 'USAGE')")
+        has_usage = cur.fetchone()[0]
+        assert has_usage is True, "vms_api harus memiliki hak USAGE pada schema public"
+
+        for priv in ("SELECT", "INSERT", "UPDATE", "DELETE"):
+            cur.execute(f"SELECT has_table_privilege('vms_api', 'public.employee', '{priv}')")
+            has_priv = cur.fetchone()[0]
+            assert has_priv is True, f"vms_api harus memiliki hak {priv} pada public.employee"
 
 
 @requires_db

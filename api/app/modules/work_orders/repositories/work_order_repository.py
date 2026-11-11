@@ -312,6 +312,13 @@ class WorkOrderRepository(BaseRepository):
                 },
             )
 
+    async def count_work_types(self, ids: list[str]) -> int:
+        """Jumlah id jenis pekerjaan (unik) yang ada dan belum dihapus; untuk validasi titik survei."""
+        return int(await self.scalar(
+            "SELECT COUNT(*) FROM work_type WHERE work_type_id = ANY(CAST(:ids AS uuid[])) AND delete_at IS NULL",
+            {"ids": ids},
+        ) or 0)
+
     async def submit_survey(
         self,
         work_order_id: UUID | str,

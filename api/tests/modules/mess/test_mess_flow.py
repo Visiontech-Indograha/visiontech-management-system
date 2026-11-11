@@ -131,3 +131,34 @@ def test_create_stay_idempotency_key(client, world: World, place):
     assert second.status_code == 201 and second.json() == first.json()
     count = sync_query("SELECT count(*) FROM company_mess_stay WHERE mess_id = %s", (place["mess_id"],))[0][0]
     assert count == 1
+
+
+def test_cancel_status_rules_future_approved_running_and_hr_removal(client, world: World, place):
+    """B-38: hunian disetujui yang belum mulai bisa dikeluarkan (HR) atau dibatalkan (pemohon, HP);
+    yang sudah berjalan hanya lewat 'Selesai inap'; kapasitas kembali setelah batal."""
+    pm = world.headers(client, "pm")
+    hr = world.headers(client, "hr")
+    member = world.headers(client, "member")
+
+    def approve(stay: dict) -> None:
+        res = client.post(f"/mess/{stay['mess_stay_id']}/decision", headers=pm, json={"approve": True})
+        assert res.status_code == 200, res.text
+
+    future = _request(client, world, "member", place, start=3, end=6).json()
+    approve(future)
+    by_hr = client.post(f"/mess/{future['mess_stay_id']}/cancel", headers=hr)
+    assert by_hr.status_code == 200 and by_hr.json()["status"] == "CANCELLED"
+    notified = sync_query(
+        "SELECT 1 FROM notification WHERE kind = 'MESS_CANCELLED' AND user_id = %s", (world.users["member"],))
+    assert len(notified) == 1
+
+    again = _request(client, world, "member", place, start=3, end=6).json()  # kapasitas sudah kembali
+    approve(again)
+    by_owner = client.post(f"/mess/{again['mess_stay_id']}/cancel", headers=member)
+    assert by_owner.status_code == 200 and by_owner.json()["status"] == "CANCELLED"
+
+    running = _request(client, world, "member", place, start=0, end=3).json()
+    approve(running)
+    refused = client.post(f"/mess/{running['mess_stay_id']}/cancel", headers=hr)
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "MESS_NOT_CANCELLABLE"
+    assert "Selesai inap" in refused.json()["error"]["message"]

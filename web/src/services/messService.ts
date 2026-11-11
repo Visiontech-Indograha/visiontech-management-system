@@ -131,6 +131,16 @@ export function useCheckoutMessStay() {
   });
 }
 
+/** Batalkan hunian yang belum dimulai (pemohon atau HR/GA). */
+export function useCancelMessStay() {
+  const done = useInvalidate();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string }) =>
+      (await api.post<MessStay>(`/mess/${id}/cancel`)).data,
+    onSuccess: done,
+  });
+}
+
 export function useCreateMessPlace() {
   const done = useInvalidate();
   return useMutation({

@@ -22,14 +22,17 @@ export function MessList({
   canAdd,
   onAdd,
   onCheckout,
+  onCancel,
 }: {
   controls: ListControls;
   stays: UseQueryResult<Paged<MessStay>>;
   canAdd: boolean;
   onAdd: () => void;
   onCheckout: (stay: MessStay) => void;
+  onCancel?: (stay: MessStay) => void;
 }) {
   const [ending, setEnding] = useState<MessStay | null>(null);
+  const [cancelling, setCancelling] = useState<MessStay | null>(null);
   const view = pagedView(stays, controls);
   const today = wibDate();
   return (
@@ -108,6 +111,16 @@ export function MessList({
                   Selesai Inap
                 </ActionButton>
               )}
+              {canAdd && onCancel && s.stay_start_date > today && (s.status === "REQUESTED" || s.status === "APPROVED") && (
+                <ActionButton
+                  variant="outline"
+                  size="sm"
+                  className="text-danger hover:bg-danger-bg hover:text-danger ml-2 shrink-0"
+                  onClick={() => setCancelling(s)}
+                >
+                  Batalkan hunian
+                </ActionButton>
+              )}
             </ListEntry>
           ))}
         </ListBlock>
@@ -128,6 +141,21 @@ export function MessList({
           setEnding(null);
         }}
         onClose={() => setEnding(null)}
+      />
+      <ConfirmDialog
+        open={cancelling !== null}
+        title="Batalkan hunian?"
+        message={
+          cancelling
+            ? `Hunian ${cancelling.employee_name} di ${cancelling.mess_name} belum dimulai dan akan dibatalkan.`
+            : ""
+        }
+        confirmLabel="Batalkan hunian"
+        onConfirm={() => {
+          if (cancelling) onCancel?.(cancelling);
+          setCancelling(null);
+        }}
+        onClose={() => setCancelling(null)}
       />
     </>
   );

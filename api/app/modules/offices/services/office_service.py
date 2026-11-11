@@ -83,7 +83,8 @@ class OfficeService:
         except IntegrityError as exc:
             raise AppError("OFFICE_INVALID", "Kantor tidak dapat disimpan. Periksa isian lalu coba lagi.",
                            status=409) from exc
-        if data.is_main_office:
+        # Kantor pertama otomatis jadi kantor utama (absen butuh acuan zona kota; tanpa ini absen gagal 500).
+        if data.is_main_office or not await self.repo.has_main():
             await self.repo.set_main(row.id)
             row = await self.repo.get(row.id)
         await self._audit(user, "OFFICE_CREATE", row.id, None, row)

@@ -118,13 +118,13 @@ async def update_campaign(
 @router.delete(
     "/campaigns/{campaign_id}",
     summary="Hapus kampanye K3 (soft delete)",
-    dependencies=[Depends(require_permission(Permission.MANAGE_HSE_CAMPAIGNS))],
 )
 async def delete_campaign(
     campaign_id: UUID,
+    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_HSE_CAMPAIGNS)),
     controller: HseController = Depends(get_controller),
 ) -> dict[str, bool]:
-    return await controller.delete_campaign(campaign_id)
+    return await controller.delete_campaign(campaign_id, current_user)
 
 
 # ================= 2. Gerbang Akseptasi & Audit Pembaca =================

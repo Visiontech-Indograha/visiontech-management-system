@@ -114,13 +114,40 @@ def employee_params(user: CurrentUser) -> dict[str, Any]:
         **viewer_params(user),
         "dir_all": sees_all_employees(user),
         "sens_all": sees_sensitive_employee_fields(user),
+        "dir_bound": False,
+        "dir_offices": [],
     }
+
+
+def directory_is_cross_office(user: CurrentUser) -> bool:
+    """SA/OM (dan V1 OPS) melihat direktori lintas kantor; pemegang izin direktori lain dibatasi kantor tugasnya."""
+    return user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER, "OPS")
+
+
+async def directory_offices(db: AsyncSession, user: CurrentUser) -> list[str]:
+    """Kantor tugas pengguna: kantor utama (`employee.office_id`) + kantor penugasan peran aktif (ADR 0002 12c)."""
+    rows = await BaseRepository(db).fetchall(
+        """
+        SELECT e.office_id::text AS office_id FROM users u
+        JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+        WHERE u.user_id = CAST(:uid AS uuid) AND e.office_id IS NOT NULL
+        UNION
+        SELECT a.office_id::text FROM user_role_assignment a
+        JOIN office o ON o.office_id = a.office_id AND o.delete_at IS NULL
+        WHERE a.user_id = CAST(:uid AS uuid) AND a.delete_at IS NULL AND a.office_id IS NOT NULL
+        """,
+        {"uid": user.user_id},
+    )
+    return sorted(r.office_id for r in rows)
 
 
 async def employee_params_scoped(db: AsyncSession, user: CurrentUser) -> dict[str, Any]:
     """`employee_params` + pembatasan kantor HR/Finance atas kolom sensitif (ADR 0002): izin sensitif yang hanya
     datang dari peran HR berlaku untuk kantor jangkauannya; SA/OM tetap semua. Flag mati = `employee_params`."""
     params = {**employee_params(user), "sens_offices": []}
+    if params["dir_all"] and not directory_is_cross_office(user):
+        params["dir_bound"] = True
+        params["dir_offices"] = await directory_offices(db, user)
     if params["sens_all"] and not user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER):
         restriction = await office_restriction(db, user, Permission.MANAGE_USERS)
         if restriction is not None:
@@ -131,12 +158,15 @@ async def employee_params_scoped(db: AsyncSession, user: CurrentUser) -> dict[st
 
 async def employee_directory_visible(db: AsyncSession, user: CurrentUser, employee_id: UUID | str) -> bool:
     """Apakah satu karyawan terlihat di direktori pengguna (dasar akses foto profil)."""
-    if sees_all_employees(user):
+    if sees_all_employees(user) and directory_is_cross_office(user):
         return True
+    bound = sees_all_employees(user)
     row = await BaseRepository(db).scalar(
         f"SELECT EXISTS (SELECT 1 FROM employee e WHERE e.employee_id = CAST(:target AS uuid) "
-        f"AND {employee_visible_sql('e.employee_id')})",
-        {**viewer_params(user), "target": str(employee_id)},
+        f"AND (CAST(:bound AS boolean) AND e.office_id = ANY(CAST(:offices AS uuid[])) "
+        f"OR NOT CAST(:bound AS boolean) AND {employee_visible_sql('e.employee_id')}))",
+        {**viewer_params(user), "target": str(employee_id), "bound": bound,
+         "offices": await directory_offices(db, user) if bound else []},
     )
     return bool(row)
 

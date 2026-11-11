@@ -1,0 +1,702 @@
+{
+  "src/components/molecules/AllocMatrixGrid.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/molecules/FilePreview.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/molecules/Modal.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/molecules/SignaturePad.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/molecules/VmsDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/molecules/ZoomableImage.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/account/AccountSessionsPanel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/account/FaceBiometricSection.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/alokasi/AllocateDialog.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/assets/AssetLendDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/assets/AssetList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/attendance/AttendanceList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/attendance/AttendanceReviewDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/attendance/OfficeCheckInCard.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "vms/max-lines-hard": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/attendance/SelfieCaptureDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/audit/AuditLogTable.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/audit/BackupRegistryTable.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/auth/LoginForm.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/auth/SetupForm.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/clients/ClientFormDialog.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/clients/ClientList.tsx": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/clients/ClientSitesModal.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/AccountCard.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/DocumentsPanel.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/directory/EmployeeAddressesPanel.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/EmployeeArchivePanel.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/EmployeeCreateDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/EmployeeOffboardDialog.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/EmployeeProfileDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/EmployeeTable.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/RoleAssignmentAddDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/directory/RoleAssignmentsPanel.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/divisions/DivisionFormDialog.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/divisions/DivisionList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/face/FaceCamera.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/hse/CampaignMediaCarousel.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/hse/HseCampaignPhotosField.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/hse/HseCampaignsPanel.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "vms/max-lines-hard": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/hse/HseMandatoryPopupGate.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/leaves/LeaveApplyDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/leaves/LeaveList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/leaves/LeaveReviewDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/media/ImageLightboxModal.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/media/PdfViewerModal.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/media/UniversalMediaModal.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/mess/MessFormDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/mess/MessList.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/mess/MessPlaceFormDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/mess/MessPlaceList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/mess/MessRequestList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/monitoring/OvertimeReviewList.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/offboarding/OffboardingDetailDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/overtime/OvertimeApplyDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/projects/ProjectFormDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/projects/ProjectList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/sites/SiteFormDialog.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/sites/SiteMapPicker.tsx": {
+    "boundaries/dependencies": {
+      "count": 3
+    },
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/surveys/SurveyLayoutMap.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/surveys/SurveyList.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/surveys/SurveyPlanDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/surveys/SurveyPreviewPanel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/surveys/SurveyReviewBar.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/teams/TeamDetailDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-completions/PmSignatureDialog.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-completions/WorkCompletionBomTable.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-completions/WorkCompletionDetailModal.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-completions/WorkCompletionFormDialog.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-completions/WorkCompletionList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-orders/WorkOrderAssignModal.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-orders/WorkOrderBastModal.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-orders/WorkOrderCreateModal.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-orders/WorkOrderList.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/work-orders/WorkOrderSurveyReviewModal.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "vms/max-lines-hard": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-plans/CorrectionsPanel.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-plans/DailyItemsPanel.tsx": {
+    "complexity": {
+      "count": 4
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/work-plans/DailyPlanDetailDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-plans/DailyPlanFormDialog.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    },
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-plans/DailyPlanLocationForm.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-plans/DailyWeekMatrix.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "src/components/organisms/work-plans/WeeklyPresentationDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-types/WorkTypeFormDialog.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-types/WorkTypeList.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/organisms/work-types/WorkTypeMaterialsDialog.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/templates/AppShell.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/templates/alokasi/AllocationTemplate.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/templates/assets/AssetsTemplate.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/templates/directory/EmployeeDetailTemplate.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/components/templates/leaves/LeavesTemplate.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/components/templates/work-plans/DailyPlansTemplate.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "src/hooks/useLiveEvents.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/lib/apiClient.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/lib/auditChanges.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/lib/errors.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/lib/mediaUtils.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/lib/nativeValidity.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/lib/roleAssignments.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "src/pages/leaves/LeavesPage.tsx": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "src/stores/sessionStore.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  }
+}

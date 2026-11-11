@@ -11742,6 +11742,11 @@ export interface components {
              * @description Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'
              */
             survey_assignment_summary?: string | null;
+            /**
+             * Duplicate Title Warning
+             * @description Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama
+             */
+            duplicate_title_warning?: string | null;
             /** Survey Points */
             survey_points?: components["schemas"]["SurveyPointOut"][];
             /** Items */

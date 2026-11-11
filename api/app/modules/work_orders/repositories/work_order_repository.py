@@ -30,15 +30,33 @@ from app.shared.access.scope_rules import (
 class WorkOrderRepository(BaseRepository):
     """Akses data basis data PostgreSQL untuk alur kerja terpadu Work Orders."""
 
+    async def same_title_numbers(self, client_id: UUID | str, title: str, limit: int = 3) -> list[str]:
+        """Nomor WO aktif milik klien yang sama dengan judul identik (tanpa beda huruf besar/kecil), terbaru dulu."""
+        rows = await self.fetchall(
+            """
+            SELECT wo_number FROM client_work_orders
+            WHERE client_id = CAST(:cid AS uuid) AND delete_at IS NULL
+              AND lower(btrim(title)) = lower(btrim(:title))
+              AND status <> 'CANCELLED'
+            ORDER BY create_at DESC LIMIT :limit
+            """,
+            {"cid": str(client_id), "title": title, "limit": limit},
+        )
+        return [str(r.wo_number) for r in rows]
+
     async def generate_wo_number(self) -> str:
         """Menghasilkan nomor WO otomatis unik berbasis tahun-bulan: WO-YYYYMM-XXXX."""
         now = utcnow()
         prefix = f"WO-{now.strftime('%Y%m')}-"
+        # Kunci sampai transaksi selesai: dua WO dibuat bersamaan tidak mendapat nomor sama (409 "Data yang sama").
+        # Nomor terbesar dipakai (bukan create_at terbaru: create_at = awal transaksi, bukan urutan commit).
+        await self.execute("SELECT pg_advisory_xact_lock(hashtext('client_work_orders.wo_number'))")
         row = await self.fetchone(
             """
             SELECT wo_number FROM client_work_orders
             WHERE wo_number LIKE :pfx || '%'
-            ORDER BY create_at DESC LIMIT 1
+              AND substr(wo_number, length(:pfx) + 1) ~ '^[0-9]{1,9}$'
+            ORDER BY CAST(substr(wo_number, length(:pfx) + 1) AS integer) DESC LIMIT 1
             """,
             {"pfx": prefix},
         )

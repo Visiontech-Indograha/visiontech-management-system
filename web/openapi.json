@@ -36143,6 +36143,18 @@
       "title": "Survey Assignment Summary",
       "description": "Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'"
      },
+     "duplicate_title_warning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duplicate Title Warning",
+      "description": "Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama"
+     },
      "survey_points": {
       "items": {
        "$ref": "#/components/schemas/SurveyPointOut"

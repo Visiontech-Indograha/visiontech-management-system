@@ -17945,6 +17945,18 @@
       ],
       "title": "Division Name"
      },
+     "duplicate_title_warning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama",
+      "title": "Duplicate Title Warning"
+     },
      "initial_complaint": {
       "anyOf": [
        {

@@ -971,6 +971,108 @@
     }
    }
   },
+  "/api/v1/work-orders/team-surveys": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "List Team Surveys",
+    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim.",
+    "operationId": "list_team_surveys_api_v1_work_orders_team_surveys_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TeamSurveyOut"
+         },
+         "title": "Response List Team Surveys Api V1 Work Orders Team Surveys Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/work-orders/{work_order_id}": {
    "get": {
     "tags": [
@@ -13477,6 +13579,86 @@
     }
    }
   },
+  "/api/v1/system/settings": {
+   "get": {
+    "tags": [
+     "System"
+    ],
+    "summary": "List System Settings",
+    "description": "Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).",
+    "operationId": "list_system_settings_api_v1_system_settings_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "type": "array",
+         "title": "Response List System Settings Api V1 System Settings Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "System"
+    ],
+    "summary": "Update System Settings",
+    "description": "Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.",
+    "operationId": "update_system_settings_api_v1_system_settings_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SystemSettingsUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "type": "array",
+         "title": "Response Update System Settings Api V1 System Settings Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
   "/api/v1/setup/status": {
    "get": {
     "tags": [
@@ -19320,6 +19502,28 @@
        }
       ],
       "title": "Full Name"
+     },
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
      },
      "effective_roles": {
       "items": {
@@ -31879,6 +32083,91 @@
     ],
     "title": "SyncResponse"
    },
+   "SystemSettingOut": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "type": {
+      "type": "string",
+      "const": "bool",
+      "title": "Type",
+      "default": "bool"
+     },
+     "value": {
+      "type": "boolean",
+      "title": "Value"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "env_force",
+       "db",
+       "env_default"
+      ],
+      "title": "Source"
+     },
+     "env_default": {
+      "type": "boolean",
+      "title": "Env Default"
+     },
+     "locked": {
+      "type": "boolean",
+      "title": "Locked"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "description",
+     "value",
+     "source",
+     "env_default",
+     "locked"
+    ],
+    "title": "SystemSettingOut"
+   },
+   "SystemSettingsUpdate": {
+    "properties": {
+     "values": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "type": "object",
+      "maxProperties": 20,
+      "minProperties": 1,
+      "title": "Values"
+     }
+    },
+    "type": "object",
+    "required": [
+     "values"
+    ],
+    "title": "SystemSettingsUpdate",
+    "description": "Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka)."
+   },
    "TeamAvailabilityItem": {
     "properties": {
      "team_id": {
@@ -32283,6 +32572,131 @@
      "leader_name"
     ],
     "title": "TeamOption"
+   },
+   "TeamSurveyOut": {
+    "properties": {
+     "survey_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Survey Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "wo_number": {
+      "type": "string",
+      "title": "Wo Number"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_radius_m": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Radius M"
+     },
+     "survey_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Survey Date"
+     },
+     "survey_status": {
+      "type": "string",
+      "title": "Survey Status"
+     },
+     "surveyor_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Id"
+     },
+     "surveyor_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Name"
+     },
+     "filled_points": {
+      "type": "integer",
+      "title": "Filled Points",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "survey_id",
+     "work_order_id",
+     "wo_number",
+     "title",
+     "survey_date",
+     "survey_status"
+    ],
+    "title": "TeamSurveyOut",
+    "description": "Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim)."
    },
    "TeamUpdate": {
     "properties": {
@@ -35256,12 +35670,14 @@
         "type": "null"
        }
       ],
-      "title": "Survey Date"
+      "title": "Survey Date",
+      "description": "Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -35660,6 +36076,30 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "survey_assignment_summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Assignment Summary",
+      "description": "Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'"
+     },
+     "duplicate_title_warning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duplicate Title Warning",
+      "description": "Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama"
      },
      "survey_points": {
       "items": {

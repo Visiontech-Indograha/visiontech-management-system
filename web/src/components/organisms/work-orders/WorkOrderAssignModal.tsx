@@ -55,7 +55,7 @@ export function WorkOrderAssignModal({
       title={`Tugaskan Tim Survei — ${workOrder.wo_number}`}
       size="lg"
     >
-      <FormBlock onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <FormBlock onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
         <div className="bg-surface-elevated/50 p-3 rounded-lg border border-border/50 text-sm space-y-1">
           <TextBlock className="font-semibold text-ink">{workOrder.title}</TextBlock>
           <div className="text-muted-foreground text-xs">

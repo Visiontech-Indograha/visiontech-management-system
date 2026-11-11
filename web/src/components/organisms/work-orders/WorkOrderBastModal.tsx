@@ -59,7 +59,7 @@ export function WorkOrderBastModal({
       title={`Tandatangani surat serah terima — ${workOrder.wo_number}`}
       size="xl"
     >
-      <FormBlock onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <FormBlock onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
         {/* Info Box */}
         <div className="bg-surface-elevated/60 p-3 rounded-lg border border-border text-xs space-y-1">
           <div className="flex items-center justify-between">

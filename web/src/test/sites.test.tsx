@@ -107,4 +107,16 @@ describe("Lokasi kerja (/sites)", () => {
     fireEvent.change(within(dialog).getByLabelText("Bujur (lng)"), { target: { value: "101.4" } });
     await waitFor(() => expect(dialog.querySelector(".leaflet-marker-icon")).not.toBeNull());
   });
+
+  it("kirim kosong: Nama dan titik lokasi ditandai per kolom dengan pesan Indonesia", async () => {
+    const calls = mockApi((c) => (c.url === "/offices" ? { data: [] } : undefined));
+    renderRoute("/sites", { role: "PM" });
+    await screen.findByText(/Belum ada lokasi kerja/);
+    fireEvent.click(screen.getAllByRole("button", { name: "Tambah lokasi" })[0]);
+    const dialog = screen.getByRole("dialog", { name: "Tambah lokasi kerja" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Simpan" }));
+    expect(await within(dialog).findByText("Nama lokasi wajib diisi.")).toBeInTheDocument();
+    expect(within(dialog).getAllByText(/Pilih titik di peta/).length).toBe(2);
+    expect(calls.some((c) => c.method === "post")).toBe(false);
+  });
 });

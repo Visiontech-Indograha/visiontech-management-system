@@ -165,7 +165,7 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
         </div>
 
         {isFormOpen && (
-          <FormBlock onSubmit={handleSubmit} className="rounded-panel border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <FormBlock onSubmit={handleSubmit} noValidate className="rounded-panel border border-primary/20 bg-primary/5 p-4 space-y-3">
             <TextBlock className="font-semibold text-primary">
               {editingSiteId ? "Ubah Lokasi Cabang / Site" : "Tambah Lokasi Cabang Baru"}
             </TextBlock>

@@ -127,7 +127,7 @@ export function WorkOrderCreateModal({
         </div>
       }
     >
-      <FormBlock id="create-wo-form" onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <FormBlock id="create-wo-form" noValidate onSubmit={handleSubmit} className="space-y-4 pt-2">
         <div className="space-y-3">
           <TextField
             label="Judul Tugas / Pekerjaan *"

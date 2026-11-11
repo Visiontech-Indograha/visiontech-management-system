@@ -88,6 +88,11 @@ class OfficeRepository(BaseRepository):
         )
         return await self.get(office_id)
 
+    async def has_main(self) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM office WHERE is_main_office AND delete_at IS NULL)"
+        ))
+
     async def set_main(self, office_id: UUID | str) -> None:
         """Jadikan kantor ini kantor utama (yang lama dilepas lebih dulu — uq_single_main_office)."""
         await self.execute(

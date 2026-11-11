@@ -200,13 +200,15 @@ class PlanItemRepository(BaseRepository):
                                         is_main_deliverable,
                                         completion_id, depends_on_item_id, target_qty, completed_qty, progress_percent,
                                         status, start_time, end_time, location_name, site_lat, site_lng,
-                                        assigned_employee_ids, notes, origin_item_id)
+                                        assigned_employee_ids, notes, origin_item_id, work_order_id)
             VALUES (CAST(:daily AS uuid), CAST(:work_type_id AS uuid), :title, :task_phase, :unit_measure,
                     :is_main_deliverable,
                     CAST(:completion_id AS uuid), CAST(:depends_on_item_id AS uuid), :target_qty, 0, 0, 'TODO',
                     CAST(:start_time AS time), CAST(:end_time AS time), :location_name,
                     CAST(:site_lat AS numeric), CAST(:site_lng AS numeric), CAST(:assigned_employee_ids AS jsonb),
-                    :notes, CAST(:origin_item_id AS uuid))
+                    :notes, CAST(:origin_item_id AS uuid),
+                    (SELECT wc.work_order_id FROM work_completion wc
+                     WHERE wc.completion_id = CAST(:completion_id AS uuid)))
             RETURNING item_id
             """,
             {"daily": str(daily_plan_id), "origin_item_id": None, **p},
@@ -327,10 +329,10 @@ class PlanItemRepository(BaseRepository):
             INSERT INTO work_plan_item (daily_plan_id, work_type_id, title, task_phase, is_main_deliverable,
                                         completion_id, depends_on_item_id, target_qty, completed_qty, progress_percent,
                                         status, start_time, end_time, location_name, site_lat, site_lng,
-                                        assigned_employee_ids, notes, origin_item_id)
+                                        assigned_employee_ids, notes, origin_item_id, work_order_id)
             SELECT CAST(:target AS uuid), work_type_id, title, task_phase, is_main_deliverable, completion_id,
                    depends_on_item_id, target_qty - completed_qty, 0, 0, 'TODO', start_time, end_time, location_name,
-                   site_lat, site_lng, assigned_employee_ids, notes, item_id
+                   site_lat, site_lng, assigned_employee_ids, notes, item_id, work_order_id
             FROM work_plan_item WHERE item_id = CAST(:id AS uuid)
             RETURNING item_id
             """,

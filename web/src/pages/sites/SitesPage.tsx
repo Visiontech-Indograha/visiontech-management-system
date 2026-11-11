@@ -10,6 +10,7 @@ export function SitesPage() {
   const controls = useListControls({ prefix: "lok_" });
   const sites = usePagedList<Site>(["sites"], "/offices", controls);
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Site | null>(null);
   const [removing, setRemoving] = useState<Site | null>(null);
 
   return (
@@ -17,7 +18,10 @@ export function SitesPage() {
       controls={controls}
       sites={sites}
       adding={adding}
+      editing={editing}
       removing={removing}
+      onEdit={setEditing}
+      onCloseEdit={() => setEditing(null)}
       onAdd={() => setAdding(true)}
       onRemove={setRemoving}
       onCloseAdd={() => setAdding(false)}

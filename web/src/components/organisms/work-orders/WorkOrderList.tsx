@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { statusLabel } from "@/lib/labels";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import {
   Briefcase,
@@ -148,7 +149,7 @@ export function WorkOrderList({
       default:
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
-            <TextBlock as="span">{status}</TextBlock>
+            <TextBlock as="span">{statusLabel(status)}</TextBlock>
           </div>
         );
     }

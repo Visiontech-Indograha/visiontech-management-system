@@ -466,7 +466,23 @@ class AttendanceSessionRepository(BaseRepository):
             """
         )
         if main_office is None:
-            raise LookupError("kantor utama belum ditetapkan (office.is_main_office)")
+            # Instalasi baru tanpa kantor utama: jangan jatuh ke 500. Pakai kantor karyawan sendiri (lalu kantor mana
+            # pun yang tertua) sebagai acuan zona kota & uang makan sampai admin menetapkan kantor utama.
+            main_office = await self.fetchone(
+                """
+                SELECT o.office_id, o.latitude, o.longitude, o.city_boundary_radius_m,
+                       o.in_city_meal_rate, o.out_city_meal_rate
+                FROM office o
+                WHERE o.delete_at IS NULL
+                ORDER BY (o.office_id = (SELECT e.office_id FROM employee e
+                                         WHERE e.employee_id = CAST(:emp AS uuid))) DESC,
+                         o.create_at ASC, o.office_id ASC
+                LIMIT 1
+                """,
+                {"emp": str(employee_id)},
+            )
+        if main_office is None:
+            raise LookupError("belum ada kantor sama sekali")
         dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
         out_of_town_plan = bool(
             await self.scalar(

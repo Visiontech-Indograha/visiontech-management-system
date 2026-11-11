@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
 import '../../shared/ui/vms_ui.dart';
+import 'wo_survey_form_screen.dart';
 
 const woSurveyStatusLabel = {
   'DRAFT': 'Sedang diisi',
@@ -85,14 +86,29 @@ class _WoTeamSurveysSectionState extends ConsumerState<WoTeamSurveysSection> {
     try {
       final engine = ref.read(syncEngineProvider);
       final items = (await engine.fetchList('wo_team_surveys', () => engine.api.teamSurveys())).items;
-      if (mounted) setState(() => _items = items);
+      // Survei yang baru dikirim dari HP (masih di antrean) tidak ditampilkan lagi sebagai "menunggu".
+      final queued = await engine.pendingWoSurveyIds();
+      final shown = [for (final i in items) if (!queued.contains('${i['work_order_id']}')) i];
+      if (mounted) setState(() => _items = shown);
     } catch (e) {
       if (mounted) setState(() => _error = apiErrorMessage(e));
     }
   }
 
-  void _open(Map<String, dynamic> s) {
-    showModalBottomSheet<void>(
+  Future<void> _open(Map<String, dynamic> s) async {
+    if (s['survey_status'] == 'DRAFT') {
+      final done = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => WoSurveyFormScreen(survey: s)),
+      );
+      if (done == true) {
+        if (mounted) {
+          setState(() => _items = [for (final i in _items ?? const <Map<String, dynamic>>[]) if (i != s) i]);
+        }
+        await _load();
+      }
+      return;
+    }
+    await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (_) => SafeArea(
@@ -106,10 +122,7 @@ class _WoTeamSurveysSectionState extends ConsumerState<WoTeamSurveysSection> {
               const SizedBox(height: 12),
               Text('Tim: ${s['surveyor_team_name'] ?? '-'}'),
               const SizedBox(height: 4),
-              const Text(
-                'Pengisian titik survei dari HP untuk work order belum tersedia. '
-                'Hubungi PM bila perlu bantuan.',
-              ),
+              const Text('Survei ini sudah dikirim. Hubungi PM bila perlu bantuan.'),
             ],
           ),
         ),

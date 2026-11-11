@@ -2,6 +2,8 @@
 # Backup DB VMS (R-20): pg_dump basis data yang DIPAKAI API (dibaca dari api.env, bukan POSTGRES_DB
 # kontainer — keduanya berbeda di server ini) → berkas lokal → unggah ke MinIO bucket `vms-backups`.
 # Retensi: 7 berkas lokal, 30 hari di MinIO. Dipanggil cron harian dan oleh autodeploy.sh.
+# Kepatuhan UU PDP No. 27/2022: opsi VMS_BACKUP_EXCLUDE_BIOMETRIC=1 mengecualikan data biometrik mentah
+# (face_embedding di tabel employee). Pembersihan biometrik mandiri: deploy/sanitasi-dump-biometrik.sh.
 # Pemakaian: backup.sh [label]   → mencetak nama berkas; kode keluar ≠ 0 bila gagal.
 set -euo pipefail
 
@@ -43,7 +45,12 @@ DB=$(grep -E '^DATABASE_URL=' api.env | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#
 [ -n "$DB" ] || { echo "Nama DB tidak ditemukan di api.env" >&2; exit 2; }
 FILE=$(backup_file_name "${BKNAME:-$DB}" "$LABEL")
 
-docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc" > "$FILE"
+DUMP_EXTRA=""
+if [ "${VMS_BACKUP_EXCLUDE_BIOMETRIC:-0}" = 1 ] || [ "${VMS_BACKUP_SANITIZE_PDP:-0}" = 1 ]; then
+  DUMP_EXTRA="--exclude-table-data='*.employee'"
+fi
+
+docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc $DUMP_EXTRA" > "$FILE"
 [ -s "$FILE" ] || { echo "Backup kosong: $FILE" >&2; exit 3; }
 
 # Unggah lewat kontainer API (klien MinIO & kredensialnya sudah ada di sana).

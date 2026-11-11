@@ -35,10 +35,15 @@ export function WorkOrderAssignModal({
       return;
     }
 
+    if (!surveyDate) {
+      toast.error("Isi tanggal survei terlebih dahulu");
+      return;
+    }
+
     try {
       await assignMutation.mutateAsync({
         lead_team_id: leadTeamId,
-        survey_date: surveyDate || undefined,
+        survey_date: surveyDate,
         notes: notes.trim() || undefined,
       });
       toast.success(`Tim survei berhasil ditugaskan untuk WO ${workOrder.wo_number}`);

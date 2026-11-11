@@ -13,10 +13,12 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
+from app.core.list_params import ListParams, apply_list
 from app.core.security import CurrentUser
 from app.modules.work_orders.controllers.work_order_controller import WorkOrderController
 from app.modules.work_orders.schemas.work_order_schema import (
     SurveySubmitIn,
+    TeamSurveyOut,
     WorkOrderAssignSurvey,
     WorkOrderCreate,
     WorkOrderDetailOut,
@@ -70,6 +72,25 @@ async def create_work_order(
 ) -> WorkOrderDetailOut:
     """Buat Work Order baru dari klien (Status awal: WAITING_SURVEY)."""
     return await controller.create_work_order(current_user, data)
+
+
+@router.get("/team-surveys", response_model=list[TeamSurveyOut])
+async def list_team_surveys(
+    response: Response,
+    params: ListParams = Depends(),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkOrderController = Depends(),
+) -> list[TeamSurveyOut]:
+    """Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.
+    Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim."""
+    rows = await controller.list_team_surveys(current_user)
+    return list(
+        apply_list(
+            rows, params, response,
+            lambda r: (r.wo_number, r.title, r.client_name, r.site_name, r.surveyor_team_name),
+            prefix=True,
+        )
+    )
 
 
 @router.get("/{work_order_id}", response_model=WorkOrderDetailOut)

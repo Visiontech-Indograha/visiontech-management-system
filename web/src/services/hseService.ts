@@ -35,6 +35,8 @@ export interface HseCampaign {
   end_date: string;
   is_mandatory: boolean;
   cooldown_seconds: number;
+  /** false = sudah diarsipkan (tidak tampil lagi ke karyawan). */
+  is_active: boolean;
   created_at: string;
 }
 
@@ -80,6 +82,7 @@ function mapCampaign(campaign: CampaignDto | ActiveCampaignDto): HseCampaign {
     end_date: campaign.end_date,
     is_mandatory: campaign.is_mandatory,
     cooldown_seconds: campaign.cooldown_seconds,
+    is_active: "is_active" in campaign ? Boolean(campaign.is_active) : true,
     created_at: campaign.create_at,
   };
 }
@@ -158,6 +161,16 @@ export async function createHseCampaign(payload: {
   };
   const res = await api.post<CampaignDto>("/hse/campaigns", apiPayload);
   return mapCampaign(res.data);
+}
+
+/** Arsipkan kampanye (PUT is_active=false): berhenti tampil ke karyawan, riwayat pembaca tetap ada. */
+export async function archiveHseCampaign(campaignId: string): Promise<void> {
+  await api.put(`/hse/campaigns/${campaignId}`, { is_active: false } satisfies Schemas["HseCampaignUpdate"]);
+}
+
+/** Hapus kampanye (DELETE). */
+export async function deleteHseCampaign(campaignId: string): Promise<void> {
+  await api.delete(`/hse/campaigns/${campaignId}`);
 }
 
 export async function fetchCampaignReaders(campaignId: string): Promise<CampaignReader[]> {

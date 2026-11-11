@@ -4,6 +4,8 @@ import {
   fetchHseCampaigns,
   createHseCampaign,
   fetchCampaignReaders,
+  archiveHseCampaign,
+  deleteHseCampaign,
   fetchVehicleInspections,
   verifyVehicleInspection,
   type HseCampaign,
@@ -26,9 +28,13 @@ import {
 } from "@/components/molecules/Glyphs";
 import { htmlToText } from "@/lib/htmlToText";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { useSession } from "@/stores/sessionStore";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { uploadFiles } from "@/services/uploadService";
 import { carouselConfigError, CAROUSEL_MAX_SECONDS } from "@/lib/hseCarousel";
+import { campaignPublishBlocker, HSE_TITLE_MAX } from "@/lib/hseCampaignRules";
 import { HseCampaignPhotosField, type CampaignPhotoDraft } from "@/components/organisms/hse/HseCampaignPhotosField";
 
 export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action: ReactNode; body: ReactNode }) => ReactNode }) {
@@ -38,6 +44,10 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
   const [selectedCampaignForAudit, setSelectedCampaignForAudit] = useState<HseCampaign | null>(null);
 
   // Form State Buat Kampanye
+  const { me } = useSession();
+  const canManage = Boolean(me?.permissions?.includes("manage:hse_campaigns"));
+  const [pendingAction, setPendingAction] = useState<{ kind: "archive" | "delete"; campaign: HseCampaign } | null>(null);
+  const [titleError, setTitleError] = useState("");
   const [title, setTitle] = useState("");
   const [contentBody, setContentBody] = useState("");
   const [targetAudience, setTargetAudience] = useState<"ALL" | "FIELD" | "OFFICE">("ALL");
@@ -48,6 +58,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
   );
   const [isMandatory, setIsMandatory] = useState(true);
   const [cooldownSeconds, setCooldownSeconds] = useState(10);
+  const publishBlocker = campaignPublishBlocker(title, contentBody);
   const configError = carouselConfigError(photos.length, Number(cooldownSeconds));
 
   // Query Kampanye K3
@@ -94,9 +105,24 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
       setPhotos([]);
       queryClient.invalidateQueries({ queryKey: ["hse", "campaigns"] });
     },
-    onError: () => {
-      toast.error("Gagal menerbitkan kampanye keselamatan. Periksa data kembali.");
+    onError: (err) => {
+      const setField = (name: string, e: { message: string }) => {
+        if (name === "title") setTitleError(e.message);
+      };
+      if (applyFieldErrors(err, setField as never, ["title"])) return;
+      toast.error(errorMessage(err, "Gagal menerbitkan kampanye keselamatan. Periksa data kembali."));
     },
+  });
+
+  const manageMutation = useMutation({
+    mutationFn: ({ kind, campaign }: { kind: "archive" | "delete"; campaign: HseCampaign }) =>
+      kind === "archive" ? archiveHseCampaign(campaign.id) : deleteHseCampaign(campaign.id),
+    onSuccess: (_d, v) => {
+      toast.success(v.kind === "archive" ? "Kampanye diarsipkan." : "Kampanye dihapus.");
+      setPendingAction(null);
+      queryClient.invalidateQueries({ queryKey: ["hse", "campaigns"] });
+    },
+    onError: (err) => toast.error(errorMessage(err, "Gagal memproses kampanye. Coba lagi.")),
   });
 
   // Mutasi Verifikasi Inspeksi
@@ -202,6 +228,9 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                       )}
                     </div>
 
+                    {!c.is_active && (
+                      <TextBlock as="span" className="text-xs font-semibold text-mist">Diarsipkan</TextBlock>
+                    )}
                     <TextBlock className="font-bold text-ink text-base line-clamp-1">
                       {c.title}
                     </TextBlock>
@@ -214,6 +243,17 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                     <TextBlock as="span" className="text-[11px] text-mist">
                       {c.start_date} s/d {c.end_date}
                     </TextBlock>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                    {canManage && c.is_active && (
+                      <ActionButton variant="outline" size="sm" onClick={() => setPendingAction({ kind: "archive", campaign: c })} className="text-xs">
+                        <TextBlock as="span">Arsipkan</TextBlock>
+                      </ActionButton>
+                    )}
+                    {canManage && (
+                      <ActionButton variant="outline" size="sm" onClick={() => setPendingAction({ kind: "delete", campaign: c })} className="text-xs text-danger">
+                        <TextBlock as="span">Hapus</TextBlock>
+                      </ActionButton>
+                    )}
                     <ActionButton
                       variant="outline"
                       size="sm"
@@ -223,6 +263,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                       <Eye size={14} />
                       <TextBlock as="span">Audit Pembaca</TextBlock>
                     </ActionButton>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -342,6 +383,21 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
         </div>
       )}
 
+      <ConfirmDialog
+        open={pendingAction !== null}
+        title={pendingAction?.kind === "delete" ? "Hapus kampanye ini?" : "Arsipkan kampanye ini?"}
+        message={
+          pendingAction?.kind === "delete"
+            ? `Kampanye "${pendingAction.campaign.title}" akan dihapus dan tidak tampil lagi.`
+            : `Kampanye "${pendingAction?.campaign.title ?? ""}" tidak akan tampil lagi ke karyawan. Riwayat pembaca tetap tersimpan.`
+        }
+        confirmLabel={pendingAction?.kind === "delete" ? "Ya, hapus" : "Ya, arsipkan"}
+        danger={pendingAction?.kind === "delete"}
+        busy={manageMutation.isPending}
+        onConfirm={() => pendingAction && manageMutation.mutate(pendingAction)}
+        onClose={() => setPendingAction(null)}
+      />
+
       {/* Modal Buat Kampanye K3 */}
       {isCreateOpen && (
         <VmsDialog
@@ -351,7 +407,12 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
           size="xl"
           className="sm:w-[min(960px,94vw)] sm:max-w-[960px]"
           footer={
-            <div className="flex justify-end gap-2 w-full">
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full">
+              {publishBlocker && (
+                <TextBlock id="hse-publish-blocker" className="mr-auto text-xs text-mist">
+                  {publishBlocker}
+                </TextBlock>
+              )}
               <ActionButton
                 variant="outline"
                 onClick={() => setIsCreateOpen(false)}
@@ -361,8 +422,12 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
               </ActionButton>
               <ActionButton
                 variant="default"
-                disabled={!title || !contentBody || createMutation.isPending || configError !== null}
-                onClick={() => createMutation.mutate()}
+                disabled={publishBlocker !== null || createMutation.isPending || configError !== null}
+                aria-describedby={publishBlocker ? "hse-publish-blocker" : undefined}
+                onClick={() => {
+                  setTitleError("");
+                  createMutation.mutate();
+                }}
               >
                 <TextBlock as="span">
                   {createMutation.isPending ? "Menerbitkan..." : "Terbitkan Kampanye"}
@@ -381,9 +446,14 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={HSE_TITLE_MAX}
+                aria-invalid={titleError !== ""}
                 placeholder="Contoh: Kewajiban Penggunaan Helm dan Body Harness di Tiang"
                 className="w-full rounded-xl border border-line bg-surface p-3 text-sm outline-none focus:border-primary"
               />
+              {titleError && (
+                <TextBlock role="alert" className="mt-1 text-sm font-medium text-destructive">{titleError}</TextBlock>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

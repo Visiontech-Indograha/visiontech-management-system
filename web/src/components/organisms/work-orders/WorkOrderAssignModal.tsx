@@ -5,8 +5,12 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { TextField, TextAreaField, SelectField } from "@/components/molecules/Field";
 import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { useTeams } from "@/services/teamService";
 import { useAssignSurvey, type WorkOrder } from "@/services/workOrderService";
+
+export const SURVEY_DATE_REQUIRED =
+  "Tanggal survei wajib diisi agar tim bisa melihat tugasnya di HP.";
 
 interface WorkOrderAssignModalProps {
   workOrder: WorkOrder | null;
@@ -22,6 +26,9 @@ export function WorkOrderAssignModal({
     new Date().toISOString().split("T")[0]
   );
   const [notes, setNotes] = useState("");
+  const [dateError, setDateError] = useState("");
+  const [teamError, setTeamError] = useState("");
+  const [summary, setSummary] = useState("");
 
   const { data: teams = [] } = useTeams();
   const assignMutation = useAssignSurvey(workOrder?.work_order_id || "");
@@ -30,26 +37,34 @@ export function WorkOrderAssignModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDateError("");
+    setTeamError("");
     if (!leadTeamId) {
-      toast.error("Pilih tim survei terlebih dahulu");
+      setTeamError("Pilih tim survei terlebih dahulu.");
       return;
     }
-
     if (!surveyDate) {
-      toast.error("Isi tanggal survei terlebih dahulu");
+      setDateError(SURVEY_DATE_REQUIRED);
       return;
     }
 
     try {
-      await assignMutation.mutateAsync({
+      const result = await assignMutation.mutateAsync({
         lead_team_id: leadTeamId,
         survey_date: surveyDate,
         notes: notes.trim() || undefined,
       });
       toast.success(`Tim survei berhasil ditugaskan untuk WO ${workOrder.wo_number}`);
-      onClose();
-    } catch {
-      toast.error("Gagal menugaskan tim survei");
+      setSummary(result.survey_assignment_summary || "");
+      if (!result.survey_assignment_summary) onClose();
+    } catch (err) {
+      const setField = (name: string, e: { message: string }) => {
+        if (name === "survey_date") setDateError(e.message);
+        else if (name === "lead_team_id") setTeamError(e.message);
+      };
+      if (!applyFieldErrors(err, setField as never, ["survey_date", "lead_team_id"])) {
+        toast.error(errorMessage(err, "Gagal menugaskan tim survei"));
+      }
     }
   };
 
@@ -60,6 +75,18 @@ export function WorkOrderAssignModal({
       title={`Tugaskan Tim Survei — ${workOrder.wo_number}`}
       size="lg"
     >
+      {summary ? (
+        <div className="space-y-4 pt-2">
+          <TextBlock role="status" className="rounded-lg border border-border bg-surface-elevated p-3 text-sm text-ink">
+            {summary}
+          </TextBlock>
+          <div className="flex justify-end">
+            <ActionButton type="button" variant="default" onClick={onClose}>
+              <TextBlock as="span">Tutup</TextBlock>
+            </ActionButton>
+          </div>
+        </div>
+      ) : (
       <FormBlock onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
         <div className="bg-surface-elevated/50 p-3 rounded-lg border border-border/50 text-sm space-y-1">
           <TextBlock className="font-semibold text-ink">{workOrder.title}</TextBlock>
@@ -78,6 +105,7 @@ export function WorkOrderAssignModal({
             label="Pilih tim survei *"
             value={leadTeamId}
             onChange={(e) => setLeadTeamId(e.target.value)}
+            error={teamError || undefined}
             required
           >
             <ControlOption value="">-- Pilih Tim Lapangan --</ControlOption>
@@ -93,6 +121,7 @@ export function WorkOrderAssignModal({
             type="date"
             value={surveyDate}
             onChange={(e) => setSurveyDate(e.target.value)}
+            error={dateError || undefined}
             required
           />
 
@@ -125,6 +154,7 @@ export function WorkOrderAssignModal({
           </ActionButton>
         </div>
       </FormBlock>
+      )}
     </VmsDialog>
   );
 }

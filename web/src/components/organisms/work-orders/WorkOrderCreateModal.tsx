@@ -12,6 +12,12 @@ import { useTeams } from "@/services/teamService";
 import { useCreateWorkOrder } from "@/services/workOrderService";
 import { useSession } from "@/stores/sessionStore";
 import { divisionScopeIds } from "@/lib/divisionScope";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
+import { pmCandidates } from "@/lib/pmCandidates";
+
+/** Batas judul sama dengan API (WorkOrderCreate.title: 3 sampai 200 karakter). */
+export const WO_TITLE_MIN = 3;
+export const WO_TITLE_MAX = 200;
 
 interface WorkOrderCreateModalProps {
   isOpen: boolean;
@@ -31,6 +37,7 @@ export function WorkOrderCreateModal({
   const [title, setTitle] = useState("");
   const [initialComplaint, setInitialComplaint] = useState("");
   const [leadTeamId, setLeadTeamId] = useState("");
+  const [titleError, setTitleError] = useState("");
 
   const { me } = useSession();
   // PM hanya boleh memilih divisinya sendiri; OM/SA tetap bebas memilih.
@@ -51,6 +58,8 @@ export function WorkOrderCreateModal({
   });
   const { data: teams = [] } = useTeams();
 
+  const pmOptions = pmCandidates(employeesData?.items);
+
   const createMutation = useCreateWorkOrder();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,13 +73,22 @@ export function WorkOrderCreateModal({
       toast.error("Pilih divisi terlebih dahulu");
       return;
     }
-    const finalPmId = pmId || (employeesData?.items && employeesData.items.length > 0 ? employeesData.items[0].employee_id : "");
+    const finalPmId = pmId || (pmOptions.length === 1 ? pmOptions[0].employee_id : "");
     if (!finalPmId) {
       toast.error("Pilih Project Manager (PM) penanggung jawab");
       return;
     }
+    setTitleError("");
     if (!title.trim()) {
-      toast.error("Judul tugas atau pekerjaan wajib diisi");
+      setTitleError("Judul tugas atau pekerjaan wajib diisi.");
+      return;
+    }
+    if (title.trim().length < WO_TITLE_MIN) {
+      setTitleError(`Judul minimal ${WO_TITLE_MIN} karakter.`);
+      return;
+    }
+    if (title.trim().length > WO_TITLE_MAX) {
+      setTitleError(`Judul maksimal ${WO_TITLE_MAX} karakter.`);
       return;
     }
 
@@ -86,8 +104,12 @@ export function WorkOrderCreateModal({
       });
       toast.success("Tugas klien baru berhasil dibuat");
       onClose();
-    } catch {
-      toast.error("Gagal membuat tugas klien");
+    } catch (err) {
+      const setField = (name: string, e: { message: string }) => {
+        if (name === "title") setTitleError(e.message);
+      };
+      if (applyFieldErrors(err, setField as never, ["title"])) return;
+      toast.error(errorMessage(err, "Gagal membuat tugas klien"));
     }
   };
 
@@ -134,6 +156,8 @@ export function WorkOrderCreateModal({
             placeholder="Contoh: Perbaikan Kabel Fiber Optic Cut Ruas Fatmawati"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            maxLength={WO_TITLE_MAX}
+            error={titleError || undefined}
             required
           />
 
@@ -192,7 +216,7 @@ export function WorkOrderCreateModal({
               required
             >
               <ControlOption value="">-- Pilih PM --</ControlOption>
-              {(employeesData?.items || []).map((emp) => (
+              {pmOptions.map((emp) => (
                 <ControlOption key={emp.employee_id} value={emp.employee_id}>
                   {emp.full_name}
                 </ControlOption>

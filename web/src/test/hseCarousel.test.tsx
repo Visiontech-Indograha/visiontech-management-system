@@ -213,6 +213,7 @@ describe("HseMandatoryPopupGate: tombol konfirmasi terkunci sampai waktu habis",
     end_date: "2026-11-30",
     is_mandatory: true,
     cooldown_seconds: 50,
+    is_active: true,
     created_at: "2026-11-01T00:00:00Z",
   };
 

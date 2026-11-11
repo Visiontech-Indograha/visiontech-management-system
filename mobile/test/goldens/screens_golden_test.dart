@@ -82,12 +82,14 @@ void main() {
     required String berkas,
     List<Override> extra = const [],
     bool signedIn = true,
+    // Layar ber-Timer (hitung mundur K3): jam palsu tester, bukan jam dinding, supaya jumlah detak tetap.
+    bool jamPalsu = false,
   }) async {
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.runAsync(() async {
+    Future<void> pasang() async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -107,10 +109,16 @@ void main() {
         ),
       );
       for (var i = 0; i < 12; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+        if (!jamPalsu) await Future<void>.delayed(const Duration(milliseconds: 50));
         await tester.pump(const Duration(milliseconds: 50));
       }
-    });
+    }
+
+    if (jamPalsu) {
+      await pasang();
+    } else {
+      await tester.runAsync(pasang);
+    }
     await tester.pump(const Duration(seconds: 1));
     await expectLater(find.byType(ShadApp).first, matchesGoldenFile('$berkas.png'));
   }
@@ -182,6 +190,7 @@ void main() {
         photoBuilder: (_, id) => ColoredBox(color: Colors.blueGrey, child: Center(child: Text('foto $id'))),
       ),
       berkas: 'k3_popup',
+      jamPalsu: true,
     );
   }, skip: _skip);
 

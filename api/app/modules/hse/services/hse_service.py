@@ -9,6 +9,7 @@ Layanan logika bisnis untuk domain HSE (Health, Safety & Environment):
 """
 from __future__ import annotations
 
+import contextlib
 from datetime import date
 from typing import Any
 from uuid import UUID
@@ -121,12 +122,21 @@ class HseService:
         offset: int = 0,
         is_active: bool | None = None,
         target_audience: str | None = None,
+        current_user: CurrentUser | None = None,
     ) -> list[HseCampaignResponse]:
+        offices = await self._offices(current_user, Permission.MANAGE_HSE_CAMPAIGNS) if current_user else None
+        # Jika bukan SA/OM, filter berdasarkan kantor karyawan (atau kantor penugasan)
+        user_office_id = None
+        if offices and len(offices) == 1 and offices[0] != "00000000-0000-0000-0000-000000000000":
+            with contextlib.suppress(ValueError):
+                user_office_id = UUID(offices[0])
+
         items = await self.campaign_repo.list_campaigns(
             limit=limit,
             offset=offset,
             is_active=is_active,
             target_audience=target_audience,
+            office_id=user_office_id,
         )
         return [HseCampaignResponse.model_validate(item) for item in items]
 

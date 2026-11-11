@@ -48,6 +48,7 @@ async def list_campaigns(
     offset: int = Query(0, ge=0),
     is_active: bool | None = Query(None),
     target_audience: str | None = Query(None),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: HseController = Depends(get_controller),
 ) -> list[HseCampaignResponse]:
     return await controller.list_campaigns(
@@ -55,6 +56,7 @@ async def list_campaigns(
         offset=offset,
         is_active=is_active,
         target_audience=target_audience,
+        current_user=current_user,
     )
 
 

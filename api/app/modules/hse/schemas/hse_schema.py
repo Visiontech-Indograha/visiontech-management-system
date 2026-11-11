@@ -56,6 +56,7 @@ class HseCampaignBase(BaseModel):
     start_date: date = Field(..., description="Tanggal awal penayangan kampanye")
     end_date: date = Field(..., description="Tanggal akhir penayangan kampanye")
     is_active: bool = Field(default=True, description="Status keaktifan kampanye")
+    office_id: UUID | None = Field(default=None, description="ID Kantor target kampanye K3 (opsional)")
 
 
 class HseCampaignCreate(HseCampaignBase):
@@ -76,6 +77,7 @@ class HseCampaignUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     is_active: bool | None = None
+    office_id: UUID | None = None
 
 
 class HseCampaignResponse(HseCampaignBase):
@@ -84,6 +86,7 @@ class HseCampaignResponse(HseCampaignBase):
     campaign_id: UUID
     created_by_id: UUID
     creator_name: str | None = None
+    office_name: str | None = None
     total_readers: int = 0
     create_at: datetime
     update_at: datetime

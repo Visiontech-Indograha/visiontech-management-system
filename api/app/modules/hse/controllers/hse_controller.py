@@ -36,12 +36,14 @@ class HseController:
         offset: int = 0,
         is_active: bool | None = None,
         target_audience: str | None = None,
+        current_user: CurrentUser | None = None,
     ) -> list[HseCampaignResponse]:
         return await self.service.list_campaigns(
             limit=limit,
             offset=offset,
             is_active=is_active,
             target_audience=target_audience,
+            current_user=current_user,
         )
 
     async def create_campaign(

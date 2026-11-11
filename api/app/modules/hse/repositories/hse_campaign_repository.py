@@ -25,18 +25,18 @@ class HseCampaignRepository(BaseRepository):
             INSERT INTO hse_campaigns (
                 title, summary, content_html, media_path, media_paths, media_captions, target_audience,
                 target_user_ids, is_mandatory, cooldown_seconds, start_date, end_date,
-                is_active, created_by_id
+                is_active, created_by_id, office_id
             )
             VALUES (
                 :title, :summary, :content_html, :media_path, CAST(:media_paths AS jsonb),
                 CAST(:media_captions AS jsonb), :target_audience,
                 CAST(:target_user_ids AS jsonb), :is_mandatory, :cooldown_seconds, :start_date, :end_date,
-                :is_active, :created_by_id
+                :is_active, :created_by_id, :office_id
             )
             RETURNING
                 campaign_id, title, summary, content_html, media_path, media_paths, media_captions, target_audience,
                 target_user_ids, is_mandatory, cooldown_seconds, start_date, end_date,
-                is_active, created_by_id, create_at, update_at;
+                is_active, created_by_id, office_id, create_at, update_at;
         """
         params = {
             "title": data.title,
@@ -53,6 +53,7 @@ class HseCampaignRepository(BaseRepository):
             "end_date": data.end_date,
             "is_active": data.is_active,
             "created_by_id": created_by_id,
+            "office_id": data.office_id,
         }
         row = await self.fetchone(query, params)
         return dict(row._mapping) if row else {}
@@ -63,15 +64,16 @@ class HseCampaignRepository(BaseRepository):
                 c.campaign_id, c.title, c.summary, c.content_html, c.media_path, c.media_paths, c.media_captions,
                 c.target_audience,
                 c.target_user_ids, c.is_mandatory, c.cooldown_seconds, c.start_date, c.end_date,
-                c.is_active, c.created_by_id, c.create_at, c.update_at,
+                c.is_active, c.created_by_id, c.office_id, o.name AS office_name, c.create_at, c.update_at,
                 COALESCE(e.full_name, u.email) AS creator_name,
                 COUNT(a.acknowledgment_id) AS total_readers
             FROM hse_campaigns c
             LEFT JOIN users u ON u.user_id = c.created_by_id
             LEFT JOIN employee e ON e.employee_id = u.employee_id
+            LEFT JOIN office o ON o.id = c.office_id
             LEFT JOIN hse_campaign_acknowledgments a ON a.campaign_id = c.campaign_id
             WHERE c.campaign_id = :campaign_id AND c.delete_at IS NULL
-            GROUP BY c.campaign_id, e.full_name, u.email;
+            GROUP BY c.campaign_id, o.name, e.full_name, u.email;
         """
         row = await self.fetchone(query, {"campaign_id": campaign_id})
         return dict(row._mapping) if row else None
@@ -82,6 +84,7 @@ class HseCampaignRepository(BaseRepository):
         offset: int = 0,
         is_active: bool | None = None,
         target_audience: str | None = None,
+        office_id: UUID | None = None,
     ) -> Sequence[dict[str, Any]]:
         conditions = ["c.delete_at IS NULL"]
         params: dict[str, Any] = {"limit": limit + offset}
@@ -94,21 +97,26 @@ class HseCampaignRepository(BaseRepository):
             conditions.append("c.target_audience = :target_audience")
             params["target_audience"] = target_audience
 
+        if office_id is not None:
+            conditions.append("(c.office_id IS NULL OR c.office_id = :office_id)")
+            params["office_id"] = office_id
+
         where_clause = " AND ".join(conditions)
         query = f"""
             SELECT
                 c.campaign_id, c.title, c.summary, c.content_html, c.media_path, c.media_paths, c.media_captions,
                 c.target_audience,
                 c.target_user_ids, c.is_mandatory, c.cooldown_seconds, c.start_date, c.end_date,
-                c.is_active, c.created_by_id, c.create_at, c.update_at,
+                c.is_active, c.created_by_id, c.office_id, o.name AS office_name, c.create_at, c.update_at,
                 COALESCE(e.full_name, u.email) AS creator_name,
                 COUNT(a.acknowledgment_id) AS total_readers
             FROM hse_campaigns c
             LEFT JOIN users u ON u.user_id = c.created_by_id
             LEFT JOIN employee e ON e.employee_id = u.employee_id
+            LEFT JOIN office o ON o.id = c.office_id
             LEFT JOIN hse_campaign_acknowledgments a ON a.campaign_id = c.campaign_id
             WHERE {where_clause}
-            GROUP BY c.campaign_id, e.full_name, u.email
+            GROUP BY c.campaign_id, o.name, e.full_name, u.email
             ORDER BY c.create_at DESC
             LIMIT :limit;
         """
@@ -158,6 +166,9 @@ class HseCampaignRepository(BaseRepository):
         if data.is_active is not None:
             fields.append("is_active = :is_active")
             params["is_active"] = data.is_active
+        if data.office_id is not None:
+            fields.append("office_id = :office_id")
+            params["office_id"] = data.office_id
 
         if not fields:
             return await self.get_by_id(campaign_id)

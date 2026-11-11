@@ -40,7 +40,7 @@ export const STATUS_LABEL: Record<string, string> = {
   WITHDRAWN: "Ditarik PM",
   // Perintah kerja (work_order_status)
   WAITING_SURVEY: "Menunggu survei",
-  SURVEY_IN_PROGRESS: "Survei berjalan",
+  SURVEY_IN_PROGRESS: "Survei sedang berjalan",
   SURVEY_SUBMITTED: "Survei terkirim",
   READY_TO_EXECUTE: "Siap dikerjakan",
   BAST_SIGNED: "Surat serah terima terbit",

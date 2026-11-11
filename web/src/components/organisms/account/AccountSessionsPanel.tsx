@@ -33,9 +33,9 @@ function RevokeConfirms({ others, one, busy, onOthers, onOne, onClose }: {
     <>
       <ConfirmDialog
         open={others}
-        title="Keluarkan perangkat lain?"
-        message="Semua perangkat selain ini akan keluar dan harus masuk lagi dengan kata sandi. Akses yang sedang berjalan berakhir paling lama 15 menit."
-        confirmLabel="Ya, keluarkan"
+        title="Keluarkan perangkat lain"
+        message="Perangkat lain yang sedang masuk dengan akun Anda akan dikeluarkan dan harus masuk kembali. Akses yang sedang berjalan berakhir paling lama 15 menit."
+        confirmLabel="Keluarkan perangkat lain"
         danger
         busy={busy}
         onConfirm={onOthers}
@@ -43,9 +43,9 @@ function RevokeConfirms({ others, one, busy, onOthers, onOne, onClose }: {
       />
       <ConfirmDialog
         open={one !== null}
-        title="Keluarkan perangkat ini?"
-        message={one ? `${deviceName(one)} akan keluar dan harus masuk lagi. Akses yang sedang berjalan berakhir paling lama 15 menit.` : ""}
-        confirmLabel="Ya, keluarkan"
+        title="Keluarkan perangkat"
+        message={one ? `${deviceName(one)} akan dikeluarkan dari akun Anda dan harus masuk kembali. Akses yang sedang berjalan berakhir paling lama 15 menit.` : ""}
+        confirmLabel="Keluarkan perangkat"
         danger
         busy={busy}
         onConfirm={() => one && onOne(one.id)}

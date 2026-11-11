@@ -1,5 +1,4 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { getAccessToken, setAccessToken } from "@/lib/apiClient";
 import { apiError, mockApi, renderRoute } from "./utils";
@@ -59,7 +58,7 @@ describe("login dan sesi API", () => {
     const { router } = renderRoute("/login");
     type("Email", ME.email);
     type("Sandi", "Rahasia123");
-    await userEvent.setup().click(screen.getByRole("button", { name: "Masuk" }));
+    fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/");
       expect(getAccessToken()).toBe("tok");

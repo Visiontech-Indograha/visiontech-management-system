@@ -32704,9 +32704,63 @@
   },
   "/api/v1/work-orders/team-surveys": {
    "get": {
-    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim.",
+    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;\n`scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.",
     "operationId": "list_team_surveys_api_v1_work_orders_team_surveys_get",
     "parameters": [
+     {
+      "description": "team = tim pemanggil; all = ditambah WO kelolaan PM",
+      "in": "query",
+      "name": "scope",
+      "required": false,
+      "schema": {
+       "default": "team",
+       "description": "team = tim pemanggil; all = ditambah WO kelolaan PM",
+       "enum": [
+        "team",
+        "all"
+       ],
+       "title": "Scope",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Tanggal survei paling awal",
+      "in": "query",
+      "name": "date_from",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling awal",
+       "title": "Date From"
+      }
+     },
+     {
+      "description": "Tanggal survei paling akhir",
+      "in": "query",
+      "name": "date_to",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling akhir",
+       "title": "Date To"
+      }
+     },
      {
       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
       "in": "query",

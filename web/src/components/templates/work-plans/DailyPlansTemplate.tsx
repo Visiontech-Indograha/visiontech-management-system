@@ -11,7 +11,8 @@ import {
   TeamWeekButton,
   WeekRecapButtons,
 } from "@/components/organisms/work-plans/DailyWeekToolbar";
-import type { DailyFormOptions, DailyPlan } from "@/services/dailyPlanService";
+import { WeekSurveysPanel } from "@/components/organisms/work-plans/WeekSurveysPanel";
+import type { DailyFormOptions, DailyPlan, ScheduledSurvey } from "@/services/dailyPlanService";
 import { PageTemplate } from "../PageTemplate";
 
 export type DailyDialog =
@@ -26,6 +27,7 @@ export function DailyPlansTemplate(props: {
   end: string;
   today: string;
   plans: UseQueryResult<DailyPlan[]>;
+  surveys: ScheduledSurvey[];
   options: DailyFormOptions | undefined;
   divisionId: string;
   canPlan: boolean;
@@ -77,6 +79,8 @@ export function DailyPlansTemplate(props: {
           />
         )}
       </div>
+
+      <WeekSurveysPanel surveys={props.surveys} />
 
       <DailyWeekMatrix
         divisionId={divisionId}

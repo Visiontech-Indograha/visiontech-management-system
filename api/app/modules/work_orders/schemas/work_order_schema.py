@@ -148,6 +148,9 @@ class WorkOrderDetailOut(WorkOrderOut):
     survey_assignment_summary: str | None = Field(
         default=None, description="Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'"
     )
+    duplicate_title_warning: str | None = Field(
+        default=None, description="Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama"
+    )
     survey_points: list[SurveyPointOut] = Field(default_factory=list)
     items: list[WorkOrderItemOut] = Field(default_factory=list)
     bom: list[WorkOrderBomOut] = Field(default_factory=list)

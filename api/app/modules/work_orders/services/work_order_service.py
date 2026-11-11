@@ -147,8 +147,16 @@ class WorkOrderService:
             "title": data.title.strip(),
             "initial_complaint": data.initial_complaint.strip() if data.initial_complaint else None,
         }
+        # Peringatan, bukan blokir: judul sama untuk klien yang sama bisa sah (pekerjaan berulang).
+        same = await self.repo.same_title_numbers(data.client_id, data.title.strip())
         new_id = await self.repo.create_work_order(payload)
-        return await self.get_work_order(new_id)
+        detail = await self.get_work_order(new_id)
+        if same:
+            detail["duplicate_title_warning"] = (
+                f"Sudah ada tugas klien dengan judul yang sama untuk klien ini ({', '.join(same)}). "
+                "Tugas baru tetap dibuat; periksa bila ini tidak disengaja."
+            )
+        return detail
 
     async def assign_survey(
         self, work_order_id: UUID | str, data: WorkOrderAssignSurvey, current_user: CurrentUser

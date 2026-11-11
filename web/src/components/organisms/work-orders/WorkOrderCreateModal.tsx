@@ -93,7 +93,7 @@ export function WorkOrderCreateModal({
     }
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         client_id: clientId,
         client_site_id: clientSiteId || undefined,
         division_id: finalDivisionId,
@@ -103,6 +103,7 @@ export function WorkOrderCreateModal({
         lead_team_id: leadTeamId || undefined,
       });
       toast.success("Tugas klien baru berhasil dibuat");
+      if (created.duplicate_title_warning) toast.warning(created.duplicate_title_warning);
       onClose();
     } catch (err) {
       const setField = (name: string, e: { message: string }) => {

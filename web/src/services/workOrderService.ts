@@ -88,6 +88,8 @@ export interface WorkOrderDetail extends WorkOrder {
   bom: WorkOrderBom[];
   /** Hanya terisi pada jawaban penugasan survei: "Tim X akan melihat di HP pada tanggal Y." */
   survey_assignment_summary?: string | null;
+  /** Hanya terisi pada jawaban pembuatan WO: klien sama sudah punya WO berjudul sama (peringatan, bukan blokir). */
+  duplicate_title_warning?: string | null;
 }
 
 export interface WorkOrderCreateInput {

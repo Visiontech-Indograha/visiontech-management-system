@@ -859,6 +859,13 @@ CREATE INDEX IF NOT EXISTS idx_attendance_office ON attendance (office_id) WHERE
 CREATE INDEX IF NOT EXISTS idx_attendance_daily_plan ON attendance (daily_plan_id) WHERE delete_at IS NULL;
 -- Pemantauan harian per tanggal (migrasi v2_0027, F-11)
 CREATE INDEX IF NOT EXISTS ix_attendance_date_status ON attendance (attendance_date, om_approval_status) WHERE delete_at IS NULL;
+-- v2_0039: indeks komposit organisasi/kantor pendukung RLS tenant (B-08)
+CREATE INDEX IF NOT EXISTS ix_attendance_office_date ON attendance (office_id, attendance_date DESC) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_employee_office_status ON employee (office_id, offboarding_status) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_employee_office_division ON employee (office_id, division_id) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_team_office_status ON team (office_id, status) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_tool_office_status ON tool (office_id, status) WHERE delete_at IS NULL;
+CREATE INDEX IF NOT EXISTS ix_vehicle_office_status ON vehicle (office_id, status) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_work_completion_daily ON work_completion (daily_plan_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wt_default_materials_type ON work_type_default_materials (work_type_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wc_bom_completion ON work_completion_bom (completion_id) WHERE delete_at IS NULL;
@@ -906,3 +913,4 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
     CONSTRAINT uq_idempotency_keys_scope UNIQUE (organization_id, user_id, key)
 );
 CREATE INDEX IF NOT EXISTS ix_idempotency_keys_created_at ON idempotency_keys (created_at);
+CREATE INDEX IF NOT EXISTS ix_idempotency_keys_org_created ON idempotency_keys (organization_id, created_at DESC);

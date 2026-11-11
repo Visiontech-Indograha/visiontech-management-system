@@ -127,6 +127,7 @@ Laporan wajib tanpa data pribadi nyata (nama, NIK, nomor rekening, foto orang). 
 ## Referensi
 
 - `references/rencana-uji.md` - contoh rencana uji dan contoh laporan.
+- `references/uji-kegunaan.md` - uji kegunaan (usability testing): tugas nyata per peran, 5 pengguna awam per peran, ukuran, skrip fasilitator, laporan, kriteria lulus. Jalankan sebelum rilis besar dan setelah perubahan UX.
 - `.claude/agents/qa.md` - definisi sub-agen QA.
 - `docs/PANDUAN-AGENTIK.md` bagian 2 (siklus) dan 8 (aturan agen).
 

@@ -11,6 +11,7 @@ import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import 'leave_backdate.dart';
 
 final _tgl = DateFormat('d MMM yyyy', 'id_ID');
 final _iso = DateFormat('yyyy-MM-dd');
@@ -330,13 +331,23 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
     super.dispose();
   }
 
+  UserRole get _role {
+    final s = ref.read(authControllerProvider);
+    return s is AuthAuthenticated ? s.user.role : UserRole.member;
+  }
+
   Future<void> _pick(bool start) async {
-    final now = DateTime.now();
+    final today = jakartaToday();
+    final earliest = leaveEarliestStart(_role);
+    // Tanggal akhir tidak boleh sebelum tanggal mulai.
+    final first = start ? earliest : (_start ?? earliest);
+    var initial = (start ? _start : _end) ?? _start ?? today;
+    if (initial.isBefore(first)) initial = first;
     final d = await showDatePicker(
       context: context,
-      initialDate: (start ? _start : _end) ?? _start ?? now,
-      firstDate: now.subtract(const Duration(days: 30)),
-      lastDate: now.add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: today.add(const Duration(days: 365)),
     );
     if (d == null) return;
     setState(() {
@@ -370,6 +381,10 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
       setState(
         () => _error = 'Lengkapi tanggal dan alasan (minimal 3 karakter).',
       );
+      return;
+    }
+    if (!leaveBackdateExempt(_role) && _start!.isBefore(leaveEarliestStart(_role))) {
+      setState(() => _error = leaveBackdateMessage);
       return;
     }
     setState(() {

@@ -15,6 +15,7 @@ import { CampaignMediaCarousel, type CarouselSlide } from "./CampaignMediaCarous
 import { ShieldAlert, Clock, CheckCircle2, Maximize, Minimize } from "@/components/molecules/Glyphs";
 import { useTimedCarousel } from "@/hooks/useTimedCarousel";
 import { htmlToText } from "@/lib/htmlToText";
+import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
 
 // Penanda "sudah dibaca" per kampanye untuk sesi login ini (tab). Popup tidak muncul lagi
@@ -26,7 +27,8 @@ function ackStorageKey(userId: string | undefined, campaignId: string) {
 function isAckedThisSession(userId: string | undefined, campaignId: string): boolean {
   try {
     return window.sessionStorage.getItem(ackStorageKey(userId, campaignId)) === "1";
-  } catch {
+  } catch (err) {
+    void err;
     return false;
   }
 }
@@ -34,7 +36,8 @@ function isAckedThisSession(userId: string | undefined, campaignId: string): boo
 function markAckedThisSession(userId: string | undefined, campaignId: string) {
   try {
     window.sessionStorage.setItem(ackStorageKey(userId, campaignId), "1");
-  } catch {
+  } catch (err) {
+    void err;
     /* penyimpanan tidak tersedia: popup mungkin muncul lagi, tidak fatal */
   }
 }
@@ -54,7 +57,7 @@ export function HseMandatoryPopupGate() {
   const [shown, setShown] = useState<HseCampaign | null>(null);
 
   // Ambil popup kampanye K3 yang aktif untuk pengguna saat ini
-  const { data: fetched, isError } = useQuery<HseCampaign | null>({
+  const { data: fetched } = useQuery<HseCampaign | null>({
     queryKey: ["hse", "active-popup", me?.user_id],
     queryFn: () => (me ? fetchActiveHsePopup() : Promise.resolve(null)),
     enabled: Boolean(me),
@@ -71,10 +74,6 @@ export function HseMandatoryPopupGate() {
       retry: 1,
     })),
   });
-
-  useEffect(() => {
-    if (isError) toast.error("Gagal memuat panduan keselamatan kerja (K3/HSE).");
-  }, [isError]);
 
   // Kunci kampanye yang baru diterima (pola "simpan dari render sebelumnya", bukan efek).
   if (fetched && !shown && !isAckedThisSession(me?.user_id, fetched.id)) setShown(fetched);
@@ -169,8 +168,8 @@ function HseCampaignPopup({
       toast.success("Terima kasih telah membaca panduan keselamatan kerja (K3/HSE).");
       onAcknowledged();
     },
-    onError: () => {
-      toast.error("Gagal mengonfirmasi pembacaan kampanye. Coba lagi.");
+    onError: (err) => {
+      toast.error(errorMessage(err, "Gagal mengonfirmasi pembacaan kampanye. Coba lagi."));
     },
   });
 
@@ -186,8 +185,12 @@ function HseCampaignPopup({
     el.requestFullscreen().then(() => {
       // Kunci orientasi lanskap bila didukung; galat diabaikan (tidak semua peramban mendukung).
       const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-      orientation?.lock?.("landscape").catch(() => undefined);
-    }).catch(() => undefined);
+      orientation?.lock?.("landscape").catch((err) => {
+        void err;
+      });
+    }).catch((err) => {
+      void err;
+    });
   };
 
   const currentSrc = slides[Math.min(carousel.index, slides.length - 1)]?.src;
@@ -362,6 +365,13 @@ function HseCampaignPopup({
               (sheetOpen ? "border-t border-line bg-background/95" : "rounded-xl bg-background/85 shadow-lg")
             }
           >
+            {ackMutation.isError && (
+              <div role="alert" className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+                <TextBlock as="p">
+                  {errorMessage(ackMutation.error, "Gagal mengonfirmasi pembacaan panduan keselamatan kerja. Coba lagi.")}
+                </TextBlock>
+              </div>
+            )}
             {readBar}
             {confirmButton}
           </div>

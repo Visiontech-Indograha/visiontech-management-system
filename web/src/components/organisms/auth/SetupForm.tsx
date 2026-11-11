@@ -1,6 +1,6 @@
 import type { UseFormReturn } from "react-hook-form";
 import { ActionButton } from "@/components/molecules/ActionButton";
-import { TextField } from "@/components/molecules/Field";
+import { TextField, PasswordField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { Panel, PanelContent, PanelDescription, PanelHeader, PanelTitle } from "@/components/molecules/Panel";
@@ -74,17 +74,15 @@ export function SetupForm({ status, isPending, isError, onRetry, form, onSubmit,
               error={errors.email?.message}
               {...register("email")}
             />
-            <TextField
+            <PasswordField
               label="Sandi"
-              type="password"
               autoComplete="new-password"
               hint="12 sampai 128 karakter."
               error={errors.password?.message}
               {...register("password")}
             />
-            <TextField
+            <PasswordField
               label="Ulangi sandi"
-              type="password"
               autoComplete="new-password"
               error={errors.confirm?.message}
               {...register("confirm")}

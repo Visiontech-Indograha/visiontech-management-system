@@ -8,6 +8,7 @@ describe("Judul tab peramban", () => {
     expect(pageTitle("/")).toBe("Beranda · Visiontech VMS");
     expect(pageTitle("/attendance")).toBe("Absensi · Visiontech VMS");
     expect(pageTitle("/sites/")).toBe("Lokasi kerja · Visiontech VMS");
+    expect(pageTitle("/clients")).toBe("Klien · Visiontech VMS");
     expect(pageTitle("/directory/e1")).toBe("Detail karyawan · Visiontech VMS");
     expect(pageTitle("/login")).toBe("Masuk · Visiontech VMS");
     expect(pageTitle("/tidak-ada")).toBe("Halaman tidak ditemukan · Visiontech VMS");

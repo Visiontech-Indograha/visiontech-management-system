@@ -43,7 +43,7 @@ export function ClientsTemplate({
 }) {
   return (
     <PageTemplate
-      title="Master Klien"
+      title="Klien"
       description="Kelola daftar perusahaan klien, narahubung (PIC), dan riwayat keterlibatan proyek."
       action={canManage && <ClientAddButton onAdd={onAdd} />}
     >

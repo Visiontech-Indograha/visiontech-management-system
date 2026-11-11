@@ -12,6 +12,7 @@ import {
   ClipboardList,
   FolderOpen,
   Hourglass,
+  Timer,
   House,
   ListChecks,
   MapPin,
@@ -48,7 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/leaves", label: "Cuti dan Izin", icon: CalendarDays, group: "Kehadiran dan SDM" },
   { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran dan SDM" },
   { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran dan SDM" },
-  { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
+  { path: "/overtime-recap", label: "Rekap lembur", icon: Timer, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
   // 3. Aset & Fasilitas
   { path: "/assets", label: "Kendaraan dan alat", icon: Truck, group: "Aset dan Fasilitas" },
   { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset dan Fasilitas" },

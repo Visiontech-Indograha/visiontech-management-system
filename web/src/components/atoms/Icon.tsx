@@ -86,6 +86,7 @@ export {
   Search,
   Filter,
   Eye,
+  EyeOff,
   Compass,
 } from "lucide-react";
 export type { LucideIcon } from "lucide-react";

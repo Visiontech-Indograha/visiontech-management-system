@@ -81,6 +81,7 @@ export {
   Search,
   Filter,
   Eye,
+  EyeOff,
   Compass,
 } from "../atoms/Icon";
 export type { LucideIcon } from "../atoms/Icon";

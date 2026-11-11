@@ -210,7 +210,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
             hint="Dipakai otomatis saat PM merencanakan pekerjaan dari survei."
             {...register("follow_up_work_type_id", { setValueAs: (v: string) => v || null })}
           >
-            <ControlOption value="">-- Belum ditentukan --</ControlOption>
+            <ControlOption value="">Belum ditentukan</ControlOption>
             {installTypes.map((w) => (
               <ControlOption key={w.id} value={w.id}>{w.name}</ControlOption>
             ))}

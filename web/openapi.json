@@ -977,7 +977,7 @@
      "Work Orders"
     ],
     "summary": "List Team Surveys",
-    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim.",
+    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;\n`scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.",
     "operationId": "list_team_surveys_api_v1_work_orders_team_surveys_get",
     "security": [
      {
@@ -985,6 +985,60 @@
      }
     ],
     "parameters": [
+     {
+      "name": "scope",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "team",
+        "all"
+       ],
+       "type": "string",
+       "description": "team = tim pemanggil; all = ditambah WO kelolaan PM",
+       "default": "team",
+       "title": "Scope"
+      },
+      "description": "team = tim pemanggil; all = ditambah WO kelolaan PM"
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling awal",
+       "title": "Date From"
+      },
+      "description": "Tanggal survei paling awal"
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling akhir",
+       "title": "Date To"
+      },
+      "description": "Tanggal survei paling akhir"
+     },
      {
       "name": "q",
       "in": "query",

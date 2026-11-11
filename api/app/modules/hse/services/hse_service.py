@@ -55,6 +55,39 @@ class HseService:
         restriction = await office_restriction(self.db, user, perm)
         return None if restriction is None else offices_param(restriction) or ["00000000-0000-0000-0000-000000000000"]
 
+    async def _ensure_campaign_scope(
+        self, user: CurrentUser | None, audience: str | None, target_user_ids: list[Any] | None,
+        *, existing: bool = False,
+    ) -> None:
+        """Penerbit K3 yang dibatasi kantor (HSE peran tambahan, ADR 0002) hanya boleh menerbitkan kampanye yang
+        seluruhnya menjangkau pengguna di kantor penugasannya: audiens INDIVIDUAL dengan semua sasaran di kantor itu.
+        Audiens ALL/FIELD/OFFICE menjangkau semua kantor, jadi ditolak sampai K3 punya kolom kantor (G2-K3).
+        `existing`: kampanye yang sudah ada di luar cakupan dijawab 404 (keberadaannya tidak dibocorkan)."""
+        offices = await self._offices(user, Permission.MANAGE_HSE_CAMPAIGNS)
+        if offices is None:
+            return
+        ids = [str(u) for u in (target_user_ids or [])]
+        ok = False
+        if audience == "INDIVIDUAL" and ids:
+            ok = bool(await self.campaign_repo.scalar(
+                """
+                SELECT COUNT(*) = CAST(:n AS int) FROM users u
+                JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+                WHERE u.user_id = ANY(CAST(:ids AS uuid[])) AND u.delete_at IS NULL
+                  AND e.office_id = ANY(CAST(:offices AS uuid[]))
+                """,
+                {"ids": ids, "n": len(set(ids)), "offices": offices},
+            )) if len(set(ids)) == len(ids) else False
+        if ok:
+            return
+        if existing:
+            raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        raise AppError(
+            "OFFICE_SCOPE_FORBIDDEN",
+            "Anda hanya dapat menerbitkan K3 untuk karyawan di kantor penugasan Anda (pilih sasaran perorangan).",
+            status=403,
+        )
+
     # ================= Kampanye K3 =================
     async def create_campaign(
         self,
@@ -63,6 +96,7 @@ class HseService:
     ) -> HseCampaignResponse:
         if data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir kampanye tidak boleh sebelum tanggal awal.", status=400)
+        await self._ensure_campaign_scope(current_user, data.target_audience, data.target_user_ids)
         await self._validate_media(data.media_paths, data.cooldown_seconds, current_user, existing_ids=set())
         self._validate_captions(data.media_paths, data.media_captions)
         if data.media_paths:
@@ -105,6 +139,13 @@ class HseService:
         existing = await self.campaign_repo.get_by_id(campaign_id)
         if not existing:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        await self._ensure_campaign_scope(
+            current_user, existing.get("target_audience"), existing.get("target_user_ids"), existing=True)
+        if data.target_audience is not None or data.target_user_ids is not None:
+            await self._ensure_campaign_scope(
+                current_user,
+                data.target_audience if data.target_audience is not None else existing.get("target_audience"),
+                data.target_user_ids if data.target_user_ids is not None else existing.get("target_user_ids"))
 
         if data.start_date and data.end_date and data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir tidak boleh sebelum tanggal awal.", status=400)
@@ -130,10 +171,12 @@ class HseService:
             raise AppError("UPDATE_FAILED", "Gagal memperbarui kampanye K3.", status=500)
         return HseCampaignResponse.model_validate(updated)
 
-    async def delete_campaign(self, campaign_id: UUID) -> bool:
+    async def delete_campaign(self, campaign_id: UUID, user: CurrentUser | None = None) -> bool:
         existing = await self.campaign_repo.get_by_id(campaign_id)
         if not existing:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        await self._ensure_campaign_scope(
+            user, existing.get("target_audience"), existing.get("target_user_ids"), existing=True)
         return await self.campaign_repo.delete(campaign_id)
 
     @staticmethod

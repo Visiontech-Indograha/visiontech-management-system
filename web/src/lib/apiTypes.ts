@@ -239,7 +239,8 @@ export interface paths {
         /**
          * List Team Surveys
          * @description Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.
-         *     Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Cakupan = keanggotaan tim.
+         *     Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;
+         *     `scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.
          */
         get: operations["list_team_surveys_api_v1_work_orders_team_surveys_get"];
         put?: never;
@@ -12557,6 +12558,12 @@ export interface operations {
     list_team_surveys_api_v1_work_orders_team_surveys_get: {
         parameters: {
             query?: {
+                /** @description team = tim pemanggil; all = ditambah WO kelolaan PM */
+                scope?: "team" | "all";
+                /** @description Tanggal survei paling awal */
+                date_from?: string | null;
+                /** @description Tanggal survei paling akhir */
+                date_to?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */

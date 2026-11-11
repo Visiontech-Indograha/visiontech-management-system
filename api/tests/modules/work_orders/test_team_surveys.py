@@ -104,3 +104,25 @@ def test_reassign_moves_draft_to_new_team_and_date(client, world: World):
     assert _assign(client, world, wo, lead_team_id=str(team2), survey_date="2026-12-05").status_code == 200
     assert _ids(client, world, "leader") == []
     assert _ids(client, world, "rival") == [wo]
+
+
+def test_scope_all_shows_surveys_to_managing_pm_and_om_in_date_range(client, world: World):
+    """B-05: Jadwal harian web memuat survei yang ditugaskan, bukan hanya HP tim."""
+    _other_team(world)
+    world.add_person("outsider", None)
+    wo_dec, wo_jan = _new_wo(world, "Des"), _new_wo(world, "Jan")
+    assert _assign(client, world, wo_dec, survey_date="2026-12-01").status_code == 200
+    assert _assign(client, world, wo_jan, survey_date="2027-01-15").status_code == 200
+
+    both = {wo_dec, wo_jan}
+    for who in ("pm", "ops", "leader"):
+        assert both <= set(_ids(client, world, who, "?scope=all")), who
+    assert both.isdisjoint(_ids(client, world, "rival", "?scope=all"))
+    assert both.isdisjoint(_ids(client, world, "outsider", "?scope=all"))
+    assert both.isdisjoint(_ids(client, world, "pm"))  # bawaan tetap hanya tim (APK lama)
+
+    dec_only = _ids(client, world, "pm", "?scope=all&date_from=2026-12-01&date_to=2026-12-31")
+    assert wo_dec in dec_only and wo_jan not in dec_only
+    bad = client.get(URL + "?scope=all&date_from=2027-02-01&date_to=2027-01-01", headers=world.headers(client, "pm"))
+    assert bad.status_code == 422, bad.text
+    assert client.get(URL + "?scope=semua", headers=world.headers(client, "pm")).status_code == 422

@@ -62,8 +62,8 @@ class HseController:
     ) -> HseCampaignResponse:
         return await self.service.update_campaign(campaign_id, data, current_user)
 
-    async def delete_campaign(self, campaign_id: UUID) -> dict[str, bool]:
-        success = await self.service.delete_campaign(campaign_id)
+    async def delete_campaign(self, campaign_id: UUID, user: CurrentUser | None = None) -> dict[str, bool]:
+        success = await self.service.delete_campaign(campaign_id, user)
         return {"success": success}
 
     async def get_active_popup(self, current_user: CurrentUser) -> dict[str, Any]:

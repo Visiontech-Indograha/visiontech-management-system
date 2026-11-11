@@ -161,7 +161,10 @@ export function useAssignSurvey(workOrderId: string) {
       const res = await api.post<WorkOrderDetail>(`/work-orders/${workOrderId}/assign-survey`, payload);
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: KEY });
+      await qc.invalidateQueries({ queryKey: ["daily-plans", "surveys"] }); // Jadwal harian ikut menampilkan survei baru
+    },
   });
 }
 

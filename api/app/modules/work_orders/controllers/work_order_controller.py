@@ -5,6 +5,7 @@ Controller untuk modul Work Orders.
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -57,8 +58,13 @@ class WorkOrderController:
             for r in rows
         ]
 
-    async def list_team_surveys(self, current_user: CurrentUser) -> list[TeamSurveyOut]:
-        rows = await self.service.list_team_surveys(current_user)
+    async def list_team_surveys(
+        self, current_user: CurrentUser, *, scope_all: bool = False,
+        date_from: date | None = None, date_to: date | None = None,
+    ) -> list[TeamSurveyOut]:
+        rows = await self.service.list_team_surveys(
+            current_user, scope_all=scope_all, date_from=date_from, date_to=date_to
+        )
         return [TeamSurveyOut(**(dict(r._mapping) if hasattr(r, "_mapping") else dict(r))) for r in rows]
 
     async def get_work_order(self, current_user: CurrentUser, work_order_id: UUID) -> WorkOrderDetailOut:

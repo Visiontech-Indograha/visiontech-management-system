@@ -52,11 +52,20 @@ KEY_COLUMNS: tuple[tuple[str, str, str], ...] = (
 
 
 def object_variants(key: str) -> list[str]:
-    """Kunci asli + semua varian WebP-nya (`_full`, `_view`, `_thumb`)."""
+    """Kunci asli + semua varian WebP-nya (`_full`, `_view`, `_thumb`),
+    serta varian turunan dari kunci file bila key adalah kunci varian."""
     tail = key.rsplit("/", 1)[-1]
     base = key.rsplit(".", 1)[0] if "." in tail else key
     base = VARIANT_RE.sub("", base)
-    return list(dict.fromkeys([key, *(f"{base}_{v}.webp" for v in VARIANTS)]))
+    # Generate all possible forms: base, base_full, base_view, base_thumb, and ext combinations if applicable
+    variants = [key]
+    ext = key.rsplit(".", 1)[1] if "." in tail else "webp"
+    for v in VARIANTS:
+        variants.append(f"{base}_{v}.{ext}")
+        variants.append(f"{base}_{v}.webp")
+    variants.append(f"{base}.{ext}")
+    variants.append(f"{base}.webp")
+    return list(dict.fromkeys(variants))
 
 
 def purge_keys(keys: Iterable[str]) -> tuple[int, int]:

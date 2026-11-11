@@ -3,8 +3,8 @@ yang memakai order itu membawa work_order_id (jalur HP). Dulu kosong: WO tak mem
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
+from app.core.time import jakarta_now
 from tests.conftest import World, requires_db, sync_query
 from tests.orders import make_client
 
@@ -26,7 +26,7 @@ def test_approved_survey_makes_order_available_for_allocation(client, world: Wor
         return [o for o in res.json()["orders"] if o["project_title"] == f"WO alokasi {tag}"]
 
     assert orders() == []  # belum ada survei disetujui -> belum jadi order
-    today = datetime.now(UTC).date().isoformat()
+    today = jakarta_now().date().isoformat()
     assert client.post(f"/work-orders/{wo_id}/assign-survey", headers=pm,
                        json={"lead_team_id": world.team_id, "survey_date": today}).status_code == 200
     work_type = str(sync_query("INSERT INTO work_type (division_id, name) VALUES (%s, %s) RETURNING work_type_id",

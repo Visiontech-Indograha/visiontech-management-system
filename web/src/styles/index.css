@@ -109,6 +109,10 @@
   --color-white: #ffffff;
   --color-black: #161a24; /* dipakai overlay shadcn (bg-black/50) → scrim bernada hijau gelap */
 
+  /* Penanda lingkungan non-produksi (putih di atasnya >= 4,5:1) */
+  --color-env-dev: #5b2a86;
+  --color-env-beta: #9a3412;
+
   /* Kontrak shadcn/ui */
   --color-background: var(--background);
   --color-foreground: var(--foreground);

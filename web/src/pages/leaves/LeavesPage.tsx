@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useListControls } from "@/hooks/useListControls";
 import { LeavesTemplate } from "@/components/templates/leaves/LeavesTemplate";
 import { useLeaves, useLeaveBalance, type LeaveRequest } from "@/services/leaveService";
+import { canCancelLeaveRule } from "@/lib/leaveRules";
 import { useSession } from "@/stores/sessionStore";
 
 const LEAVE_STATUSES = ["PENDING", "APPROVED_BY_PM", "APPROVED_BY_HR", "REJECTED", "CANCELLED"] as const;
@@ -21,17 +22,8 @@ export function LeavesPage() {
   const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
 
   const currentYear = new Date().getFullYear();
-  const today = new Date().toISOString().slice(0, 10);
-
   // Pemohon sendiri, HR, atau OM dapat membatalkan cuti yang sudah disetujui selama hari cutinya belum lewat
-  const canCancelLeave = (l: LeaveRequest) =>
-    (l.status === "PENDING" && l.employee_id === me?.employee_id) || // pengajuan sendiri yang masih menunggu
-    (l.status === "APPROVED_BY_PM" || l.status === "APPROVED_BY_HR") &&
-    String(l.end_date).slice(0, 10) >= today &&
-    (l.employee_id === me?.employee_id ||
-      me?.role === "ADMIN_HR_GA" ||
-      me?.role === "HR" ||
-      me?.role === "OPERATIONAL_MANAGER");
+  const canCancelLeave = (l: LeaveRequest) => canCancelLeaveRule(l, me);
 
   // Jika bukan reviewer/admin, batasi daftar ke pengajuan diri sendiri; jika reviewer, tampilkan semua
   const leavesQuery = useLeaves({

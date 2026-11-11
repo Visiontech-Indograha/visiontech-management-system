@@ -34,6 +34,7 @@ import {
   WorkTypesPage,
   DivisionsPage,
   SurveyDetailPage,
+  SystemSettingsPage,
   WorkOrdersPage,
   HseCampaignsPage,
 } from "./lazyPages";
@@ -44,6 +45,7 @@ import { RouteErrorPage } from "@/pages/system/RouteErrorPage";
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
+  "/system-settings": <SystemSettingsPage />,
   "/directory": <DirectoryPage />,
   "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,

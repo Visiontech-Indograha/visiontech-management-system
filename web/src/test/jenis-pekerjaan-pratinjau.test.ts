@@ -36,6 +36,6 @@ describe("label satuan dan fase", () => {
   });
 
   it("fase tersimpan memakai label lapangan", () => {
-    expect(defaultsLabel("", "REPLACEMENT")).toBe("Satuan: Unit · Fase bawaan: Replacement");
+    expect(defaultsLabel("", "REPLACEMENT")).toBe("Satuan: Unit · Fase bawaan: Penggantian");
   });
 });

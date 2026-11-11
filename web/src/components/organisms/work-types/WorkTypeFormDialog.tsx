@@ -1,3 +1,4 @@
+import { divisionOptionLabel } from "@/lib/divisionLabel";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -144,10 +145,10 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
           disabled={Boolean(me?.role === "PROJECT_MANAGER" && userDivisions.length <= 1)}
           {...register("division_id")}
         >
-          <ControlOption value="">-- Pilih Divisi --</ControlOption>
+          <ControlOption value="">Pilih divisi</ControlOption>
           {userDivisions.map((u) => (
             <ControlOption key={u.id} value={u.id}>
-              {`${u.name} (${u.code})`}
+              {divisionOptionLabel(u, userDivisions)}
             </ControlOption>
           ))}
           {initialDivisionId && !userDivisions.some((u) => u.id === initialDivisionId) && (

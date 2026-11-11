@@ -47,7 +47,7 @@ function Holder({ name }: { name?: string | null }) {
 
 function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
-    <ActionButton variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="h-9 text-xs">
+    <ActionButton variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="h-11 text-xs">
       {count !== undefined ? `${label} (${count})` : label}
     </ActionButton>
   );

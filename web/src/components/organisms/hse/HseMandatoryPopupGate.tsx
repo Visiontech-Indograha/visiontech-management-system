@@ -246,11 +246,11 @@ function HseCampaignPopup({
   const textContent = (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <TextBlock as="span" className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[11px] font-bold text-amber-700">
+        <TextBlock as="span" className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-xs font-bold text-amber-700">
           KAMPANYE KESELAMATAN
         </TextBlock>
         {campaign.target_audience !== "ALL" && (
-          <TextBlock as="span" className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+          <TextBlock as="span" className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
             Sasaran: {campaign.target_audience}
           </TextBlock>
         )}

@@ -244,7 +244,7 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
                     required
                   />
                 </div>
-                <TextBlock className="text-[11px] text-mist">
+                <TextBlock className="text-xs text-mist">
                   Teknisi yang bertugas pada site ini dapat presensi dalam radius toleransi di atas.
                 </TextBlock>
               </div>
@@ -298,12 +298,12 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-primary shrink-0" />
                       <TextBlock className="font-medium text-foreground">{site.site_name}</TextBlock>
-                      <TextBlock as="span" className="rounded-control bg-hover px-1.5 py-0.5 text-[10px] text-mist">
+                      <TextBlock as="span" className="rounded-control bg-hover px-1.5 py-0.5 text-xs text-mist">
                         Radius: {site.geofence_radius_meters}m
                       </TextBlock>
                     </div>
                     <TextBlock className="text-xs text-mist line-clamp-1">{site.address}</TextBlock>
-                    <div className="flex items-center gap-3 text-[11px] text-mist">
+                    <div className="flex items-center gap-3 text-xs text-mist">
                       <TextBlock as="span">
                         GPS: {Number(site.latitude).toFixed(4)}, {Number(site.longitude).toFixed(4)}
                       </TextBlock>

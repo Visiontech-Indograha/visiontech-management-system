@@ -76,7 +76,7 @@ function Callout({ point, n }: { point: Point; n: number }) {
     <div className="w-48">
       <TextBlock className="text-xs font-semibold">{`${n}. ${point.name}`}</TextBlock>
       {point.site_lat && point.site_lng && (
-        <TextBlock className="text-[10px] text-mist">{`${Number(point.site_lat).toFixed(5)}, ${Number(point.site_lng).toFixed(5)}`}</TextBlock>
+        <TextBlock className="text-xs text-mist">{`${Number(point.site_lat).toFixed(5)}, ${Number(point.site_lng).toFixed(5)}`}</TextBlock>
       )}
       {url && <ImageView src={url} alt={point.name} className="mt-1 h-32 w-full rounded object-cover shadow-sm" />}
     </div>

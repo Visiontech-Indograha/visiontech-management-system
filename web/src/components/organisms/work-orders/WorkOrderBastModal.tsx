@@ -64,7 +64,7 @@ export function WorkOrderBastModal({
         <div className="bg-surface-elevated/60 p-3 rounded-lg border border-border text-xs space-y-1">
           <div className="flex items-center justify-between">
             <TextBlock className="font-semibold text-ink text-sm">{workOrder.title}</TextBlock>
-            <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded font-semibold text-[11px]">
+            <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded font-semibold text-xs">
               <TextBlock as="span">{workOrder.completed_items} / {workOrder.total_items} Item Selesai</TextBlock>
             </div>
           </div>

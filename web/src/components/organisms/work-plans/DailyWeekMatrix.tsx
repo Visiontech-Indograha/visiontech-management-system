@@ -155,7 +155,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                 placeholder="Cari lokasi atau tim..."
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                className="h-9 w-full rounded-control border border-line bg-background pl-3 pr-8 text-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="h-11 w-full rounded-control border border-line bg-background pl-3 pr-8 text-xs focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
               />
               {searchQ && (
                 <PlainAction
@@ -288,7 +288,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                           {SHORT_DATE.format(asDate(d))}
                         </TextBlock>
                         {isToday && (
-                          <TextBlock as="span" className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                          <TextBlock as="span" className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
                             Hari ini
                           </TextBlock>
                         )}
@@ -333,7 +333,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                                 {plan.site_name || "Lokasi belum ditentukan"}
                               </TextBlock>
                               {plan.is_out_of_town && (
-                                <TextBlock as="span" className="ml-1 shrink-0 rounded-full border border-warning-border bg-warning-bg px-1.5 py-0.2 text-[10px] font-semibold text-warning">
+                                <TextBlock as="span" className="ml-1 shrink-0 rounded-full border border-warning-border bg-warning-bg px-1.5 py-0.2 text-xs font-semibold text-warning">
                                   Luar kota
                                 </TextBlock>
                               )}
@@ -341,7 +341,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
                               <div className={`h-full rounded-full ${st.bar}`} style={{ width: `${pct}%` }} />
                             </div>
-                            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] text-mist">
+                            <div className="flex flex-wrap items-center justify-between gap-1 text-xs text-mist">
                               <TextBlock as="span" className="truncate font-medium">
                                 {(plan.phases ?? []).map(phaseLabel).join(", ") || "Persiapan"}
                               </TextBlock>
@@ -398,7 +398,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                       {Number(d.slice(8))}
                     </TextBlock>
                     {list.length === 0 ? (
-                      !out && <TextBlock as="span" className="hidden text-[11px] text-mist sm:block">Kosong</TextBlock>
+                      !out && <TextBlock as="span" className="hidden text-xs text-mist sm:block">Kosong</TextBlock>
                     ) : (
                       <>
                         {/* Jenis pekerjaan langsung tertulis & berwarna; layar lebar ditambah nama tim. */}
@@ -408,7 +408,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                               key={`${p.daily_plan_id}-${ph}`}
                               as="span"
                               title={`${phaseLabel(ph)} · ${p.team_name} · ${WORK_STATE[workState(p, today)].label}`}
-                              className={`truncate rounded border px-1 py-0.5 text-[10px] font-semibold leading-tight sm:text-[11px] ${phaseColor(ph).chip}`}
+                              className={`truncate rounded border px-1 py-0.5 text-xs font-semibold leading-tight sm:text-xs ${phaseColor(ph).chip}`}
                             >
                               <TextBlock as="span" className={`mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle ${WORK_STATE[workState(p, today)].dot}`} />
                               {phaseLabel(ph)}
@@ -416,7 +416,7 @@ export function DailyWeekMatrix({ teams, start, today, divisionId, canPlan, onOp
                             </TextBlock>
                           ))}
                           {list.reduce((n, p) => n + Math.max(1, p.phases?.length ?? 0), 0) > 3 && (
-                            <TextBlock as="span" className="text-[10px] text-mist">{`+${list.reduce((n, p) => n + Math.max(1, p.phases?.length ?? 0), 0) - 3} lagi`}</TextBlock>
+                            <TextBlock as="span" className="text-xs text-mist">{`+${list.reduce((n, p) => n + Math.max(1, p.phases?.length ?? 0), 0) - 3} lagi`}</TextBlock>
                           )}
                         </div>
                       </>

@@ -42,6 +42,8 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
   Map<String, dynamic>? _balance;
   bool _loading = true;
   String? _error;
+  String? _notice; // hasil aksi batal: tetap terlihat di layar, tidak hilang seperti snackbar
+  bool _cancelling = false;
   final _query = ListQuery();
 
   @override
@@ -112,19 +114,31 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || _cancelling) return;
+    setState(() {
+      _cancelling = true;
+      _notice = null;
+    });
+    String? message;
     try {
       await ref
           .read(syncEngineProvider)
           .api
           .cancelLeave(leave['leave_id'] as String);
-      await _load();
+      message = 'Pengajuan cuti dibatalkan.';
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
-      }
+      message = apiErrorMessage(e, fallback: 'Pengajuan cuti belum bisa dibatalkan. Coba lagi.');
     }
+    // Muat ulang apa pun hasilnya: status di server mungkin sudah berubah (mis. sudah disetujui atasan).
+    await _load();
+    if (!mounted) return;
+    setState(() {
+      _cancelling = false;
+      _notice = message;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _apply() async {
@@ -158,6 +172,11 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_notice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SurfaceCard(child: Text(_notice!, style: VmsTextStyles.bodySm)),
               ),
             if (_error != null)
               Padding(
@@ -260,7 +279,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
                 const Spacer(),
                 if (leaveCancellable(status))
                   TextButton(
-                    onPressed: () => _cancel(l),
+                    onPressed: _cancelling ? null : () => _cancel(l),
                     child: const Text('Batalkan'),
                   ),
               ],

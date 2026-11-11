@@ -48,11 +48,15 @@ class OfflineOp {
 /// setelah sinyal putus tidak menggandakan data. Foto bukti disimpan sebagai path
 /// lokal (`_local_files`) dan diunggah tepat sebelum operasinya dikirim.
 class SyncEngine {
+  final DateTime Function() _clock; // diganti hanya di tes (golden stabil)
+
   SyncEngine({
     required ApiClient apiClient,
     required AppDatabase db,
     required DeviceIdProvider deviceId,
-  }) : _api = VmsApi(apiClient),
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now,
+       _api = VmsApi(apiClient),
        _client = apiClient,
        _db = db, // ignore: prefer_initializing_formals
        _deviceId = deviceId {
@@ -98,7 +102,7 @@ class SyncEngine {
         ...payload,
         if (localFiles.isNotEmpty) _localFiles: localFiles,
       },
-      'client_created_at': DateTime.now().toUtc().toIso8601String(),
+      'client_created_at': _clock().toUtc().toIso8601String(),
     };
     return _db
         .into(_db.pendingSyncOperations)

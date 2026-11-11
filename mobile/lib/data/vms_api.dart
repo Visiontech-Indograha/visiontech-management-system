@@ -471,6 +471,10 @@ class VmsApi {
     )).data,
   );
 
+  /// Jenis pekerjaan (kunci id) untuk rekomendasi titik survei.
+  Future<List<Map<String, dynamic>>> workTypes() async =>
+      _list((await _dio.get('$_p/work-types')).data);
+
   /// Survei work order milik tim saya (ketua atau anggota aktif), untuk bagian "Survei dari work order".
   Future<List<Map<String, dynamic>>> teamSurveys() async =>
       _list((await _dio.get('$_p/work-orders/team-surveys')).data);

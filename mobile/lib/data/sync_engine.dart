@@ -29,6 +29,7 @@ class OfflineOp {
   static const overtimeReport = 'OVERTIME_REPORT';
   static const planItemProgress = 'PLAN_ITEM_PROGRESS';
   static const planRolloverRequest = 'PLAN_ROLLOVER_REQUEST';
+  static const woSurveySubmit = 'WO_SURVEY_SUBMIT';
 
   static const labels = {
     dailyReportSave: 'Simpan laporan harian',
@@ -38,6 +39,7 @@ class OfflineOp {
     overtimeReport: 'Laporan lembur',
     planItemProgress: 'Simpan hasil kerja',
     planRolloverRequest: 'Minta pindah hari',
+    woSurveySubmit: 'Kirim survei work order',
     OfflineAttendance.entityType: 'Absensi offline',
   };
 }
@@ -139,6 +141,46 @@ class SyncEngine {
     return false;
   }
 
+  /// Jumlah foto lokal per titik pada survei work order (`survey.points[].local_files`).
+  static int pointLocalFiles(Map<String, dynamic> payload) {
+    final survey = payload['survey'];
+    if (survey is! Map) return 0;
+    var n = 0;
+    for (final pt in (survey['points'] as List?) ?? const []) {
+      if (pt is Map) n += ((pt['local_files'] as List?) ?? const []).length;
+    }
+    return n;
+  }
+
+  /// Unggah foto tiap titik lalu isi `evidence_file_ids` titik itu (unggahan yang sudah berhasil tidak diulang).
+  Future<void> _uploadPointFiles(Map<String, dynamic> payload) async {
+    final survey = payload['survey'];
+    if (survey is! Map) return;
+    for (final pt in (survey['points'] as List?) ?? const []) {
+      if (pt is! Map) continue;
+      final paths = List<String>.from((pt['local_files'] as List?) ?? const []);
+      if (paths.isEmpty) continue;
+      final ids = List<String>.from((pt['evidence_file_ids'] as List?) ?? const []);
+      for (final path in paths) {
+        ids.add(await _api.uploadFile(File(path)));
+      }
+      pt
+        ..remove('local_files')
+        ..['evidence_file_ids'] = ids;
+    }
+  }
+
+  /// Id work order yang survei-nya masih menunggu kirim di antrean (kartu disembunyikan dari daftar).
+  Future<Set<String>> pendingWoSurveyIds() async {
+    final rows = await (_db.select(_db.pendingSyncOperations)
+          ..where((t) => t.entityType.equals(OfflineOp.woSurveySubmit)))
+        .get();
+    return {
+      for (final r in rows)
+        '${((jsonDecode(r.payloadJson) as Map)['payload'] as Map)['work_order_id']}',
+    };
+  }
+
   Future<void> _push() async {
     // Absen offline dikirim lebih dulu lewat endpoint-nya sendiri (bertanda tangan).
     await offlineAttendance.push();
@@ -162,7 +204,8 @@ class SyncEngine {
       final files = List<String>.from(
         (payload[_localFiles] as List?) ?? const [],
       );
-      if (files.isNotEmpty) {
+      final pointFiles = pointLocalFiles(payload);
+      if (files.isNotEmpty || pointFiles > 0) {
         try {
           final ids = List<String>.from(
             (payload['evidence_file_ids'] as List?) ?? const [],
@@ -170,9 +213,12 @@ class SyncEngine {
           for (final path in files) {
             ids.add(await _api.uploadFile(File(path)));
           }
-          payload
-            ..remove(_localFiles)
-            ..['evidence_file_ids'] = ids;
+          if (files.isNotEmpty) {
+            payload
+              ..remove(_localFiles)
+              ..['evidence_file_ids'] = ids;
+          }
+          await _uploadPointFiles(payload);
           record['payload'] = payload;
           await (_db.update(
             _db.pendingSyncOperations,
@@ -479,6 +525,7 @@ class SyncEngine {
       }
       final payload = record['payload'] as Map;
       n += ((payload[_localFiles] as List?) ?? const []).length;
+      n += pointLocalFiles(Map<String, dynamic>.from(payload));
     }
     return n;
   }

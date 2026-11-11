@@ -1,5 +1,5 @@
 # ADR 0003: Penerima eksternal untuk peminjaman aset
-Status: Usulan (keputusan bisnis dari pemilik, autopilot 2026-11-11; rincian teknis menunggu persetujuan)
+Status: Diterima (disetujui pemilik 2026-11-11, "approved all"; dikerjakan sebagai B-23 di gelombang 3)
 Tanggal: 2026-11-11
 Pemilik keputusan bisnis: pemilik VMS.
 

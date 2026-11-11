@@ -263,9 +263,12 @@ class LeaveService:
             raise ForbiddenError("Hanya pemohon, HR, atau OM yang dapat membatalkan permohonan cuti ini.")
         if leave.status not in CANCELLABLE_STATUSES:
             raise AppError("NOT_CANCELLABLE", "Permohonan cuti ini sudah tidak dapat dibatalkan.", status=409)
-        if leave.end_date < jakarta_now().date():
+        # Pengajuan yang masih menunggu belum memakai saldo: boleh dibatalkan kapan pun sebelum diputus.
+        # Cuti yang sudah disetujui hanya dapat dibatalkan sampai hari terakhirnya.
+        if leave.status != "PENDING" and leave.end_date < _today():
             raise AppError(
-                "NOT_CANCELLABLE", "Cuti yang hari terakhirnya sudah lewat tidak dapat dibatalkan.", status=409,
+                "NOT_CANCELLABLE",
+                "Cuti yang sudah disetujui dan hari terakhirnya sudah lewat tidak dapat dibatalkan.", status=409,
             )
 
         reason = ((data.reason or "").strip() if data else "") or None

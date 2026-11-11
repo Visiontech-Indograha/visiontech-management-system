@@ -110,6 +110,10 @@ class Settings(BaseSettings):
 
     # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.
     DISCORD_WEBHOOK_ALERTS: str = ""
+    # Hapus terjadwal (core/retention_job): pemutus otomatis, ukuran batch, batas waktu total satu jalan.
+    RETENTION_MAX_PER_TYPE: int = 500
+    RETENTION_BATCH_SIZE: int = 50
+    RETENTION_MAX_SECONDS: int = 1200
 
     # Konfigurasi penyimpanan objek (S3/MinIO)
     MINIO_ENDPOINT: str = "127.0.0.1:9000"

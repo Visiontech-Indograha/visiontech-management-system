@@ -471,6 +471,10 @@ class VmsApi {
     )).data,
   );
 
+  /// Survei work order milik tim saya (ketua atau anggota aktif), untuk bagian "Survei dari work order".
+  Future<List<Map<String, dynamic>>> teamSurveys() async =>
+      _list((await _dio.get('$_p/work-orders/team-surveys')).data);
+
   /// Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari mulai [start] — foto, keterangan, status.
   Future<List<int>> teamWeekSlides(String teamId, String start) async {
     final res = await _dio.post<List<int>>(

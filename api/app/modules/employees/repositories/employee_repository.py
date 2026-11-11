@@ -254,6 +254,12 @@ class EmployeeRepository(BaseRepository):
             await purge_row(self.db, "users", "user_id", uid)
         await purge_row(self.db, "employee", "employee_id", employee_id)
 
+    async def separated_at(self, employee_id: UUID) -> Any:
+        """Waktu karyawan keluar (selesai offboarding); None bila belum/tidak tercatat."""
+        row = await self.fetchone("SELECT separated_at FROM employee WHERE employee_id = CAST(:id AS uuid)",
+                                  {"id": str(employee_id)})
+        return row[0] if row else None
+
     async def restore(self, employee_id: UUID) -> None:
         """Batal arsip: data kembali terlihat, status tetap offboarded (akses baru lewat HR)."""
         params = {"id": str(employee_id)}

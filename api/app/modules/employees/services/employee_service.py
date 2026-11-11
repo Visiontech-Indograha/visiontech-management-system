@@ -20,7 +20,9 @@ from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationE
 from app.core.file_cleanup import employee_keys, release_keys
 from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
+from app.core.retention import PERSONAL_DATA_WINDOW
 from app.core.security import CurrentUser
+from app.core.time import utcnow
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
 from app.shared.access.office_scope import ensure_office_in_scope
@@ -240,6 +242,14 @@ class EmployeeService:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan tidak diarsipkan.", status=409)
+        separated_at = await self.repo.separated_at(employee_id)
+        if separated_at is not None and utcnow() - separated_at > PERSONAL_DATA_WINDOW:
+            raise AppError(
+                "RESTORE_EXPIRED",
+                "Karyawan ini sudah keluar lebih dari 30 hari, jadi data pribadinya (foto, KTP, telepon, alamat) "
+                "sudah dihapus dan tidak bisa dipulihkan. Daftarkan sebagai karyawan baru bila perlu.",
+                status=409,
+            )
         await self.repo.restore(employee_id)
         await self._audit(user, "EMPLOYEE_RESTORE", employee_id)
         return {"id": str(employee_id), "message": RESTORED}

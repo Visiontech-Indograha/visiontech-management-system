@@ -129,6 +129,34 @@ async def cleanup_idempotency(hari: int) -> None:
     await engine.dispose()
 
 
+async def hapus_terjadwal(terapkan: bool, paksa: bool = False) -> int:
+    """Hapus terjadwal (anonimisasi karyawan keluar >30 hari + hapus permanen arsip lewat retensi). Mengembalikan
+    kode keluar: 0 sukses/sedang berjalan, 1 ada kegagalan atau jenis diblokir pemutus."""
+    import json
+    import logging
+
+    from app.core import retention_job as retention
+    from app.core.alerts import send_business_alert
+    from app.core.time import utcnow
+
+    engine = make_engine(_operator_url())
+    try:
+        summary = await retention.jalankan(engine, terapkan=terapkan, now=utcnow(), paksa=paksa)
+    finally:
+        await engine.dispose()
+    data = summary.as_dict()
+    logging.getLogger("app.retention").info(json.dumps(data))
+    print(json.dumps(data, indent=2))
+    if summary.status == "sedang_berjalan":
+        print("Hapus terjadwal sedang berjalan di proses lain; dilewati.")
+        return 0
+    if terapkan:  # hanya angka, tanpa data pribadi
+        ringkas = ", ".join(f"{k}: {v.diproses} dihapus/{v.ditahan} ditahan/{v.gagal} gagal"
+                            for k, v in summary.jenis.items() if v.kandidat)
+        await send_business_alert("Hapus terjadwal selesai", ringkas or "Tidak ada yang perlu diproses.")
+    return 1 if summary.bermasalah else 0
+
+
 async def buat_partisi(bulan_ke_depan: int) -> int:
     """Buat partisi bulanan app_activity_logs + DEFAULT sebagai peran pemilik (cron host bulanan)."""
     from app.database.migration_v3 import ensure_activity_log_partitions
@@ -173,6 +201,13 @@ def main() -> None:
     part_parser = subparsers.add_parser("buat-partisi", help="Buat partisi app_activity_logs (peran pemilik, untuk cron)")
     part_parser.add_argument("--bulan", type=int, default=6, help="Jumlah bulan ke depan")
 
+    hapus_parser = subparsers.add_parser(
+        "hapus-terjadwal", help="Anonimisasi karyawan keluar >30 hari + hapus permanen arsip lewat retensi")
+    mode = hapus_parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--cek", action="store_true", help="Hanya lapor jumlah, tidak mengubah apa pun")
+    mode.add_argument("--terapkan", action="store_true", help="Jalankan (hanya jenis kebijakan aktif)")
+    hapus_parser.add_argument("--paksa", action="store_true", help="Lewati pemutus otomatis (ambang jumlah)")
+
     backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
     backup_parser.add_argument(
         "--cycle", default="WEEKLY", choices=["DAILY", "WEEKLY", "MONTHLY"], help="Siklus backup"
@@ -197,6 +232,8 @@ def main() -> None:
         asyncio.run(cleanup_orphans())
     elif args.command == "cleanup-idempotency":
         asyncio.run(cleanup_idempotency(args.hari))
+    elif args.command == "hapus-terjadwal":
+        sys.exit(asyncio.run(hapus_terjadwal(terapkan=args.terapkan, paksa=args.paksa)))
     elif args.command == "buat-partisi":
         print(f"Partisi diperiksa/dibuat: {asyncio.run(buat_partisi(args.bulan))} pernyataan.")
     elif args.command == "backup-db":

@@ -431,6 +431,13 @@ class AssetRepository(BaseRepository):
             f"WHERE {col} = CAST(:id AS uuid) AND delete_at IS NULL",
             {"id": str(asset_id)},
         )
+        if asset_type != "TOOL":  # berkas & inspeksi kendaraan ikut diarsipkan (jadwal retensi + pembersihan berkas)
+            for child in ("vehicle_file", "vehicle_inspection"):
+                await self.execute(
+                    f"UPDATE {child} SET delete_at = now(), update_at = now() "
+                    "WHERE vehicle_id = CAST(:id AS uuid) AND delete_at IS NULL",
+                    {"id": str(asset_id)},
+                )
 
     # ── Berkas kendaraan ──────────────────────────────────────────────────────
     async def vehicle_files(self, vehicle_id: UUID | str) -> list[Any]:

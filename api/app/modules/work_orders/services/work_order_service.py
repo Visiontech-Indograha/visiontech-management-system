@@ -195,6 +195,9 @@ class WorkOrderService:
         if wo.status not in ("WAITING_SURVEY", "SURVEY_IN_PROGRESS", "SURVEY_SUBMITTED"):
             raise AppError("INVALID_STATE", f"Laporan survei tidak dapat dikirim untuk status {wo.status}.", status=409)
 
+        wt_ids = sorted({str(p.recommended_work_type_id) for p in data.points})
+        if wt_ids and await self.repo.count_work_types(wt_ids) != len(wt_ids):
+            raise ValidationError("Jenis pekerjaan yang dipilih pada titik survei tidak ditemukan.")
         points_payload = [p.model_dump() for p in data.points]
         if not await self.repo.submit_survey(
             work_order_id=work_order_id,
@@ -207,6 +210,21 @@ class WorkOrderService:
             raise AppError("INVALID_STATE", "Status WO berubah; laporan survei tidak dapat dikirim. Muat ulang.",
                            status=409)
         return await self.get_work_order(work_order_id)
+
+    async def submit_survey_offline(
+        self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
+    ) -> None:
+        """Kirim survei dari antrean sinkron offline. Cakupan tim sama dengan jalur online (404/403).
+        Survei yang sudah SURVEY_SUBMITTED dianggap sudah terkirim (aman idempoten, tidak ditimpa);
+        status lain di luar survei (mis. sudah disetujui) -> 409 dan ditolak oleh sinkron."""
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengirim laporan survei.")
+        wo = await self.repo.get_work_order(work_order_id)
+        if not wo:
+            raise NotFoundError("Work Order tidak ditemukan.")
+        if wo.status == "SURVEY_SUBMITTED":
+            return
+        await self.submit_survey(work_order_id, data, current_user)
 
     async def apply_survey(self, work_order_id: UUID | str, current_user: CurrentUser) -> Any:
         """

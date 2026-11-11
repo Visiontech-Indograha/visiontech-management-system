@@ -1,14 +1,20 @@
 # Cadangan terenkripsi ke Windows 'pobonguar' (tarik malam hari)
 
+> [!IMPORTANT]
+> **LANGKAH PEMILIK (OWNER'S MANUAL STEP):** Seluruh eksekusi perintah di server produksi (`visiontech-bar`) maupun di mesin Windows (`pobonguar`) adalah kewenangan eksklusif pemilik. Agen AI dilarang melakukan SSH atau eksekusi perubahan langsung di server produksi.
+
 Alur: server Linux `visiontech-bar` membuat cadangan DB + MinIO (prod dan beta) terenkripsi `age` -> Windows
 `pobonguar` (Tailscale 100.94.81.43) MENARIK lewat SFTP baca-saja -> verifikasi sha256 -> retensi -> peringatan.
 Kunci PUBLIK age ada di Linux; kunci PRIVAT hanya di Windows + satu salinan offline. Tidak ada rahasia di repo.
 
 Yang dibuat repo: `deploy/backup-terenkripsi.sh`, `deploy/siapkan-backup-reader.sh`, `deploy/perkiraan-disk-cadangan.sh`,
-`deploy/windows/{Cadangan-Umum,Tarik-Cadangan,Daftar-Tugas,Uji-Pulih}.ps1`; `backup-minio.sh` mendapat opsi `VMS_MINIO_REMOVE=1`.
+`deploy/sanitasi-dump-biometrik.sh`, `deploy/windows/{Cadangan-Umum,Tarik-Cadangan,Daftar-Tugas,Uji-Pulih}.ps1`;
+`backup-minio.sh` mengaktifkan `mc mirror --remove` secara bawaan sesuai keputusan retensi PDP pemilik.
 Jangan tempel ke server tanpa membaca; perubahan di server dicadangkan dulu (ikuti `deploy/README.md`).
 
-## 0. Prasyarat
+## 0. Prasyarat & Kepatuhan UU PDP No. 27/2022
+- **Prinsip PDP (Data Biometrik)**: Kolom `face_embedding` pada tabel `employee` adalah Data Pribadi Spesifik (Pasal 4 ayat 2 huruf d UU PDP). Data mentah biometrik tidak boleh dikirim ke luar server tanpa enkripsi `age`. Untuk pemulihan ke lingkungan non-produksi (uji/staging), gunakan opsi `VMS_BACKUP_EXCLUDE_BIOMETRIC=1` atau jalankan `deploy/sanitasi-dump-biometrik.sh`.
+- **Retensi MinIO 35 Hari**: Sesuai keputusan pemilik, berkas terhapus di MinIO dibuang maksimal **35 hari** (30 hari retensi DB/MinIO + maks 5 hari siklus cadangan). `mc mirror --remove` aktif agar berkas terhapus tidak abadi di mirror.
 - Linux: `sudo apt install age` (>= 1.1), GNU tar, cron. Windows Server 2019: OpenSSH Client
   (`Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0`), `age.exe` (unduh rilis resmi FiloSottile/age ke
   `C:\Tools\age\`, tambah ke PATH), opsional `pg_restore.exe` (PostgreSQL client 18). `tar.exe` sudah bawaan.
@@ -101,14 +107,63 @@ Penghapusan tuntas: salinan kerja Linux memakai `mc mirror --remove`; inkrementa
 sistem tetap ada di arsip lama sampai set mingguannya dibuang. Bawaan `-RetensiMinioHari 28` (+ panjang set <= 7 hari) menjamin berkas
 terhapus hilang paling lambat 35 hari (keputusan pemilik). Konsekuensi: titik pulih MinIO yang terjamin ~28 hari.
 
-## 6. Uji pulih bulanan (Administrator, kunci privat dipasang)
+## 6. Uji pulih dan langkah pemulihan dari cadangan terenkripsi (LANGKAH PEMILIK)
+
+### 6.1 Uji pulih otomatis bulanan (Windows Administrator, kunci privat dipasang)
 ```powershell
 .\Uji-Pulih.ps1 -Identitas C:\kunci\vms-age.key -Lingkungan prod ; .\Uji-Pulih.ps1 -Identitas C:\kunci\vms-age.key -Lingkungan beta
 ```
 Mendekripsi ke folder sementara, `pg_restore --list` (jumlah entri), hitung berkas di rantai arsip MinIO, hapus sementara, lapor di
-`D:\cadangan-vms\log\uji-pulih-<env>-<bulan>.txt`. Pulih penuh (kuartalan, atas perintah pemilik): dekripsi `age -d -i kunci -o x.dump berkas.age`,
-`pg_restore -d <db-kosong> x.dump`; MinIO: ekstrak full lalu inkremental berurutan dengan `tar -x --listed-incremental=/dev/null -f`.
-Catat tanggal, hasil, durasi di log uji pulih.
+`D:\cadangan-vms\log\uji-pulih-<env>-<bulan>.txt`.
+
+### 6.2 Prosedur pemulihan penuh (Disaster Recovery)
+> **PENTING**: Pemulihan ke server produksi hanya dilakukan saat insiden/bencana atas persetujuan pemilik, selalu pulihkan ke basis data/penyimpanan sementara terlebih dahulu untuk verifikasi integritas.
+
+#### A. Pemulihan Database (PostgreSQL)
+1. **Verifikasi Checksum**:
+   ```powershell
+   # Windows:
+   (Get-FileHash -Algorithm SHA256 prod-db-20261111-020000.dump.age).Hash.ToLower()
+   Get-Content prod-db-20261111-020000.dump.age.sha256
+   ```
+2. **Dekripsi dengan age**:
+   ```powershell
+   age.exe -d -i C:\kunci\vms-age.key -o prod-db-pulih.dump prod-db-20261111-020000.dump.age
+   ```
+3. **Verifikasi Isi Dump**:
+   ```powershell
+   pg_restore.exe --list prod-db-pulih.dump | Select-Object -First 20
+   ```
+4. **Pulihkan ke Basis Data Sementara / Bersih**:
+   ```bash
+   # Di Linux:
+   pg_restore -U "$POSTGRES_USER" -d vms_recovery --clean --if-exists prod-db-pulih.dump
+   ```
+5. **(Khusus Lingkungan Non-Prod / Staging) Sanitasi Biometrik PDP**:
+   ```bash
+   bash deploy/sanitasi-dump-biometrik.sh --db vms_db_staging vms_staging
+   ```
+
+#### B. Pemulihan Berkas MinIO
+1. **Dekripsi Arsip Penuh (Full) & Inkremental**:
+   ```powershell
+   age.exe -d -i C:\kunci\vms-age.key -o minio-full.tar prod-minio-20261108-020000-full.tar.age
+   age.exe -d -i C:\kunci\vms-age.key -o minio-inc-1.tar prod-minio-20261109-020000-inc.tar.age
+   age.exe -d -i C:\kunci\vms-age.key -o minio-inc-2.tar prod-minio-20261110-020000-inc.tar.age
+   ```
+2. **Ekstraksi Rantai Arsip Berurutan** (tar GNU dengan `--listed-incremental=/dev/null` agar penghapusan berkas sinkron):
+   ```bash
+   mkdir -p /tmp/minio-pulih
+   tar -C /tmp/minio-pulih --listed-incremental=/dev/null -xf minio-full.tar
+   tar -C /tmp/minio-pulih --listed-incremental=/dev/null -xf minio-inc-1.tar
+   tar -C /tmp/minio-pulih --listed-incremental=/dev/null -xf minio-inc-2.tar
+   ```
+3. **Kembalikan Berkas ke MinIO**:
+   ```bash
+   # Gunakan mc mirror ke target MinIO
+   mc mirror /tmp/minio-pulih/vms-files/ minio_target/vms-files/
+   ```
+4. Bersihkan folder sementara dan hapus berkas hasil dekripsi setelah selesai.
 
 ## 7. Rotasi kunci
 1. Buat pasangan baru (`age-keygen`), tambahkan kunci PUBLIK baru sebagai baris kedua `age-recipients.txt` (cadangan baru terbaca KEDUA kunci).
@@ -124,5 +179,4 @@ sudo userdel backup-reader; crontab -e   # hapus dua baris backup-terenkripsi
 ```powershell
 Unregister-ScheduledTask 'VMS Tarik Cadangan' -Confirm:$false; Unregister-ScheduledTask 'VMS Periksa Cadangan' -Confirm:$false
 ```
-Cadangan lama (`backup.sh`, `backup-minio.sh`, `backup-offsite.sh`) tidak diubah dan tetap jalan; `backup-minio.sh` hanya mendapat opsi baru
-yang mati secara bawaan.
+Cadangan lama (`backup.sh`, `backup-minio.sh`, `backup-offsite.sh`) tidak diubah dan tetap jalan; `backup-minio.sh` mengaktifkan `--remove` secara bawaan sesuai kepatuhan retensi PDP.

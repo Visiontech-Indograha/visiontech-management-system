@@ -55,7 +55,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="text-xs bg-slate-700 hover:bg-slate-600 text-white border-slate-600 h-8 gap-1.5"
+              className="text-xs bg-slate-700 hover:bg-slate-600 text-white border-slate-600 h-11 gap-1.5"
             >
               <Printer className="w-3.5 h-3.5" />
               Cetak
@@ -64,7 +64,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-slate-700 hover:bg-slate-600 text-white border-slate-600 h-8 gap-1.5"
+                className="text-xs bg-slate-700 hover:bg-slate-600 text-white border-slate-600 h-11 gap-1.5"
               >
                 <Download className="w-3.5 h-3.5" />
                 Unduh
@@ -74,7 +74,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-slate-300 hover:text-white hover:bg-slate-700 h-8 gap-1.5"
+                className="text-xs text-slate-300 hover:text-white hover:bg-slate-700 h-11 gap-1.5"
               >
                 <ExternalLinkIcon className="w-3.5 h-3.5" />
                 Tab Baru

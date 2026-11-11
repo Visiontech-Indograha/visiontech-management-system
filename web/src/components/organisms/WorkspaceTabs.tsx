@@ -43,7 +43,7 @@ export function WorkspaceTabs() {
             end
             className={({ isActive }) =>
               clsx(
-                "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
                 isActive
                   ? "border-primary bg-primary text-primary-foreground shadow-xs"
                   : "border-line bg-surface text-foreground hover:border-primary/40 hover:bg-accent hover:text-primary",

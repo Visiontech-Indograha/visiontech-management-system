@@ -16,7 +16,7 @@ export function RoleSelectField({ label, value, options, onChange }: {
       <Select
         value={value}
         onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        className="flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
       >
         {Object.entries(options).map(([v, text]) => (
           <SelectOption key={v} value={v}>{text}</SelectOption>

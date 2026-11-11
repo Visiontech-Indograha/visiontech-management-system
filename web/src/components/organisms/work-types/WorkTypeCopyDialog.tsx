@@ -1,3 +1,4 @@
+import { divisionOptionLabel } from "@/lib/divisionLabel";
 import { useState } from "react";
 import { toast } from "sonner";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
@@ -49,10 +50,10 @@ export function WorkTypeCopyDialog({ type, onClose }: { type: WorkType; onClose:
         Divisi tujuan mendapat jenis pekerjaan sendiri yang bisa diubah terpisah.
       </TextBlock>
       <SelectField label="Divisi tujuan" value={target} onChange={(e) => setTarget(e.target.value)}>
-        <ControlOption value="">-- Pilih Divisi --</ControlOption>
+        <ControlOption value="">Pilih divisi</ControlOption>
         {targets.map((d) => (
           <ControlOption key={d.id} value={d.id}>
-            {`${d.name} (${d.code})`}
+            {divisionOptionLabel(d, targets)}
           </ControlOption>
         ))}
       </SelectField>

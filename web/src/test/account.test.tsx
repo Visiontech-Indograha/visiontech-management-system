@@ -27,6 +27,7 @@ describe("Akun dan keamanan", () => {
     expect(within(list).getByText(/Aplikasi Visiontech · Android/)).toBeInTheDocument();
 
     fireEvent.click(within(list).getByRole("button", { name: "Keluarkan Aplikasi Visiontech · Android" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, keluarkan" }));
     await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/auth/sessions/s2/revoke")).toBe(true));
     expect(within(list).queryByRole("button", { name: /Keluarkan Chrome/ })).toBeNull(); // perangkat ini tidak bisa
   });
@@ -38,6 +39,7 @@ describe("Akun dan keamanan", () => {
     });
     renderRoute("/account", { role: "field" });
     fireEvent.click(await screen.findByRole("button", { name: "Keluarkan perangkat lain" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, keluarkan" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/auth/sessions/revoke-others")).toBe(true));
   });
 

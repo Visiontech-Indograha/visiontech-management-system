@@ -1,6 +1,7 @@
 import {
   Bed,
   Network,
+  Settings,
   BookUser,
   Briefcase,
   Building2,
@@ -60,6 +61,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
   { path: "/divisions", label: "Divisi dan jabatan", icon: Network, anyOf: ["manage:divisions", "manage:users"], group: "Master dan Sistem" },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
+  { path: "/system-settings", label: "Setelan sistem", icon: Settings, requires: ["manage:system_settings"], group: "Master dan Sistem" },
 ];
 
 /** Tujuan utama untuk bilah navigasi bawah ponsel (< 768 px). */

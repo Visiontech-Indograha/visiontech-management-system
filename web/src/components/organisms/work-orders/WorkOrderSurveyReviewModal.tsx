@@ -1,4 +1,7 @@
 import L from "leaflet";
+import { statusLabel } from "@/lib/labels";
+import { errorMessage } from "@/lib/errors";
+import { SurveyApproveButton } from "./SurveyApproveButton";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { toast } from "sonner";
@@ -7,7 +10,6 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import {
-  CheckCircle2,
   MapPin,
   Camera,
   Layers,
@@ -159,8 +161,8 @@ export function WorkOrderSurveyReviewModal({
       await applyMutation.mutateAsync();
       toast.success("Hasil survei berhasil disetujui! Work order kini siap dijadwalkan.");
       onClose();
-    } catch {
-      toast.error("Gagal menyetujui hasil survei");
+    } catch (err) {
+      toast.error(errorMessage(err, "Hasil survei belum bisa disetujui. Coba lagi."));
     }
   };
 
@@ -188,7 +190,7 @@ export function WorkOrderSurveyReviewModal({
                 <TextBlock as="span">Klien: </TextBlock>
                 <TextBlock as="span" className="font-semibold text-ink">{detail.client_name}</TextBlock>
                 <TextBlock as="span"> | Lokasi: </TextBlock>
-                <TextBlock as="span" className="font-semibold text-ink">{detail.site_name || "Pusat"}</TextBlock>
+                <TextBlock as="span" className="font-semibold text-ink">{detail.site_name || "Belum ada site"}</TextBlock>
                 <TextBlock as="span"> ({detail.site_address || "-"})</TextBlock>
                 <TextBlock as="span"> | Tim: </TextBlock>
                 <TextBlock as="span" className="font-semibold text-ink">{detail.team_name || "Belum ditunjuk"}</TextBlock>
@@ -237,7 +239,7 @@ export function WorkOrderSurveyReviewModal({
                     : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
                 }`}
               >
-                <TextBlock as="span">{detail.status}</TextBlock>
+                <TextBlock as="span">{statusLabel(detail.status)}</TextBlock>
               </div>
             </div>
           </div>
@@ -608,28 +610,13 @@ export function WorkOrderSurveyReviewModal({
                             <TextBlock as="span">
                               Mengunci titik survei, menyalin tugas ke jadwal harian, dan mengubah status menjadi{" "}
                             </TextBlock>
-                            <TextBlock as="span" className="font-bold text-ink">READY_TO_EXECUTE</TextBlock>
+                            <TextBlock as="span" className="font-bold text-ink">{statusLabel("READY_TO_EXECUTE")}</TextBlock>
                             <TextBlock as="span">.</TextBlock>
                           </div>
                         </div>
                       </div>
 
-                      <ActionButton
-                        type="button"
-                        variant="default"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 shadow-sm"
-                        disabled={applyMutation.isPending}
-                        onClick={handleApply}
-                      >
-                        {applyMutation.isPending ? (
-                          <TextBlock as="span">Memproses Persetujuan...</TextBlock>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <TextBlock as="span">Setujui hasil survei dan kunci tugas</TextBlock>
-                          </div>
-                        )}
-                      </ActionButton>
+                      <SurveyApproveButton pending={applyMutation.isPending} onApprove={handleApply} />
                     </div>
                   </div>
                 )}

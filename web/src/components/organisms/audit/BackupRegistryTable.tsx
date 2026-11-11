@@ -4,6 +4,7 @@
  * Menampilkan siklus backup, periode data, ukuran terkompresi, SHA-256, dan aksi unduh berkas.
  */
 
+import { statusLabel } from "@/lib/labels";
 import React, { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { toDownloadUrl } from "@/lib/mediaUtils";
@@ -165,7 +166,7 @@ export const BackupRegistryTable: React.FC = () => {
                     ) : (
                       <TextBlock as="span" className="inline-flex items-center gap-1 text-xs font-medium text-danger">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        {item.status}
+                        {statusLabel(item.status)}
                       </TextBlock>
                     )}
                   </TableBlockCell>

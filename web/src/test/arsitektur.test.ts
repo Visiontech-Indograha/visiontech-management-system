@@ -113,7 +113,7 @@ const IMPOR_DIALOG_LAMA = /from\s+["'][^"']*(molecules\/Modal|atoms\/Dialog|\.\/
 const BATAS_BERKAS_BESAR: Record<string, number> = {
   "components/organisms/attendance/OfficeCheckInCard.tsx": 509,
   "components/organisms/hse/HseCampaignsPanel.tsx": 611,
-  "components/organisms/work-orders/WorkOrderSurveyReviewModal.tsx": 623,
+  "components/organisms/work-orders/WorkOrderSurveyReviewModal.tsx": 611,
 };
 const hitungBaris = (f: string) =>
   read(f).split("\n").filter((l: string) => {

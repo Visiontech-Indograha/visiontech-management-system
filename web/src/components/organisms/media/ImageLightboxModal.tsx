@@ -86,7 +86,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               variant="outline"
               size="sm"
               onClick={handleZoomIn}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 px-2"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 px-2"
               title="Perbesar"
             >
               <ZoomIn className="w-4 h-4" />
@@ -95,7 +95,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               variant="outline"
               size="sm"
               onClick={handleZoomOut}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 px-2"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 px-2"
               title="Perkecil"
             >
               <ZoomOut className="w-4 h-4" />
@@ -104,7 +104,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               variant="outline"
               size="sm"
               onClick={handleRotate}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 px-2"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 px-2"
               title="Putar 90°"
             >
               <RotateCw className="w-4 h-4" />
@@ -113,7 +113,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               variant="outline"
               size="sm"
               onClick={handleReset}
-              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 px-2"
+              className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 px-2"
               title="Reset Tampilan"
             >
               <RotateCcw className="w-4 h-4" />
@@ -123,7 +123,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-8 px-2 gap-1"
+                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 px-2 gap-1"
               >
                 <Download className="w-4 h-4" />
               </Button>
@@ -132,7 +132,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-xs text-slate-400 hover:text-white hover:bg-slate-800 h-8 px-2"
+                className="text-xs text-slate-400 hover:text-white hover:bg-slate-800 h-11 px-2"
               >
                 <ExternalLinkIcon className="w-4 h-4" />
               </Button>
@@ -177,7 +177,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
                   </div>
                 )}
               </div>
-              <TextBlock as="span" className="text-[11px] text-slate-500">Zoom: {Math.round(scale * 100)}%</TextBlock>
+              <TextBlock as="span" className="text-xs text-slate-500">Zoom: {Math.round(scale * 100)}%</TextBlock>
             </div>
           )}
         </div>

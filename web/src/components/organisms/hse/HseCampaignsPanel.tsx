@@ -222,7 +222,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                           : "Karyawan Kantor"}
                       </TextBlock>
                       {c.is_mandatory && (
-                        <TextBlock as="span" className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600">
+                        <TextBlock as="span" className="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-bold text-rose-600">
                           Wajib Baca ({c.cooldown_seconds}s)
                         </TextBlock>
                       )}
@@ -240,7 +240,7 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                   </div>
 
                   <div className="mt-5 pt-3 border-t border-line flex items-center justify-between">
-                    <TextBlock as="span" className="text-[11px] text-mist">
+                    <TextBlock as="span" className="text-xs text-mist">
                       {c.start_date} s/d {c.end_date}
                     </TextBlock>
                     <div className="flex flex-wrap items-center justify-end gap-2">
@@ -612,10 +612,10 @@ export function HseCampaignsPanel({ renderPage }: { renderPage: (page: { action:
                       <TableBlockRow key={r.acknowledgment_id} className="hover:bg-surface-elevated/40">
                         <TableBlockCell className="p-3 font-semibold text-ink">
                           {r.user_name}
-                          <div className="text-[11px] text-mist font-normal">{r.user_email}</div>
+                          <div className="text-xs text-mist font-normal">{r.user_email}</div>
                         </TableBlockCell>
                         <TableBlockCell className="p-3">
-                          <TextBlock as="span" className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          <TextBlock as="span" className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                             {r.platform}
                           </TextBlock>
                         </TableBlockCell>

@@ -84,26 +84,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_photoBusy) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
               leading: const Icon(Icons.photo_camera_outlined),
               title: const Text('Ambil foto'),
-              onTap: () => Navigator.pop(context, 'camera'),
+              onTap: () => Navigator.of(sheetContext).pop('camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
               title: const Text('Pilih dari galeri'),
-              onTap: () => Navigator.pop(context, 'gallery'),
+              onTap: () => Navigator.of(sheetContext).pop('gallery'),
             ),
             if (_currentPhotoId() != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline),
                 title: const Text('Hapus foto'),
-                onTap: () => Navigator.pop(context, 'remove'),
+                onTap: () => Navigator.of(sheetContext).pop('remove'),
               ),
+            const Divider(height: 1),
+            ListTile(
+              key: const Key('profile-photo-sheet-close'),
+              leading: const Icon(Icons.close_rounded),
+              title: const Text('Tutup'),
+              onTap: () => Navigator.of(sheetContext).pop(),
+            ),
           ],
         ),
       ),

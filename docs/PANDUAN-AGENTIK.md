@@ -1,3 +1,5 @@
+> Serah terima AI terbaru: [SERAH-TERIMA-AI.md](SERAH-TERIMA-AI.md)
+
 # Panduan agentik VMS
 
 Versi: 0.1 - 2026-11-04 - cabang `docs/skills-agentik`

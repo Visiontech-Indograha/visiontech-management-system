@@ -48,6 +48,20 @@ def test_same_title_other_client_or_cancelled_wo_does_not_warn(client, world: Wo
     assert after_cancel.status_code == 201 and after_cancel.json()["duplicate_title_warning"] is None
 
 
+def test_wo_number_follows_highest_number_not_latest_create_at(client, world: World):
+    """Akar flaky 409: create_at = awal transaksi, jadi 'terbaru' bisa bukan nomor terbesar."""
+    client_id = make_client()
+    tag = uuid.uuid4().hex[:6]
+    numbers = [_create(client, world, client_id, f"WO urut {i} {tag}").json()["wo_number"] for i in range(2)]
+    # Nomor terkecil diberi create_at paling baru (meniru transaksi yang mulai belakangan tapi commit lebih dulu).
+    sync_query("UPDATE client_work_orders SET create_at = now() + interval '1 hour' WHERE wo_number = %s",
+               (min(numbers),))
+    third = _create(client, world, client_id, f"WO urut 3 {tag}")
+    assert third.status_code == 201, third.text
+    assert third.json()["wo_number"] not in numbers
+    assert third.json()["wo_number"] > max(numbers)
+
+
 def test_concurrent_creates_get_distinct_wo_numbers(client, world: World):
     """Nomor WO dikunci: dua pembuatan serentak tidak bentrok (dulu 409 'Data yang sama sudah ada')."""
     from tests.concurrency import dua_bersamaan

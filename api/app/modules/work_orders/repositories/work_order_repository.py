@@ -49,12 +49,14 @@ class WorkOrderRepository(BaseRepository):
         now = utcnow()
         prefix = f"WO-{now.strftime('%Y%m')}-"
         # Kunci sampai transaksi selesai: dua WO dibuat bersamaan tidak mendapat nomor sama (409 "Data yang sama").
+        # Nomor terbesar dipakai (bukan create_at terbaru: create_at = awal transaksi, bukan urutan commit).
         await self.execute("SELECT pg_advisory_xact_lock(hashtext('client_work_orders.wo_number'))")
         row = await self.fetchone(
             """
             SELECT wo_number FROM client_work_orders
             WHERE wo_number LIKE :pfx || '%'
-            ORDER BY create_at DESC LIMIT 1
+              AND substr(wo_number, length(:pfx) + 1) ~ '^[0-9]{1,9}$'
+            ORDER BY CAST(substr(wo_number, length(:pfx) + 1) AS integer) DESC LIMIT 1
             """,
             {"pfx": prefix},
         )

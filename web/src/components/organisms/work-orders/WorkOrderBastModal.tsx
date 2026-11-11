@@ -7,6 +7,7 @@ import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { SignaturePad, type SignaturePadHandle } from "@/components/molecules/SignaturePad";
 import { FileCheck2 } from "@/components/molecules/Glyphs";
+import { errorMessage } from "@/lib/errors";
 import { useSignBast, type WorkOrder } from "@/services/workOrderService";
 
 interface WorkOrderBastModalProps {
@@ -47,8 +48,8 @@ export function WorkOrderBastModal({
       });
       toast.success(`Surat serah terima untuk tugas ${workOrder.wo_number} berhasil ditandatangani!`);
       onClose();
-    } catch {
-      toast.error("Gagal menandatangani surat serah terima");
+    } catch (err) {
+      toast.error(errorMessage(err, "Surat serah terima belum bisa ditandatangani. Periksa koneksi lalu coba lagi."));
     }
   };
 

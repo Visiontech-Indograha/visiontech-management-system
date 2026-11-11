@@ -17,6 +17,8 @@ import {
   TableBlockHeaderCell,
   TableBlockCell,
 } from "@/components/molecules/TableBlock";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { errorMessage } from "@/lib/errors";
 import {
   useWorkTypeMaterials,
   useCreateWorkTypeMaterial,
@@ -46,6 +48,8 @@ export function WorkTypeMaterialsDialog({
 }: WorkTypeMaterialsDialogProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<DefaultMaterial | null>(null);
+  const [deletingMaterial, setDeletingMaterial] = useState<DefaultMaterial | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: materials = [], isPending, isError } = useWorkTypeMaterials(workType?.id || "");
   const createMaterial = useCreateWorkTypeMaterial();
@@ -122,20 +126,32 @@ export function WorkTypeMaterialsDialog({
         toast.success("Material default berhasil ditambahkan.");
       }
       handleCancelForm();
-    } catch {
-      toast.error(editingMaterial ? "Gagal memperbarui material default." : "Gagal menambahkan material default.");
+    } catch (err) {
+      toast.error(
+        errorMessage(
+          err,
+          editingMaterial
+            ? "Material default belum bisa diperbarui. Periksa isian formulir lalu coba lagi."
+            : "Material default belum bisa ditambahkan. Periksa isian formulir lalu coba lagi."
+        )
+      );
     }
   };
 
-  const handleDelete = async (materialId: string, name: string) => {
+  const handleConfirmDelete = async () => {
+    if (!deletingMaterial || !workType) return;
+    setDeleteError(null);
     try {
       await deleteMaterial.mutateAsync({
         workTypeId: workType.id,
-        materialId,
+        materialId: deletingMaterial.default_material_id,
       });
-      toast.success(`Material '${name}' berhasil dihapus.`);
-    } catch {
-      toast.error("Gagal menghapus material default.");
+      toast.success(`Material '${deletingMaterial.material_name}' berhasil dihapus.`);
+      setDeletingMaterial(null);
+    } catch (err) {
+      const msg = errorMessage(err, "Material default belum bisa dihapus. Coba lagi.");
+      setDeleteError(msg);
+      toast.error(msg);
     }
   };
 
@@ -315,8 +331,11 @@ export function WorkTypeMaterialsDialog({
                         <ActionButton
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleDelete(m.default_material_id, m.material_name)}
-                          aria-label="Hapus Material"
+                          onClick={() => {
+                            setDeleteError(null);
+                            setDeletingMaterial(m);
+                          }}
+                          aria-label={`Hapus ${m.material_name}`}
                         >
                           <Trash2 className="h-3.5 w-3.5 text-danger" />
                         </ActionButton>
@@ -329,6 +348,25 @@ export function WorkTypeMaterialsDialog({
           </div>
         )}
       </div>
+
+      {deletingMaterial && (
+        <ConfirmDialog
+          open={Boolean(deletingMaterial)}
+          title="Hapus material default"
+          message={`Hapus material ${deletingMaterial.material_name} dari jenis pekerjaan ini? Order baru tidak akan menyertakan material ini secara otomatis.`}
+          confirmLabel="Hapus"
+          danger
+          busy={deleteMaterial.isPending}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onClose={() => {
+            if (!deleteMaterial.isPending) {
+              setDeletingMaterial(null);
+              setDeleteError(null);
+            }
+          }}
+        />
+      )}
     </VmsDialog>
   );
 }

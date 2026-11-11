@@ -10,6 +10,7 @@ import { WorkCompletionAddButton } from "./WorkCompletionAddButton";
 import { WorkCompletionDetailModal } from "./WorkCompletionDetailModal";
 import { WorkCompletionFormDialog } from "./WorkCompletionFormDialog";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { errorMessage } from "@/lib/errors";
 import {
   type WorkCompletion,
   type WorkCompletionListResponse,
@@ -59,8 +60,8 @@ export function WorkCompletionList({
       await deleteMutation.mutateAsync(deleteTarget.completion_id);
       toast.success("Pekerjaan klien berhasil dihapus.");
       setDeleteTarget(null);
-    } catch {
-      toast.error("Gagal menghapus pekerjaan klien.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Pekerjaan klien belum bisa dihapus. Coba lagi sebentar lagi."));
     }
   };
 
@@ -69,8 +70,8 @@ export function WorkCompletionList({
     try {
       await updateStatusMutation.mutateAsync({ id: order.completion_id, status: next });
       toast.success(next === "URGENT" ? "Ditandai mendesak." : "Tanda mendesak dihapus.");
-    } catch {
-      toast.error("Gagal mengubah status. Coba lagi.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Status pekerjaan belum bisa diubah. Coba lagi sebentar lagi."));
     }
   };
 

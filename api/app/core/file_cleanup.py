@@ -37,8 +37,8 @@ KEY_COLUMNS: tuple[tuple[str, str, str], ...] = (
     ("employee_file", "path_file", "delete_at IS NULL"),
     ("tool", "photo_path", "TRUE"),
     ("vehicle", "photo_path", "TRUE"),
-    ("vehicle_file", "path_file", "TRUE"),
-    ("vehicle_inspection", "path_file", "TRUE"),
+    ("vehicle_file", "path_file", "delete_at IS NULL"),
+    ("vehicle_inspection", "path_file", "delete_at IS NULL"),
     ("asset_assignment", "handover_photo_path", "TRUE"),
     ("asset_assignment", "return_photo_path", "TRUE"),
     ("offboarding_clearance_item", "handover_photo_path", "TRUE"),
@@ -137,9 +137,9 @@ async def employee_keys(db: AsyncSession, employee_id: UUID | str) -> list[str]:
     return list(dict.fromkeys(keys))
 
 
-async def release_keys(db: AsyncSession, keys: Iterable[str]) -> int:
-    """Lepas berkas yang tak dirujuk data mana pun: hapus baris `file_object` (dalam transaksi), lalu jadwalkan
-    penghapusan objek + varian setelah commit. Mengembalikan jumlah kunci yang dilepas."""
+async def release_keys_now(db: AsyncSession, keys: Iterable[str]) -> list[str]:
+    """Lepas berkas yang tak dirujuk data mana pun: hapus baris `file_object` (dalam transaksi). Mengembalikan
+    kunci yang dilepas; objeknya BELUM dihapus (pemanggil menghapusnya setelah commit, lihat `purge_keys_async`)."""
     released: list[str] = []
     for key in dict.fromkeys(k for k in keys if k):
         if await is_referenced(db, key):
@@ -150,5 +150,11 @@ async def release_keys(db: AsyncSession, keys: Iterable[str]) -> int:
         except IntegrityError:  # masih dipakai tabel lain lewat FK
             continue
         released.append(key)
+    return released
+
+
+async def release_keys(db: AsyncSession, keys: Iterable[str]) -> int:
+    """`release_keys_now` + jadwalkan penghapusan objek + varian setelah commit. Mengembalikan jumlah kunci."""
+    released = await release_keys_now(db, keys)
     queue_purge(db, released)
     return len(released)

@@ -87,7 +87,7 @@ export function OvertimeApplyDialog({ onClose }: { onClose: () => void }) {
         query={plans}
         errorText="Jadwal hari ini tidak dapat dimuat."
         empty={ongoing.length === 0}
-        emptyText="Lembur hanya bisa diajukan saat jadwal kerja hari ini sedang berjalan."
+        emptyText="Lembur diajukan dari jadwal yang sedang berjalan. Buka tab Jadwal kerja, pilih jadwal hari ini."
       >
         <FormBlock id="overtime-apply-form" onSubmit={handleSubmit(onSubmit)}>
           {!online && <FormErrorText message="Anda sedang offline. Sambungkan internet untuk mengirim lembur." />}

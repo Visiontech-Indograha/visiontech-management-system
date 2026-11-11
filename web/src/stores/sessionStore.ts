@@ -3,9 +3,11 @@ import {
   getAccessToken,
   refreshAccessToken,
   setAccessToken,
+  setLogoutBroadcastReceiver,
   setMustChangePasswordHandler,
   setSessionExpiredHandler,
 } from "@/lib/apiClient";
+import { broadcastLogout } from "@/lib/tabSync";
 import type { Me, TokenOut } from "@/lib/types";
 import { mockMe } from "../app/mockSession";
 import { queryClient } from "@/lib/queryClient";
@@ -61,6 +63,8 @@ export const useSession = create<SessionState>((set, get) => {
   };
 
   setSessionExpiredHandler(clear);
+  // Tab lain keluar: ikut keluar (tanpa menyiarkan ulang).
+  setLogoutBroadcastReceiver(clear);
   // Server menjawab 403 MUST_CHANGE_PASSWORD: tandai sesi agar RequireAuth mengarahkan ke ganti sandi.
   setMustChangePasswordHandler(() => {
     const current = get().me;
@@ -99,6 +103,7 @@ export const useSession = create<SessionState>((set, get) => {
         /* sesi lokal tetap dibersihkan */
       }
       clear();
+      broadcastLogout();
     },
     applyToken: async (token: TokenOut) => {
       if (isSessionExpired(parseAuthTime(token.access_token))) {

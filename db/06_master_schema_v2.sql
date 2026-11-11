@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS employee (
     photo_path VARCHAR(255) NULL,
     face_embedding JSONB NULL, -- Vektor biometrik wajah
     offboarding_status offboarding_status_enum NOT NULL DEFAULT 'active',
+    separated_at TIMESTAMPTZ NULL, -- titik awal 30 hari berkas pribadi (diisi saat offboarding COMPLETED)
     create_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
@@ -572,6 +573,28 @@ CREATE TABLE IF NOT EXISTS employee_offboarding (
     update_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     delete_at TIMESTAMPTZ NULL
 );
+
+-- Retensi: kebijakan + log job (v2_0036). Semua kebijakan awal nonaktif.
+CREATE TABLE IF NOT EXISTS retention_policy (
+    data_type VARCHAR(60) PRIMARY KEY,
+    retention_days INTEGER NOT NULL CHECK (retention_days > 0),
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_by UUID NULL REFERENCES users(user_id) ON DELETE SET NULL,
+    update_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS retention_run_log (
+    run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    mode VARCHAR(10) NOT NULL CHECK (mode IN ('cek', 'terapkan')),
+    counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(10) NOT NULL CHECK (status IN ('berhasil', 'gagal', 'sebagian')),
+    detail TEXT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_retention_run_log_run_at ON retention_run_log (run_at DESC);
+INSERT INTO retention_policy (data_type, retention_days) VALUES
+    ('employee_row',1825),('client',1825),('employee_file',1825),('tool',730),('vehicle',730),
+    ('company_mess',365),('division',365),('job_position',365),('employee_personal_files',30)
+ON CONFLICT (data_type) DO NOTHING;
 
 -- 22. Tabel offboarding_clearance_item (Detail Pengembalian Barang Pinjaman saat Offboarding - 1A)
 CREATE TABLE IF NOT EXISTS offboarding_clearance_item (

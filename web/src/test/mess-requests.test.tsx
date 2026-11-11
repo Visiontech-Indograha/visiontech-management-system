@@ -1,6 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { mockMe } from "@/app/mockSession";
+import { PERMISSIONS } from "@/lib/permissions";
 import { mockApi, renderRoute } from "./utils";
 
 const request = {
@@ -25,6 +27,13 @@ describe("Mess: permintaan dan daftar mess", () => {
     await userEvent.click(screen.getByRole("button", { name: "Tolak Uji Anggota" }));
     await userEvent.click(await screen.findByRole("button", { name: "Tolak pengajuan" }));
     expect(await screen.findByText("Alasan penolakan wajib diisi.")).toBeInTheDocument();
+  });
+
+  it("Super Admin (izin kelola mess dari API) melihat tombol Tambah Mess", async () => {
+    mockApi(handler);
+    renderRoute("/mess", { me: { ...mockMe("ADMIN")!, role: "SUPER_ADMIN", permissions: [...PERMISSIONS] } });
+    await userEvent.click(await screen.findByRole("tab", { name: "Daftar Mess" }));
+    expect(await screen.findByRole("button", { name: /Tambah Mess/ })).toBeInTheDocument();
   });
 
   it("daftar mess menampilkan keterisian", async () => {

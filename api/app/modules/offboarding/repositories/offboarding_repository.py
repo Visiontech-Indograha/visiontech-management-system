@@ -209,7 +209,7 @@ class OffboardingRepository(BaseRepository):
         if not done.rowcount:
             return False
         await self.execute(
-            "UPDATE employee SET offboarding_status = 'offboarded', update_at = now() "
+            "UPDATE employee SET offboarding_status = 'offboarded', separated_at = now(), update_at = now() "
             "WHERE employee_id = CAST(:emp AS uuid) AND offboarding_status = 'in_process'", params)
         await self.execute(
             "UPDATE member SET is_active = FALSE, update_at = now() "

@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { listenTabSync, refreshAcrossTabs } from "@/lib/tabSync";
 
 /** Bentuk error seragam dari backend (docs/05-API-SPEC §4). */
 export class ApiError extends Error {
@@ -31,6 +32,18 @@ export const getAccessToken = () => accessToken;
 export const setSessionExpiredHandler = (fn: (() => void) | null) => {
   onSessionExpired = fn;
 };
+
+// Siaran dari tab lain: token baru hanya diterima bila tab ini sudah punya sesi (tetap di memori).
+let onRemoteLogout: (() => void) | null = null;
+export const setLogoutBroadcastReceiver = (fn: (() => void) | null) => {
+  onRemoteLogout = fn;
+};
+listenTabSync({
+  onToken: (token) => {
+    if (accessToken) accessToken = token;
+  },
+  onLogout: () => onRemoteLogout?.(),
+});
 
 /** Penanda kemampuan klien: server baru menjawab 403 MUST_CHANGE_PASSWORD bila sandi sementara belum diganti. */
 export const APP_CAPABILITIES = "must-change-password";
@@ -104,22 +117,27 @@ function toApiError(error: AxiosError): ApiError {
 let refreshing: Promise<string> | null = null;
 
 export async function refreshAccessToken(): Promise<string> {
-  refreshing ??= axios
-    .post<{ access_token: string }>(
-      `${baseURL}/auth/refresh`,
-      null,
-      {
-        withCredentials: true,
-        headers: {
-          "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
-          "X-Device-Label": getDeviceLabel(),
-          "X-App-Capabilities": APP_CAPABILITIES,
+  // Lintas tab: kunci "vms-refresh" mencegah dua tab memakai cookie refresh yang sama bersamaan
+  // (refresh kedua dianggap pemakaian ulang dan mencabut semua sesi).
+  refreshing ??= refreshAcrossTabs(() =>
+    axios
+      .post<{ access_token: string }>(
+        `${baseURL}/auth/refresh`,
+        null,
+        {
+          withCredentials: true,
+          headers: {
+            "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
+            "X-Device-Label": getDeviceLabel(),
+            "X-App-Capabilities": APP_CAPABILITIES,
+          },
         },
-      },
-    )
-    .then((r) => {
-      accessToken = r.data.access_token;
-      return accessToken;
+      )
+      .then((r) => r.data.access_token),
+  )
+    .then((token) => {
+      accessToken = token;
+      return token;
     })
     .finally(() => {
       refreshing = null;

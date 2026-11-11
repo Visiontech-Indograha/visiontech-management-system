@@ -100,7 +100,7 @@ export interface WorkOrderCreateInput {
 
 export interface AssignSurveyInput {
   lead_team_id: string;
-  survey_date?: string | null;
+  survey_date: string;
   notes?: string | null;
 }
 

@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import storage
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.security import CurrentUser
 from app.core.time import utcnow
 from app.modules.exports.services.builders.docx_builders import (
@@ -153,6 +154,9 @@ class WorkOrderService:
     ) -> Any:
         if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat menugaskan survei.")
+        survey_date = data.survey_date
+        if survey_date is None:
+            raise ValidationError("Tanggal survei wajib diisi agar tim bisa melihat tugasnya di HP.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat menugaskan survei.")
         wo = await self.repo.get_work_order(work_order_id)
@@ -167,7 +171,18 @@ class WorkOrderService:
             survey_date=data.survey_date,
             notes=data.notes,
         )
-        return await self.get_work_order(work_order_id)
+        detail = await self.get_work_order(work_order_id)
+        team_name = await self.repo.team_name(data.lead_team_id) or "yang ditugaskan"
+        detail["survey_assignment_summary"] = (
+            f"Tim {team_name} akan melihat di HP pada tanggal {survey_date.strftime('%d-%m-%Y')}."
+        )
+        return detail
+
+    async def list_team_surveys(self, current_user: CurrentUser) -> Sequence[Any]:
+        """Survei WO aktif milik tim yang diikuti pemanggil. Tanpa karyawan terkait = daftar kosong."""
+        if not current_user.employee_id:
+            return []
+        return await self.repo.list_team_surveys(viewer_params(current_user), MAX_ROWS_UNPAGED)
 
     async def submit_survey(
         self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
@@ -180,6 +195,9 @@ class WorkOrderService:
         if wo.status not in ("WAITING_SURVEY", "SURVEY_IN_PROGRESS", "SURVEY_SUBMITTED"):
             raise AppError("INVALID_STATE", f"Laporan survei tidak dapat dikirim untuk status {wo.status}.", status=409)
 
+        wt_ids = sorted({str(p.recommended_work_type_id) for p in data.points})
+        if wt_ids and await self.repo.count_work_types(wt_ids) != len(wt_ids):
+            raise ValidationError("Jenis pekerjaan yang dipilih pada titik survei tidak ditemukan.")
         points_payload = [p.model_dump() for p in data.points]
         if not await self.repo.submit_survey(
             work_order_id=work_order_id,
@@ -192,6 +210,21 @@ class WorkOrderService:
             raise AppError("INVALID_STATE", "Status WO berubah; laporan survei tidak dapat dikirim. Muat ulang.",
                            status=409)
         return await self.get_work_order(work_order_id)
+
+    async def submit_survey_offline(
+        self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
+    ) -> None:
+        """Kirim survei dari antrean sinkron offline. Cakupan tim sama dengan jalur online (404/403).
+        Survei yang sudah SURVEY_SUBMITTED dianggap sudah terkirim (aman idempoten, tidak ditimpa);
+        status lain di luar survei (mis. sudah disetujui) -> 409 dan ditolak oleh sinkron."""
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengirim laporan survei.")
+        wo = await self.repo.get_work_order(work_order_id)
+        if not wo:
+            raise NotFoundError("Work Order tidak ditemukan.")
+        if wo.status == "SURVEY_SUBMITTED":
+            return
+        await self.submit_survey(work_order_id, data, current_user)
 
     async def apply_survey(self, work_order_id: UUID | str, current_user: CurrentUser) -> Any:
         """

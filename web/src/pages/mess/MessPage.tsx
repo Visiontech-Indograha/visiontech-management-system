@@ -11,6 +11,7 @@ import { messActions } from "@/lib/aksiPeran";
 import {
   type MessPlace,
   type MessStay,
+  useCancelMessStay,
   useCheckoutMessStay,
 } from "@/services/messService";
 import { useSession } from "@/stores/sessionStore";
@@ -27,6 +28,7 @@ export function MessPage() {
   const requests = usePagedList<MessStay>(["mess-stays"], "/mess", requestControls, { status: "REQUESTED" });
   const places = usePagedList<MessPlace>(["mess-places"], "/mess/places", placeControls);
   const checkout = useCheckoutMessStay();
+  const cancel = useCancelMessStay();
   const [tab, setTab] = useState<MessTab>("stays");
   const [adding, setAdding] = useState(false);
   const [addingPlace, setAddingPlace] = useState(false);
@@ -39,6 +41,15 @@ export function MessPage() {
     try {
       await checkout.mutateAsync({ id: stay.mess_stay_id });
       toast.success(`Inap ${stay.employee_name} ditandai selesai.`);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    }
+  };
+
+  const handleCancel = async (stay: MessStay) => {
+    try {
+      await cancel.mutateAsync({ id: stay.mess_stay_id });
+      toast.success(`Hunian ${stay.employee_name} dibatalkan.`);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -61,6 +72,7 @@ export function MessPage() {
       addingPlace={addingPlace}
       onAdd={() => setAdding(true)}
       onCheckout={handleCheckout}
+      onCancel={handleCancel}
       onCloseAdd={() => setAdding(false)}
       onAddPlace={() => setAddingPlace(true)}
       onCloseAddPlace={() => setAddingPlace(false)}

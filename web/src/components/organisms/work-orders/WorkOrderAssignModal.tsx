@@ -35,10 +35,15 @@ export function WorkOrderAssignModal({
       return;
     }
 
+    if (!surveyDate) {
+      toast.error("Isi tanggal survei terlebih dahulu");
+      return;
+    }
+
     try {
       await assignMutation.mutateAsync({
         lead_team_id: leadTeamId,
-        survey_date: surveyDate || undefined,
+        survey_date: surveyDate,
         notes: notes.trim() || undefined,
       });
       toast.success(`Tim survei berhasil ditugaskan untuk WO ${workOrder.wo_number}`);
@@ -55,7 +60,7 @@ export function WorkOrderAssignModal({
       title={`Tugaskan Tim Survei — ${workOrder.wo_number}`}
       size="lg"
     >
-      <FormBlock onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <FormBlock onSubmit={handleSubmit} noValidate className="space-y-4 pt-2">
         <div className="bg-surface-elevated/50 p-3 rounded-lg border border-border/50 text-sm space-y-1">
           <TextBlock className="font-semibold text-ink">{workOrder.title}</TextBlock>
           <div className="text-muted-foreground text-xs">

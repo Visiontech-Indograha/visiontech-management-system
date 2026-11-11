@@ -101,8 +101,10 @@ class WorkOrderCreate(BaseModel):
 
 class WorkOrderAssignSurvey(BaseModel):
     lead_team_id: UUID
-    survey_date: date | None = None
-    notes: str | None = None
+    survey_date: date | None = Field(
+        default=None, description="Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP"
+    )
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class WorkOrderSignBast(BaseModel):
@@ -143,6 +145,28 @@ class WorkOrderOut(BaseModel):
 
 
 class WorkOrderDetailOut(WorkOrderOut):
+    survey_assignment_summary: str | None = Field(
+        default=None, description="Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'"
+    )
     survey_points: list[SurveyPointOut] = Field(default_factory=list)
     items: list[WorkOrderItemOut] = Field(default_factory=list)
     bom: list[WorkOrderBomOut] = Field(default_factory=list)
+
+
+class TeamSurveyOut(BaseModel):
+    """Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim)."""
+
+    survey_id: UUID
+    work_order_id: UUID
+    wo_number: str
+    title: str
+    client_name: str | None = None
+    site_name: str | None = None
+    site_lat: Decimal | None = None
+    site_lng: Decimal | None = None
+    site_radius_m: int | None = None
+    survey_date: date
+    survey_status: str
+    surveyor_team_id: UUID | None = None
+    surveyor_team_name: str | None = None
+    filled_points: int = 0

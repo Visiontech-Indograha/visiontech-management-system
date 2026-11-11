@@ -54,7 +54,7 @@ def _post(client, world: World, who: str, path: str, body: dict | None = None):
 
 def test_assign_survey_only_managers_in_scope(client, world: World):
     _setup_scope(world)
-    body = {"lead_team_id": world.team_id}
+    body = {"lead_team_id": world.team_id, "survey_date": "2026-12-01"}
     for who in ("ops", "pm", "admin"):
         wo = _work_order(world, team=False)
         ok = _post(client, world, who, f"/work-orders/{wo['work_order_id']}/assign-survey", body)

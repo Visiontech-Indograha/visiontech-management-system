@@ -21,12 +21,16 @@ from app.core.errors import AppError
 from app.core.security import CurrentUser
 from app.modules.overtime.services.overtime_service import OvertimeService
 from app.modules.system.repositories.sync_repository import CRUDSync
+from app.modules.work_orders.schemas.work_order_schema import SurveySubmitIn
+from app.modules.work_orders.services.work_order_service import WorkOrderService
 from app.modules.work_plans.schemas.daily_report_schema import DailyReportCreate
 from app.modules.work_plans.schemas.plan_item_schema import ProgressIn, RolloverRequest
 from app.modules.work_plans.services.daily_plan_service import DailyPlanService
 from app.modules.work_plans.services.plan_item_service import PlanItemService
 
-OFFLINE_ALLOWED = ("OVERTIME_REPORT", "DAILY_REPORT_SUBMIT", "PLAN_ITEM_PROGRESS", "PLAN_ROLLOVER_REQUEST")
+OFFLINE_ALLOWED = (
+    "OVERTIME_REPORT", "DAILY_REPORT_SUBMIT", "PLAN_ITEM_PROGRESS", "PLAN_ROLLOVER_REQUEST", "WO_SURVEY_SUBMIT",
+)
 NOT_OFFLINE = "Aksi ini tidak dapat dikirim saat offline."
 INVALID = "Data operasi tidak valid."
 
@@ -93,6 +97,20 @@ class SyncService:
             # Permintaan pindah hari dari HP (ketua): aturan & status sama dengan endpoint request-rollover.
             rollover = RolloverRequest(delay_reason=str(p["delay_reason"]), completed_qty=p["completed_qty"])
             await PlanItemService(self.db).request_rollover(user, UUID(str(p["item_id"])), rollover)
+        elif op_type == "WO_SURVEY_SUBMIT":
+            # Survei WO dari HP (tim): validasi & cakupan sama dengan POST /work-orders/{id}/submit-survey.
+            # Foto titik: `photos` (sudah terunggah) + `evidence_file_ids` (berkas dari antrean foto HP) per titik.
+            body = dict(p.get("survey") or {})
+            points = []
+            for pt in body.get("points") or []:
+                pt = dict(pt)
+                extra = pt.pop("evidence_file_ids", None) or []
+                pt["photos"] = list(pt.get("photos") or []) + [{"file_id": str(f)} for f in extra]
+                points.append(pt)
+            body["points"] = points
+            await WorkOrderService(self.db).submit_survey_offline(
+                UUID(str(p["work_order_id"])), SurveySubmitIn.model_validate(body), user
+            )
 
     async def apply_operations(self, user: CurrentUser, device_id: str, operations: list[Any]) -> list[dict[str, Any]]:
         """

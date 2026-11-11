@@ -26,13 +26,20 @@ from app.core.errors import AppError, ForbiddenError, ValidationError
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, LeaveReview
-from app.modules.leaves.services.leave_service import LeaveService
+from app.modules.leaves.services import leave_service
+from app.modules.leaves.services.leave_service import LEAVE_MAX_BACKDATE_DAYS, LeaveService
 
 
 @pytest.fixture(autouse=True)
 def _silent_notifications(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tes unit memakai repo tiruan; notifikasi diuji terpisah di tests/modules/notifications."""
     monkeypatch.setattr(LeaveService, "_notify", lambda self: AsyncMock())
+
+
+@pytest.fixture(autouse=True)
+def _fixed_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tanggal 'hari ini' disuntik agar tes tanggal tetap tidak menua."""
+    monkeypatch.setattr(leave_service, "_today", lambda: date(2026, 5, 4))
 
 
 def make_user(role: str = "EMPLOYEE", employee_id: str | None = None) -> CurrentUser:
@@ -418,3 +425,33 @@ def test_rejected_or_cancelled_leave_cannot_be_cancelled_again():
             assert exc.value.code == "NOT_CANCELLABLE"
 
     asyncio.run(run())
+
+
+def _apply_backdated(role: str, days_back: int) -> None:
+    async def run():
+        repo = AsyncMock()
+        repo.has_overlapping_leave.return_value = False
+        repo.get_or_create_balance.return_value = MagicMock(remaining_quota=10)
+        repo.insert_leave.return_value = uuid4()
+        repo.get_leave.return_value = MagicMock(status="PENDING")
+        day = date(2026, 5, 4) - timedelta(days=days_back)
+        data = LeaveCreate(leave_type="SICK", start_date=day, end_date=day + timedelta(days=1),
+                           reason="Cuti mundur uji")
+        await LeaveService(repo).apply(make_user(role), data)
+    asyncio.run(run())
+
+
+def test_backdate_exactly_limit_allowed():
+    assert LEAVE_MAX_BACKDATE_DAYS == 3
+    _apply_backdated("EMPLOYEE", 3)
+
+
+def test_backdate_beyond_limit_rejected_for_employee():
+    with pytest.raises(ValidationError) as exc:
+        _apply_backdated("EMPLOYEE", 4)
+    assert "paling lambat 3 hari ke belakang" in str(exc.value.message)
+
+
+@pytest.mark.parametrize("role", ["ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN"])
+def test_backdate_beyond_limit_allowed_for_hr(role: str):
+    _apply_backdated(role, 30)

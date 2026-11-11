@@ -229,6 +229,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-orders/team-surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Team Surveys
+         * @description Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.
+         *     Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;
+         *     `scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.
+         */
+        get: operations["list_team_surveys_api_v1_work_orders_team_surveys_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-orders/{work_order_id}": {
         parameters: {
             query?: never;
@@ -3693,6 +3715,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List System Settings
+         * @description Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).
+         */
+        get: operations["list_system_settings_api_v1_system_settings_get"];
+        /**
+         * Update System Settings
+         * @description Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.
+         */
+        put: operations["update_system_settings_api_v1_system_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/setup/status": {
         parameters: {
             query?: never;
@@ -5490,6 +5536,10 @@ export interface components {
             photo_file_id?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
             /** Effective Roles */
             effective_roles?: string[];
             /** Role Scopes */
@@ -10278,6 +10328,44 @@ export interface components {
             /** Results */
             results: components["schemas"]["OperationResult"][];
         };
+        /** SystemSettingOut */
+        SystemSettingOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /**
+             * Type
+             * @default bool
+             * @constant
+             */
+            type: "bool";
+            /** Value */
+            value: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "env_force" | "db" | "env_default";
+            /** Env Default */
+            env_default: boolean;
+            /** Locked */
+            locked: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * SystemSettingsUpdate
+         * @description Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka).
+         */
+        SystemSettingsUpdate: {
+            /** Values */
+            values: {
+                [key: string]: boolean;
+            };
+        };
         /** TeamAvailabilityItem */
         TeamAvailabilityItem: {
             /**
@@ -10484,6 +10572,52 @@ export interface components {
             leader_employee_id: string;
             /** Leader Name */
             leader_name: string;
+        };
+        /**
+         * TeamSurveyOut
+         * @description Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim).
+         */
+        TeamSurveyOut: {
+            /**
+             * Survey Id
+             * Format: uuid
+             */
+            survey_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Wo Number */
+            wo_number: string;
+            /** Title */
+            title: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /** Site Radius M */
+            site_radius_m?: number | null;
+            /**
+             * Survey Date
+             * Format: date
+             */
+            survey_date: string;
+            /** Survey Status */
+            survey_status: string;
+            /** Surveyor Team Id */
+            surveyor_team_id?: string | null;
+            /** Surveyor Team Name */
+            surveyor_team_name?: string | null;
+            /**
+             * Filled Points
+             * @default 0
+             */
+            filled_points: number;
         };
         /** TeamUpdate */
         TeamUpdate: {
@@ -11455,7 +11589,10 @@ export interface components {
              * Format: uuid
              */
             lead_team_id: string;
-            /** Survey Date */
+            /**
+             * Survey Date
+             * @description Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP
+             */
             survey_date?: string | null;
             /** Notes */
             notes?: string | null;
@@ -11600,6 +11737,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Survey Assignment Summary
+             * @description Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'
+             */
+            survey_assignment_summary?: string | null;
             /** Survey Points */
             survey_points?: components["schemas"]["SurveyPointOut"][];
             /** Items */
@@ -12395,6 +12537,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_team_surveys_api_v1_work_orders_team_surveys_get: {
+        parameters: {
+            query?: {
+                /** @description team = tim pemanggil; all = ditambah WO kelolaan PM */
+                scope?: "team" | "all";
+                /** @description Tanggal survei paling awal */
+                date_from?: string | null;
+                /** @description Tanggal survei paling akhir */
+                date_to?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamSurveyOut"][];
                 };
             };
             /** @description Validation Error */
@@ -19439,6 +19623,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OperationStatus"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_system_settings_api_v1_system_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingOut"][];
+                };
+            };
+        };
+    };
+    update_system_settings_api_v1_system_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingOut"][];
                 };
             };
             /** @description Validation Error */

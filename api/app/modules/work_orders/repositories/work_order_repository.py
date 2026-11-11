@@ -201,9 +201,16 @@ class WorkOrderRepository(BaseRepository):
         """
         return await self.fetchone(sql, {"id": str(work_order_id), **viewer})
 
-    async def list_team_surveys(self, viewer: dict[str, Any], limit: int) -> Sequence[Any]:
-        """Survei WO aktif (WO SURVEY_IN_PROGRESS, survei belum dikirim/disetujui) milik tim yang diikuti
-        pemanggil (ketua atau anggota aktif). Satu kueri, tanpa N+1; jumlah titik lewat subkueri terindeks."""
+    async def list_team_surveys(
+        self, viewer: dict[str, Any] | None, limit: int, *,
+        scope_all: bool = False, date_from: date | None = None, date_to: date | None = None,
+    ) -> Sequence[Any]:
+        """Survei WO aktif (WO SURVEY_IN_PROGRESS, survei belum dikirim/disetujui). Bawaan: milik tim yang diikuti
+        pemanggil (ketua atau anggota aktif). `scope_all`: ditambah WO yang dikelola PM (`viewer=None` = semua,
+        untuk SA/OM). `date_from`/`date_to` membatasi tanggal survei. Satu kueri, tanpa N+1."""
+        scope_sql = (
+            "TRUE" if viewer is None else work_order_visible_sql("wo") if scope_all else work_order_team_sql("wo")
+        )
         return await self.fetchall(
             f"""
             SELECT
@@ -224,11 +231,13 @@ class WorkOrderRepository(BaseRepository):
             WHERE s.delete_at IS NULL
               AND wo.status = 'SURVEY_IN_PROGRESS'
               AND s.status NOT IN ('SUBMITTED', 'APPROVED')
-              AND {work_order_team_sql('wo')}
+              AND {scope_sql}
+              AND (CAST(:d_from AS date) IS NULL OR s.survey_date >= CAST(:d_from AS date))
+              AND (CAST(:d_to AS date) IS NULL OR s.survey_date <= CAST(:d_to AS date))
             ORDER BY s.survey_date, s.create_at, s.survey_id
             LIMIT :limit
             """,
-            {**viewer, "limit": limit},
+            {**(viewer or {}), "limit": limit, "d_from": date_from, "d_to": date_to},
         )
 
     async def team_name(self, team_id: UUID | str) -> str | None:

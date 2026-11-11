@@ -13,6 +13,7 @@ import hashlib
 import json
 import uuid
 from collections.abc import Sequence
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -178,11 +179,19 @@ class WorkOrderService:
         )
         return detail
 
-    async def list_team_surveys(self, current_user: CurrentUser) -> Sequence[Any]:
-        """Survei WO aktif milik tim yang diikuti pemanggil. Tanpa karyawan terkait = daftar kosong."""
-        if not current_user.employee_id:
+    async def list_team_surveys(
+        self, current_user: CurrentUser, *, scope_all: bool = False,
+        date_from: date | None = None, date_to: date | None = None,
+    ) -> Sequence[Any]:
+        """Survei WO aktif milik tim yang diikuti pemanggil. `scope_all` (Jadwal harian web) menambah WO yang
+        dikelola PM; SA/OM melihat semua. Tanpa karyawan terkait dan bukan SA/OM = daftar kosong."""
+        all_orgs = scope_all and sees_all_work_orders(current_user)
+        if not all_orgs and not current_user.employee_id:
             return []
-        return await self.repo.list_team_surveys(viewer_params(current_user), MAX_ROWS_UNPAGED)
+        return await self.repo.list_team_surveys(
+            None if all_orgs else viewer_params(current_user), MAX_ROWS_UNPAGED,
+            scope_all=scope_all, date_from=date_from, date_to=date_to,
+        )
 
     async def submit_survey(
         self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser

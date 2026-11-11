@@ -101,6 +101,7 @@ export function AccountCard({ employee }: { employee: Employee }) {
           >
             <TextBlock as="span">Sandi sementara (hanya ditampilkan sekali): </TextBlock>
             <TextBlock as="code" className="select-all font-mono font-semibold">{issued}</TextBlock>
+            <ActionButton type="button" size="sm" variant="outline" className="ml-2" onClick={() => { void navigator.clipboard?.writeText(issued).then(() => toast.success("Sandi disalin."), () => toast.error("Tidak bisa menyalin. Blok sandinya lalu salin manual.")); }}><TextBlock as="span">Salin</TextBlock></ActionButton>
             <TextBlock className="mt-1 text-caption text-mist">
               Sampaikan langsung ke karyawan; minta diganti setelah masuk.
             </TextBlock>

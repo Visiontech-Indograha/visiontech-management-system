@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { TextField } from "@/components/molecules/Field";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
-import { ApiError } from "@/lib/apiClient";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import type { LatLng } from "@/lib/geo";
 import { useCreateSite } from "@/services/siteService";
 import { SiteMapPicker } from "./SiteMapPicker";
@@ -17,7 +17,7 @@ const coordinate = (min: number, max: number, label: string) =>
   z
     .string()
     .trim()
-    .min(1, `${label} wajib diisi.`)
+    .min(1, "Pilih titik di peta, cari alamat, atau isi lintang dan bujur.")
     .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= min && Number(v) <= max, {
       message: `${label} harus angka antara ${min} dan ${max}.`,
     });
@@ -44,6 +44,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
     handleSubmit,
     control,
     setValue,
+    setError,
     getValues,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<SiteValues>({
@@ -73,7 +74,7 @@ export function SiteFormDialog({ onClose }: { onClose: () => void }) {
       toast.success("Lokasi kerja ditambahkan.");
       onClose();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Terjadi kesalahan. Coba lagi.");
+      setFormError(applyFieldErrors(err, setError, ["name", "address"]) ? "Periksa kolom yang ditandai." : errorMessage(err));
     }
   });
 

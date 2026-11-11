@@ -86,6 +86,8 @@ export interface WorkOrderDetail extends WorkOrder {
   survey_points: SurveyPoint[];
   items: WorkOrderItem[];
   bom: WorkOrderBom[];
+  /** Hanya terisi pada jawaban penugasan survei: "Tim X akan melihat di HP pada tanggal Y." */
+  survey_assignment_summary?: string | null;
 }
 
 export interface WorkOrderCreateInput {

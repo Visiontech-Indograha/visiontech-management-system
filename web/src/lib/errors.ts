@@ -1,9 +1,16 @@
 import { ApiError } from "./apiClient";
 
+/** API membalas 404 bila karyawan di luar kantor tugas HR (ADR 0002); pesan aslinya membingungkan. */
+export const OFFBOARDING_OUT_OF_OFFICE_MESSAGE =
+  "Karyawan ini bukan dari kantor tugas Anda, jadi proses keluarnya tidak bisa Anda kelola.";
+
 /** Pesan galat untuk pengguna: pesan Indonesia dari API bila ada, selain itu pesan umum. */
 export function errorMessage(err: unknown, fallback = "Terjadi kesalahan. Coba lagi."): string {
   if (err instanceof ApiError && err.code === "IDEMPOTENCY_SEDANG_DIPROSES") {
     return "Pengajuan sedang diproses, tunggu sebentar.";
+  }
+  if (err instanceof ApiError && err.status === 404 && /^Data proses keluar tidak ditemukan/i.test(err.message)) {
+    return OFFBOARDING_OUT_OF_OFFICE_MESSAGE;
   }
   return err instanceof ApiError ? err.message : fallback;
 }

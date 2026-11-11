@@ -1,8 +1,9 @@
 import { forwardRef, type FormHTMLAttributes, type InputHTMLAttributes, type LabelHTMLAttributes } from "react";
+import { handleInvalid, clearCustomValidity } from "@/lib/nativeValidity";
 
 /** Atom input native tanpa gaya bawaan (mis. kotak centang, berkas); input teks bergaya memakai atom `Input`. */
-export const NativeInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function NativeInput(props, ref) {
-  return <input ref={ref} {...props} />;
+export const NativeInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function NativeInput({ onInvalid, onInput, ...props }, ref) {
+  return <input ref={ref} onInvalid={(e) => { handleInvalid(e); onInvalid?.(e); }} onInput={(e) => { clearCustomValidity(e); onInput?.(e); }} {...props} />;
 });
 
 /** Atom label native (`<label>`). */

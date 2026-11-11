@@ -76,6 +76,9 @@ class OfficeService:
 
     async def create_office(self, user: CurrentUser, data: OfficeCreate) -> Any:
         self._check_hours(data.clock_in_time, data.clock_out_time)
+        name_clean = data.name.strip() if data.name else ""
+        if await self.repo.name_taken(name_clean):
+            raise AppError("DUPLICATE_SITE_NAME", "Nama lokasi kerja sudah digunakan. Gunakan nama lain.", status=409)
         values = _fields(data)
         values["address"] = values["address"] or ""
         try:
@@ -97,6 +100,14 @@ class OfficeService:
         self._check_hours(
             data.clock_in_time or current.clock_in_time, data.clock_out_time or current.clock_out_time
         )
+        if data.name is not None:
+            name_clean = data.name.strip()
+            if await self.repo.name_taken(name_clean, exclude_id=office_id):
+                raise AppError(
+                    "DUPLICATE_SITE_NAME",
+                    "Nama lokasi kerja sudah digunakan. Gunakan nama lain.",
+                    status=409,
+                )
         if data.is_main_office is False and current.is_main_office:
             raise AppError(
                 "MAIN_OFFICE_REQUIRED",

@@ -8,6 +8,9 @@ COPY . .
 # Kosong = same-origin; Caddy meneruskan /api ke api:8000.
 ARG VITE_API_BASE_URL=""
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+# Penanda lingkungan: "beta" untuk build beta; kosong (produksi) = tanpa penanda.
+ARG VITE_APP_ENV=""
+ENV VITE_APP_ENV=${VITE_APP_ENV}
 RUN npm run build
 
 FROM caddy:2-alpine

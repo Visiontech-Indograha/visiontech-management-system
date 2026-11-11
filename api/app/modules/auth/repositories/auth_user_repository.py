@@ -88,7 +88,9 @@ class AuthUserRepository(BaseRepository):
                 u.is_active,
                 u.must_change_password,
                 COALESCE(e.office_id, {_MAIN_OFFICE}) AS organization_id,
-                {roles_sql} AS roles
+                {roles_sql} AS roles,
+                e.office_id,
+                e.division_id
             FROM users u
             LEFT JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
             WHERE u.user_id = CAST(:id AS uuid) AND u.delete_at IS NULL

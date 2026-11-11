@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -105,14 +106,18 @@ async def unit_of_work(db: AsyncSession) -> AsyncIterator[None]:
 
 
 # ── Request context (audit; RLS belum aktif) ─────────────────────────────────
-# Menetapkan variabel sesi PostgreSQL untuk pelacakan audit. RLS BELUM diaktifkan (belum ada kebijakan);
-# variabel ini disiapkan agar kebijakan RLS kelak bisa memakainya.
-# Menggunakan SET LOCAL agar efeknya terbatas pada sesi transaksi saat ini.
+# Menetapkan variabel sesi PostgreSQL untuk pelacakan audit dan fondasi RLS.
+# Menggunakan SET LOCAL (is_local=true) agar efeknya terbatas pada sesi transaksi saat ini.
 _SET_CONTEXT = text(
     """
-    SELECT set_config('app.user_id', :user_id, true),
-           set_config('app.organization_id', :organization_id, true),
-           set_config('app.actor_label', :actor_label, true)
+    SELECT set_config('app.user_id', CAST(:user_id AS text), true),
+           set_config('app.organization_id', CAST(:organization_id AS text), true),
+           set_config('app.org_id', CAST(:org_id AS text), true),
+           set_config('app.actor_label', CAST(:actor_label AS text), true),
+           set_config('app.role', CAST(:role AS text), true),
+           set_config('app.office_id', CAST(:office_id AS text), true),
+           set_config('app.division_id', CAST(:division_id AS text), true),
+           set_config('app.is_system', CAST(:is_system AS text), true)
     """
 )
 
@@ -120,16 +125,33 @@ _SET_CONTEXT = text(
 async def set_request_context(
     db: AsyncSession | AsyncConnection,
     *,
-    user_id: str,
-    organization_id: str,
-    actor_label: str,
+    user_id: str | UUID | None = None,
+    organization_id: str | UUID | None = None,
+    org_id: str | UUID | None = None,
+    actor_label: str | None = None,
+    role: str | None = None,
+    office_id: str | UUID | None = None,
+    division_id: str | UUID | None = None,
+    is_system: bool | str | None = False,
 ) -> None:
     """
-    Set context variables (user_id, organization_id, actor_label) in the
-    PostgreSQL session for audit triggers (siap dipakai RLS kelak; RLS belum aktif).
+    Set context variables (user_id, org_id, actor_label, role, office_id, division_id, is_system)
+    in the PostgreSQL session for audit triggers and upcoming RLS policies.
+    Menggunakan SET LOCAL (is_local=true) agar terisolasi pada transaksi saat ini
+    dan tidak bocor ke permintaan lain pada koneksi pool yang sama.
     """
-    # Mengeksekusi penyiapan variabel sesi secara lokal (SET LOCAL)
-    await db.execute(
-        _SET_CONTEXT,
-        {"user_id": user_id, "organization_id": organization_id, "actor_label": actor_label},
-    )
+    org_val = organization_id if organization_id is not None else org_id
+    org_str = str(org_val) if org_val is not None else None
+    sys_str = "1" if (is_system is True or is_system == "1") else "0"
+
+    params: dict[str, Any] = {
+        "user_id": str(user_id) if user_id is not None else None,
+        "organization_id": org_str,
+        "org_id": org_str,
+        "actor_label": str(actor_label) if actor_label is not None else None,
+        "role": str(role) if role is not None else None,
+        "office_id": str(office_id) if office_id is not None else None,
+        "division_id": str(division_id) if division_id is not None else None,
+        "is_system": sys_str,
+    }
+    await db.execute(_SET_CONTEXT, params)

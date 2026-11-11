@@ -691,7 +691,7 @@
   },
   "src/pages/leaves/LeavesPage.tsx": {
     "complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "src/stores/sessionStore.ts": {

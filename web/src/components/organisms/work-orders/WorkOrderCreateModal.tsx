@@ -58,7 +58,7 @@ export function WorkOrderCreateModal({
   });
   const { data: teams = [] } = useTeams();
 
-  const pmOptions = pmCandidates(employeesData?.items);
+  const pmOptions = pmCandidates(employeesData?.items, me);
 
   const createMutation = useCreateWorkOrder();
 
@@ -229,7 +229,7 @@ export function WorkOrderCreateModal({
             label="Tim survei (opsional)"
             value={leadTeamId}
             onChange={(e) => setLeadTeamId(e.target.value)}
-            hint="Bisa ditentukan sekarang atau saat status WAITING_SURVEY"
+            hint="Bisa ditentukan sekarang atau saat statusnya menunggu survei"
           >
             <ControlOption value="">-- Belum Ditugaskan --</ControlOption>
             {teams.map((t) => (

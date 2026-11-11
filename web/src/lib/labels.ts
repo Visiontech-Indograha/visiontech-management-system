@@ -38,6 +38,19 @@ export const STATUS_LABEL: Record<string, string> = {
   IN_REVIEW: "Ditinjau",
   RESOLVED: "Selesai",
   WITHDRAWN: "Ditarik PM",
+  // Perintah kerja (work_order_status)
+  WAITING_SURVEY: "Menunggu survei",
+  SURVEY_IN_PROGRESS: "Survei berjalan",
+  SURVEY_SUBMITTED: "Survei terkirim",
+  READY_TO_EXECUTE: "Siap dikerjakan",
+  BAST_SIGNED: "Surat serah terima terbit",
+  // Hasil cadangan
+  SUCCESS: "Berhasil",
+  FAILED: "Gagal",
+  PARTIAL_FAILURE: "Gagal sebagian",
+  // Cuti
+  APPROVED_BY_PM: "Menunggu HR",
+  APPROVED_BY_HR: "Disetujui",
   DONE: "Selesai",
   PARTIAL: "Selesai sebagian",
   LATE: "Terlambat",

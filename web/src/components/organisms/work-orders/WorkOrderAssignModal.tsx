@@ -95,7 +95,7 @@ export function WorkOrderAssignModal({
             <TextBlock as="span" className="text-ink font-medium">{workOrder.client_name}</TextBlock>
             <TextBlock as="span"> | Lokasi: </TextBlock>
             <TextBlock as="span" className="text-ink font-medium">
-              {workOrder.site_name || "Kantor Pusat / Umum"}
+              {workOrder.site_name || "Belum ada site"}
             </TextBlock>
           </div>
         </div>

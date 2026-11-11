@@ -72,7 +72,7 @@ export function WorkOrderBastModal({
             <TextBlock as="span">Klien: </TextBlock>
             <TextBlock as="span" className="font-medium text-ink">{workOrder.client_name}</TextBlock>
             <TextBlock as="span"> | Lokasi: </TextBlock>
-            <TextBlock as="span" className="font-medium text-ink">{workOrder.site_name || "Pusat"}</TextBlock>
+            <TextBlock as="span" className="font-medium text-ink">{workOrder.site_name || "Belum ada site"}</TextBlock>
           </div>
         </div>
 

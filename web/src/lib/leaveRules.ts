@@ -26,3 +26,19 @@ export function validateLeaveStart(start: string, roles: Array<string | null | u
   const min = leaveMinStartDate(roles, now);
   return min && start < min ? LEAVE_BACKDATE_MESSAGE : null;
 }
+
+/**
+ * Boleh membatalkan cuti? Sama dengan API (leave_service.cancel): status menunggu/disetujui, hari terakhir belum lewat
+ * (zona Jakarta); menunggu hanya oleh pemohon; sudah disetujui oleh pemohon, HR, atau OM.
+ */
+export function canCancelLeaveRule(
+  l: { status: string; employee_id: string; end_date: string },
+  me: { role?: string | null; employee_id?: string | null } | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (String(l.end_date).slice(0, 10) < jakartaToday(now)) return false;
+  const own = Boolean(me?.employee_id) && l.employee_id === me?.employee_id;
+  if (l.status === "PENDING") return own;
+  const approved = l.status === "APPROVED_BY_PM" || l.status === "APPROVED_BY_HR";
+  return approved && (own || ["ADMIN_HR_GA", "OPERATIONAL_MANAGER"].includes(me?.role ?? ""));
+}

@@ -28,6 +28,7 @@ export function MessTemplate({
   addingPlace,
   onAdd,
   onCheckout,
+  onCancel,
   onCloseAdd,
   onAddPlace,
   onCloseAddPlace,
@@ -47,6 +48,7 @@ export function MessTemplate({
   addingPlace: boolean;
   onAdd: () => void;
   onCheckout: (stay: MessStay) => void;
+  onCancel?: (stay: MessStay) => void;
   onCloseAdd: () => void;
   onAddPlace: () => void;
   onCloseAddPlace: () => void;
@@ -72,6 +74,7 @@ export function MessTemplate({
           canAdd={canManage}
           onAdd={onAdd}
           onCheckout={onCheckout}
+          onCancel={onCancel}
         />
       )}
       {tab === "requests" && <MessRequestList controls={requestControls} requests={requests} />}

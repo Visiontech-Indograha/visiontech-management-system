@@ -38,6 +38,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.event.inputs.env || github.ref_name }}
+          fetch-depth: 0 # butuh jumlah commit penuh untuk nomor build beta
 
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
@@ -65,6 +66,21 @@ jobs:
           keyPassword=$KEY_PASSWORD
           EOF
 
+      # Nomor build: prod = pubspec (tidak berubah). Beta = max(pubspec, jumlah commit HEAD) supaya
+      # tiap build beta baru naik (pembaruan dalam aplikasi mendeteksinya), tetap <= build prod berikutnya
+      # (versi.sh memakai jumlah commit juga) dan jauh di bawah batas Android 2.100.000.000. Lihat docs/RILIS.md.
+      - name: Tentukan nomor build
+        run: |
+          set -euo pipefail
+          BASE=$(sed -n 's/^version:[[:space:]]*[0-9][0-9.]*+\([0-9]*\).*/\1/p' mobile/pubspec.yaml)
+          BUILD=$BASE
+          if [ "$ENV_NAME" = beta ]; then
+            N=$(git rev-list --count HEAD)
+            [ "$N" -gt "$BUILD" ] && BUILD=$N
+          fi
+          [ "$BUILD" -ge 1 ] && [ "$BUILD" -le 2100000000 ] || { echo "Nomor build $BUILD di luar batas"; exit 1; }
+          echo "BUILD_NUMBER=$BUILD" >> "$GITHUB_ENV"
+
       - name: Build APK (${{ env.ENV_NAME }})
         working-directory: mobile
         run: |
@@ -79,6 +95,7 @@ jobs:
           flutter pub get
           flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64 \
             -Pforce-version-code-ignoring-abi=true --dart-define=API_BASE_URL="$URL" $EXTRA \
+            --build-number="$BUILD_NUMBER" \
             --obfuscate --split-debug-info="$RUNNER_TEMP/sym"
 
       # Simbol debug untuk mendekode stack trace (flutter symbolize). Hanya artefak workflow, tidak dipublikasikan.
@@ -98,7 +115,7 @@ jobs:
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
           WANT=$(grep -v '^#' deploy/android-release-cert.sha256 | tr -d '[:space:]')
           VER=$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\)+\([0-9]*\).*/\1 \2/p' mobile/pubspec.yaml)
-          NAME=${VER% *}; BUILD=${VER#* }
+          NAME=${VER% *}; BUILD=$BUILD_NUMBER
           PKG=com.visiontech.vms_mobile; [ "$ENV_NAME" = beta ] && PKG=$PKG.beta
           OUT="$RUNNER_TEMP/rilis"; mkdir -p "$OUT"
           FILES=""; SEP=""

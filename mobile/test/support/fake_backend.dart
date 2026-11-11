@@ -110,7 +110,7 @@ class FakeBackend extends Interceptor {
 
 AppDatabase memoryDb() => AppDatabase.forTesting(NativeDatabase.memory());
 
-SyncEngine engineWith(AppDatabase db, FakeBackend backend) {
+SyncEngine engineWith(AppDatabase db, FakeBackend backend, {DateTime Function()? clock}) {
   final apiClient = ApiClient(tokenStorage: const TokenStorage());
   apiClient.dio.interceptors
     ..clear()
@@ -119,5 +119,6 @@ SyncEngine engineWith(AppDatabase db, FakeBackend backend) {
     apiClient: apiClient,
     db: db,
     deviceId: const FakeDeviceId(),
+    clock: clock,
   );
 }

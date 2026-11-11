@@ -68,7 +68,7 @@ void main() {
     attendanceClock = () => DateTime.utc(2026, 10, 2, 3);
     db = memoryDb();
     backend = FakeBackend();
-    engine = engineWith(db, backend);
+    engine = engineWith(db, backend, clock: attendanceClock);
   });
 
   tearDown(() async {

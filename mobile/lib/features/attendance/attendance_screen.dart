@@ -160,7 +160,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       // Tanggal server (WIB) bila sudah diketahui; jam HP bisa salah atau beda zona.
       final today = _serverToday ??
           DateFormat('yyyy-MM-dd').format(
-              DateTime.now().toUtc().add(const Duration(hours: 7)));
+              attendanceClock().toUtc().add(const Duration(hours: 7)));
       final plans = await engine.fetchList('daily_today', () => engine.api.dailyPlans(start: today, end: today));
       if (!NetworkHint.probablyOffline) {
         try {
@@ -223,7 +223,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// Label tombol pulang; bila sesi yang dibuka berasal dari hari lain, sebut tanggalnya agar tidak membingungkan.
   String _openSessionLabel(Map<String, dynamic> today) {
     final day = today['work_date'] as String?;
-    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     if (day == null || day == current) return 'Absen pulang';
     return 'Absen pulang (masuk ${DateFormat('d MMM', 'id_ID').format(DateTime.parse(day))})';
   }
@@ -244,7 +244,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak
     // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini". Sesi tanggal sebelumnya (lupa pulang,
     // kerja malam) sudah berakhir pada tengah malam: tidak ditawarkan sebagai "Absen pulang" hari ini.
-    final dayNow = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final dayNow = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     for (final r in _records) {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
@@ -257,7 +257,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         return r;
       }
     }
-    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     for (final r in _records) {
       if (r['work_date'] == today) return r;
     }
@@ -269,7 +269,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   static const _maxAttemptsPerDay = 2;
 
   int get _rejectedToday {
-    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     return _records.where((r) => r['work_date'] == today && r['status'] == 'REJECTED').length;
   }
 
@@ -772,7 +772,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated ? auth.user.displayName.split(' ').first : '';
     final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
-    final hour = DateTime.now().hour;
+    final hour = attendanceClock().hour;
     final greet = hour < 11
         ? 'Selamat pagi'
         : hour < 15
@@ -791,7 +791,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             HeroHeader(
               eyebrow: 'Absensi',
               title: name.isEmpty ? greet : '$greet, $name',
-              subtitle: _day.format(DateTime.now()),
+              subtitle: _day.format(attendanceClock()),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),

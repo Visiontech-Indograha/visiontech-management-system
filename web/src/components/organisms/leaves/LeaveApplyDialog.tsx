@@ -11,6 +11,7 @@ import { applyFieldErrors, errorMessage } from "@/lib/errors";
 import { uploadFiles } from "@/services/uploadService";
 import { useIdempotencyKey } from "@/lib/idempotency";
 import { useLeaveMutation, type LeaveCreateInput } from "@/services/leaveService";
+import { leaveMinStartDate, validateLeaveStart } from "@/lib/leaveRules";
 import { useSession } from "@/stores/sessionStore";
 
 function calculateWorkingDays(startStr: string, endStr: string): number {
@@ -34,6 +35,8 @@ export function LeaveApplyDialog({
 }) {
   const mutation = useLeaveMutation();
   const { me } = useSession();
+  const roles = [me?.role, ...(me?.effective_roles ?? [])];
+  const minStart = leaveMinStartDate(roles);
   const [formError, setFormError] = useState<string | null>(null);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -61,6 +64,11 @@ export function LeaveApplyDialog({
 
   const onSubmit = async (values: LeaveCreateInput) => {
     setFormError(null);
+    const backdate = validateLeaveStart(values.start_date, roles);
+    if (backdate) {
+      setError("start_date", { message: backdate });
+      return;
+    }
     if (new Date(values.end_date) < new Date(values.start_date)) {
       setFormError("Tanggal selesai tidak boleh sebelum tanggal mulai.");
       return;
@@ -139,6 +147,7 @@ export function LeaveApplyDialog({
           <TextField
             label="Tanggal Mulai"
             type="date"
+            min={minStart ?? undefined}
             error={errors.start_date?.message}
             {...register("start_date", { required: "Tanggal mulai wajib diisi." })}
           />

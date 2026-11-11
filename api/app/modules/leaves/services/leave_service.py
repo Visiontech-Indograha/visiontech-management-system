@@ -21,6 +21,14 @@ from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, Le
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
 
+# Batas mundur tanggal mulai cuti (hari, zona Jakarta) untuk pemohon biasa. Web dan mobile harus memakai angka sama.
+LEAVE_MAX_BACKDATE_DAYS = 3
+
+
+def _today() -> date:
+    return jakarta_now().date()
+
+
 LEAVE_TYPES = (
     ("ANNUAL", "Cuti tahunan", True),
     ("SICK", "Sakit", False),
@@ -93,6 +101,14 @@ class LeaveService:
 
         if data.end_date < data.start_date:
             raise ValidationError("Tanggal akhir cuti tidak boleh sebelum tanggal mulai.")
+
+        # Cuti mundur lebih dari batas hanya boleh dicatatkan HR/Admin
+        if (not user.has_role("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
+                and data.start_date < _today() - timedelta(days=LEAVE_MAX_BACKDATE_DAYS)):
+            raise ValidationError(
+                f"Tanggal mulai cuti paling lambat {LEAVE_MAX_BACKDATE_DAYS} hari ke belakang. "
+                "Hubungi HR untuk cuti yang lebih lama."
+            )
 
         # Cegah permohonan dengan tanggal bertabrakan (overlapping) dengan cuti aktif/pending
         if await self.repo.has_overlapping_leave(emp_id, data.start_date, data.end_date):

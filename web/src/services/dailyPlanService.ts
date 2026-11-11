@@ -51,6 +51,18 @@ export const useDailyPlans = (f: DailyFilters) =>
       })).data,
   });
 
+/** Survei work order yang ditugaskan dalam rentang minggu (Jadwal harian): milik tim dan WO yang dikelola PM. */
+export type ScheduledSurvey = S["TeamSurveyOut"];
+
+export const useWeekSurveys = (range: { start: string; end: string }) =>
+  useQuery({
+    queryKey: [...KEY, "surveys", range],
+    queryFn: async () =>
+      (await api.get<ScheduledSurvey[]>("/work-orders/team-surveys", {
+        params: { scope: "all", date_from: range.start, date_to: range.end },
+      })).data,
+  });
+
 export const useDailyPlan = (id: string | null) =>
   useQuery({
     queryKey: [...KEY, "detail", id],

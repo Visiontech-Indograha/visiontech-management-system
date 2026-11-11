@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { DailyPlansTemplate, type DailyDialog } from "@/components/templates/work-plans/DailyPlansTemplate";
 import { ApiError } from "@/lib/apiClient";
-import { addDays, useBulkApprove, useDailyFormOptions, useDailyPlans, wibDate, weekStart } from "@/services/dailyPlanService";
+import { addDays, useBulkApprove, useDailyFormOptions, useDailyPlans, useWeekSurveys, wibDate, weekStart } from "@/services/dailyPlanService";
 import { useSession } from "@/stores/sessionStore";
 
 /** "Jadwal harian" (Milestone 5, daily-first): minggu = rentang tanggal Senin–Minggu. */
@@ -15,6 +15,7 @@ export function DailyPlansPage() {
   const [dialog, setDialog] = useState<DailyDialog>(null);
   const end = addDays(start, 6);
   const plans = useDailyPlans({ start, end, division_id: divisionId || undefined });
+  const surveys = useWeekSurveys({ start, end });
   const options = useDailyFormOptions(canPlan);
   const bulk = useBulkApprove();
   const pending = (plans.data ?? []).filter((p) => (p.status === "SUBMITTED" || p.status === "DRAFT") && p.work_date >= today);
@@ -32,6 +33,7 @@ export function DailyPlansPage() {
       end={end}
       today={today}
       plans={plans}
+      surveys={surveys.data ?? []}
       options={options.data}
       divisionId={divisionId}
       canPlan={canPlan}

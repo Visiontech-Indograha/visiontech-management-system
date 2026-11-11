@@ -166,6 +166,12 @@ export function AllocateDialog({ divisionId, cells, teams, orders, today, onClos
               </ControlOption>
             ))}
           </SelectField>
+          {orderOptions.length === 0 && (
+            <TextBlock className="text-sm text-mist">
+              Belum ada order klien untuk divisi ini. Order muncul setelah survei work order selesai dan disetujui PM.
+              Tugaskan survei dulu dari halaman work order.
+            </TextBlock>
+          )}
           {completionId && (
             <div role="status" className="rounded-md bg-hover p-2 text-sm">
               {s ? (

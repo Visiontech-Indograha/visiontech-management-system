@@ -7,13 +7,12 @@ import { TextField, TextAreaField, SelectField } from "@/components/molecules/Fi
 import { FormBlock, ControlOption } from "@/components/molecules/FormBlock";
 import { Plus } from "@/components/molecules/Glyphs";
 import { useClients, useClientSites } from "@/services/clientService";
-import { useDivisions, useEmployees } from "@/services/employeeService";
+import { useDivisions } from "@/services/employeeService";
 import { useTeams } from "@/services/teamService";
-import { useCreateWorkOrder } from "@/services/workOrderService";
+import { useCreateWorkOrder, usePmCandidates } from "@/services/workOrderService";
 import { useSession } from "@/stores/sessionStore";
 import { divisionScopeIds } from "@/lib/divisionScope";
 import { applyFieldErrors, errorMessage } from "@/lib/errors";
-import { pmCandidates } from "@/lib/pmCandidates";
 
 /** Batas judul sama dengan API (WorkOrderCreate.title: 3 sampai 200 karakter). */
 export const WO_TITLE_MIN = 3;
@@ -50,15 +49,18 @@ export function WorkOrderCreateModal({
   const { data: sites = [] } = useClientSites(clientId);
   const { data: allDivisions = [] } = useDivisions();
   const divisions = scopeIds ? allDivisions.filter((d) => scopeIds.includes(d.id)) : allDivisions;
-  const { data: employeesData } = useEmployees({
-    status: "active",
-    page: 1,
-    size: 100,
-    ...(scopeIds && scopedDivisionId ? { division_id: scopedDivisionId } : {}),
-  });
   const { data: teams = [] } = useTeams();
 
-  const pmOptions = pmCandidates(employeesData?.items, me);
+  const pmQuery = usePmCandidates(scopedDivisionId || undefined);
+  const pmOptions = pmQuery.data ?? [];
+  const pmHint = pmQuery.isPending
+    ? "Memuat daftar PM..."
+    : pmQuery.isError
+      ? undefined
+      : pmOptions.length === 0
+        ? "Belum ada PM di divisi ini"
+        : undefined;
+  const pmError = pmQuery.isError ? "Daftar PM belum bisa dimuat. Tutup lalu buka lagi, atau coba beberapa saat lagi." : undefined;
 
   const createMutation = useCreateWorkOrder();
 
@@ -215,6 +217,9 @@ export function WorkOrderCreateModal({
               value={pmId}
               onChange={(e) => setPmId(e.target.value)}
               required
+              hint={pmHint}
+              error={pmError}
+              aria-busy={pmQuery.isPending}
             >
               <ControlOption value="">Pilih PM</ControlOption>
               {pmOptions.map((emp) => (

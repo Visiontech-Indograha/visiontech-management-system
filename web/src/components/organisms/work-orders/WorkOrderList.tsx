@@ -107,7 +107,7 @@ export function WorkOrderList({
       case "SURVEY_IN_PROGRESS":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-info-bg text-info border border-info-border">
-            <TextBlock as="span">Survei Berjalan</TextBlock>
+            <TextBlock as="span">Survei sedang berjalan</TextBlock>
           </div>
         );
       case "SURVEY_SUBMITTED":

@@ -15,6 +15,7 @@ from fastapi import Depends
 from app.core.security import CurrentUser
 from app.modules.work_orders.dependencies import get_work_order_service
 from app.modules.work_orders.schemas.work_order_schema import (
+    PmCandidateOut,
     SurveySubmitIn,
     TeamSurveyOut,
     WorkOrderAssignSurvey,
@@ -57,6 +58,10 @@ class WorkOrderController:
             WorkOrderOut(**(dict(r._mapping) if hasattr(r, "_mapping") else dict(r)))
             for r in rows
         ]
+
+    async def list_pm_candidates(self, current_user: CurrentUser, division_id: UUID | None) -> list[PmCandidateOut]:
+        rows = await self.service.list_pm_candidates(current_user, division_id)
+        return [PmCandidateOut(**dict(r._mapping)) for r in rows]
 
     async def list_team_surveys(
         self, current_user: CurrentUser, *, scope_all: bool = False,

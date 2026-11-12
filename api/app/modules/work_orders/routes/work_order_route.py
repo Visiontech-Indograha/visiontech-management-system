@@ -18,6 +18,7 @@ from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.security import CurrentUser
 from app.modules.work_orders.controllers.work_order_controller import WorkOrderController
 from app.modules.work_orders.schemas.work_order_schema import (
+    PmCandidateOut,
     SurveySubmitIn,
     TeamSurveyOut,
     WorkOrderAssignSurvey,
@@ -63,6 +64,20 @@ async def list_work_orders(
         q=q,
         limit=limit,
     )
+
+
+@router.get("/pm-candidates", response_model=list[PmCandidateOut], summary="Calon PM untuk Buat Tugas Klien")
+async def list_pm_candidates(
+    response: Response,
+    params: ListParams = Depends(),
+    division_id: UUID | None = Query(None, description="Batasi pada satu divisi"),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkOrderController = Depends(),
+) -> list[PmCandidateOut]:
+    """Karyawan berperan PM (utama atau tambahan) dengan id, nama, dan divisi saja. SA/OM: semua divisi; PM: divisi
+    yang ia pimpin atau tempati (divisi lain 404); peran lain 403. `q` = awalan nama; tanpa parameter = semua calon."""
+    rows = await controller.list_pm_candidates(current_user, division_id)
+    return list(apply_list(rows, params, response, lambda r: (r.full_name,), prefix=True))
 
 
 @router.post("", response_model=WorkOrderDetailOut, status_code=status.HTTP_201_CREATED)

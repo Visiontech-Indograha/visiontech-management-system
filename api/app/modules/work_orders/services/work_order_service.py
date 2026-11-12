@@ -21,7 +21,7 @@ from uuid import UUID
 import filetype
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import storage
+from app.core import storage, system_settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.security import CurrentUser
@@ -41,7 +41,7 @@ from app.modules.work_orders.schemas.work_order_schema import (
     WorkOrderCreate,
     WorkOrderSignBast,
 )
-from app.shared.access.scope_rules import sees_all_work_orders, viewer_params
+from app.shared.access.scope_rules import is_pm, sees_all_work_orders, viewer_params
 from app.shared.documents.branding import default_kop_logos
 from app.shared.documents.build_limiter import build_limited
 
@@ -130,6 +130,26 @@ class WorkOrderService:
         if not allowed:
             raise ForbiddenError(message)
         return access
+
+    async def list_pm_candidates(self, current_user: CurrentUser, division_id: UUID | None) -> Sequence[Any]:
+        """Calon PM per divisi untuk form tugas klien. SA/OM: semua divisi; PM (utama atau tambahan): hanya divisi
+        yang ia pimpin atau tempati; peran lain 403. Divisi di luar cakupan atau tak ada → 404."""
+        everywhere = current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER")
+        if not everywhere and not is_pm(current_user):
+            raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat melihat calon PM.")
+        scope: list[str] | None = None
+        if not everywhere:
+            led = await self.repo.pm_division_ids(current_user.employee_id) if current_user.employee_id else []
+            if division_id is not None and str(division_id) not in led:
+                raise NotFoundError("Divisi tidak ditemukan.")
+            scope = [str(division_id)] if division_id is not None else led
+            if not scope:
+                return []
+        elif division_id is not None:
+            if not await self.repo.division_exists(str(division_id)):
+                raise NotFoundError("Divisi tidak ditemukan.")
+            scope = [str(division_id)]
+        return await self.repo.pm_candidates(scope, with_extra_roles=system_settings.role_assignment_enabled())
 
     async def create_work_order(self, data: WorkOrderCreate, current_user: CurrentUser) -> Any:
         # Cek kewenangan

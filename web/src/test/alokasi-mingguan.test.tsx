@@ -145,6 +145,21 @@ describe("Alokasi mingguan — matriks dan legenda", () => {
 });
 
 describe("Alokasi mingguan — dialog Alokasikan", () => {
+  it("T-3: menjelaskan syarat order dan tanpa teks teknis API", async () => {
+    mockApi((c) => {
+      if (c.url === "/work-plans/weekly") return { data: matrixFor(String((c.params as { week_start: string }).week_start)) };
+      if (c.url === "/work-plans/form-options") return { data: options };
+      if (c.url === "/work-types") return { data: workTypes };
+    });
+    renderRoute("/alokasi-mingguan", { role: "PM" });
+    await screen.findByRole("table", { name: "Matriks alokasi mingguan" });
+    fireEvent.click(screen.getByRole("button", { name: "Minggu berikutnya" }));
+    fireEvent.click(await screen.findByRole("button", { name: cellName("Tim Alpha", addDays(nextWeek, 1), "Kosong") }));
+    const dialog = await screen.findByRole("dialog", { name: "Alokasikan" });
+    expect(within(dialog).getByText(/Hanya order yang surveinya sudah disetujui yang bisa dialokasikan/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/belum tersedia di API/)).toBeNull();
+  });
+
   it("klik sel kosong membuka dialog; kirim bulk lalu tambah item dan tampilkan hasil per sel", async () => {
     const day = addDays(nextWeek, 1);
     const calls = mockApi((c) => {

@@ -6,10 +6,16 @@
  */
 export function pmCandidates<T extends { employee_id?: string | null; system_role?: string | null }>(
   items: readonly T[] | undefined,
-  self?: { role?: string | null; employee_id?: string | null } | null,
+  self?: { role?: string | null; employee_id?: string | null; full_name?: string | null } | null,
 ): T[] {
-  const selfId = self?.role === "PROJECT_MANAGER" ? self.employee_id : null;
-  return (items ?? []).filter((e) => e.system_role === "PROJECT_MANAGER" || Boolean(selfId && e.employee_id === selfId));
+  const isPm = self?.role === "PROJECT_MANAGER" || self?.role === "PM";
+  const selfId = isPm ? self?.employee_id : null;
+  const out = (items ?? []).filter((e) => e.system_role === "PROJECT_MANAGER" || Boolean(selfId && e.employee_id === selfId));
+  // Bila daftar karyawan tak memuat PM yang login (mis. disaring/dibatasi), pilihan tetap berisi dirinya sendiri.
+  if (selfId && !out.some((e) => e.employee_id === selfId)) {
+    out.push({ employee_id: selfId, full_name: self?.full_name ?? "Saya", system_role: "PROJECT_MANAGER" } as unknown as T);
+  }
+  return out;
 }
 
 /**

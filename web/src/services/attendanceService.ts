@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useKeysetList } from "@/hooks/useKeysetList";
 import { api } from "@/lib/apiClient";
+import { dateRangeError } from "@/lib/dateRange";
 import type { components } from "@/lib/apiTypes";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { saveBlob } from "@/services/exportService";
@@ -25,6 +26,7 @@ export function useAttendance(f: AttendanceFilters) {
   return useKeysetList<AttendanceList, AttendanceList>({
     key: ["attendance", "list"],
     url: "/attendance",
+    enabled: !dateRangeError(f.from, f.to),
     params: {
       size: PAGE_SIZE,
       scope: f.scope || undefined,

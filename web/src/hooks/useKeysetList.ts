@@ -33,11 +33,13 @@ export async function getKeysetPage<B>(url: string, params: Params, cursor: stri
  * Daftar keyset dengan TanStack Query. `merge` menggabungkan semua halaman jadi satu bentuk yang sama dengan daftar lama,
  * sehingga organisme tetap memakai `query.data`. Kursor tak valid (422) -> daftar dimulai ulang dari halaman pertama.
  */
-export function useKeysetList<B, D>({ key, url, params, merge }: {
+export function useKeysetList<B, D>({ key, url, params, merge, enabled = true }: {
   key: readonly unknown[];
   url: string;
   params: Params;
   merge: (pages: B[]) => D;
+  /** false = jangan panggil API (mis. saringan belum sah); data sebelumnya tetap tampil. */
+  enabled?: boolean;
 }) {
   const qc = useQueryClient();
   const fullKey = [...key, "keyset", params];
@@ -47,6 +49,7 @@ export function useKeysetList<B, D>({ key, url, params, merge }: {
     initialPageParam: "",
     queryFn: ({ pageParam }) => getKeysetPage<B>(url, params, pageParam),
     getNextPageParam: (last) => last.next ?? undefined,
+    enabled,
     placeholderData: keepPreviousData,
     // Muat ulang daftar infinite mengulang SEMUA halaman yang sudah dimuat (berurutan). Jangan lakukan itu
     // diam-diam: tanpa ini, tiap mount/fokus/sambung ulang setelah 30 detik memanggil ulang N halaman.

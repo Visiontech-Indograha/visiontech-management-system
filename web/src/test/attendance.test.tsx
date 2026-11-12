@@ -32,6 +32,18 @@ const setup = (extra?: (url: string) => { status?: number; data?: unknown } | un
   });
 
 describe("Absensi", () => {
+  it("T-2: tanggal terbalik menampilkan pesan awam dan tidak memanggil API dengan rentang itu", async () => {
+    const calls = setup();
+    renderRoute("/attendance", { role: "FINANCE" });
+    await screen.findByText("Gudang Cikarang", { exact: false });
+    fireEvent.change(screen.getByLabelText("Dari tanggal"), { target: { value: "2026-11-20" } });
+    fireEvent.change(screen.getByLabelText("Sampai tanggal"), { target: { value: "2026-11-10" } });
+    expect(await screen.findByText("Tanggal 'Dari' tidak boleh setelah tanggal 'Sampai'.")).toBeInTheDocument();
+    expect(calls.some((c) => c.url === "/attendance" && (c.params as { from?: string; to?: string }).from === "2026-11-20"
+      && (c.params as { to?: string }).to === "2026-11-10")).toBe(false);
+    expect(screen.queryByText(/tidak dapat dimuat/i)).toBeNull();
+  });
+
   it("Finance: default filter perlu review, tinjau wajib catatan", async () => {
     const calls = setup((url) => (url === "/attendance/a1/review" ? { data: { message: "Absensi di-approved." } } : undefined));
     renderRoute("/attendance", { role: "FINANCE" });

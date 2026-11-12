@@ -229,12 +229,16 @@ class MessRepository(BaseRepository):
         )
         return updated is not None
 
-    async def set_end_date(self, mess_stay_id: UUID | str, end: date) -> None:
-        await self.execute(
+    async def set_end_date(self, mess_stay_id: UUID | str, end: date) -> bool:
+        """Majukan tanggal selesai hanya untuk hunian APPROVED yang sedang berjalan pada `end` (kondisi di UPDATE).
+        False = status/periode sudah berubah (mis. dibatalkan bersamaan)."""
+        updated = await self.scalar(
             "UPDATE company_mess_stay SET stay_end_date = :end, update_at = now() "
-            "WHERE mess_stay_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            "WHERE mess_stay_id = CAST(:id AS uuid) AND status = 'APPROVED' AND delete_at IS NULL "
+            "AND stay_start_date <= :end AND stay_end_date >= :end RETURNING mess_stay_id",
             {"id": str(mess_stay_id), "end": end},
         )
+        return updated is not None
 
     async def update_dates(self, mess_stay_id: UUID | str, start: date | None, end: date | None) -> None:
         await self.execute(

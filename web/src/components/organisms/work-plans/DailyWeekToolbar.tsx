@@ -6,7 +6,8 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
-import { useExportPeriodic, useExportTeamWeek } from "@/services/exportService";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
+import { useExportPeriodic, useExportTeamWeek, type ExportFormat } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
 export function DailyWeekToolbar({ options, divisionId, onDivision }: {
@@ -40,14 +41,14 @@ export function ApproveWeekButton({ count, busy, onClick }: { count: number; bus
   );
 }
 
-/** Laporan mingguan tim (.pptx) untuk satu tim pada minggu yang tampil (API /exports/team-week). */
+/** Laporan mingguan tim (PDF, Word, atau PowerPoint) untuk satu tim pada minggu yang tampil (API /exports/team-week). */
 export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["teams"]; start: string }) {
   const exporter = useExportTeamWeek();
   const [picked, setPicked] = useState("");
   const teamId = picked || (teams.length === 1 ? teams[0]!.team_id : "");
-  const run = () =>
+  const run = (export_format: ExportFormat) =>
     exporter.mutate(
-      { team_id: teamId, start_date: start },
+      { team_id: teamId, start_date: start, export_format },
       { onSuccess: () => toast.success("Laporan mingguan tim berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
     );
   return (
@@ -62,9 +63,13 @@ export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["team
           </SelectField>
         </div>
       )}
-      <ActionButton variant="outline" size="sm" className="h-11" disabled={!teamId || exporter.isPending} onClick={run}>
-        Laporan mingguan tim (.pptx)
-      </ActionButton>
+      <ExportFormatButtons
+        label="Laporan mingguan tim"
+        busy={exporter.isPending}
+        pendingFormat={exporter.variables?.export_format}
+        disabled={!teamId}
+        onPick={run}
+      />
     </div>
   );
 }

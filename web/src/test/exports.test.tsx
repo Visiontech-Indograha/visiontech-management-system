@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
 import { WorkCompletionExportPanel } from "@/components/organisms/work-completions/WorkCompletionExportPanel";
 import { mockApi, renderRoute } from "./utils";
 
@@ -27,7 +28,17 @@ describe("Ekspor dokumen order", () => {
     mockApi((c) => (c.url === "/exports/work-completions/c-1" ? { data: [] } : undefined));
     renderPanel(false);
     expect(screen.getByRole("button", { name: /Serah terima resmi \(\.pdf\)/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Laporan survei \(\.docx\)/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Laporan survei sebagai Word" })).toBeEnabled();
+  });
+
+  it("memilih PDF mengirim export_format PDF", async () => {
+    const calls = mockApi((c) => {
+      if (c.method === "post") return { data: new Blob(["pdf"]) };
+      return c.url === "/exports/work-completions/c-1" ? { data: [] } : undefined;
+    });
+    renderPanel(true);
+    fireEvent.click(screen.getByRole("button", { name: "Surat tugas / lembar order sebagai PDF" }));
+    await waitFor(() => expect(calls.find((c) => c.method === "post")?.data).toEqual({ template: "ORDER_SHEET", export_format: "PDF" }));
   });
 
   it("membuat Survey Report lewat POST lalu menampilkan riwayat yang bisa diunduh ulang", async () => {
@@ -48,11 +59,13 @@ describe("Ekspor dokumen order", () => {
       }
     });
     renderPanel(true);
-    fireEvent.click(screen.getByRole("button", { name: /Laporan survei \(\.docx\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Laporan survei sebagai Word" }));
     await waitFor(() =>
-      expect(calls.find((c) => c.method === "post")?.data).toEqual({ template: "SURVEY_REPORT" }),
+      expect(calls.find((c) => c.method === "post")?.data).toEqual({ template: "SURVEY_REPORT", export_format: "WORD_DOCX" }),
     );
-    expect(await screen.findByText(/Laporan survei \(\.docx\) · .* · Dian/)).toBeInTheDocument();
+    const post = calls.find((c) => c.method === "post");
+    expect((post?.headers as Record<string, string>)["Idempotency-Key"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await screen.findByText(/Laporan survei · .* · Dian/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Unduh" })).toBeInTheDocument();
   });
 });
@@ -77,5 +90,13 @@ describe("Verifikasi QR (publik)", () => {
     renderRoute("/verify/work-completion/00000000-0000-4000-8000-0000000000c1?h=bukan-hash", { role: null });
     expect(await screen.findByText("Tidak terverifikasi")).toBeInTheDocument();
     expect(calls.some((c) => c.url.startsWith("/verify"))).toBe(false);
+  });
+});
+
+describe("Pilihan format unduhan", () => {
+  it("semua tombol nonaktif saat proses dan yang dipilih menampilkan Menyiapkan", () => {
+    render(<ExportFormatButtons label="Laporan harian" busy pendingFormat="PDF" onPick={() => {}} />);
+    for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Laporan harian sebagai PDF" })).toHaveTextContent("Menyiapkan");
   });
 });

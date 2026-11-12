@@ -304,6 +304,8 @@ def _svc(items: list | None = None, header: object | None = None) -> es.ExportSe
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
     repo.employee_name = AsyncMock(return_value="Pengguna Uji")
+    repo.lock_export = AsyncMock()
+    repo.recent_export = AsyncMock(return_value=None)
     repo.insert_export = AsyncMock(
         return_value=SimpleNamespace(
             export_id="e1",

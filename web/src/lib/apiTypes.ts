@@ -1686,7 +1686,9 @@ export interface paths {
         put?: never;
         /**
          * Export Work Completion
-         * @description BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).
+         * @description Berita acara serah terima, laporan survei, surat tugas, atau laporan kemajuan: PDF, Word, atau PowerPoint
+         *     (`export_format`; kosong = bawaan jenisnya) dengan isi setara. Juga: berita acara resmi ber-QR (.pdf) dan
+         *     rincian volume dan biaya (.xlsx). Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.
          */
         post: operations["export_work_completion_api_v1_exports_work_completions__completion_id__post"];
         delete?: never;
@@ -1775,7 +1777,8 @@ export interface paths {
         put?: never;
         /**
          * Export Survey
-         * @description Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.
+         * @description Laporan survei ACS/CCTV format baku (docs/37) dalam PDF, Word (bawaan), atau PowerPoint; tersedia setelah
+         *     survei dikirim. Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.
          */
         post: operations["export_survey_api_v1_exports_surveys__task_id__post"];
         delete?: never;
@@ -1799,7 +1802,8 @@ export interface paths {
         put?: never;
         /**
          * Export Periodic
-         * @description Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx).
+         * @description Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide
+         *     mingguan (.pptx). Mendukung Idempotency-Key.
          */
         post: operations["export_periodic_api_v1_exports_periodic_post"];
         delete?: never;
@@ -1819,8 +1823,9 @@ export interface paths {
         put?: never;
         /**
          * Export Team Week
-         * @description Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
-         *     atau PM/OM divisinya.
+         * @description Laporan mingguan tim: semua pekerjaan tim 7 hari (Senin sampai Minggu) — foto, keterangan, status — dalam
+         *     PowerPoint (bawaan), PDF, atau Word. Ketua/anggota tim atau PM/OM divisinya; tim di luar cakupan: 404.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["export_team_week_api_v1_exports_team_week_post"];
         delete?: never;
@@ -1840,8 +1845,9 @@ export interface paths {
         put?: never;
         /**
          * Export Daily Report
-         * @description Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan
-         *     ketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+         * @description Laporan harian satu jadwal: header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan ketua,
+         *     dalam Word (bawaan), PDF, atau PowerPoint. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+         *     Mendukung Idempotency-Key.
          */
         post: operations["export_daily_report_api_v1_exports_daily_report_post"];
         delete?: never;
@@ -6005,6 +6011,11 @@ export interface components {
              * @enum {string}
              */
             template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES" | "ORDER_SHEET";
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = bawaan jenisnya
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /**
          * CopyToDivisionIn
@@ -6632,6 +6643,11 @@ export interface components {
              * Format: uuid
              */
             daily_plan_id: string;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = Word
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /** DailyReportOut */
         DailyReportOut: {
@@ -10644,6 +10660,16 @@ export interface components {
              * Format: date
              */
             start_date: string;
+            /**
+             * End Date
+             * @description Opsional; bila diisi harus Minggu (tepat 7 hari dari Senin)
+             */
+            end_date?: string | null;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = PowerPoint
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /** ToolCreate */
         ToolCreate: {
@@ -15565,7 +15591,10 @@ export interface operations {
     export_work_completion_api_v1_exports_work_completions__completion_id__post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 completion_id: string;
             };
@@ -15747,8 +15776,14 @@ export interface operations {
     };
     export_survey_api_v1_exports_surveys__task_id__post: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                /** @description PDF, WORD_DOCX, atau PPTX; kosong = Word */
+                export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
+            };
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 task_id: string;
             };
@@ -15799,7 +15834,10 @@ export interface operations {
     export_periodic_api_v1_exports_periodic_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15832,7 +15870,10 @@ export interface operations {
     export_team_week_api_v1_exports_team_week_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15865,7 +15906,10 @@ export interface operations {
     export_daily_report_api_v1_exports_daily_report_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

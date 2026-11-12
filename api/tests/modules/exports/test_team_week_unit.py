@@ -166,6 +166,8 @@ async def test_team_week_export_passes_the_teams_vehicles_and_tools_to_the_deck(
         SimpleNamespace(kind="Alat", name="Bor beton", code="TL-007", holder="Riko", work_date=date(2026, 10, 27),
                         status="allocated"),
     ])
+    svc.repo.lock_export = AsyncMock()
+    svc.repo.recent_export = AsyncMock(return_value=None)
     svc.repo.team_roster = AsyncMock(return_value=[])
     svc._points = AsyncMock(return_value=([], []))
     svc._kop_logos = AsyncMock(return_value=(b"", None))

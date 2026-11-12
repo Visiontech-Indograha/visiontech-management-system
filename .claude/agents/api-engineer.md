@@ -1,7 +1,8 @@
 ---
 name: api-engineer
 description: Engineer lapisan API (FastAPI, SQLAlchemy async, Alembic) VMS. Mengerjakan brief arsitek di worktree terisolasi: route, service, repository, skema Pydantic, dan kontrak OpenAPI. Pakai untuk perubahan di `api/`.
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-api, vms-db, vms-system-design
 model: sonnet
 ---
 

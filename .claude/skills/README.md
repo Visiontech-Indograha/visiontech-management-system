@@ -22,6 +22,7 @@ Berkas ini adalah indeks. Aturan kerja lengkap ada di `docs/PANDUAN-AGENTIK.md`.
 | `vms-api` | `api-engineer` | ada (ditulis agen lain; belum ditinjau di sini) |
 | `vms-db` | `api-engineer`, `db-engineer` | ada (ditulis agen lain; belum ditinjau di sini) |
 | `vms-storage-minio` | `api-engineer`, `devops-engineer` | ada (ditulis agen lain; belum ditinjau di sini) |
+| `vms-laporan-ekspor` | `api-engineer`, `web-engineer`, `qa` | ada (ekspor PDF/Word/PPTX, matriks laporan) |
 
 Bila skill lapisan tidak ada saat sub-agen dijalankan, sub-agen harus melapor (bagian "Belum diuji / risiko"), bukan menebak aturannya.
 

@@ -1,7 +1,8 @@
 ---
 name: web-engineer
 description: Engineer lapisan web (React + TypeScript + Vite, atomic design) VMS. Mengerjakan brief dari arsitek di worktree terisolasi. Pakai untuk perubahan halaman, komponen, dan alur web.
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-web, vms-ux-design-system
 model: sonnet
 ---
 

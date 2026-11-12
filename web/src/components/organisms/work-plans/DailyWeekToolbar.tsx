@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
 import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
-import { useExportPeriodic, useExportTeamWeek, type ExportFormat } from "@/services/exportService";
+import { useExportMonthly, useExportPeriodic, useExportTeamWeek, type ExportFormat } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
 export function DailyWeekToolbar({ options, divisionId, onDivision }: {
@@ -70,6 +70,50 @@ export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["team
         disabled={!teamId}
         onPick={run}
       />
+    </div>
+  );
+}
+
+const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+/** Laporan bulanan divisi (PDF, Word, atau PowerPoint) untuk bulan dan tahun pilihan (API /exports/monthly). Butuh satu divisi. */
+export function MonthlyReportButtons({ divisionId, start }: { divisionId: string; start: string }) {
+  const exporter = useExportMonthly();
+  const [year, setYear] = useState(() => Number(start.slice(0, 4)));
+  const [month, setMonth] = useState(() => Number(start.slice(5, 7)));
+  const baseYear = Number(start.slice(0, 4));
+  const years = [baseYear - 2, baseYear - 1, baseYear, baseYear + 1];
+  const run = (export_format: ExportFormat) =>
+    exporter.mutate(
+      { division_id: divisionId, year, month, export_format },
+      { onSuccess: () => toast.success("Laporan bulanan berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
+    );
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="w-32 [&>div]:mb-0">
+        <SelectField label="Bulan" value={String(month)} onChange={(e) => setMonth(Number(e.target.value))}>
+          {MONTH_NAMES.map((name, i) => (
+            <ControlOption key={name} value={String(i + 1)}>{name}</ControlOption>
+          ))}
+        </SelectField>
+      </div>
+      <div className="w-24 [&>div]:mb-0">
+        <SelectField label="Tahun" value={String(year)} onChange={(e) => setYear(Number(e.target.value))}>
+          {years.map((y) => (
+            <ControlOption key={y} value={String(y)}>{y}</ControlOption>
+          ))}
+        </SelectField>
+      </div>
+      <ExportFormatButtons
+        label="Laporan bulanan"
+        busy={exporter.isPending}
+        pendingFormat={exporter.variables?.export_format}
+        disabled={!divisionId}
+        onPick={run}
+      />
+      {!divisionId && (
+        <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh laporan bulanan.</TextBlock>
+      )}
     </div>
   );
 }

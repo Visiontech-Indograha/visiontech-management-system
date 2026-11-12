@@ -84,29 +84,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_photoBusy) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Ambil foto'),
-              onTap: () => Navigator.pop(context, 'camera'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Pilih dari galeri'),
-              onTap: () => Navigator.pop(context, 'gallery'),
-            ),
-            if (_currentPhotoId() != null)
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Hapus foto'),
-                onTap: () => Navigator.pop(context, 'remove'),
-              ),
-          ],
-        ),
-      ),
+      builder: (sheetContext) => ProfilePhotoSheet(hasPhoto: _currentPhotoId() != null),
     );
     if (choice == null || !mounted) return;
     setState(() => _photoBusy = true);
@@ -742,6 +720,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Isi sheet foto profil. Menutup lewat tombol "Tutup" (hasil null = batal).
+class ProfilePhotoSheet extends StatelessWidget {
+  const ProfilePhotoSheet({super.key, required this.hasPhoto});
+  final bool hasPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil foto'),
+              onTap: () => Navigator.of(context).pop('camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari galeri'),
+              onTap: () => Navigator.of(context).pop('gallery'),
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Hapus foto'),
+                onTap: () => Navigator.of(context).pop('remove'),
+              ),
+            const Divider(height: 1),
+            ListTile(
+              key: const Key('profile-photo-sheet-close'),
+              leading: const Icon(Icons.close_rounded),
+              title: const Text('Tutup'),
+              onTap: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
       ),
     );
   }

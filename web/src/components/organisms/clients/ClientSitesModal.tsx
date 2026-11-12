@@ -6,6 +6,8 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { MapPin, User, Plus, Trash2, Edit2, Compass } from "@/components/molecules/Glyphs";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { errorMessage } from "@/lib/errors";
 import {
   useClientSites,
   useSaveClientSite,
@@ -27,6 +29,8 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSiteId, setEditingSiteId] = useState<string | null>(null);
+  const [deletingSite, setDeletingSite] = useState<ClientSite | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [siteName, setSiteName] = useState("");
   const [address, setAddress] = useState("");
@@ -128,17 +132,22 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
           : "Lokasi cabang baru berhasil ditambahkan."
       );
       setIsFormOpen(false);
-    } catch {
-      toast.error("Gagal menyimpan lokasi cabang.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Lokasi cabang belum bisa disimpan. Periksa kembali isian lalu coba lagi."));
     }
   };
 
-  const handleDelete = async (site: ClientSite) => {
+  const handleConfirmDelete = async () => {
+    if (!deletingSite) return;
+    setDeleteError(null);
     try {
-      await deleteMutation.mutateAsync(site.site_id);
+      await deleteMutation.mutateAsync(deletingSite.site_id);
       toast.success("Lokasi cabang berhasil dihapus.");
-    } catch {
-      toast.error("Gagal menghapus lokasi cabang.");
+      setDeletingSite(null);
+    } catch (err) {
+      const msg = errorMessage(err, "Lokasi cabang belum bisa dihapus. Coba lagi.");
+      setDeleteError(msg);
+      toast.error(msg);
     }
   };
 
@@ -244,7 +253,7 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
                     required
                   />
                 </div>
-                <TextBlock className="text-[11px] text-mist">
+                <TextBlock className="text-xs text-mist">
                   Teknisi yang bertugas pada site ini dapat presensi dalam radius toleransi di atas.
                 </TextBlock>
               </div>
@@ -298,12 +307,12 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
                     <div className="flex items-center gap-2">
                       <MapPin size={16} className="text-primary shrink-0" />
                       <TextBlock className="font-medium text-foreground">{site.site_name}</TextBlock>
-                      <TextBlock as="span" className="rounded-control bg-hover px-1.5 py-0.5 text-[10px] text-mist">
+                      <TextBlock as="span" className="rounded-control bg-hover px-1.5 py-0.5 text-xs text-mist">
                         Radius: {site.geofence_radius_meters}m
                       </TextBlock>
                     </div>
                     <TextBlock className="text-xs text-mist line-clamp-1">{site.address}</TextBlock>
-                    <div className="flex items-center gap-3 text-[11px] text-mist">
+                    <div className="flex items-center gap-3 text-xs text-mist">
                       <TextBlock as="span">
                         GPS: {Number(site.latitude).toFixed(4)}, {Number(site.longitude).toFixed(4)}
                       </TextBlock>
@@ -330,8 +339,12 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
                       variant="ghost"
                       size="sm"
                       className="text-danger hover:text-danger"
-                      onClick={() => handleDelete(site)}
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeletingSite(site);
+                      }}
                       title="Hapus lokasi ini"
+                      aria-label={`Hapus lokasi ${site.site_name}`}
                     >
                       <Trash2 size={14} />
                     </ActionButton>
@@ -342,6 +355,25 @@ export function ClientSitesModal({ client, onClose }: ClientSitesModalProps) {
           )}
         </div>
       </div>
+
+      {deletingSite && (
+        <ConfirmDialog
+          open={Boolean(deletingSite)}
+          title="Hapus lokasi cabang"
+          message={`Hapus lokasi ${deletingSite.site_name}? Absensi di lokasi ini tidak bisa memakainya lagi.`}
+          confirmLabel="Hapus"
+          danger
+          busy={deleteMutation.isPending}
+          error={deleteError}
+          onConfirm={handleConfirmDelete}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              setDeletingSite(null);
+              setDeleteError(null);
+            }
+          }}
+        />
+      )}
     </VmsDialog>
   );
 }

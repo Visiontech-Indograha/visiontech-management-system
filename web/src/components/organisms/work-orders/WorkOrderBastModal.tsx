@@ -7,6 +7,7 @@ import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { SignaturePad, type SignaturePadHandle } from "@/components/molecules/SignaturePad";
 import { FileCheck2 } from "@/components/molecules/Glyphs";
+import { errorMessage } from "@/lib/errors";
 import { useSignBast, type WorkOrder } from "@/services/workOrderService";
 
 interface WorkOrderBastModalProps {
@@ -47,8 +48,8 @@ export function WorkOrderBastModal({
       });
       toast.success(`Surat serah terima untuk tugas ${workOrder.wo_number} berhasil ditandatangani!`);
       onClose();
-    } catch {
-      toast.error("Gagal menandatangani surat serah terima");
+    } catch (err) {
+      toast.error(errorMessage(err, "Surat serah terima belum bisa ditandatangani. Periksa koneksi lalu coba lagi."));
     }
   };
 
@@ -64,7 +65,7 @@ export function WorkOrderBastModal({
         <div className="bg-surface-elevated/60 p-3 rounded-lg border border-border text-xs space-y-1">
           <div className="flex items-center justify-between">
             <TextBlock className="font-semibold text-ink text-sm">{workOrder.title}</TextBlock>
-            <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded font-semibold text-[11px]">
+            <div className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded font-semibold text-xs">
               <TextBlock as="span">{workOrder.completed_items} / {workOrder.total_items} Item Selesai</TextBlock>
             </div>
           </div>
@@ -72,7 +73,7 @@ export function WorkOrderBastModal({
             <TextBlock as="span">Klien: </TextBlock>
             <TextBlock as="span" className="font-medium text-ink">{workOrder.client_name}</TextBlock>
             <TextBlock as="span"> | Lokasi: </TextBlock>
-            <TextBlock as="span" className="font-medium text-ink">{workOrder.site_name || "Pusat"}</TextBlock>
+            <TextBlock as="span" className="font-medium text-ink">{workOrder.site_name || "Belum ada site"}</TextBlock>
           </div>
         </div>
 

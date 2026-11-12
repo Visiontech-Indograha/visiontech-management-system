@@ -128,7 +128,7 @@ export function LeaveApplyDialog({
       <TextBlock className="mb-4 text-sm text-mist">
         Isi formulir permohonan cuti tahunan, izin sakit, atau izin khusus lainnya.
       </TextBlock>
-      <FormBlock id="leave-apply-form" onSubmit={handleSubmit(onSubmit)}>
+      <FormBlock id="leave-apply-form" noValidate onSubmit={handleSubmit(onSubmit)}>
         {formError && <FormErrorText message={formError} />}
 
         <SelectField

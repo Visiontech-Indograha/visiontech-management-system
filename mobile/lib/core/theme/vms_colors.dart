@@ -49,10 +49,11 @@ abstract final class VmsColors {
   static const Color warningSolid = Color(0xFFC7892A);
 
   // danger
+  static const Color dangerSolid = Color(0xFFB93C2D);
+  static const Color danger = dangerSolid;
   static const Color dangerFg = Color(0xFFA33A2C);
   static const Color dangerBg = Color(0xFFFBECEA);
   static const Color dangerBorder = Color(0xFFF0C2BA);
-  static const Color dangerSolid = Color(0xFFB93C2D);
 
   // info
   static const Color infoFg = Color(0xFF2F5F8A);

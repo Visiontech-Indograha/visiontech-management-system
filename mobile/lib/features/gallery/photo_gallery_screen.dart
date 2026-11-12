@@ -93,7 +93,13 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       }
       return;
     }
-    await saveToPhoneGallery(file.path);
+    try {
+      await saveToPhoneGallery(file.path);
+    } catch (e) {
+      if (mounted) {
+        showGalleryError(context, e, fallback: 'Foto gagal disimpan ke galeri HP.');
+      }
+    }
     await _load();
   }
 
@@ -121,7 +127,7 @@ class _PhotoGalleryScreenState extends State<PhotoGalleryScreen> {
       await file.delete();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Foto tidak dapat dihapus: $e')));
+        showGalleryError(context, e, fallback: 'Foto tidak dapat dihapus.');
       }
     }
     await _load();

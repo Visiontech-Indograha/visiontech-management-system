@@ -60,13 +60,13 @@ export function AllocMatrixGrid({ matrix, today, selected, multi, onCell }: {
                     disabled={kind === "EMPTY" && !bookable}
                     onClick={() => onCell(row, cell)}
                     className={cn(
-                      "flex h-auto min-h-14 flex-col items-center justify-center whitespace-normal rounded-md border px-0.5 py-1 text-[10px] leading-tight font-normal",
+                      "flex h-auto min-h-14 flex-col items-center justify-center whitespace-normal rounded-md border px-0.5 py-1 text-xs leading-tight font-normal",
                       "disabled:cursor-default disabled:opacity-60",
                       CELL_TONE[kind],
                       isSel && "ring-2 ring-brand-500",
                     )}
                   >
-                    <Text as="span" className="text-[10px] font-semibold opacity-75">
+                    <Text as="span" className="text-xs font-semibold opacity-75">
                       {DAY_LABEL[i]} {Number(cell.work_date.slice(8))}
                     </Text>
                     <Text as="span" className="mt-0.5 truncate font-medium">

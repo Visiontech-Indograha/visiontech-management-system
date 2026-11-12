@@ -196,3 +196,36 @@ def test_port_closing_script_replaces_literally_and_verifies_the_write():
     assert 'sed -i "s|' not in text
     assert '${isi/"$from"/$to}' in text
     assert 'grep -qF -- "$to" "$file" || {' in text.split("cp -p", 1)[1]    # hasil tulis diverifikasi
+
+
+def test_backup_scripts_support_biometric_exclusion_for_pdp():
+    """B-13: dump DB mendukung opsi eksklusi data biometrik mentah (face_embedding) demi kepatuhan UU PDP."""
+    for script_name in ("backup.sh", "backup-terenkripsi.sh"):
+        text = read(DEPLOY / script_name)
+        assert "VMS_BACKUP_EXCLUDE_BIOMETRIC" in text
+        assert "--exclude-table-data='*.employee'" in text
+
+
+def test_backup_minio_uses_remove_and_respects_retention():
+    """B-13: mirror MinIO memakai --remove bawaan agar berkas terhapus hilang dalam retensi maks 35 hari."""
+    text = read(DEPLOY / "backup-minio.sh")
+    assert "retensi berkas terhapus maksimal 35 hari" in text
+    assert 'VMS_MINIO_REMOVE:-1' in text
+    assert 'REMOVE_OPT="--remove"' in text
+
+
+def test_backup_offsite_requires_age_encryption_and_refuses_plain_dumps():
+    """B-13: cadangan ke luar server wajib terenkripsi age dan menolak dump polos tanpa enkripsi."""
+    text = read(DEPLOY / "backup-offsite.sh")
+    assert "KEPATUHAN PDP: Cadangan DB yang dikirim ke luar server WAJIB terenkripsi age." in text
+    assert "age -R" in text
+    assert "VMS_ALLOW_UNENCRYPTED_OFFSITE" in text
+
+
+def test_biometric_sanitization_script_is_present_and_safe():
+    """B-13: skrip pembersihan mandiri face_embedding tabel employee tersedia dan aman."""
+    text = read(DEPLOY / "sanitasi-dump-biometrik.sh")
+    assert "set -euo pipefail" in text
+    assert "UPDATE employee SET face_embedding = NULL" in text
+    assert "--network none" in text
+

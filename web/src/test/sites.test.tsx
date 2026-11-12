@@ -72,6 +72,22 @@ describe("Lokasi kerja (/sites)", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "delete" && c.url === "/offices/s1")).toBe(true));
   });
 
+  it("tombol Ubah membuka dialog terisi dan mengirim PUT; nama kembar hanya diberi peringatan", async () => {
+    const calls = mockApi((c) => {
+      if (c.url === "/offices" && c.method === "get") return { data: [{ ...site, can_manage: true }, { ...site, id: "s2", name: "Kantor Lama", can_manage: true }] };
+      if (c.url === "/offices/s1" && c.method === "put") return { data: site };
+    });
+    renderRoute("/sites", { role: "PM" });
+    fireEvent.click(await screen.findByRole("button", { name: "Ubah Gudang Cikarang" }));
+    const dialog = screen.getByRole("dialog", { name: "Ubah lokasi kerja" });
+    const name = within(dialog).getByLabelText("Nama lokasi") as HTMLInputElement;
+    expect(name.value).toBe("Gudang Cikarang");
+    fireEvent.change(name, { target: { value: "Kantor Lama" } });
+    expect(await within(dialog).findByText(/Sudah ada lokasi dengan nama ini/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: /Simpan/ }));
+    await waitFor(() => expect(calls.some((c) => c.method === "put" && c.url === "/offices/s1")).toBe(true));
+  });
+
   it("galat memuat menampilkan Coba lagi", async () => {
     mockApi(() => apiError(500, "INTERNAL_ERROR", "Terjadi gangguan pada sistem. Coba lagi beberapa saat; bila berulang, hubungi admin."));
     renderRoute("/sites", { role: "PM" });

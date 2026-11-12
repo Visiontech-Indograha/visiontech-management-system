@@ -33,3 +33,21 @@ String? nearestSiteId(List<Map<String, dynamic>> sites, double lat, double lng) 
   }
   return best;
 }
+
+/// Pilihan lokasi absen bawaan: terdekat (GPS) > lokasi absen terakhir > kantor sendiri > urutan pertama.
+String? defaultSiteId(List<Map<String, dynamic>> sites, {String? near, String? last, String? ownOfficeId}) {
+  bool has(String? id) => id != null && sites.any((s) => s['id'] == id);
+  if (has(near)) return near;
+  if (has(last)) return last;
+  if (has(ownOfficeId)) return ownOfficeId;
+  return sites.isEmpty ? null : sites.first['id'] as String?;
+}
+
+/// Kantor sendiri didahulukan di daftar lokasi (setelah lokasi tugas hari ini); sisanya tetap urutannya.
+List<Map<String, dynamic>> ownOfficeFirst(List<Map<String, dynamic>> offices, String? ownOfficeId) {
+  if (ownOfficeId == null) return offices;
+  return [
+    ...offices.where((s) => s['id'] == ownOfficeId),
+    ...offices.where((s) => s['id'] != ownOfficeId),
+  ];
+}

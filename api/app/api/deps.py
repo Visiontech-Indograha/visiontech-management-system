@@ -131,6 +131,8 @@ async def get_current_user(
         session_id=session_id,
         permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
         employee_id=str(identity.employee_id) if getattr(identity, "employee_id", None) else None,
+        office_id=str(identity.office_id) if getattr(identity, "office_id", None) else None,
+        division_id=str(identity.division_id) if getattr(identity, "division_id", None) else None,
         must_change_password=must_change,
     )
 
@@ -201,6 +203,8 @@ async def get_file_viewer(
         permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
         # Tanpa ini pemeriksaan "boleh melihat jadwal" (foto bukti/survei) selalu gagal untuk <img>/tiket berkas.
         employee_id=str(identity.employee_id) if getattr(identity, "employee_id", None) else None,
+        office_id=str(identity.office_id) if getattr(identity, "office_id", None) else None,
+        division_id=str(identity.division_id) if getattr(identity, "division_id", None) else None,
     )
 
 
@@ -297,6 +301,10 @@ async def get_db_with_user(
             user_id=current_user.user_id,
             organization_id=current_user.organization_id,
             actor_label=current_user.email,
+            role=current_user.role,
+            office_id=current_user.office_id,
+            division_id=current_user.division_id,
+            is_system=False,
         )
     except SQLAlchemyError as exc:
         # Dok 17: tanpa data pribadi & tanpa isi galat DB ke Discord; detail lengkap ada di log.
@@ -336,6 +344,10 @@ async def get_file_viewer_db(
             user_id=current_user.user_id,
             organization_id=current_user.organization_id,
             actor_label=current_user.email,
+            role=current_user.role,
+            office_id=current_user.office_id,
+            division_id=current_user.division_id,
+            is_system=False,
         )
     except SQLAlchemyError as exc:
         logger.exception("Konteks RLS gagal disetel untuk akses berkas")

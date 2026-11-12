@@ -55,11 +55,14 @@ selesaikan() {
 }
 
 cadangan_db() {
-  local DB out ukuran
+  local DB out ukuran dump_extra=""
   DB=$(grep -E '^DATABASE_URL=' api.env | sed -E 's#.*/([A-Za-z0-9_]+)(\?.*)?$#\1#')
   [ -n "$DB" ] || { echo "Nama DB tidak ditemukan di api.env" >&2; return 2; }
   out="$ENC/$NAME-db-$STAMP.dump.age"
-  docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc" | age -R "$RECIP_CLEAN" > "$out.partial"
+  if [ "${VMS_BACKUP_EXCLUDE_BIOMETRIC:-0}" = 1 ] || [ "${VMS_BACKUP_SANITIZE_PDP:-0}" = 1 ]; then
+    dump_extra="--exclude-table-data='*.employee'"
+  fi
+  docker exec "$DB_CONTAINER" sh -c "pg_dump -U \"\$POSTGRES_USER\" -d '$DB' -Fc $dump_extra" | age -R "$RECIP_CLEAN" > "$out.partial"
   [ -s "$out.partial" ] || { echo "Cadangan DB kosong" >&2; return 3; }
   mv "$out.partial" "$out"
   ukuran=$(docker exec "$DB_CONTAINER" sh -c "psql -U \"\$POSTGRES_USER\" -d '$DB' -Atc \"select pg_database_size('$DB')\"" 2>/dev/null || echo 0)

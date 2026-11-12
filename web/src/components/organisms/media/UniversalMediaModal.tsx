@@ -152,7 +152,7 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
             >
               <Button
                 variant="outline"
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-9 gap-1.5 text-xs"
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 gap-1.5 text-xs"
               >
                 <ExternalLinkIcon className="w-3.5 h-3.5" />
                 Buka di Tab Baru
@@ -161,7 +161,7 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
             <Button
               variant="ghost"
               onClick={onClose}
-              className="flex-1 text-slate-400 hover:text-white hover:bg-slate-800 h-9 text-xs"
+              className="flex-1 text-slate-400 hover:text-white hover:bg-slate-800 h-11 text-xs"
             >
               Tutup
             </Button>

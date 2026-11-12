@@ -1,6 +1,7 @@
 import {
   Bed,
   Network,
+  Settings,
   BookUser,
   Briefcase,
   Building2,
@@ -11,6 +12,7 @@ import {
   ClipboardList,
   FolderOpen,
   Hourglass,
+  Timer,
   House,
   ListChecks,
   MapPin,
@@ -47,7 +49,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/leaves", label: "Cuti dan Izin", icon: CalendarDays, group: "Kehadiran dan SDM" },
   { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran dan SDM" },
   { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran dan SDM" },
-  { path: "/overtime-recap", label: "Rekap lembur", icon: Hourglass, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
+  { path: "/overtime-recap", label: "Rekap lembur", icon: Timer, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
   // 3. Aset & Fasilitas
   { path: "/assets", label: "Kendaraan dan alat", icon: Truck, group: "Aset dan Fasilitas" },
   { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset dan Fasilitas" },
@@ -60,6 +62,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
   { path: "/divisions", label: "Divisi dan jabatan", icon: Network, anyOf: ["manage:divisions", "manage:users"], group: "Master dan Sistem" },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
+  { path: "/system-settings", label: "Setelan sistem", icon: Settings, requires: ["manage:system_settings"], group: "Master dan Sistem" },
 ];
 
 /** Tujuan utama untuk bilah navigasi bawah ponsel (< 768 px). */

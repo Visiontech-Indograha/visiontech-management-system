@@ -131,3 +131,86 @@ def test_create_stay_idempotency_key(client, world: World, place):
     assert second.status_code == 201 and second.json() == first.json()
     count = sync_query("SELECT count(*) FROM company_mess_stay WHERE mess_id = %s", (place["mess_id"],))[0][0]
     assert count == 1
+
+
+def test_cancel_status_rules_future_approved_running_and_hr_removal(client, world: World, place):
+    """B-38: hunian disetujui yang belum mulai bisa dikeluarkan (HR) atau dibatalkan (pemohon, HP);
+    yang sudah berjalan hanya lewat 'Selesai inap'; kapasitas kembali setelah batal."""
+    pm = world.headers(client, "pm")
+    hr = world.headers(client, "hr")
+    member = world.headers(client, "member")
+
+    def approve(stay: dict) -> None:
+        res = client.post(f"/mess/{stay['mess_stay_id']}/decision", headers=pm, json={"approve": True})
+        assert res.status_code == 200, res.text
+
+    future = _request(client, world, "member", place, start=3, end=6).json()
+    approve(future)
+    by_hr = client.post(f"/mess/{future['mess_stay_id']}/cancel", headers=hr)
+    assert by_hr.status_code == 200 and by_hr.json()["status"] == "CANCELLED"
+    notified = sync_query(
+        "SELECT 1 FROM notification WHERE kind = 'MESS_CANCELLED' AND user_id = %s", (world.users["member"],))
+    assert len(notified) == 1
+
+    again = _request(client, world, "member", place, start=3, end=6).json()  # kapasitas sudah kembali
+    approve(again)
+    by_owner = client.post(f"/mess/{again['mess_stay_id']}/cancel", headers=member)
+    assert by_owner.status_code == 200 and by_owner.json()["status"] == "CANCELLED"
+
+    running = _request(client, world, "member", place, start=0, end=3).json()
+    approve(running)
+    refused = client.post(f"/mess/{running['mess_stay_id']}/cancel", headers=hr)
+    assert refused.status_code == 409 and refused.json()["error"]["code"] == "MESS_NOT_CANCELLABLE"
+    assert "Selesai inap" in refused.json()["error"]["message"]
+
+
+def test_cancel_end_role_matrix_and_terminal_states(client, world: World, place):
+    """B-38: matriks peran batal/selesai-inap; status akhir tidak bisa dibatalkan/diselesaikan lagi."""
+    pm, hr = world.headers(client, "pm"), world.headers(client, "hr")
+    member, leader = world.headers(client, "member"), world.headers(client, "leader")
+
+    def approved(start: int, end: int) -> dict:
+        stay = _request(client, world, "member", place, start=start, end=end).json()
+        res = client.post(f"/mess/{stay['mess_stay_id']}/decision", headers=pm, json={"approve": True})
+        assert res.status_code == 200, res.text
+        return stay
+
+    future = approved(3, 6)
+    for who in (leader, pm):
+        assert client.post(f"/mess/{future['mess_stay_id']}/cancel", headers=who).status_code == 403
+        assert client.post(f"/mess/{future['mess_stay_id']}/end", headers=who).status_code == 403
+    done = client.post(f"/mess/{future['mess_stay_id']}/cancel", headers=hr)
+    assert done.status_code == 200 and done.json()["status"] == "CANCELLED"
+    again = client.post(f"/mess/{future['mess_stay_id']}/cancel", headers=member)
+    assert again.status_code == 409 and again.json()["error"]["code"] == "MESS_NOT_CANCELLABLE"
+    assert client.post(f"/mess/{future['mess_stay_id']}/end", headers=hr).status_code == 409
+
+    running = approved(0, 3)
+    by_hr = client.post(f"/mess/{running['mess_stay_id']}/end", headers=hr)
+    assert by_hr.status_code == 200 and by_hr.json()["stay_end_date"] == _day(0)
+    assert client.post(f"/mess/{running['mess_stay_id']}/cancel", headers=member).status_code == 409
+    repeat = client.post(f"/mess/{running['mess_stay_id']}/end", headers=member)  # ulang = tanpa efek
+    assert repeat.status_code == 200 and repeat.json()["stay_end_date"] == _day(0)
+
+
+def test_end_is_atomic_against_concurrent_cancel(client, world: World, place):
+    """Hunian yang berubah status di antara pembacaan dan UPDATE tidak boleh dimajukan tanggal selesainya."""
+    import asyncio
+
+    from app.core.time import jakarta_now
+    from app.database.session import AsyncSessionLocal
+    from app.modules.mess.repositories.mess_repository import MessRepository
+
+    pm = world.headers(client, "pm")
+    stay = _request(client, world, "member", place, start=0, end=3).json()
+    client.post(f"/mess/{stay['mess_stay_id']}/decision", headers=pm, json={"approve": True})
+    sync_query("UPDATE company_mess_stay SET status = 'CANCELLED' WHERE mess_stay_id = %s RETURNING 1",
+               (stay["mess_stay_id"],))
+
+    async def run() -> bool:
+        async with AsyncSessionLocal() as db:
+            return await MessRepository(db).set_end_date(stay["mess_stay_id"], jakarta_now().date())
+
+    assert asyncio.run(run()) is False
+    row = sync_query("SELECT stay_end_date FROM company_mess_stay WHERE mess_stay_id = %s", (stay["mess_stay_id"],))
+    assert row[0][0].isoformat() == _day(3)

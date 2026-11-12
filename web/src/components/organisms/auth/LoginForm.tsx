@@ -7,7 +7,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { DeviceLimitHelpDialog } from "@/components/organisms/auth/DeviceLimitHelpDialog";
 import { Panel, PanelContent, PanelDescription, PanelHeader, PanelTitle } from "@/components/molecules/Panel";
 import { StyledInput, StyledLabel } from "@/components/molecules/InputControls";
-import { AlertCircle, Timer } from "@/components/molecules/Glyphs";
+import { AlertCircle, Eye, EyeOff, Timer } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ImageView } from "@/components/molecules/ImageView";
 import { InlineLink } from "@/components/molecules/Links";
@@ -34,6 +34,7 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
 }) {
   const { register, formState: { errors, isSubmitting } } = form;
   const [helpOpen, setHelpOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   return (
     <>
         <Panel className="w-full max-w-sm gap-5">
@@ -84,7 +85,25 @@ export function LoginForm({ admin, form, onSubmit, formError, formErrorCode = nu
               </div>
               <div className="space-y-1.5">
                 <StyledLabel htmlFor="password">Sandi</StyledLabel>
-                <StyledInput id="password" type="password" autoComplete="current-password" {...register("password")} />
+                <div className="relative">
+                  <StyledInput
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    className="pr-12"
+                    {...register("password")}
+                  />
+                  <ActionButton
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                    className="absolute right-0 top-0 h-full min-h-[44px] min-w-[44px] rounded-r-md px-3 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </ActionButton>
+                </div>
                 {errors.password && <TextBlock className="text-sm text-destructive">{errors.password.message}</TextBlock>}
               </div>
               <ActionButton type="submit" className="h-11 w-full" disabled={isSubmitting || lockSeconds > 0}>

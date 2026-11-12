@@ -211,7 +211,7 @@ export function HseCampaignPhotosField({
                     </ActionButton>
                   </div>
                 </div>
-                <ControlLabel htmlFor={`caption-${photo.key}`} className="text-[11px] font-semibold text-mist">
+                <ControlLabel htmlFor={`caption-${photo.key}`} className="text-xs font-semibold text-mist">
                   Keterangan foto {i + 1} (opsional, maks {CAPTION_MAX_CHARS} karakter)
                 </ControlLabel>
                 <ControlTextarea
@@ -223,7 +223,7 @@ export function HseCampaignPhotosField({
                   placeholder="Poin penting yang harus terbaca di HP"
                   className="w-full rounded-lg border border-line bg-background p-2 text-sm outline-none focus:border-primary"
                 />
-                <TextBlock as="span" className="self-end text-[11px] text-mist">
+                <TextBlock as="span" className="self-end text-xs text-mist">
                   {photo.caption.length}/{CAPTION_MAX_CHARS}
                 </TextBlock>
               </div>

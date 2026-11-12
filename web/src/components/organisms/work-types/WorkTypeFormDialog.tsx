@@ -1,3 +1,4 @@
+import { divisionOptionLabel } from "@/lib/divisionLabel";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -144,10 +145,10 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
           disabled={Boolean(me?.role === "PROJECT_MANAGER" && userDivisions.length <= 1)}
           {...register("division_id")}
         >
-          <ControlOption value="">-- Pilih Divisi --</ControlOption>
+          <ControlOption value="">Pilih divisi</ControlOption>
           {userDivisions.map((u) => (
             <ControlOption key={u.id} value={u.id}>
-              {`${u.name} (${u.code})`}
+              {divisionOptionLabel(u, userDivisions)}
             </ControlOption>
           ))}
           {initialDivisionId && !userDivisions.some((u) => u.id === initialDivisionId) && (
@@ -209,7 +210,7 @@ export function WorkTypeFormDialog({ type, onClose }: { type: WorkType | null; o
             hint="Dipakai otomatis saat PM merencanakan pekerjaan dari survei."
             {...register("follow_up_work_type_id", { setValueAs: (v: string) => v || null })}
           >
-            <ControlOption value="">-- Belum ditentukan --</ControlOption>
+            <ControlOption value="">Belum ditentukan</ControlOption>
             {installTypes.map((w) => (
               <ControlOption key={w.id} value={w.id}>{w.name}</ControlOption>
             ))}

@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime } from "@/lib/format";
 import { useRevokeOtherSessions, useRevokeSession, useSessions, type ActiveSession } from "@/services/accountService";
+import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -18,6 +20,41 @@ function deviceName(s: ActiveSession): string {
   return label || s.device_label || ua || "Perangkat tidak dikenal";
 }
 
+/** Dua konfirmasi keluarkan perangkat: semua perangkat lain, atau satu perangkat. */
+function RevokeConfirms({ others, one, busy, onOthers, onOne, onClose }: {
+  others: boolean;
+  one: ActiveSession | null;
+  busy: boolean;
+  onOthers: () => void;
+  onOne: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <ConfirmDialog
+        open={others}
+        title="Keluarkan perangkat lain"
+        message="Perangkat lain yang sedang masuk dengan akun Anda akan dikeluarkan dan harus masuk kembali. Akses yang sedang berjalan berakhir paling lama 15 menit."
+        confirmLabel="Keluarkan perangkat lain"
+        danger
+        busy={busy}
+        onConfirm={onOthers}
+        onClose={onClose}
+      />
+      <ConfirmDialog
+        open={one !== null}
+        title="Keluarkan perangkat"
+        message={one ? `${deviceName(one)} akan dikeluarkan dari akun Anda dan harus masuk kembali. Akses yang sedang berjalan berakhir paling lama 15 menit.` : ""}
+        confirmLabel="Keluarkan perangkat"
+        danger
+        busy={busy}
+        onConfirm={() => one && onOne(one.id)}
+        onClose={onClose}
+      />
+    </>
+  );
+}
+
 /**
  * Perangkat yang sedang masuk + "Keluarkan" per perangkat dan "Keluarkan perangkat lain" (M1 / P1-7).
  * Token akses perangkat lain habis paling lama 15 menit.
@@ -26,6 +63,8 @@ export function AccountSessionsPanel() {
   const sessions = useSessions();
   const revoke = useRevokeSession();
   const revokeOthers = useRevokeOtherSessions();
+  const [confirmOthers, setConfirmOthers] = useState(false);
+  const [confirmOne, setConfirmOne] = useState<ActiveSession | null>(null);
   const others = sessions.data?.filter((s) => !s.current).length ?? 0;
 
   const run = async (action: () => Promise<unknown>, done: string) => {
@@ -45,7 +84,7 @@ export function AccountSessionsPanel() {
               <ActionButton
                 variant="outline"
                 disabled={revokeOthers.isPending}
-                onClick={() => run(() => revokeOthers.mutateAsync(), "Perangkat lain dikeluarkan (paling lambat 15 menit).")}
+                onClick={() => setConfirmOthers(true)}
               >
                 Keluarkan perangkat lain
               </ActionButton>
@@ -74,7 +113,7 @@ export function AccountSessionsPanel() {
                       variant="outline"
                       aria-label={`Keluarkan ${deviceName(s)}`}
                       disabled={revoke.isPending}
-                      onClick={() => run(() => revoke.mutateAsync(s.id), "Perangkat dikeluarkan (paling lambat 15 menit).")}
+                      onClick={() => setConfirmOne(s)}
                     >
                       Keluarkan
                     </ActionButton>
@@ -86,6 +125,14 @@ export function AccountSessionsPanel() {
           <TextBlock className="mt-2 text-body-sm text-mist">
             Perangkat yang dikeluarkan harus masuk lagi; akses yang sedang berjalan berakhir paling lama 15 menit.
           </TextBlock>
+          <RevokeConfirms
+            others={confirmOthers}
+            one={confirmOne}
+            busy={revokeOthers.isPending || revoke.isPending}
+            onOthers={() => run(() => revokeOthers.mutateAsync(), "Perangkat lain dikeluarkan (paling lambat 15 menit).").then(() => setConfirmOthers(false))}
+            onOne={(id) => run(() => revoke.mutateAsync(id), "Perangkat dikeluarkan (paling lambat 15 menit).").then(() => setConfirmOne(null))}
+            onClose={() => { setConfirmOthers(false); setConfirmOne(null); }}
+          />
         </section>
   );
 }

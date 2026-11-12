@@ -118,7 +118,14 @@ class AuthService:
         """Konteks RLS & audit transaksi ini = pengguna ini, setelah identitasnya pasti (sandi benar / token sah).
         Tanpa ini kueri tabel ber-RLS (mis. `employee`) diam-diam kosong di bawah peran runtime `vms_api` (P9-2)."""
         await set_request_context(
-            self.users.db, user_id=str(user.id), organization_id=str(user.organization_id), actor_label=str(user.login)
+            self.users.db,
+            user_id=str(user.id),
+            organization_id=str(user.organization_id),
+            actor_label=str(user.login),
+            role=getattr(user, "system_role", None) or (user.roles[0] if getattr(user, "roles", None) else None),
+            office_id=getattr(user, "office_id", None),
+            division_id=getattr(user, "division_id", None),
+            is_system=False,
         )
 
     async def _user(self, user_id: str) -> Any:

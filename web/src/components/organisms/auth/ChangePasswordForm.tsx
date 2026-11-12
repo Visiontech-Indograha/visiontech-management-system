@@ -1,5 +1,5 @@
 import type { UseFormReturn } from "react-hook-form";
-import { TextField } from "@/components/molecules/Field";
+import { PasswordField } from "@/components/molecules/Field";
 import type { ChangePasswordValues } from "@/schemas/changePasswordSchema";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -27,24 +27,21 @@ export function ChangePasswordForm({ form, onSubmit, formError, forced = false, 
           : "Masukkan sandi saat ini dan sandi baru."}</TextBlock>
       <FormBlock onSubmit={onSubmit} noValidate>
         <FormErrorText message={formError} />
-        <TextField
+        <PasswordField
           label="Sandi saat ini"
-          type="password"
           autoComplete="current-password"
           error={errors.current_password?.message}
           {...register("current_password")}
         />
-        <TextField
+        <PasswordField
           label="Sandi baru"
-          type="password"
           autoComplete="new-password"
           hint="Minimal 8 karakter, memuat huruf dan angka."
           error={errors.new_password?.message}
           {...register("new_password")}
         />
-        <TextField
+        <PasswordField
           label="Ulangi sandi baru"
-          type="password"
           autoComplete="new-password"
           error={errors.confirm?.message}
           {...register("confirm")}

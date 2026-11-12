@@ -30,15 +30,33 @@ from app.shared.access.scope_rules import (
 class WorkOrderRepository(BaseRepository):
     """Akses data basis data PostgreSQL untuk alur kerja terpadu Work Orders."""
 
+    async def same_title_numbers(self, client_id: UUID | str, title: str, limit: int = 3) -> list[str]:
+        """Nomor WO aktif milik klien yang sama dengan judul identik (tanpa beda huruf besar/kecil), terbaru dulu."""
+        rows = await self.fetchall(
+            """
+            SELECT wo_number FROM client_work_orders
+            WHERE client_id = CAST(:cid AS uuid) AND delete_at IS NULL
+              AND lower(btrim(title)) = lower(btrim(:title))
+              AND status <> 'CANCELLED'
+            ORDER BY create_at DESC LIMIT :limit
+            """,
+            {"cid": str(client_id), "title": title, "limit": limit},
+        )
+        return [str(r.wo_number) for r in rows]
+
     async def generate_wo_number(self) -> str:
         """Menghasilkan nomor WO otomatis unik berbasis tahun-bulan: WO-YYYYMM-XXXX."""
         now = utcnow()
         prefix = f"WO-{now.strftime('%Y%m')}-"
+        # Kunci sampai transaksi selesai: dua WO dibuat bersamaan tidak mendapat nomor sama (409 "Data yang sama").
+        # Nomor terbesar dipakai (bukan create_at terbaru: create_at = awal transaksi, bukan urutan commit).
+        await self.execute("SELECT pg_advisory_xact_lock(hashtext('client_work_orders.wo_number'))")
         row = await self.fetchone(
             """
             SELECT wo_number FROM client_work_orders
             WHERE wo_number LIKE :pfx || '%'
-            ORDER BY create_at DESC LIMIT 1
+              AND substr(wo_number, length(:pfx) + 1) ~ '^[0-9]{1,9}$'
+            ORDER BY CAST(substr(wo_number, length(:pfx) + 1) AS integer) DESC LIMIT 1
             """,
             {"pfx": prefix},
         )
@@ -201,9 +219,16 @@ class WorkOrderRepository(BaseRepository):
         """
         return await self.fetchone(sql, {"id": str(work_order_id), **viewer})
 
-    async def list_team_surveys(self, viewer: dict[str, Any], limit: int) -> Sequence[Any]:
-        """Survei WO aktif (WO SURVEY_IN_PROGRESS, survei belum dikirim/disetujui) milik tim yang diikuti
-        pemanggil (ketua atau anggota aktif). Satu kueri, tanpa N+1; jumlah titik lewat subkueri terindeks."""
+    async def list_team_surveys(
+        self, viewer: dict[str, Any] | None, limit: int, *,
+        scope_all: bool = False, date_from: date | None = None, date_to: date | None = None,
+    ) -> Sequence[Any]:
+        """Survei WO aktif (WO SURVEY_IN_PROGRESS, survei belum dikirim/disetujui). Bawaan: milik tim yang diikuti
+        pemanggil (ketua atau anggota aktif). `scope_all`: ditambah WO yang dikelola PM (`viewer=None` = semua,
+        untuk SA/OM). `date_from`/`date_to` membatasi tanggal survei. Satu kueri, tanpa N+1."""
+        scope_sql = (
+            "TRUE" if viewer is None else work_order_visible_sql("wo") if scope_all else work_order_team_sql("wo")
+        )
         return await self.fetchall(
             f"""
             SELECT
@@ -224,11 +249,13 @@ class WorkOrderRepository(BaseRepository):
             WHERE s.delete_at IS NULL
               AND wo.status = 'SURVEY_IN_PROGRESS'
               AND s.status NOT IN ('SUBMITTED', 'APPROVED')
-              AND {work_order_team_sql('wo')}
+              AND {scope_sql}
+              AND (CAST(:d_from AS date) IS NULL OR s.survey_date >= CAST(:d_from AS date))
+              AND (CAST(:d_to AS date) IS NULL OR s.survey_date <= CAST(:d_to AS date))
             ORDER BY s.survey_date, s.create_at, s.survey_id
             LIMIT :limit
             """,
-            {**viewer, "limit": limit},
+            {**(viewer or {}), "limit": limit, "d_from": date_from, "d_to": date_to},
         )
 
     async def team_name(self, team_id: UUID | str) -> str | None:
@@ -635,6 +662,8 @@ class WorkOrderRepository(BaseRepository):
                     },
                 )
 
+        await self._ensure_order(work_order_id)
+
         # Update status work order & survey
         await self.execute(
             """
@@ -648,6 +677,26 @@ class WorkOrderRepository(BaseRepository):
             {"wo_id": str(work_order_id), "uid": str(approved_by_user_id)},
         )
         return True
+
+    async def _ensure_order(self, work_order_id: UUID | str) -> None:
+        """Order alokasi (work_completion) untuk WO ini; satu per WO (indeks unik), aman dipanggil ulang.
+        Tanpa ini Alokasi/Jadwal tidak punya order yang bisa dipilih setelah survei disetujui."""
+        await self.execute(
+            """
+            INSERT INTO work_completion (report_scope, division_id, pm_id, client_id, client_name, project_title,
+                                         order_number, total_target_unit, unit_measure, order_status,
+                                         priority_level, work_order_id)
+            SELECT 'PROJECT', w.division_id, w.pm_id, w.client_id, c.name, w.title, w.wo_number,
+                   GREATEST(1, (SELECT COUNT(*) FROM work_order_items i
+                                WHERE i.work_order_id = w.work_order_id AND i.delete_at IS NULL))::int,
+                   'Unit', 'ONGOING', 'NORMAL', w.work_order_id
+            FROM client_work_orders w JOIN client c ON c.client_id = w.client_id
+            WHERE w.work_order_id = CAST(:wo_id AS uuid)
+              AND NOT EXISTS (SELECT 1 FROM work_completion x
+                              WHERE x.work_order_id = w.work_order_id AND x.delete_at IS NULL)
+            """,
+            {"wo_id": str(work_order_id)},
+        )
 
     async def update_item_progress(
         self,

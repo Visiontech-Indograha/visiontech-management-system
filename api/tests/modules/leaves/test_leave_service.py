@@ -400,7 +400,7 @@ def test_leave_cannot_be_cancelled_after_its_last_day():
     """Cuti yang hari terakhirnya sudah lewat tidak dapat dibatalkan lagi."""
     async def run():
         user = make_user("EMPLOYEE")
-        past = jakarta_now().date() - timedelta(days=1)
+        past = date(2026, 5, 3)  # hari ini diinjeksi 2026-05-04 (fixture _fixed_today)
         repo = AsyncMock()
         repo.get_leave.return_value = MagicMock(
             employee_id=user.employee_id, status="APPROVED_BY_HR", leave_type="ANNUAL",
@@ -410,6 +410,48 @@ def test_leave_cannot_be_cancelled_after_its_last_day():
             await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Terlambat"))
         assert exc.value.code == "NOT_CANCELLABLE"
         repo.cancel_leave.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_pending_leave_can_be_cancelled_even_after_its_last_day(monkeypatch):
+    """Pengajuan menunggu (belum memakai saldo) boleh dibatalkan kapan pun; tanggal hari ini diinjeksi."""
+    async def run():
+        from datetime import date
+
+        from app.modules.leaves.services import leave_service as mod
+        monkeypatch.setattr(mod, "_today", lambda: date(2026, 12, 31))
+        user = make_user("EMPLOYEE")
+        repo = AsyncMock()
+        repo.get_leave.return_value = MagicMock(
+            employee_id=user.employee_id, status="PENDING", leave_type="ANNUAL",
+            start_date=date(2026, 1, 5), end_date=date(2026, 1, 7), total_days=3,
+        )
+        repo.cancel_leave.return_value = True
+        await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Lupa membatalkan"))
+        repo.cancel_leave.assert_awaited_once()
+        repo.deduct_balance.assert_not_awaited()
+
+    asyncio.run(run())
+
+
+def test_approved_leave_cannot_be_cancelled_after_last_day_but_can_on_it(monkeypatch):
+    async def run():
+        from datetime import date
+
+        from app.modules.leaves.services import leave_service as mod
+        monkeypatch.setattr(mod, "_today", lambda: date(2026, 1, 7))
+        user = make_user("EMPLOYEE")
+        repo = AsyncMock()
+        repo.get_leave.return_value = MagicMock(
+            employee_id=user.employee_id, status="APPROVED_BY_PM", leave_type="SICK",
+            start_date=date(2026, 1, 5), end_date=date(2026, 1, 7), total_days=3,
+        )
+        repo.cancel_leave.return_value = True
+        await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Batal"))
+        monkeypatch.setattr(mod, "_today", lambda: date(2026, 1, 8))
+        with pytest.raises(AppError):
+            await LeaveService(repo).cancel(user, uuid4(), LeaveCancel(reason="Batal"))
 
     asyncio.run(run())
 

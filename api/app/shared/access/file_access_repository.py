@@ -12,12 +12,13 @@ from uuid import UUID
 from app.core.repository import BaseRepository
 from app.shared.access.office_scope import attendance_office_scope
 from app.shared.access.pm_reach import pm_reaches_employee
+from app.shared.access.scope_rules import work_order_visible_sql
 
 
 class FileAccessRepository(BaseRepository):
     """Query tautan berkas: template, aset, profil, dokumen karyawan, swafoto, lampiran jadwal."""
 
-    async def links(self, file_id: UUID | str, employee_id: UUID | str | None) -> Any:
+    async def links(self, file_id: UUID | str, employee_id: UUID | str | None, *, is_pm: bool = False) -> Any:
         """Metadata berkas + jenis tautannya; None bila berkas tidak ada."""
         return await self.fetchone(
             f"""
@@ -58,6 +59,17 @@ class FileAccessRepository(BaseRepository):
                    EXISTS (SELECT 1 FROM attendance a
                            WHERE f.storage_key IN (a.face_photo_path, a.out_of_radius_photo_path)
                            AND a.employee_id = CAST(:emp AS uuid)) AS own_selfie,
+                   -- foto titik survei WO (work_order_survey_points.photos_json, bentuk {file_id} atau larik lama)
+                   EXISTS (SELECT 1 FROM work_order_survey_points p
+                           WHERE p.delete_at IS NULL AND (p.photos_json @> jsonb_build_array(
+                               jsonb_build_object('file_id', f.id::text))
+                           OR p.photos_json ? f.id::text OR p.photos_json ? f.storage_key)) AS survey_point_file,
+                   EXISTS (SELECT 1 FROM work_order_survey_points p
+                           JOIN client_work_orders wo ON wo.work_order_id = p.work_order_id AND wo.delete_at IS NULL
+                           WHERE p.delete_at IS NULL AND (p.photos_json @> jsonb_build_array(
+                               jsonb_build_object('file_id', f.id::text))
+                           OR p.photos_json ? f.id::text OR p.photos_json ? f.storage_key)
+                           AND {work_order_visible_sql('wo')}) AS survey_point_visible,
                    ARRAY(
                        SELECT wpa.daily_plan_id::text FROM work_plan_attachment wpa WHERE wpa.file_id = f.id
                        UNION  -- foto bukti / foto titik survei pada item jadwal
@@ -72,5 +84,6 @@ class FileAccessRepository(BaseRepository):
             FROM file_object f
             WHERE f.id = CAST(:fid AS uuid)
             """,
-            {"fid": str(file_id), "emp": str(employee_id) if employee_id else None},
+            {"fid": str(file_id), "emp": str(employee_id) if employee_id else None,
+             "viewer_emp": str(employee_id) if employee_id else None, "pm": is_pm},
         )

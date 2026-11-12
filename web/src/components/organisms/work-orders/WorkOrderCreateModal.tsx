@@ -12,6 +12,12 @@ import { useTeams } from "@/services/teamService";
 import { useCreateWorkOrder } from "@/services/workOrderService";
 import { useSession } from "@/stores/sessionStore";
 import { divisionScopeIds } from "@/lib/divisionScope";
+import { applyFieldErrors, errorMessage } from "@/lib/errors";
+import { pmCandidates } from "@/lib/pmCandidates";
+
+/** Batas judul sama dengan API (WorkOrderCreate.title: 3 sampai 200 karakter). */
+export const WO_TITLE_MIN = 3;
+export const WO_TITLE_MAX = 200;
 
 interface WorkOrderCreateModalProps {
   isOpen: boolean;
@@ -31,6 +37,7 @@ export function WorkOrderCreateModal({
   const [title, setTitle] = useState("");
   const [initialComplaint, setInitialComplaint] = useState("");
   const [leadTeamId, setLeadTeamId] = useState("");
+  const [titleError, setTitleError] = useState("");
 
   const { me } = useSession();
   // PM hanya boleh memilih divisinya sendiri; OM/SA tetap bebas memilih.
@@ -51,6 +58,8 @@ export function WorkOrderCreateModal({
   });
   const { data: teams = [] } = useTeams();
 
+  const pmOptions = pmCandidates(employeesData?.items, me);
+
   const createMutation = useCreateWorkOrder();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,18 +73,27 @@ export function WorkOrderCreateModal({
       toast.error("Pilih divisi terlebih dahulu");
       return;
     }
-    const finalPmId = pmId || (employeesData?.items && employeesData.items.length > 0 ? employeesData.items[0].employee_id : "");
+    const finalPmId = pmId || (pmOptions.length === 1 ? pmOptions[0].employee_id : "");
     if (!finalPmId) {
       toast.error("Pilih Project Manager (PM) penanggung jawab");
       return;
     }
+    setTitleError("");
     if (!title.trim()) {
-      toast.error("Judul tugas atau pekerjaan wajib diisi");
+      setTitleError("Judul tugas atau pekerjaan wajib diisi.");
+      return;
+    }
+    if (title.trim().length < WO_TITLE_MIN) {
+      setTitleError(`Judul minimal ${WO_TITLE_MIN} karakter.`);
+      return;
+    }
+    if (title.trim().length > WO_TITLE_MAX) {
+      setTitleError(`Judul maksimal ${WO_TITLE_MAX} karakter.`);
       return;
     }
 
     try {
-      await createMutation.mutateAsync({
+      const created = await createMutation.mutateAsync({
         client_id: clientId,
         client_site_id: clientSiteId || undefined,
         division_id: finalDivisionId,
@@ -85,9 +103,14 @@ export function WorkOrderCreateModal({
         lead_team_id: leadTeamId || undefined,
       });
       toast.success("Tugas klien baru berhasil dibuat");
+      if (created.duplicate_title_warning) toast.warning(created.duplicate_title_warning);
       onClose();
-    } catch {
-      toast.error("Gagal membuat tugas klien");
+    } catch (err) {
+      const setField = (name: string, e: { message: string }) => {
+        if (name === "title") setTitleError(e.message);
+      };
+      if (applyFieldErrors(err, setField as never, ["title"])) return;
+      toast.error(errorMessage(err, "Gagal membuat tugas klien"));
     }
   };
 
@@ -134,6 +157,8 @@ export function WorkOrderCreateModal({
             placeholder="Contoh: Perbaikan Kabel Fiber Optic Cut Ruas Fatmawati"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            maxLength={WO_TITLE_MAX}
+            error={titleError || undefined}
             required
           />
 
@@ -146,7 +171,7 @@ export function WorkOrderCreateModal({
             }}
             required
           >
-            <ControlOption value="">-- Pilih Klien --</ControlOption>
+            <ControlOption value="">Pilih klien</ControlOption>
             {clients.map((c) => (
               <ControlOption key={c.client_id} value={c.client_id}>
                 {c.name}
@@ -161,7 +186,7 @@ export function WorkOrderCreateModal({
               onChange={(e) => setClientSiteId(e.target.value)}
               hint={sites.length === 0 ? "Klien belum memiliki daftar lokasi cabang/site." : undefined}
             >
-              <ControlOption value="">-- Pilih Lokasi Site (Opsional) --</ControlOption>
+              <ControlOption value="">Pilih lokasi cabang (opsional)</ControlOption>
               {sites.map((s) => (
                 <ControlOption key={s.site_id} value={s.site_id}>
                   {s.site_name} - {s.address}
@@ -177,7 +202,7 @@ export function WorkOrderCreateModal({
               onChange={(e) => setDivisionId(e.target.value)}
               required
             >
-              <ControlOption value="">-- Pilih Divisi --</ControlOption>
+              <ControlOption value="">Pilih divisi</ControlOption>
               {divisions.map((d) => (
                 <ControlOption key={d.id} value={d.id}>
                   {d.name}
@@ -191,8 +216,8 @@ export function WorkOrderCreateModal({
               onChange={(e) => setPmId(e.target.value)}
               required
             >
-              <ControlOption value="">-- Pilih PM --</ControlOption>
-              {(employeesData?.items || []).map((emp) => (
+              <ControlOption value="">Pilih PM</ControlOption>
+              {pmOptions.map((emp) => (
                 <ControlOption key={emp.employee_id} value={emp.employee_id}>
                   {emp.full_name}
                 </ControlOption>
@@ -204,9 +229,9 @@ export function WorkOrderCreateModal({
             label="Tim survei (opsional)"
             value={leadTeamId}
             onChange={(e) => setLeadTeamId(e.target.value)}
-            hint="Bisa ditentukan sekarang atau saat status WAITING_SURVEY"
+            hint="Bisa ditentukan sekarang atau saat statusnya menunggu survei"
           >
-            <ControlOption value="">-- Belum Ditugaskan --</ControlOption>
+            <ControlOption value="">Belum ditugaskan</ControlOption>
             {teams.map((t) => (
               <ControlOption key={t.team_id} value={t.team_id}>
                 {t.name} (Ketua: {t.leader_name || "-"})

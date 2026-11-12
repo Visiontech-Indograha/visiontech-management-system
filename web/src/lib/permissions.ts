@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   "export:attendance",
   "review:overtime",
   "manage:sites",
+  "manage:system_settings",
   "manage:divisions",
   "manage:assets",
   "manage:mess",

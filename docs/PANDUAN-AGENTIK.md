@@ -1,3 +1,5 @@
+> Serah terima AI terbaru: [SERAH-TERIMA-AI.md](SERAH-TERIMA-AI.md)
+
 # Panduan agentik VMS
 
 Versi: 0.1 - 2026-11-04 - cabang `docs/skills-agentik`
@@ -158,6 +160,8 @@ Kriteria tahan rilis: ada P1 terbuka, atau kebocoran lintas divisi.
 ```
 
 Contoh lengkap ada di `.claude/skills/vms-qa/references/rencana-uji.md`.
+
+Uji kegunaan (usability testing, pengguna awam per peran) diatur di `.claude/skills/vms-qa/references/uji-kegunaan.md`; wajib sebelum rilis MINOR/MAJOR yang menyentuh layar.
 
 ### 2.7 Laporan QA
 

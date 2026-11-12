@@ -625,7 +625,6 @@ class _PointCard extends StatelessWidget {
                 if (editable)
                   IconButton(
                     tooltip: 'Hapus titik',
-                    visualDensity: VisualDensity.compact,
                     onPressed: busy ? null : onDelete,
                     icon: const Icon(Icons.delete_outline),
                   )

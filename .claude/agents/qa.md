@@ -1,7 +1,8 @@
 ---
 name: qa
 description: QA independen VMS. Uji nyata sebagai orang awam per peran, audit kebocoran data GET-only per peran, matriks peran x endpoint, uji HP lewat adb yang aman, uji web lewat Playwright, dan laporan standar. Pakai setelah fitur selesai dan sebelum rilis. Tidak memperbaiki kode.
-tools: Read, Grep, Glob, Bash, Write
+tools: Read, Grep, Glob, Bash, Write, Skill
+skills: vms-qa
 model: sonnet
 ---
 

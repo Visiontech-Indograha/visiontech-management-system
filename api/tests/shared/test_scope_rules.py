@@ -66,7 +66,8 @@ def test_viewer_params_and_asset_viewer_follow_role():
 
 def test_employee_params_carry_scope_flags():
     params = sr.employee_params(_user("EMPLOYEE"))
-    assert params == {"viewer_emp": EMP, "pm": False, "dir_all": False, "sens_all": False}
+    assert params == {"viewer_emp": EMP, "pm": False, "dir_all": False, "sens_all": False,
+                      "dir_bound": False, "dir_offices": []}
     hr = sr.employee_params(_user("ADMIN_HR_GA"))
     assert hr["dir_all"] is True and hr["sens_all"] is True
 

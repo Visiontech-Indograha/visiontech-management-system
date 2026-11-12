@@ -1,3 +1,4 @@
+import { appEnv, ENV_TITLE_PREFIX, type AppEnv } from "@/lib/appEnv";
 import { NAV_ITEMS } from "./navigation";
 
 export const APP_NAME = "Visiontech VMS";
@@ -12,12 +13,15 @@ const PATTERNS: [RegExp, string][] = [
   [/^\/403$/, "Tidak berwenang"],
   [/^\/directory\/[^/]+$/, "Detail karyawan"],
   [/^\/surveys\/[^/]+$/, "Detail survei"],
-  [/^\/clients$/, "Master Klien"],
   [/^\/projects$/, "Master Proyek (SPK)"],
 ];
 
 /** Judul tab peramban untuk satu alamat; `null` bila tidak dikenal (dipakai sebagai "halaman tidak ditemukan"). */
-export function pageTitle(pathname: string): string {
+export function pageTitle(pathname: string, env: AppEnv = appEnv()): string {
+  return (env ? ENV_TITLE_PREFIX[env] : "") + baseTitle(pathname);
+}
+
+function baseTitle(pathname: string): string {
   const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   for (const [re, label] of PATTERNS) if (re.test(path)) return `${label} · ${APP_NAME}`;
   const item = NAV_ITEMS.find((i) => i.path === path);

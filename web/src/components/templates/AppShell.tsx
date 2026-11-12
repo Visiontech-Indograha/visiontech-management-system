@@ -46,7 +46,7 @@ export function AppShell() {
           "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar",
           "transition-[transform,width] duration-[var(--motion-base)] ease-out md:sticky md:top-0 md:h-screen md:translate-x-0",
           collapsed && "md:w-[76px]",
-          drawerOpen ? "translate-x-0" : "-translate-x-full",
+          drawerOpen ? "translate-x-0" : "-translate-x-full max-md:invisible",
         )}
       >
         <SidebarBrand

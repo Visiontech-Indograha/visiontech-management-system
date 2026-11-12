@@ -209,6 +209,19 @@ def test_allowlists_have_no_stale_entries():
     assert set(GUARDED_IN_HANDLER) <= set(routes)
 
 
+def test_allowlist_entries_are_not_redundant_or_unexplained():
+    """B-32: rute yang sudah punya `require_permission`/penjaga tidak perlu masuk allowlist (entri basi menyamarkan
+    pelonggaran nanti), dan tiap entri wajib beralasan."""
+    routes = _routes()
+    for name, table in (("SELF_SERVICE", SELF_SERVICE), ("GUARDED_IN_HANDLER", GUARDED_IN_HANDLER)):
+        assert all(str(reason).strip() for reason in table.values()), f"{name}: alasan kosong"
+        redundant = sorted(
+            key for key in table
+            if key in routes and any(guard in dep for dep in routes[key] for guard in _GUARDS)
+        )
+        assert redundant == [], f"{name} memuat rute yang sudah berizin: {redundant}"
+
+
 def _other_unit_pm(world: World) -> None:
     unit = world.add_unit("WALL_DISPLAY")
     world.add_person("pm_other", "PM", unit, per_unit=True)

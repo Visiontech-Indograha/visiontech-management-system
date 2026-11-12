@@ -6,8 +6,8 @@ export const PHASE_LABEL: Record<Phase, string> = {
   SURVEY: "Survei",
   PREPARATION: "Persiapan",
   INSTALLATION: "Instalasi",
-  REPLACEMENT: "Replacement",
-  MAINTENANCE: "Maintenance",
+  REPLACEMENT: "Penggantian",
+  MAINTENANCE: "Pemeliharaan",
 };
 
 export const PHASE_TONE: Record<Phase, "info" | "neutral" | "success" | "warning" | "danger"> = {

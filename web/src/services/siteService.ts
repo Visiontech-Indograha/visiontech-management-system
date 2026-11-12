@@ -28,6 +28,14 @@ export function useCreateSite() {
   });
 }
 
+export function useUpdateSite(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: Partial<SiteCreate>) => (await api.put<Site>(`/offices/${id}`, body)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  });
+}
+
 export function useDeleteSite() {
   const qc = useQueryClient();
   return useMutation({

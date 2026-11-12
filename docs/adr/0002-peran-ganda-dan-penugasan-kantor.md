@@ -154,7 +154,16 @@ Akibat pada skema/tes: kombinasi terlarang (SA+apa pun, Finance+HR) ditolak 422 
 ## 12b. Keputusan lanjutan (2026-11-06, temuan QA di beta)
 
 - (a) Login web mengikuti peran efektif: diizinkan bila peran utama atau peran tambahan aktif (hanya saat `ROLE_ASSIGNMENT_ENABLED`) memuat minimal satu peran kantor. Akun yang efektifnya hanya lapangan (EMPLOYEE/TEAM_LEADER) tetap ditolak `NOT_OFFICE_ACCOUNT`; flag mati = perilaku lama. Logika union dipakai ulang dari `find_identity`. Login mobile dan bentuk token/refresh tidak berubah.
-- (b) Direktori karyawan (`/employees`) SENGAJA terbuka lintas kantor (profil dasar tanpa NIK/rekening); kode direktori tidak diubah.
+- (b) DIGANTI oleh bagian 12c. Putusan lama: Direktori karyawan (`/employees`) sengaja terbuka lintas kantor (profil dasar tanpa NIK/rekening); kode direktori tidak diubah.
+
+## 12c. Perubahan keputusan pemilik (2026-11-11): Direktori difilter per kantor tugas
+
+Pemilik menyetujui ("approved all") usulan backlog B-03. Putusan 12b(b) dicabut.
+
+- Direktori karyawan (`/employees`, `/directory`) hanya menampilkan karyawan dari kantor tugas peminta (kantor utama dan kantor pada `user_role_assignment` aktif).
+- Dampak: profil dasar karyawan kantor lain TIDAK lagi terlihat oleh HR atau peran kantor lain. Detail karyawan kantor lain tetap 404.
+- Peran lintas kantor (SA, OM, PM) tetap melihat sesuai cakupan peran masing-masing; tidak dipersempit.
+- Kode: filter kantor di repositori direktori, tes matriks peran x kantor (HR kantor A tidak melihat karyawan kantor B), snapshot OpenAPI bila skema berubah. Brief: jalur J4 (B-03).
 
 ## 12a. Verifikasi klaim JWT (grep, 2026-11-05)
 

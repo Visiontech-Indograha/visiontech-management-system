@@ -76,6 +76,9 @@ class OfficeService:
 
     async def create_office(self, user: CurrentUser, data: OfficeCreate) -> Any:
         self._check_hours(data.clock_in_time, data.clock_out_time)
+        name_clean = data.name.strip() if data.name else ""
+        if await self.repo.name_taken(name_clean):
+            raise AppError("DUPLICATE_SITE_NAME", "Nama lokasi kerja sudah digunakan. Gunakan nama lain.", status=409)
         values = _fields(data)
         values["address"] = values["address"] or ""
         try:
@@ -83,7 +86,8 @@ class OfficeService:
         except IntegrityError as exc:
             raise AppError("OFFICE_INVALID", "Kantor tidak dapat disimpan. Periksa isian lalu coba lagi.",
                            status=409) from exc
-        if data.is_main_office:
+        # Kantor pertama otomatis jadi kantor utama (absen butuh acuan zona kota; tanpa ini absen gagal 500).
+        if data.is_main_office or not await self.repo.has_main():
             await self.repo.set_main(row.id)
             row = await self.repo.get(row.id)
         await self._audit(user, "OFFICE_CREATE", row.id, None, row)
@@ -96,6 +100,14 @@ class OfficeService:
         self._check_hours(
             data.clock_in_time or current.clock_in_time, data.clock_out_time or current.clock_out_time
         )
+        if data.name is not None:
+            name_clean = data.name.strip()
+            if await self.repo.name_taken(name_clean, exclude_id=office_id):
+                raise AppError(
+                    "DUPLICATE_SITE_NAME",
+                    "Nama lokasi kerja sudah digunakan. Gunakan nama lain.",
+                    status=409,
+                )
         if data.is_main_office is False and current.is_main_office:
             raise AppError(
                 "MAIN_OFFICE_REQUIRED",

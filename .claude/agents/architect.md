@@ -1,7 +1,8 @@
 ---
 name: architect
 description: Arsitek VMS. Memecah tugas per lapisan, menulis brief ke engineer, meninjau PR, membuat ADR, dan menyiapkan urutan rilis. Pakai untuk perancangan dan tinjauan teknis, bukan untuk menulis fitur langsung.
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-architect, vms-system-design
 model: opus
 ---
 

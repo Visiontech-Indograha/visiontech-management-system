@@ -68,7 +68,7 @@ export function AuditLogTable({ logs }: { logs: UseQueryResult<AuditEventList> }
                   <TableBlockCell className="px-4 py-2 text-right">
                     <ActionButton
                       variant="ghost"
-                      className="h-8 px-2"
+                      className="h-11 px-2"
                       onClick={() => setOpen(open === l.id ? null : l.id)}
                       aria-expanded={open === l.id}
                     >

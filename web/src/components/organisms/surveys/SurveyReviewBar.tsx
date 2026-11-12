@@ -4,11 +4,13 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
-import { CheckCircle2, ClipboardCheck, Download, Send } from "@/components/molecules/Glyphs";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
+import { CheckCircle2, ClipboardCheck, Send } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { errorMessage } from "@/lib/errors";
+import type { ExportFormat } from "@/services/exportService";
 import { useOfficialSurveyReport, useReviewSurvey, type Survey } from "@/services/surveyService";
 
 /** Aksi PM pada survei: setujui / kembalikan (catatan wajib), unduh laporan resmi, rencanakan pekerjaan lanjutan. */
@@ -39,9 +41,9 @@ export function SurveyReviewBar({ survey, onPlan }: { survey: Survey; onPlan: ()
     }
   };
 
-  const download = async () => {
+  const download = async (format: ExportFormat) => {
     try {
-      await official.mutateAsync();
+      await official.mutateAsync(format);
     } catch (err) {
       toast.error(errorMessage(err));
     }
@@ -60,9 +62,12 @@ export function SurveyReviewBar({ survey, onPlan }: { survey: Survey; onPlan: ()
         </>
       )}
       {survey.state !== "DRAFT" && (
-        <ActionButton variant="outline" onClick={download} disabled={official.isPending}>
-          <Download className="mr-1.5 h-4 w-4" /> {official.isPending ? "Menyiapkan…" : "Unduh laporan resmi (.docx)"}
-        </ActionButton>
+        <ExportFormatButtons
+          label="Laporan resmi survei"
+          busy={official.isPending}
+          pendingFormat={official.variables}
+          onPick={(f) => void download(f)}
+        />
       )}
       {survey.state === "APPROVED" && (
         <ActionButton variant="outline" onClick={onPlan}>

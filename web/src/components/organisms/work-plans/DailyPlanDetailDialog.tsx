@@ -29,6 +29,7 @@ import {
   type DailyPlan,
   wibDate,
 } from "@/services/dailyPlanService";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
 import { useExportDailyReport } from "@/services/exportService";
 import { DailyItemsPanel } from "./DailyItemsPanel";
 
@@ -235,22 +236,20 @@ export function DailyPlanDetailDialog({ plan, canPlan, isLeader, onEdit, onClose
             <ActionButton size="sm" variant="outline" onClick={() => enterMode("reject")}>Kembalikan ke draf</ActionButton>
           )}
           {(canPlan || isLeader) && (
-            <ActionButton
-              size="sm"
-              variant="outline"
-              disabled={exportReport.isPending}
-              onClick={() =>
+            <ExportFormatButtons
+              label="Laporan harian"
+              busy={exportReport.isPending}
+              pendingFormat={exportReport.variables?.export_format}
+              onPick={(export_format) =>
                 exportReport.mutate(
-                  { daily_plan_id: p.daily_plan_id },
+                  { daily_plan_id: p.daily_plan_id, export_format },
                   {
                     onSuccess: () => toast.success("Laporan harian siap diunduh."),
                     onError: (err) => toast.error(errorMessage(err)),
                   },
                 )
               }
-            >
-              Cetak laporan harian (.docx)
-            </ActionButton>
+            />
           )}
           {editable && <ActionButton size="sm" variant="outline" onClick={onEdit}>Ubah</ActionButton>}
           {manages && <ActionButton size="sm" variant="outline" onClick={() => enterMode("copy")}>Salin ke hari lain</ActionButton>}

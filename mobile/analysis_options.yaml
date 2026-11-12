@@ -3,7 +3,11 @@
 include: package:very_good_analysis/analysis_options.yaml
 
 plugins:
-  riverpod_lint: ^3.2.0
+  riverpod_lint:
+    version: ^3.2.0
+    diagnostics:
+      # BASELINE Fase 0: 8 pelanggaran belum dibereskan (hapus baris = aktif).
+      avoid_public_notifier_properties: false
 
 analyzer:
   # BASELINE Fase 0 (docs/MOBILE-LINT.md): mode ketat very_good_analysis dimatikan dulu; nyalakan satu per satu.

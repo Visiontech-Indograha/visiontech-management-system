@@ -9,6 +9,7 @@ export type PeriodicExportBody = components["schemas"]["PeriodicExportRequest"];
 export type CompletionVerification = components["schemas"]["WorkCompletionVerifyOut"];
 export type DailyReportBody = components["schemas"]["DailyReportExportRequest"];
 export type TeamWeekBody = components["schemas"]["TeamWeekExportRequest"];
+export type MonthlyBody = components["schemas"]["MonthlyExportRequest"];
 
 export type ExportFormat = NonNullable<components["schemas"]["DailyReportExportRequest"]["export_format"]>;
 
@@ -102,6 +103,19 @@ export function useExportTeamWeek() {
         headers: idempotencyHeaders(newIdempotencyKey()),
       });
       saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-mingguan-tim");
+    },
+  });
+}
+
+/** POST /exports/monthly: laporan bulanan divisi (satu bulan kalender; PDF, Word, atau PowerPoint). */
+export function useExportMonthly() {
+  return useMutation({
+    mutationFn: async (body: MonthlyBody) => {
+      const res = await api.post<Blob>("/exports/monthly", body, {
+        responseType: "blob",
+        headers: idempotencyHeaders(newIdempotencyKey()),
+      });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-bulanan");
     },
   });
 }

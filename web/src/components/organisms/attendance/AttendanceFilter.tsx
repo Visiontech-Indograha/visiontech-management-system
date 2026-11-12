@@ -1,4 +1,5 @@
 import { TextField } from "@/components/molecules/Field";
+import { dateRangeError } from "@/lib/dateRange";
 import { STATUS_LABEL } from "@/lib/labels";
 import type { AttendanceFilters } from "@/services/attendanceService";
 import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
@@ -37,7 +38,8 @@ export function AttendanceFilter({ filters: f, onChange: set }: {
           onChange={(e) => set({ q: e.target.value })}
         />
         <TextField label="Dari tanggal" type="date" value={f.from} onChange={(e) => set({ from: e.target.value })} />
-        <TextField label="Sampai tanggal" type="date" value={f.to} onChange={(e) => set({ to: e.target.value })} />
+        <TextField label="Sampai tanggal" type="date" value={f.to} onChange={(e) => set({ to: e.target.value })}
+                   error={dateRangeError(f.from, f.to) ?? undefined} />
       </div>
   );
 }

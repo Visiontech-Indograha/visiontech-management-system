@@ -5,12 +5,15 @@ Controller ekspor dokumen: hasil builder dikembalikan sebagai berkas unduhan + m
 """
 from __future__ import annotations
 
+import json
+from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
 from fastapi import Depends
 from fastapi.responses import Response
 
+from app.api.deps import IdempotencyGuard
 from app.core.errors import NotFoundError
 from app.core.security import CurrentUser
 from app.modules.exports.dependencies import get_export_service
@@ -18,6 +21,7 @@ from app.modules.exports.schemas.export_schema import (
     CompletionExportRequest,
     DailyReportExportRequest,
     ExportOut,
+    MonthlyExportRequest,
     PeriodicExportRequest,
     SurveyLogoOut,
     TeamWeekExportRequest,
@@ -43,9 +47,21 @@ class ExportController:
     def __init__(self, service: ExportService = Depends(get_export_service)) -> None:
         self.service = service
 
+    async def idempotent(self, user: CurrentUser, idem: IdempotencyGuard,
+                         action: Callable[[], Awaitable[Response]]) -> Response:
+        """Idempotency-Key: kunci yang sama mengembalikan dokumen yang sama (tanpa membuat baru); tanpa header,
+        perilaku biasa (klik ganda tetap ditangani dedup di service)."""
+        stored = idem.tersimpan()
+        if stored is not None:
+            export_id = UUID(json.loads(bytes(stored.body))["export_id"])
+            return _file(*await self.service.replay(user, export_id))
+        response = await action()
+        await idem.simpan({"export_id": response.headers["X-Export-Id"]}, 200)
+        return response
+
     async def export_completion(self, user: CurrentUser, completion_id: UUID,
                                 body: CompletionExportRequest) -> Response:
-        return _file(*await self.service.export_completion(user, completion_id, body.template))
+        return _file(*await self.service.export_completion(user, completion_id, body.template, body.export_format))
 
     async def preview_survey(self, user: CurrentUser, task_id: UUID) -> Response:
         export_format, content = await self.service.preview_survey(user, task_id)
@@ -54,8 +70,8 @@ class ExportController:
                         headers={"Content-Disposition": content_disposition("inline", name),
                                  "X-Preview-Format": export_format, "Cache-Control": "no-store"})
 
-    async def export_survey(self, user: CurrentUser, task_id: UUID) -> Response:
-        return _file(*await self.service.export_survey(user, task_id))
+    async def export_survey(self, user: CurrentUser, task_id: UUID, export_format: str | None = None) -> Response:
+        return _file(*await self.service.export_survey(user, task_id, export_format))
 
     def survey_logos(self, user: CurrentUser) -> list[SurveyLogoOut]:
         return [SurveyLogoOut(**x) for x in self.service.survey_logos(user)]
@@ -79,11 +95,15 @@ class ExportController:
         return _file(*await self.service.export_periodic(user, body.division_id, body.start_date, body.end_date,
                                                         body.export_format))
 
+    async def export_monthly(self, user: CurrentUser, body: MonthlyExportRequest) -> Response:
+        return _file(*await self.service.export_monthly(user, body.division_id, body.year, body.month,
+                                                       body.export_format))
+
     async def export_daily_report(self, user: CurrentUser, body: DailyReportExportRequest) -> Response:
-        return _file(*await self.service.export_daily_report(user, body.daily_plan_id))
+        return _file(*await self.service.export_daily_report(user, body.daily_plan_id, body.export_format))
 
     async def export_team_week(self, user: CurrentUser, body: TeamWeekExportRequest) -> Response:
-        return _file(*await self.service.export_team_week(user, body.team_id, body.start_date))
+        return _file(*await self.service.export_team_week(user, body.team_id, body.start_date, body.export_format))
 
     async def list_periodic(self, user: CurrentUser) -> list[ExportOut]:
         return [_out(r) for r in await self.service.list_periodic(user)]

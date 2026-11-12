@@ -173,3 +173,11 @@ class TeamSurveyOut(BaseModel):
     surveyor_team_id: UUID | None = None
     surveyor_team_name: str | None = None
     filled_points: int = 0
+
+
+class PmCandidateOut(BaseModel):
+    """Calon PM untuk form Buat Tugas Klien: hanya id, nama, dan divisi (tanpa kontak, email, atau peran)."""
+    employee_id: UUID
+    full_name: str
+    division_id: UUID | None = None
+    division_name: str | None = None

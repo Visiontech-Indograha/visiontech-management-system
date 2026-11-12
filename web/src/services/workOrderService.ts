@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import type { components } from "@/lib/apiTypes";
 import { saveBlob } from "./exportService";
 
 export type WorkOrderStatus =
@@ -199,4 +200,19 @@ export async function downloadWorkOrderExport(
     responseType: "blob",
   });
   saveBlob(res.data, res.headers["content-disposition"] as string | undefined, fallbackName);
+}
+
+export type PmCandidate = components["schemas"]["PmCandidateOut"];
+
+/** Calon PM untuk form Buat Tugas Klien (GET /work-orders/pm-candidates), disaring per divisi. */
+export function usePmCandidates(divisionId?: string) {
+  return useQuery({
+    queryKey: ["work-orders", "pm-candidates", { division_id: divisionId ?? null }],
+    queryFn: async (): Promise<PmCandidate[]> =>
+      (
+        await api.get<PmCandidate[]>("/work-orders/pm-candidates", {
+          params: { size: 100, ...(divisionId ? { division_id: divisionId } : {}) },
+        })
+      ).data,
+  });
 }

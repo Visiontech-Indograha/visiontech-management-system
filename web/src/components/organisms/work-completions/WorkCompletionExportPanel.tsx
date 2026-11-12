@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { ActionButton } from "@/components/molecules/ActionButton";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
 import { Download } from "@/components/molecules/Glyphs";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -36,24 +37,45 @@ export function WorkCompletionExportPanel({ completionId, signed }: { completion
           Setiap dokumen tercatat dan bisa diunduh ulang. PDF ber-QR verifikasi tersedia setelah PM menandatangani.
         </TextBlock>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {COMPLETION_TEMPLATES.map((t) => (
-          <ActionButton
-            key={t.template}
-            size="sm"
-            variant="outline"
-            disabled={exporter.isPending || (t.needsSignature && !signed)}
-            onClick={() =>
-              exporter.mutate(t.template, {
-                onSuccess: () => toast.success(`${t.label} berhasil dibuat.`),
-                onError: (err) => toast.error(errorMessage(err)),
-              })
-            }
-          >
-            <Download className="mr-1.5 h-3.5 w-3.5" />
-            {t.label}
-          </ActionButton>
-        ))}
+      <div className="flex flex-col items-start gap-2">
+        {COMPLETION_TEMPLATES.map((t) =>
+          t.formats ? (
+            <ExportFormatButtons
+              key={t.template}
+              label={t.label}
+              busy={exporter.isPending}
+              pendingFormat={exporter.variables?.template === t.template ? exporter.variables.format : null}
+              onPick={(format) =>
+                exporter.mutate(
+                  { template: t.template, format },
+                  {
+                    onSuccess: () => toast.success(`${t.label} berhasil dibuat.`),
+                    onError: (err) => toast.error(errorMessage(err)),
+                  },
+                )
+              }
+            />
+          ) : (
+            <ActionButton
+              key={t.template}
+              size="sm"
+              variant="outline"
+              disabled={exporter.isPending || (t.needsSignature && !signed)}
+              onClick={() =>
+                exporter.mutate(
+                  { template: t.template },
+                  {
+                    onSuccess: () => toast.success(`${t.label} berhasil dibuat.`),
+                    onError: (err) => toast.error(errorMessage(err)),
+                  },
+                )
+              }
+            >
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              {t.label}
+            </ActionButton>
+          ),
+        )}
       </div>
       {(history.data?.length ?? 0) > 0 && (
         <div>

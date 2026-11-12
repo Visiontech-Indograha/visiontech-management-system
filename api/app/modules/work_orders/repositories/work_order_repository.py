@@ -17,6 +17,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.repository import BaseRepository, escape_like
 from app.core.time import utcnow
 from app.shared.access.scope_rules import (
@@ -275,6 +276,52 @@ class WorkOrderRepository(BaseRepository):
             "SELECT work_order_id FROM work_order_bom WHERE bom_id = CAST(:id AS uuid)", {"id": str(bom_id)}
         )
         return found
+
+    async def pm_division_ids(self, employee_id: str) -> list[str]:
+        """Divisi aktif cakupan PM `employee_id`: yang dipimpin (`division.pm_id`) dan divisinya sendiri."""
+        rows = await self.fetchall(
+            "SELECT division_id::text AS division_id FROM division "
+            "WHERE pm_id = CAST(:emp AS uuid) AND delete_at IS NULL "
+            "UNION SELECT e.division_id::text FROM employee e JOIN division d ON d.division_id = e.division_id "
+            "WHERE e.employee_id = CAST(:emp AS uuid) AND d.delete_at IS NULL",
+            {"emp": employee_id},
+        )
+        return [r.division_id for r in rows]
+
+    async def division_exists(self, division_id: str) -> bool:
+        found = await self.scalar(
+            "SELECT 1 FROM division WHERE division_id = CAST(:div AS uuid) AND delete_at IS NULL",
+            {"div": division_id},
+        )
+        return bool(found)
+
+    async def pm_candidates(self, division_ids: list[str] | None, *, with_extra_roles: bool) -> Sequence[Any]:
+        """Karyawan aktif berperan PM (utama, atau tambahan bila `with_extra_roles`) dalam satu kueri.
+        `division_ids` None = semua divisi; selain itu karyawan di divisi tersebut atau PM divisi itu sendiri."""
+        return await self.fetchall(
+            """
+            SELECT e.employee_id, e.full_name, e.division_id, d.name AS division_name
+            FROM employee e
+            LEFT JOIN division d ON d.division_id = e.division_id AND d.delete_at IS NULL
+            WHERE e.delete_at IS NULL AND e.offboarding_status::text <> 'offboarded'
+              AND EXISTS (
+                  SELECT 1 FROM users u
+                  WHERE u.employee_id = e.employee_id AND u.delete_at IS NULL AND u.is_active
+                    AND (u.system_role::text = 'PROJECT_MANAGER'
+                         OR (CAST(:extra AS boolean) AND EXISTS (
+                             SELECT 1 FROM user_role_assignment a
+                             WHERE a.user_id = u.user_id AND a.role::text = 'PROJECT_MANAGER'
+                               AND a.delete_at IS NULL)))
+              )
+              AND (CAST(:divs AS uuid[]) IS NULL
+                   OR e.division_id = ANY(CAST(:divs AS uuid[]))
+                   OR e.employee_id IN (SELECT x.pm_id FROM division x
+                                        WHERE x.division_id = ANY(CAST(:divs AS uuid[])) AND x.delete_at IS NULL))
+            ORDER BY e.full_name, e.employee_id
+            LIMIT :cap
+            """,
+            {"divs": division_ids, "extra": with_extra_roles, "cap": MAX_ROWS_UNPAGED},
+        )
 
     async def create_work_order(self, data: dict[str, Any]) -> str:
         sql = """

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
+import { idempotencyHeaders, newIdempotencyKey } from "@/lib/idempotency";
 
 export type ExportRecord = components["schemas"]["ExportOut"];
 export type CompletionTemplate = components["schemas"]["CompletionExportRequest"]["template"];
@@ -8,15 +9,25 @@ export type PeriodicExportBody = components["schemas"]["PeriodicExportRequest"];
 export type CompletionVerification = components["schemas"]["WorkCompletionVerifyOut"];
 export type DailyReportBody = components["schemas"]["DailyReportExportRequest"];
 export type TeamWeekBody = components["schemas"]["TeamWeekExportRequest"];
+export type MonthlyBody = components["schemas"]["MonthlyExportRequest"];
+
+export type ExportFormat = NonNullable<components["schemas"]["DailyReportExportRequest"]["export_format"]>;
+
+/** Pilihan format dokumen untuk pengguna awam: nama di layar dan ekstensi berkas. */
+export const EXPORT_FORMATS: { value: ExportFormat; label: string; ext: string }[] = [
+  { value: "PDF", label: "PDF", ext: ".pdf" },
+  { value: "WORD_DOCX", label: "Word", ext: ".docx" },
+  { value: "PPTX", label: "PowerPoint", ext: ".pptx" },
+];
 
 /** Dokumen per order (docs/35 §8). `needsSignature`: hanya setelah disahkan PM. */
-export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string; needsSignature?: boolean }[] = [
-  { template: "ORDER_SHEET", label: "Surat tugas / lembar order (.docx)" },
-  { template: "BAST", label: "Serah terima (.docx)" },
-  { template: "SURVEY_REPORT", label: "Laporan survei (.docx)" },
+export const COMPLETION_TEMPLATES: { template: CompletionTemplate; label: string; needsSignature?: boolean; formats?: boolean }[] = [
+  { template: "ORDER_SHEET", label: "Surat tugas / lembar order", formats: true },
+  { template: "BAST", label: "Serah terima", formats: true },
+  { template: "SURVEY_REPORT", label: "Laporan survei", formats: true },
   { template: "BAST_PDF", label: "Serah terima resmi (.pdf)", needsSignature: true },
   { template: "BOQ", label: "Rekap material (.xlsx)" },
-  { template: "PROGRESS_SLIDES", label: "Laporan slide berfoto (.pptx)" },
+  { template: "PROGRESS_SLIDES", label: "Laporan kemajuan berfoto", formats: true },
 ];
 
 /** Simpan Blob dari API sebagai unduhan; nama berkas dari Content-Disposition server. */
@@ -48,8 +59,12 @@ export function useCompletionExports(completionId: string) {
 export function useExportCompletion(completionId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (template: CompletionTemplate) => {
-      const res = await api.post<Blob>(`/exports/work-completions/${completionId}`, { template }, { responseType: "blob" });
+    mutationFn: async ({ template, format }: { template: CompletionTemplate; format?: ExportFormat }) => {
+      const res = await api.post<Blob>(
+        `/exports/work-completions/${completionId}`,
+        format ? { template, export_format: format } : { template },
+        { responseType: "blob", headers: idempotencyHeaders(newIdempotencyKey()) },
+      );
       saveBlob(res.data, res.headers["content-disposition"] as string | undefined, `${template}.bin`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: historyKey(completionId) }),
@@ -66,22 +81,41 @@ export function useExportPeriodic() {
   });
 }
 
-/** POST /exports/daily-report: laporan harian satu jadwal (.docx), siap cetak. */
+/** POST /exports/daily-report: laporan harian satu jadwal (PDF, Word, atau PowerPoint). */
 export function useExportDailyReport() {
   return useMutation({
     mutationFn: async (body: DailyReportBody) => {
-      const res = await api.post<Blob>("/exports/daily-report", body, { responseType: "blob" });
-      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-harian.docx");
+      const res = await api.post<Blob>("/exports/daily-report", body, {
+        responseType: "blob",
+        headers: idempotencyHeaders(newIdempotencyKey()),
+      });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-harian");
     },
   });
 }
 
-/** POST /exports/team-week: laporan mingguan tim (.pptx); start_date = Senin minggu yang tampil. */
+/** POST /exports/team-week: laporan mingguan tim (PDF, Word, atau PowerPoint); start_date = Senin minggu yang tampil. */
 export function useExportTeamWeek() {
   return useMutation({
     mutationFn: async (body: TeamWeekBody) => {
-      const res = await api.post<Blob>("/exports/team-week", body, { responseType: "blob" });
-      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-mingguan-tim.pptx");
+      const res = await api.post<Blob>("/exports/team-week", body, {
+        responseType: "blob",
+        headers: idempotencyHeaders(newIdempotencyKey()),
+      });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-mingguan-tim");
+    },
+  });
+}
+
+/** POST /exports/monthly: laporan bulanan divisi (satu bulan kalender; PDF, Word, atau PowerPoint). */
+export function useExportMonthly() {
+  return useMutation({
+    mutationFn: async (body: MonthlyBody) => {
+      const res = await api.post<Blob>("/exports/monthly", body, {
+        responseType: "blob",
+        headers: idempotencyHeaders(newIdempotencyKey()),
+      });
+      saveBlob(res.data, res.headers["content-disposition"] as string | undefined, "laporan-bulanan");
     },
   });
 }

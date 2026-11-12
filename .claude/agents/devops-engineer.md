@@ -1,7 +1,8 @@
 ---
 name: devops-engineer
 description: Engineer DevOps VMS (GitHub Actions, skrip deploy server, Docker Compose, cadangan, APK, versi). Mengerjakan brief arsitek untuk workflow, skrip deploy, dan perbaikan CI yang rusak. Pakai untuk perubahan `.github/`, `deploy/`, dan `scripts/`.
-tools: Read, Grep, Glob, Edit, Write, Bash
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-devops-infra, vms-cicd-versioning
 model: sonnet
 ---
 

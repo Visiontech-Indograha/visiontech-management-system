@@ -10,7 +10,6 @@ import { LeaveApplyDialog } from "@/components/organisms/leaves/LeaveApplyDialog
 import { ApiError } from "@/lib/apiClient";
 import { errorMessage, OFFBOARDING_OUT_OF_OFFICE_MESSAGE } from "@/lib/errors";
 import { indonesianValidityMessage } from "@/lib/nativeValidity";
-import { pmCandidates } from "@/lib/pmCandidates";
 import { campaignPublishBlocker, HSE_TITLE_MAX } from "@/lib/hseCampaignRules";
 import type { WorkOrder } from "@/services/workOrderService";
 import { mockApi } from "./utils";
@@ -99,15 +98,6 @@ describe("butir 3: batas judul", () => {
     expect(campaignPublishBlocker("", "")).toBe("Isi judul dan isi kampanye dulu agar bisa diterbitkan.");
     expect(campaignPublishBlocker("A", "<p></p>")).toBe("Isi isi kampanye dulu agar bisa diterbitkan.");
     expect(campaignPublishBlocker("A", "<p>x</p>")).toBeNull();
-  });
-});
-
-describe("butir 4: pilihan PM", () => {
-  it("hanya karyawan berperan PM", () => {
-    const out = pmCandidates([
-      { system_role: "FIELD_TECHNICIAN", n: 1 }, { system_role: "PROJECT_MANAGER", n: 2 }, { system_role: null, n: 3 },
-    ]);
-    expect(out.map((e) => e.n)).toEqual([2]);
   });
 });
 

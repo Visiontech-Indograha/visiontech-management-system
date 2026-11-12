@@ -6713,6 +6713,69 @@
     }
    }
   },
+  "/api/v1/exports/monthly": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Monthly",
+    "description": "Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word\n(bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar\ncakupan: 404. Mendukung Idempotency-Key.",
+    "operationId": "export_monthly_api_v1_exports_monthly_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MonthlyExportRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/exports/team-week": {
    "post": {
     "tags": [
@@ -27547,6 +27610,54 @@
     ],
     "title": "MissingCheckInResponse",
     "description": "Schema for missing check-in alerts (moved from attendance cron endpoint)."
+   },
+   "MonthlyExportRequest": {
+    "properties": {
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "year": {
+      "type": "integer",
+      "maximum": 2100.0,
+      "minimum": 2020.0,
+      "title": "Year",
+      "description": "Tahun, mis. 2026"
+     },
+     "month": {
+      "type": "integer",
+      "maximum": 12.0,
+      "minimum": 1.0,
+      "title": "Month",
+      "description": "Bulan 1 sampai 12"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word"
+     }
+    },
+    "type": "object",
+    "required": [
+     "division_id",
+     "year",
+     "month"
+    ],
+    "title": "MonthlyExportRequest",
+    "description": "Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan)."
    },
    "MyExecutionTodayOut": {
     "properties": {

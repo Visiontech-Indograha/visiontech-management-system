@@ -21,12 +21,15 @@ from app.modules.exports.services.builders.model import (
     AssetLine,
     CompletionReport,
     DailyReport,
+    PeriodicReport,
     ReportPoint,
     TeamWeekReport,
     coord_text,
+    month_label,
     omitted_note,
     plan_status_label,
     qty,
+    rupiah,
     tgl,
 )
 from app.shared.documents import docx_kit as kit
@@ -474,5 +477,49 @@ def progress_docx(r: CompletionReport) -> bytes:
         kit.heading(doc, "5. Dokumentasi")
         kit.picture_pair(doc, photos[:_DOC_PHOTOS])
     _photo_note(doc, r.omitted_photos + max(0, len(photos) - _DOC_PHOTOS))
+    kit.para(doc, f"Dicetak oleh {r.generated_by} pada {tgl(r.generated_at)}", italic=True, size=8)
+    return kit.to_bytes(doc)
+
+
+def monthly_docx(r: PeriodicReport) -> bytes:
+    """Laporan bulanan divisi (Word): agregat satu bulan kalender: ringkasan, jadwal tim, material, uang makan."""
+    doc = kit.new_document()
+    kit.letterhead(doc, COMPANY, "Laporan Bulanan Divisi", month_label(r.start), r.division_name)
+    total = sum(d.items for d in r.days)
+    done = sum(d.items_done for d in r.days)
+    kit.heading(doc, "1. Ringkasan Bulan Ini")
+    kit.info_table(doc, [
+        ("Divisi", r.division_name),
+        ("Bulan", month_label(r.start)),
+        ("Periode", f"{tgl(r.start)} s.d. {tgl(r.end)}"),
+        ("Jadwal tim", str(len(r.days))),
+        ("Pekerjaan selesai", f"{done} dari {total}"),
+        ("Pekerjaan pindah hari", str(sum(d.items_shifted for d in r.days))),
+        ("Total uang makan", rupiah(sum(m.total_amount for m in r.meal))),
+    ])
+    kit.heading(doc, "2. Jadwal Tim per Hari")
+    if r.days:
+        kit.grid(doc, ["No", "Tanggal", "Tim", "Lokasi", "Selesai", "Kemajuan"], [
+            (i, tgl(d.work_date), d.team_name, d.site_name, f"{d.items_done} / {d.items}", f"{d.avg_progress}%")
+            for i, d in enumerate(r.days, start=1)
+        ], [1, 2.8, 4, 5, 2.4, 2.4])
+    else:
+        kit.para(doc, "Tidak ada jadwal tim pada bulan ini.", italic=True)
+    kit.heading(doc, "3. Rincian Material per Pekerjaan Klien")
+    if r.boq:
+        kit.grid(doc, ["No", "No. kerja", "Pekerjaan", "Material", "Rencana", "Satuan"], [
+            (i, b.order_number or "-", b.project_title, b.material_name, qty(b.estimated_qty), b.unit)
+            for i, b in enumerate(r.boq, start=1)
+        ], [1, 2.6, 4.4, 4.4, 2, 2])
+    else:
+        kit.para(doc, "Tidak ada rincian material pada bulan ini.", italic=True)
+    kit.heading(doc, "4. Uang Makan")
+    if r.meal:
+        kit.grid(doc, ["No", "NIK", "Nama", "Hari dalam kota", "Hari luar kota", "Total"], [
+            (i, m.employee_no, m.full_name, m.in_city_days, m.out_city_days, rupiah(m.total_amount))
+            for i, m in enumerate(r.meal, start=1)
+        ], [1, 2.4, 4.6, 2.6, 2.6, 3])
+    else:
+        kit.para(doc, "Tidak ada uang makan pada bulan ini.", italic=True)
     kit.para(doc, f"Dicetak oleh {r.generated_by} pada {tgl(r.generated_at)}", italic=True, size=8)
     return kit.to_bytes(doc)

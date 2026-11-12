@@ -21,6 +21,7 @@ from app.modules.exports.schemas.export_schema import (
     CompletionExportRequest,
     DailyReportExportRequest,
     ExportOut,
+    MonthlyExportRequest,
     PeriodicExportRequest,
     ReportFormat,
     SurveyLogoOut,
@@ -127,6 +128,19 @@ async def export_periodic(
     """Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide
     mingguan (.pptx). Mendukung Idempotency-Key."""
     return await controller.idempotent(current_user, idem, lambda: controller.export_periodic(current_user, body))
+
+
+@router.post("/monthly", response_class=Response, responses=_FILE)
+async def export_monthly(
+    body: MonthlyExportRequest,
+    current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
+    controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
+) -> Response:
+    """Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word
+    (bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar
+    cakupan: 404. Mendukung Idempotency-Key."""
+    return await controller.idempotent(current_user, idem, lambda: controller.export_monthly(current_user, body))
 
 
 @router.post("/team-week", response_class=Response, responses=_FILE)

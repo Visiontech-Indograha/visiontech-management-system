@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from datetime import timedelta
 
 import docx
 import pytest
@@ -192,8 +193,9 @@ def test_team_week_export_uses_team_logo(client, world: World, stored):
     _put(client, world.headers(client, "leader"), world.team_id, _png((500, 500)))
     add_item(make_daily_plan(world, status="APPROVED"), world, "Pasang kamera")
     today = jakarta_now().date()
+    monday = today - timedelta(days=today.weekday())  # minggu harus mulai Senin
     response = client.post("/exports/team-week", headers=world.headers(client, "leader"),
-                           json={"team_id": world.team_id, "start_date": today.isoformat()})
+                           json={"team_id": world.team_id, "start_date": monday.isoformat()})
     assert response.status_code == 200, response.text
     prs = Presentation(io.BytesIO(response.content))
     sizes = [sh.image.size for s in prs.slides for sh in s.shapes if sh.shape_type == 13]

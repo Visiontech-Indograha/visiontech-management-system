@@ -13,7 +13,8 @@ from __future__ import annotations
 import asyncio
 import io
 import re
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
@@ -29,7 +30,9 @@ from app.modules.exports.services.builders.docx_builders import (
     bast_docx,
     daily_report_docx,
     order_sheet_docx,
+    progress_docx,
     survey_report_docx,
+    team_week_docx,
 )
 from app.modules.exports.services.builders.model import (
     AssetLine,
@@ -42,10 +45,15 @@ from app.modules.exports.services.builders.model import (
     tgl,
 )
 from app.modules.exports.services.builders.office_builders import (
+    bast_pptx,
     completion_pptx,
     completion_xlsx,
+    daily_report_pptx,
+    order_sheet_pptx,
     periodic_pptx,
     periodic_xlsx,
+    survey_pptx,
+    survey_report_pptx,
     team_week_pptx,
 )
 from app.modules.exports.services.builders.pdf_builders import completion_pdf
@@ -87,6 +95,15 @@ PERIODIC = {
     "EXCEL_XLSX": ("PERIODIC_RECAP", periodic_xlsx, "builtin:periodic-xlsx-v1"),
     "PPTX": ("PERIODIC_SLIDES", periodic_pptx, "builtin:periodic-pptx-v1"),
 }
+# Templat dokumen order yang bisa dibuat dalam tiga format (Word, PDF dari Word, PowerPoint) dengan isi setara.
+COMPLETION_RENDER: dict[str, tuple[Callable[[CompletionReport], bytes], Callable[[CompletionReport], bytes]]] = {
+    "BAST": (bast_docx, bast_pptx),
+    "SURVEY_REPORT": (survey_report_docx, survey_report_pptx),
+    "ORDER_SHEET": (order_sheet_docx, order_sheet_pptx),
+    "PROGRESS_SLIDES": (progress_docx, completion_pptx),
+}
+FORMATS = frozenset({"PDF", "WORD_DOCX", "PPTX"})
+DEDUP_WINDOW_S = 60  # klik ganda dalam jendela ini mengembalikan dokumen yang sama, bukan membuat baru
 MAX_PERIOD_DAYS = 31
 MAX_PHOTOS_PER_POINT = 6
 MAX_PHOTOS = 40
@@ -124,7 +141,14 @@ def _slug(text: str | None) -> str:
 
 
 # Nama berkas unduhan yang informatif (dokumen baru); jenis lain tetap memakai kode templatnya.
-FILE_LABEL = {"ORDER_SHEET": "Surat-tugas-order", "DAILY_REPORT": "Laporan-harian-tim"}
+FILE_LABEL = {
+    "ORDER_SHEET": "Surat-tugas-order", "DAILY_REPORT": "Laporan-harian-tim",
+    "BAST": "Berita-acara-serah-terima", "BAST_PDF": "Berita-acara-serah-terima-resmi",
+    "SURVEY_REPORT": "Laporan-survei", "SURVEY_ACS": "Laporan-survei-ACS", "SURVEY_CCTV": "Laporan-survei-CCTV",
+    "PROGRESS_SLIDES": "Laporan-kemajuan-pekerjaan", "BOQ": "Rincian-volume-dan-biaya",
+    "TEAM_WEEK_SLIDES": "Laporan-mingguan-tim", "PERIODIC_RECAP": "Rekap-divisi",
+    "PERIODIC_SLIDES": "Laporan-mingguan-divisi",
+}
 
 
 def file_name(record: Any) -> str:
@@ -139,7 +163,31 @@ EXPORT_BUILD_CONCURRENCY = _EXPORT_BUILD_CONCURRENCY
 _build = build_limited
 
 
+async def _render(fmt: str, docx_builder: Callable[[Any], bytes], pptx_builder: Callable[[Any], bytes],
+                  data: Any) -> bytes:
+    """Satu sumber isi: PPTX dari builder slide; Word dari builder Word; PDF = Word yang dikonversi
+    (office_convert), jadi isi PDF selalu sama dengan Word."""
+    if fmt == "PPTX":
+        return await _build(pptx_builder, data)
+    docx = await _build(docx_builder, data)
+    if fmt == "WORD_DOCX":
+        return docx
+    pdf = await docx_to_pdf(docx)
+    if pdf is None:
+        raise AppError("PDF_UNAVAILABLE", "Pembuat PDF belum aktif. Pilih format Word atau slide.",
+                       status=503)
+    return pdf
+
+
+def _check_format(fmt: str | None, default: str) -> str:
+    if fmt is not None and fmt not in FORMATS:
+        raise ValidationError("Format harus PDF, WORD_DOCX, atau PPTX.")
+    return fmt or default
+
+
 class ExportService:
+    _omitted_photos = 0  # foto terpotong batas jumlah pada panggilan `_points` terakhir
+
     def __init__(self, repo: ExportRepository, orders: WorkCompletionService,
                  surveys: SurveyService | None = None) -> None:
         self.repo = repo
@@ -147,20 +195,27 @@ class ExportService:
         self.surveys = surveys
 
     # ── Laporan survei berformat baku (docs/37) ───────────────────────────────
-    async def export_survey(self, user: CurrentUser, task_id: UUID) -> tuple[Any, bytes]:
+    async def export_survey(self, user: CurrentUser, task_id: UUID,
+                            export_format: str | None = None) -> tuple[Any, bytes]:
         if self.surveys is None:  # pragma: no cover - dirakit di dependencies
             raise AppError("NOT_CONFIGURED", "Ekspor survei belum dirakit.", status=500)
+        out_format = _check_format(export_format, "WORD_DOCX")
         survey = await self.surveys.detail(user, task_id)
         if survey["state"] == "DRAFT":
             raise AppError("SURVEY_NOT_SUBMITTED", "Laporan tersedia setelah ketua tim mengirim survei.", status=409)
-        content = await _build(build_survey_docx, await self._survey_doc(survey, user))
         fmt = survey["format"]
-        key = (f"exports/survey/{task_id}/{jakarta_now():%Y%m%d-%H%M%S}_survey_{fmt.lower()}_"
-               f"{_slug(survey['client_name'])}.docx")
-        record = await self._store(user, key, content, "WORD_DOCX", source_type="WORK_COMPLETION",
-                                   completion_id=survey["completion_id"], template_type=f"SURVEY_{fmt}",
-                                   master=f"templates/survey_{fmt.lower()}.docx")
-        return record, content
+        template_type = f"SURVEY_{fmt}"
+        prefix = f"exports/survey/{task_id}/"
+        async with self._dedup(user, prefix, template_type, out_format) as hit:
+            if hit is not None:
+                return hit
+            content = await _render(out_format, build_survey_docx, survey_pptx, await self._survey_doc(survey, user))
+            key = (f"{prefix}{jakarta_now():%Y%m%d-%H%M%S}_survey_{fmt.lower()}_"
+                   f"{_slug(survey['client_name'])}.{EXT[out_format]}")
+            record = await self._store(user, key, content, out_format, source_type="WORK_COMPLETION",
+                                       completion_id=survey["completion_id"], template_type=template_type,
+                                       master=f"templates/survey_{fmt.lower()}.docx")
+            return record, content
 
     async def preview_survey(self, user: CurrentUser, task_id: UUID) -> tuple[str, bytes]:
         """Pratinjau laporan survei untuk ketua tim & PM, kapan pun (juga sebelum dikirim). Tidak disimpan/dicatat.
@@ -172,17 +227,14 @@ class ExportService:
             raise AppError("NO_SURVEY_POINTS", "Belum ada titik survei untuk dipratinjau.", status=422)
         doc = await self._survey_doc(survey, user)  # sekali: unduh & kecilkan foto tidak diulang untuk PDF
         docx = await _build(build_survey_docx, doc)
-        pdf: bytes | None = None
-        try:
-            from app.shared.documents.reportlab_service import build_survey_pdf_reportlab
-            pdf = await _build(build_survey_pdf_reportlab, doc)
-        except (ImportError, OSError, RuntimeError, ValueError):
-            pdf = await docx_to_pdf(docx)
+        pdf = await docx_to_pdf(docx)  # satu sumber isi dengan Word: PDF = Word yang dikonversi
         return ("PDF", pdf) if pdf else ("WORD_DOCX", docx)
 
     async def _survey_doc(self, s: dict[str, Any], user: CurrentUser) -> SurveyDoc:
         file_ids = [str(ph["file_id"]) for p in s["points"] for ph in p["photos"]]
-        keys = await self.repo.image_keys([f for f in dict.fromkeys(file_ids) if _UUID.match(f)][:MAX_PHOTOS])
+        unique_ids = [f for f in dict.fromkeys(file_ids) if _UUID.match(f)]
+        omitted = max(0, len(unique_ids) - MAX_PHOTOS)
+        keys = await self.repo.image_keys(unique_ids[:MAX_PHOTOS])
         images: dict[str, bytes] = {}
         for fid, key in keys.items():
             raw = storage.get_image_bytes(key)
@@ -197,12 +249,12 @@ class ExportService:
         names = [p["name"] for p in s["points"]]
         location = s.get("location") or "-"
         if s["format"] == "ACS":
-            activities = [f"{s.get('purpose') or 'Assesment pemasangan ACS'} pada {location}"]
-            default = (f"Assessment dilakukan pada tanggal {date_text.replace(' ', '-')} dengan diikuti oleh "
+            activities = [f"{s.get('purpose') or 'Penilaian pemasangan ACS'} pada {location}"]
+            default = (f"Penilaian lapangan dilakukan pada tanggal {date_text.replace(' ', '-')} dengan diikuti oleh "
                        f"Team VTI ({', '.join(members) or leader}).")
         else:
-            activities = ["Survey Lokasi", "Menentukan titik pemasangan: " + ", ".join(names)]
-            default = (f"Berikut uraian hasil survey pemasangan {len(names)} titik di {location}. Survey dilakukan "
+            activities = ["Survei Lokasi", "Menentukan titik pemasangan: " + ", ".join(names)]
+            default = (f"Berikut uraian hasil survei pemasangan {len(names)} titik di {location}. Survei dilakukan "
                        f"pada tanggal {date_text} oleh {s.get('team_name') or 'tim'} ({', '.join(members)}).")
         narrative = [t.strip() for t in (s.get("narrative") or default).split("\n\n") if t.strip()]
         points = []
@@ -239,7 +291,7 @@ class ExportService:
             points=points,
             bom=[(b["name"], b["qty"], b["unit"], b["group"]) for b in s["bom"]],
             team_name=s.get("team_name") or "", leader_name=leader, member_names=members,
-            logos=await self._survey_logos_for(s, user),
+            logos=await self._survey_logos_for(s, user), omitted_photos=omitted,
         )
 
     async def _survey_logos_for(self, s: dict[str, Any], user: CurrentUser) -> dict[str, bytes]:
@@ -277,23 +329,35 @@ class ExportService:
         if full:
             return order, None
         if template is not None and template not in LEADER_TEMPLATES:
-            raise ForbiddenError("Ketua tim hanya dapat mengunduh BAST dan slide progres untuk timnya.")
+            raise ForbiddenError("Ketua tim hanya dapat mengunduh berita acara serah terima dan laporan kemajuan "
+                                 "untuk timnya.")
         return order, await self.repo.led_team_ids(user.employee_id)
 
-    async def export_completion(self, user: CurrentUser, completion_id: UUID, template: str) -> tuple[Any, bytes]:
+    async def export_completion(self, user: CurrentUser, completion_id: UUID, template: str,
+                                requested_format: str | None = None) -> tuple[Any, bytes]:
+        default_format, build, master = COMPLETION_TEMPLATES[template]
+        out_format = _check_format(requested_format, default_format)
+        if template not in COMPLETION_RENDER and out_format != default_format:
+            raise ValidationError("Dokumen ini hanya tersedia dalam satu format.")
         order, team_ids = await self._order_scope(user, completion_id, template)
-        export_format, build, master = COMPLETION_TEMPLATES[template]
         if template == "BAST_PDF" and not order.get("signature_hash"):
             raise AppError("NOT_SIGNED", "PDF resmi tersedia setelah serah terima disetujui PM.", status=409)
-        report = await self._completion_report(order, user, team_ids)
-        if template == "SURVEY_REPORT" and not report.survey_points:
-            raise AppError("NO_SURVEY_ITEMS", "Order ini belum punya item fase Survei.", status=422)
-        content = build(report)
-        key = (f"exports/work-completion/{completion_id}/{jakarta_now():%Y%m%d-%H%M%S}_"
-               f"{template.lower()}_{_slug(order.get('client_name'))}.{EXT[export_format]}")
-        record = await self._store(user, key, content, export_format, source_type="WORK_COMPLETION",
-                                   completion_id=completion_id, template_type=template, master=master)
-        return record, content
+        prefix = f"exports/work-completion/{completion_id}/"
+        async with self._dedup(user, prefix, template, out_format) as hit:
+            if hit is not None:
+                return hit
+            report = await self._completion_report(order, user, team_ids)
+            if template == "SURVEY_REPORT" and not report.survey_points:
+                raise AppError("NO_SURVEY_ITEMS", "Order ini belum punya item fase Survei.", status=422)
+            if template in COMPLETION_RENDER:
+                content = await _render(out_format, *COMPLETION_RENDER[template], report)
+            else:
+                content = await _build(build, report)
+            key = (f"{prefix}{jakarta_now():%Y%m%d-%H%M%S}_"
+                   f"{template.lower()}_{_slug(order.get('client_name'))}.{EXT[out_format]}")
+            record = await self._store(user, key, content, out_format, source_type="WORK_COMPLETION",
+                                       completion_id=completion_id, template_type=template, master=master)
+            return record, content
 
     async def list_for_completion(self, user: CurrentUser, completion_id: UUID) -> list[Any]:
         _, team_ids = await self._order_scope(user, completion_id, None)
@@ -303,11 +367,21 @@ class ExportService:
         return rows
 
     # ── Laporan harian satu jadwal (cetak per hari) ──────────────────────────
-    async def export_daily_report(self, user: CurrentUser, daily_plan_id: UUID) -> tuple[Any, bytes]:
+    async def export_daily_report(self, user: CurrentUser, daily_plan_id: UUID,
+                                  export_format: str | None = None) -> tuple[Any, bytes]:
+        out_format = _check_format(export_format, "WORD_DOCX")
         await check_daily_access(self.repo.db, daily_plan_id, user, DailyNeed.VIEW)  # tak terlihat → 404
         header = await self.repo.daily_header(daily_plan_id)
         if header is None:
             raise NotFoundError("Jadwal harian")
+        prefix = f"exports/daily-report/{daily_plan_id}/"
+        async with self._dedup(user, prefix, "DAILY_REPORT", out_format) as hit:
+            if hit is not None:
+                return hit
+            return await self._daily_report(user, daily_plan_id, header, out_format, prefix)
+
+    async def _daily_report(self, user: CurrentUser, daily_plan_id: UUID, header: Any, out_format: str,
+                            prefix: str) -> tuple[Any, bytes]:
         items = await self.repo.daily_items(daily_plan_id)
         points, _ = await self._points(items, [], [], MAX_PHOTOS)
         report = DailyReport(
@@ -318,11 +392,12 @@ class ExportService:
             report_submitted_at=header.report_submitted_at,
             logos=await self._kop_logos([str(header.team_id)]),
             assets=_asset_lines(await self.repo.daily_assets(daily_plan_id)),
+            omitted_photos=self._omitted_photos,
         )
-        content = await _build(daily_report_docx, report)
-        key = (f"exports/daily-report/{daily_plan_id}/{jakarta_now():%Y%m%d-%H%M%S}_daily_report_"
-               f"{_slug(header.team_name)}_{header.work_date:%Y%m%d}.docx")
-        record = await self._store(user, key, content, "WORD_DOCX", source_type="WORK_PLAN_DAILY",
+        content = await _render(out_format, daily_report_docx, daily_report_pptx, report)
+        key = (f"{prefix}{jakarta_now():%Y%m%d-%H%M%S}_daily_report_"
+               f"{_slug(header.team_name)}_{header.work_date:%Y%m%d}.{EXT[out_format]}")
+        record = await self._store(user, key, content, out_format, source_type="WORK_PLAN_DAILY",
                                    template_type="DAILY_REPORT", master="builtin:daily-report-docx-v1",
                                    daily_plan_id=daily_plan_id)
         return record, content
@@ -334,7 +409,7 @@ class ExportService:
             raise ValidationError("Tanggal akhir harus sama atau setelah tanggal awal.")
         if (end - start).days >= MAX_PERIOD_DAYS:
             raise ValidationError(f"Rentang rekap paling lama {MAX_PERIOD_DAYS} hari.")
-        await check_division_manager(self.repo.db, division_id, user)
+        await self._manage_division(division_id, user, "Divisi")
         template_type, build, master = PERIODIC[export_format]
         report = PeriodicReport(
             division_name=await self.repo.division_name(division_id) or "-", start=start, end=end,
@@ -343,7 +418,7 @@ class ExportService:
             meal=await self.repo.periodic_meal(division_id, start, end),
             generated_by=await self._printer(user), generated_at=jakarta_now(),
         )
-        content = build(report)
+        content = await _build(build, report)
         key = (f"exports/periodic/{division_id}/{start:%Y%m%d}-{end:%Y%m%d}_{jakarta_now():%H%M%S}_"
                f"{template_type.lower()}.{EXT[export_format]}")
         record = await self._store(user, key, content, export_format, source_type="WORK_PLAN_PERIODIC",
@@ -357,6 +432,17 @@ class ExportService:
         return await self.repo.list_exports(generated_by=None if sees_all else user.employee_id)
 
     # ── Unduh ulang dari registri ────────────────────────────────────────────
+    async def replay(self, user: CurrentUser, export_id: UUID) -> tuple[Any, bytes]:
+        """Ulang respons Idempotency-Key: hanya dokumen buatan pengguna ini sendiri."""
+        record = await self.repo.get_export(export_id)
+        if record is None or str(record.generated_by_id) != str(user.employee_id):
+            raise NotFoundError("Dokumen")
+        content = storage.get_object_bytes(record.file_output_url)
+        if content is None:
+            raise AppError("FILE_GONE", "Berkas dokumen tidak ditemukan di penyimpanan. Buat ulang dokumennya.",
+                           status=404)
+        return record, content
+
     async def download(self, user: CurrentUser, export_id: UUID) -> tuple[Any, bytes]:
         record = await self.repo.get_export(export_id)
         if record is None:
@@ -398,6 +484,8 @@ class ExportService:
         all_refs = [r for refs in item_refs.values() for r in refs] + extra_refs
         file_ids = list(dict.fromkeys(r["file_id"] for r in all_refs if r["file_id"] and _UUID.match(r["file_id"])))
         keys = await self.repo.image_keys(file_ids[:max_photos])
+        self._omitted_photos = (max(0, len(file_ids) - max_photos)
+                                + sum(max(0, len(photo_refs(i.photos)) - MAX_PHOTOS_PER_POINT) for i in items))
         names = await self.repo.requirement_names(
             list({str(r["requirement_id"]) for r in all_refs if r.get("requirement_id")}))
         images: dict[str, bytes] = {}
@@ -425,31 +513,69 @@ class ExportService:
         return points, photos
 
     # ── Laporan mingguan tim (ketua/anggota tim, atau PM/OM divisinya) ──────
-    async def export_team_week(self, user: CurrentUser, team_id: UUID, start: date) -> tuple[Any, bytes]:
+    async def export_team_week(self, user: CurrentUser, team_id: UUID, start: date,
+                               export_format: str | None = None) -> tuple[Any, bytes]:
+        out_format = _check_format(export_format, "PPTX")
         team = await self.repo.team_info(team_id)
         if team is None:
             raise NotFoundError("Tim")
         in_team = user.employee_id is not None and await self.repo.is_team_member(team_id, user.employee_id)
         # HR/GA (ADMIN_HR_GA) boleh melihat seperti laporan harian (akses baca, konsisten dengan daily-report).
         if not (in_team or is_admin(user) or user.has_role("ADMIN_HR_GA")):
-            await check_division_manager(self.repo.db, team.division_id, user)
+            await self._manage_division(team.division_id, user, "Tim")
         end = start + timedelta(days=6)
         items = await self.repo.team_week_items(team_id, start, end)
         if not items:
             raise AppError("NO_WORK", "Belum ada pekerjaan tim ini pada minggu tersebut.", status=422)
+        prefix = f"exports/team-week/{team_id}/{start:%Y%m%d}_"
+        async with self._dedup(user, prefix, "TEAM_WEEK_SLIDES", out_format) as hit:
+            if hit is not None:
+                return hit
+            return await self._team_week(user, team, team_id, start, end, items, out_format, prefix)
+
+    async def _team_week(self, user: CurrentUser, team: Any, team_id: UUID, start: date, end: date, items: list[Any],
+                         out_format: str, prefix: str) -> tuple[Any, bytes]:
         points, _ = await self._points(items, [], [], MAX_PHOTOS_TEAM_WEEK)
         report = TeamWeekReport(
             team_name=team.name, division_name=team.division_name, start=start, end=end, points=points,
             roster=await self.repo.team_roster([str(team_id)]), generated_by=await self._printer(user),
             generated_at=jakarta_now(), logos=await self._kop_logos([str(team_id)]),
             assets=_asset_lines(await self.repo.team_week_assets(team_id, start, end)),
+            omitted_photos=self._omitted_photos,
         )
-        content = await _build(team_week_pptx, report)
-        key = f"exports/team-week/{team_id}/{start:%Y%m%d}_{jakarta_now():%H%M%S}_team_week.pptx"
-        record = await self._store(user, key, content, "PPTX", source_type="WORK_PLAN_PERIODIC",
+        content = await _render(out_format, team_week_docx, team_week_pptx, report)
+        key = f"{prefix}{jakarta_now():%H%M%S}_team_week.{EXT[out_format]}"
+        record = await self._store(user, key, content, out_format, source_type="WORK_PLAN_PERIODIC",
                                    template_type="TEAM_WEEK_SLIDES", master="builtin:team-week-pptx-v1",
                                    period=(start, end))
         return record, content
+
+    async def _manage_division(self, division_id: UUID | str, user: CurrentUser, what: str) -> None:
+        """PM/OM divisi atau SUPER_ADMIN. Pemanggil di luar cakupan (atau divisi tak ada) → 404, bukan 403:
+        keberadaan objek divisi lain tidak boleh diketahui."""
+        try:
+            await check_division_manager(self.repo.db, division_id, user)
+        except AppError as exc:
+            if exc.status == 403 or exc.code == "VALIDATION_ERROR":
+                raise NotFoundError(what) from None
+            raise
+
+    @asynccontextmanager
+    async def _dedup(self, user: CurrentUser, prefix: str, template_type: str,
+                     export_format: str) -> AsyncIterator[tuple[Any, bytes] | None]:
+        """Klik ganda / permintaan serentak yang sama (pengguna, dokumen, format) tidak membuat banyak dokumen:
+        kunci advisory transaksi memberi giliran; pemanggil berikutnya menemukan dokumen yang baru dibuat
+        (dalam DEDUP_WINDOW_S detik) dan menerimanya kembali. Kunci lepas saat transaksi permintaan selesai."""
+        hit: tuple[Any, bytes] | None = None
+        if user.employee_id:
+            await self.repo.lock_export(f"{user.employee_id}|{prefix}|{template_type}|{export_format}")
+            record = await self.repo.recent_export(user.employee_id, prefix, template_type, export_format,
+                                                   DEDUP_WINDOW_S)
+            if record is not None:
+                content = storage.get_object_bytes(record.file_output_url)
+                if content is not None:
+                    hit = (record, content)
+        yield hit
 
     async def _kop_logos(self, team_ids: list[str]) -> branding.KopLogos:
         """Logo kop dokumen: logo Visiontech (selalu) + logo tim. Hanya bila dokumen memuat satu tim;
@@ -472,7 +598,8 @@ class ExportService:
             items = [i for i in items if str(i.team_id) in team_ids]
             if not items:
                 raise ForbiddenError("Order ini tidak memiliki pekerjaan untuk tim yang Anda pimpin.")
-        order_refs = photo_refs(order.get("realization_photos_json"))[:MAX_PHOTOS_PER_POINT * 2]
+        all_order_refs = photo_refs(order.get("realization_photos_json"))
+        order_refs = all_order_refs[:MAX_PHOTOS_PER_POINT * 2]
         bom = list(order.get("bom_items") or [])
         points, photos = await self._points(items, bom, order_refs, MAX_PHOTOS)
         roster = await self.repo.team_roster(list(dict.fromkeys(str(i.team_id) for i in items)))
@@ -486,11 +613,12 @@ class ExportService:
             marks.append(MapPoint("Lokasi order", float(order["site_lat"]), float(order["site_lng"]), None,
                                   status="PROPOSED"))
         map_image = await asyncio.to_thread(render_point_map, marks) if marks else None
+        omitted = self._omitted_photos + (len(all_order_refs) - len(order_refs))
         return CompletionReport(
             order=order, points=points, roster=roster, bom=bom, generated_by=await self._printer(user),
             generated_at=jakarta_now(), verify_url=verify_url(order), photos=photos(order_refs, "Foto realisasi"),
             leader_signature=storage.get_image_bytes(leader_key) if leader_key else None,
             pm_signature=storage.get_image_bytes(pm_key) if pm_key else None,
             map_image=map_image, has_coordinates=bool(marks),
-            logos=await self._kop_logos([str(i.team_id) for i in items]),
+            logos=await self._kop_logos([str(i.team_id) for i in items]), omitted_photos=omitted,
         )

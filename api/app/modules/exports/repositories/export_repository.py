@@ -310,6 +310,33 @@ class ExportRepository(BaseRepository):
              "by": str(generated_by) if generated_by else None, "limit": limit},
         ))
 
+    async def lock_export(self, key: str) -> None:
+        """Kunci advisory transaksi (menunggu giliran; lepas saat commit/rollback) agar permintaan ekspor yang sama
+        dari satu pengguna berjalan berurutan, bukan berbarengan."""
+        await self.execute("SELECT pg_advisory_xact_lock(hashtextextended(:k, 0))", {"k": key})
+
+    async def recent_export(self, employee_id: UUID | str, key_prefix: str, template_type: str,
+                            export_format: str, window_s: int) -> Any:
+        """Dokumen terbaru buatan pengguna ini untuk dokumen+format yang sama dalam `window_s` detik terakhir
+        (kunci penyimpanan berawalan `key_prefix`), atau None."""
+        return await self.fetchone(
+            f"""
+            SELECT {_EXPORT_COLS}
+            FROM document_template_export x
+            JOIN employee e ON e.employee_id = x.generated_by_id
+            WHERE x.delete_at IS NULL
+              AND x.generated_by_id = CAST(:by AS uuid)
+              AND x.template_type = :tpl
+              AND x.export_format = CAST(:fmt AS export_format_enum)
+              AND starts_with(x.file_output_url, :prefix)
+              AND x.create_at > NOW() - make_interval(secs => :win)
+            ORDER BY x.create_at DESC
+            LIMIT 1
+            """,
+            {"by": str(employee_id), "tpl": template_type, "fmt": export_format, "prefix": key_prefix,
+             "win": window_s},
+        )
+
     async def get_export(self, export_id: UUID | str) -> Any:
         return await self.fetchone(
             f"""

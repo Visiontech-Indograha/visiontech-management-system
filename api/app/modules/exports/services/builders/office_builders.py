@@ -1,6 +1,6 @@
 """
 app/modules/exports/services/builders/office_builders.py
-Excel (rekap BoQ & uang makan) dan PowerPoint (slide progres) — docs/35 §8.
+Excel (rekap rincian volume dan biaya & uang makan) dan PowerPoint (slide progres) — docs/35 §8.
 """
 from __future__ import annotations
 
@@ -19,12 +19,15 @@ from app.modules.exports.services.builders.model import (
     COMPANY,
     AssetLine,
     CompletionReport,
+    DailyReport,
     PeriodicReport,
     TeamWeekReport,
+    omitted_note,
     plan_status_label,
     qty,
     tgl,
 )
+from app.modules.exports.services.builders.survey_template import SurveyDoc
 
 _HEAD = PatternFill("solid", fgColor="1E293B")
 
@@ -55,13 +58,13 @@ def completion_xlsx(r: CompletionReport) -> bytes:
     o = r.order
     sub = f"{o.get('client_name') or '-'} · {o.get('project_title') or '-'} · {r.number}"
     wb = Workbook()
-    _sheet(wb.active, "Bill of Quantity", sub,
+    _sheet(wb.active, "Rincian Volume dan Biaya", sub,
            ["No", "Kode", "Material", "Satuan", "Estimasi", "Aktual", "Selisih", "Kategori", "Catatan"],
            [(i, b.get("material_code"), b.get("material_name"), b.get("unit"), float(b.get("estimated_qty") or 0),
              float(b.get("actual_qty") or 0), float(b.get("actual_qty") or 0) - float(b.get("estimated_qty") or 0),
              b.get("category"), b.get("notes")) for i, b in enumerate(r.bom, start=1)],
            [5, 12, 36, 9, 10, 10, 10, 16, 30])
-    wb.active.title = "BoQ"
+    wb.active.title = "Rincian Volume dan Biaya"
     _sheet(wb.create_sheet("Titik"), "Realisasi per Titik", sub,
            ["No", "Tanggal", "Tim", "Titik", "Lokasi", "Fase", "Target", "Realisasi", "Progres %", "Status", "Remark"],
            [(i, p.work_date, p.team_name, p.title, p.location, p.phase_label, p.target, p.completed, p.progress,
@@ -80,7 +83,7 @@ def periodic_xlsx(r: PeriodicReport) -> bytes:
              d.titles) for d in r.days],
            [12, 20, 24, 12, 7, 8, 8, 12, 60])
     wb.active.title = "Jadwal"
-    _sheet(wb.create_sheet("BoQ"), "Bill of Quantity", sub,
+    _sheet(wb.create_sheet("Rincian Volume dan Biaya"), "Rincian Volume dan Biaya", sub,
            ["Order", "Klien", "Pekerjaan", "Kode", "Material", "Satuan", "Estimasi", "Aktual", "Selisih"],
            [(b.order_number, b.client_name, b.project_title, b.material_code, b.material_name, b.unit,
              b.estimated_qty, b.actual_qty, b.actual_qty - b.estimated_qty) for b in r.boq],
@@ -148,25 +151,99 @@ def _summary(prs: PptxPresentation, points: Sequence[Any], kicker: str, footer: 
     theme.text(slide, 17.5, 9.4, 15.1, 7.5, side_text, size=12, color=theme.INK)
 
 
-def completion_pptx(r: CompletionReport) -> bytes:
+def _omitted_slide(prs: PptxPresentation, count: int, footer: str) -> None:
+    """Catatan bila sebagian foto tidak disertakan (batas jumlah foto per dokumen)."""
+    note = omitted_note(count)
+    if note:
+        slide = theme.page(prs, "Catatan foto", "Dokumentasi", footer=footer)
+        theme.text(slide, 1.3, 4.5, 31, 2.0, note, size=16, color=theme.INK)
+
+
+def completion_pptx(r: CompletionReport, *, badge: str = "Laporan pekerjaan klien",
+                    only_points: Sequence[Any] | None = None) -> bytes:
     o = r.order
+    points = list(r.points if only_points is None else only_points)
     prs = theme.deck(r.logos)
     footer = f"{o.get('project_title') or 'Laporan pekerjaan'} · {o.get('client_name') or ''}"
     theme.cover(prs, o.get("project_title") or "Laporan Pekerjaan",
                 f"{o.get('client_name') or '-'} · {tgl(o.get('start_work_date'))} s.d. {tgl(o.get('end_work_date'))}",
-                f"{COMPANY} · No. {r.number}", badge="Laporan pekerjaan klien")
+                f"{COMPANY} · No. {r.number}", badge=badge)
     note = f"{o.get('summary_notes') or '-'}"
     if o.get("obstacles"):
         note += f"\n\nKendala: {o['obstacles']}"
-    _summary(prs, r.points, o.get("client_name") or "", footer, "Ringkasan & kendala", note)
-    _points_table(prs, "Kemajuan per pekerjaan", "Daftar pekerjaan", r.points, footer)
-    _work_slides(prs, [p for p in r.points if p.photos], footer)
+    _summary(prs, points, o.get("client_name") or "", footer, "Ringkasan & kendala", note)
+    _points_table(prs, "Kemajuan per pekerjaan", "Daftar pekerjaan", points, footer)
+    _work_slides(prs, [p for p in points if p.photos], footer)
+    _omitted_slide(prs, r.omitted_photos, footer)
     for start in range(0, len(r.bom), 12):
         slide = theme.page(prs, "Daftar material", "Material terpakai", footer=footer)
         theme.table(slide, ["Material", "Rencana", "Terpakai", "Satuan"],
                     [(b.get("material_name"), qty(b.get("estimated_qty")), qty(b.get("actual_qty")), b.get("unit"))
                      for b in r.bom[start:start + 12]], [16.0, 5.0, 5.0, 5.3])
     theme.closing(prs, f"{COMPANY} · {o.get('client_name') or ''}")
+    return theme.save(prs)
+
+
+def bast_pptx(r: CompletionReport) -> bytes:
+    return completion_pptx(r, badge="Berita Acara Serah Terima")
+
+
+def order_sheet_pptx(r: CompletionReport) -> bytes:
+    return completion_pptx(r, badge="Surat tugas pekerjaan")
+
+
+def survey_report_pptx(r: CompletionReport) -> bytes:
+    return completion_pptx(r, badge="Laporan survei", only_points=r.survey_points)
+
+
+def daily_report_pptx(r: DailyReport) -> bytes:
+    """Laporan harian satu jadwal (PowerPoint): isi setara dokumen Word-nya."""
+    prs = theme.deck(r.logos)
+    footer = f"{r.team_name} · {tgl(r.work_date)}"
+    members = sorted({m.full_name for m in r.roster if not m.is_leader})
+    theme.cover(prs, f"Laporan Harian\n{r.team_name}", f"{tgl(r.work_date)} · {r.division_name}",
+                f"{COMPANY} · Ketua tim: {r.leader_name}", badge="Laporan harian", emblem=r.team_name)
+    side = [f"Status jadwal: {plan_status_label(r.status)}", f"Lokasi: {r.site_name or '-'}",
+            f"Ketua: {r.leader_name}", f"Anggota: {', '.join(members) or '-'}", "",
+            f"Laporan ketua tim: {r.summary or 'Belum ada laporan ringkasan dari ketua tim.'}"]
+    if r.obstacles:
+        side.append(f"Kendala: {r.obstacles}")
+    _summary(prs, r.points, r.division_name, footer, "Informasi jadwal & laporan ketua", "\n".join(side))
+    _points_table(prs, "Item pekerjaan hari ini", r.team_name, r.points, footer)
+    _assets_slide(prs, r.assets, footer)
+    _work_slides(prs, r.points, footer)
+    _omitted_slide(prs, r.omitted_photos, footer)
+    theme.closing(prs, f"{r.team_name} · {COMPANY}")
+    return theme.save(prs)
+
+
+def survey_pptx(d: SurveyDoc) -> bytes:
+    """Laporan survei (PowerPoint): sampul, informasi, satu slide per titik (foto + keterangan), rincian."""
+    prs = theme.deck()
+    title = d.project_title or d.client
+    footer = f"Laporan Survei · {d.client}"
+    theme.cover(prs, f"Laporan Survei\n{title}", f"{d.client} · {d.date_text}", f"{COMPANY} · {d.team_name}",
+                badge="Laporan survei")
+    slide = theme.page(prs, "Informasi survei", d.client, footer=footer)
+    theme.text(slide, 1.3, 4.0, 31, 4.5,
+               "\n".join([f"Tanggal: {d.date_text}", f"Lokasi: {d.location}", f"Tujuan: {d.purpose}",
+                          f"Tim: {d.team_name} (ketua: {d.leader_name or '-'})",
+                          f"Anggota: {', '.join(d.member_names) or '-'}"]), size=13, color=theme.INK)
+    theme.text(slide, 1.3, 9.0, 31, 8.0, "\n\n".join([*d.activities, *d.narrative]), size=12, color=theme.INK)
+    for p in d.points:
+        extra = [f"Bahan: {n} {qty(q)} {u}" for n, q, u in p.materials] + [f"Kebutuhan: {n}" for n in p.needs]
+        note = "; ".join([*p.remarks, *extra]) or "-"
+        theme.work_slide(prs, kicker=d.date_text, title=p.name, phase="SURVEY", phase_label="Survei",
+                         status="DONE" if p.status == "EXISTING" else "IN_PROGRESS",
+                         status_label="Sudah terpasang" if p.status == "EXISTING" else "Usulan baru", note=note,
+                         progress=d.location, photos=[(ph.slot, ph.image) for ph in p.photos], footer=footer)
+    for start in range(0, len(d.bom), 12):
+        slide = theme.page(prs, "Rincian volume dan biaya (estimasi)", "Material", footer=footer)
+        theme.table(slide, ["No", "Material", "Jumlah", "Satuan", "Kelompok"],
+                    [(start + i, n, qty(q), u, g) for i, (n, q, u, g) in enumerate(d.bom[start:start + 12], start=1)],
+                    [2.0, 14.0, 4.5, 4.5, 6.3])
+    _omitted_slide(prs, d.omitted_photos, footer)
+    theme.closing(prs, f"{COMPANY} · {d.client}")
     return theme.save(prs)
 
 
@@ -223,5 +300,6 @@ def team_week_pptx(r: TeamWeekReport) -> bytes:
     _points_table(prs, "Semua pekerjaan minggu ini", r.team_name, r.points, footer)
     _assets_slide(prs, r.assets, footer)
     _work_slides(prs, r.points, footer)
+    _omitted_slide(prs, r.omitted_photos, footer)
     theme.closing(prs, f"{r.team_name} · {COMPANY}")
     return theme.save(prs)

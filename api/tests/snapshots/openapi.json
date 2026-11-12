@@ -2922,6 +2922,23 @@
    },
    "CompletionExportRequest": {
     "properties": {
+     "export_format": {
+      "anyOf": [
+       {
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = bawaan jenisnya",
+      "title": "Export Format"
+     },
      "template": {
       "enum": [
        "BAST",
@@ -4505,6 +4522,23 @@
       "format": "uuid",
       "title": "Daily Plan Id",
       "type": "string"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word",
+      "title": "Export Format"
      }
     },
     "required": [
@@ -14812,6 +14846,36 @@
    },
    "TeamWeekExportRequest": {
     "properties": {
+     "end_date": {
+      "anyOf": [
+       {
+        "format": "date",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Opsional; bila diisi harus Minggu (tepat 7 hari dari Senin)",
+      "title": "End Date"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = PowerPoint",
+      "title": "Export Format"
+     },
      "start_date": {
       "format": "date",
       "title": "Start Date",
@@ -24831,8 +24895,28 @@
   },
   "/api/v1/exports/daily-report": {
    "post": {
-    "description": "Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan\nketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).",
+    "description": "Laporan harian satu jadwal: header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan ketua,\ndalam Word (bawaan), PDF, atau PowerPoint. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).\nMendukung Idempotency-Key.",
     "operationId": "export_daily_report_api_v1_exports_daily_report_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -24903,8 +24987,28 @@
     ]
    },
    "post": {
-    "description": "Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx).",
+    "description": "Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide\nmingguan (.pptx). Mendukung Idempotency-Key.",
     "operationId": "export_periodic_api_v1_exports_periodic_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -25143,7 +25247,7 @@
   },
   "/api/v1/exports/surveys/{task_id}": {
    "post": {
-    "description": "Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.",
+    "description": "Laporan survei ACS/CCTV format baku (docs/37) dalam PDF, Word (bawaan), atau PowerPoint; tersedia setelah\nsurvei dikirim. Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.",
     "operationId": "export_survey_api_v1_exports_surveys__task_id__post",
     "parameters": [
      {
@@ -25154,6 +25258,47 @@
        "format": "uuid",
        "title": "Task Id",
        "type": "string"
+      }
+     },
+     {
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word",
+      "in": "query",
+      "name": "export_format",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "PDF",
+          "WORD_DOCX",
+          "PPTX"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word",
+       "title": "Export Format"
+      }
+     },
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
       }
      }
     ],
@@ -25233,8 +25378,28 @@
   },
   "/api/v1/exports/team-week": {
    "post": {
-    "description": "Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim\natau PM/OM divisinya.",
+    "description": "Laporan mingguan tim: semua pekerjaan tim 7 hari (Senin sampai Minggu) — foto, keterangan, status — dalam\nPowerPoint (bawaan), PDF, atau Word. Ketua/anggota tim atau PM/OM divisinya; tim di luar cakupan: 404.\nMendukung Idempotency-Key.",
     "operationId": "export_team_week_api_v1_exports_team_week_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
     "requestBody": {
      "content": {
       "application/json": {
@@ -25327,7 +25492,7 @@
     ]
    },
    "post": {
-    "description": "BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).",
+    "description": "Berita acara serah terima, laporan survei, surat tugas, atau laporan kemajuan: PDF, Word, atau PowerPoint\n(`export_format`; kosong = bawaan jenisnya) dengan isi setara. Juga: berita acara resmi ber-QR (.pdf) dan\nrincian volume dan biaya (.xlsx). Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.",
     "operationId": "export_work_completion_api_v1_exports_work_completions__completion_id__post",
     "parameters": [
      {
@@ -25338,6 +25503,24 @@
        "format": "uuid",
        "title": "Completion Id",
        "type": "string"
+      }
+     },
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
       }
      }
     ],

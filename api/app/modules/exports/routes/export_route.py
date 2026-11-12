@@ -9,10 +9,10 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi.responses import Response
 
-from app.api.deps import get_current_user, require_permission
+from app.api.deps import IdempotencyGuard, get_current_user, idempotency_guard, require_permission
 from app.core.permissions import Permission
 from app.core.rate_limit import GROUP_UPLOAD, rate_limit
 from app.core.security import CurrentUser
@@ -22,6 +22,7 @@ from app.modules.exports.schemas.export_schema import (
     DailyReportExportRequest,
     ExportOut,
     PeriodicExportRequest,
+    ReportFormat,
     SurveyLogoOut,
     TeamWeekExportRequest,
 )
@@ -41,9 +42,13 @@ async def export_work_completion(
     body: CompletionExportRequest,
     current_user: CurrentUser = Depends(get_current_user),
     controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> Response:
-    """BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx)."""
-    return await controller.export_completion(current_user, completion_id, body)
+    """Berita acara serah terima, laporan survei, surat tugas, atau laporan kemajuan: PDF, Word, atau PowerPoint
+    (`export_format`; kosong = bawaan jenisnya) dengan isi setara. Juga: berita acara resmi ber-QR (.pdf) dan
+    rincian volume dan biaya (.xlsx). Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama."""
+    return await controller.idempotent(
+        current_user, idem, lambda: controller.export_completion(current_user, completion_id, body))
 
 
 @router.get("/surveys/{task_id}/preview", response_class=Response, responses=_FILE)
@@ -91,11 +96,15 @@ def reset_survey_logo(role: LogoRole, current_user: CurrentUser = _PM,
 @router.post("/surveys/{task_id}", response_class=Response, responses=_FILE)
 async def export_survey(
     task_id: UUID,
+    export_format: ReportFormat | None = Query(None, description="PDF, WORD_DOCX, atau PPTX; kosong = Word"),
     current_user: CurrentUser = Depends(get_current_user),
     controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> Response:
-    """Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim."""
-    return await controller.export_survey(current_user, task_id)
+    """Laporan survei ACS/CCTV format baku (docs/37) dalam PDF, Word (bawaan), atau PowerPoint; tersedia setelah
+    survei dikirim. Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama."""
+    return await controller.idempotent(
+        current_user, idem, lambda: controller.export_survey(current_user, task_id, export_format))
 
 
 @router.get("/work-completions/{completion_id}", response_model=list[ExportOut])
@@ -113,9 +122,11 @@ async def export_periodic(
     body: PeriodicExportRequest,
     current_user: CurrentUser = Depends(require_permission(Permission.CREATE_PLAN)),
     controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> Response:
-    """Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx)."""
-    return await controller.export_periodic(current_user, body)
+    """Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide
+    mingguan (.pptx). Mendukung Idempotency-Key."""
+    return await controller.idempotent(current_user, idem, lambda: controller.export_periodic(current_user, body))
 
 
 @router.post("/team-week", response_class=Response, responses=_FILE)
@@ -123,10 +134,12 @@ async def export_team_week(
     body: TeamWeekExportRequest,
     current_user: CurrentUser = Depends(get_current_user),
     controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> Response:
-    """Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
-    atau PM/OM divisinya."""
-    return await controller.export_team_week(current_user, body)
+    """Laporan mingguan tim: semua pekerjaan tim 7 hari (Senin sampai Minggu) — foto, keterangan, status — dalam
+    PowerPoint (bawaan), PDF, atau Word. Ketua/anggota tim atau PM/OM divisinya; tim di luar cakupan: 404.
+    Mendukung Idempotency-Key."""
+    return await controller.idempotent(current_user, idem, lambda: controller.export_team_week(current_user, body))
 
 
 @router.post("/daily-report", response_class=Response, responses=_FILE)
@@ -134,10 +147,12 @@ async def export_daily_report(
     body: DailyReportExportRequest,
     current_user: CurrentUser = Depends(get_current_user),
     controller: ExportController = Depends(),
+    idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> Response:
-    """Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan
-    ketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis)."""
-    return await controller.export_daily_report(current_user, body)
+    """Laporan harian satu jadwal: header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan ketua,
+    dalam Word (bawaan), PDF, atau PowerPoint. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+    Mendukung Idempotency-Key."""
+    return await controller.idempotent(current_user, idem, lambda: controller.export_daily_report(current_user, body))
 
 
 @router.get("/periodic", response_model=list[ExportOut])

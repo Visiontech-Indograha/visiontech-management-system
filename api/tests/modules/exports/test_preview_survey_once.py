@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 
 from app.modules.exports.services import export_service as es
-from app.shared.documents import reportlab_service
 
 
 @pytest.mark.asyncio
@@ -27,13 +26,14 @@ async def test_preview_survey_builds_doc_and_pdf_once(monkeypatch: pytest.Monkey
         calls["docx"] += 1
         return b"docx"
 
-    def fake_pdf(data: Any) -> bytes:
+    monkeypatch.setattr(es.ExportService, "_survey_doc", fake_doc)
+    monkeypatch.setattr(es, "build_survey_docx", fake_docx)
+
+    async def fake_convert(docx: bytes) -> bytes:
         calls["pdf"] += 1
         return b"%PDF"
 
-    monkeypatch.setattr(es.ExportService, "_survey_doc", fake_doc)
-    monkeypatch.setattr(es, "build_survey_docx", fake_docx)
-    monkeypatch.setattr(reportlab_service, "build_survey_pdf_reportlab", fake_pdf)
+    monkeypatch.setattr(es, "docx_to_pdf", fake_convert)
     svc = es.ExportService(SimpleNamespace(), SimpleNamespace(), Surveys())  # type: ignore[arg-type]
     kind, content = await svc.preview_survey(SimpleNamespace(), None)  # type: ignore[arg-type]
     assert (kind, content) == ("PDF", b"%PDF")

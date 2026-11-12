@@ -23,6 +23,7 @@ from docx.shared import Cm
 from docx.text.paragraph import Paragraph
 from PIL import Image
 
+from app.modules.exports.services.builders.model import omitted_note
 from app.shared.documents.branding import apply_logos
 
 TEMPLATES = Path(__file__).resolve().parents[4] / "shared" / "documents" / "templates"
@@ -32,7 +33,7 @@ MASTER_TITLES = (
     ("NEW CCTV INSTALLATION AT PHR ZONA ROKAN", "{title}"),
     ("INSTALLASI BARU CCTV- ACS AREA ZONA ROKAN", "{title}"),
     ("NEW ACS AND CCTV INSTALLATION AT SMO SOUTH AREA", "{title}"),
-    ("SURVEY REPORT NEW CCTV INSTALATION", "SURVEY REPORT {title}"),
+    ("SURVEY REPORT NEW CCTV INSTALATION", "LAPORAN SURVEI {title}"),
     ("INSTALLASI ACS", "{title}"),
     ("Proposal for New CCTV and ACS Installation", "Proposal: {title}"),
     ("Proposal for New CCTV Installation", "Proposal: {title}"),
@@ -109,6 +110,7 @@ class SurveyDoc:
     logos: dict[str, bytes] = field(default_factory=dict)
     auto_layout: bytes | None = None  # peta satelit + penanda titik (static_map)  # logo kop pengganti (company/client)
     project_title: str = ""  # judul pekerjaan (order) → kop, footer, sampul
+    omitted_photos: int = 0  # foto yang terpotong batas jumlah (dicatat di dokumen)
 
 
 # ── Helper teks: isi run tanpa merusak format ─────────────────────────────────
@@ -208,6 +210,21 @@ def _clear_runs(p: Any) -> None:
     for child in list(p):
         if child.tag != qn("w:pPr"):
             p.remove(child)
+
+
+def _note_paragraph(text: str) -> Any:
+    """Paragraf catatan polos (miring) untuk keterangan dokumen."""
+    p = OxmlElement("w:p")
+    run = OxmlElement("w:r")
+    props = OxmlElement("w:rPr")
+    props.append(OxmlElement("w:i"))
+    run.append(props)
+    t = OxmlElement("w:t")
+    t.text = text
+    t.set(qn("xml:space"), "preserve")
+    run.append(t)
+    p.append(run)
+    return p
 
 
 def _page_break() -> Any:
@@ -344,7 +361,7 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
         first, cont = rows[1], rows[2]
         for tr in rows[1:]:
             table.remove(tr)
-        for n, line in enumerate(data.activities or ["Survey Lokasi"]):
+        for n, line in enumerate(data.activities or ["Survei Lokasi"]):
             tr = copy.deepcopy(first if n == 0 else cont)
             cells = _cells(tr)
             if n == 0:
@@ -352,7 +369,7 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
             _cell_set(cells[1], line, marker="-")
             table.append(tr)
     else:
-        _fill_rows(table, 1, 0, [[data.activity_date_text, line] for line in (data.activities or ["Survey"])])
+        _fill_rows(table, 1, 0, [[data.activity_date_text, line] for line in (data.activities or ["Survei"])])
     out.append(table)
     out.append(OxmlElement("w:p"))
     narr_proto = spec["narrative"][-1]
@@ -412,7 +429,12 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
 
     # Dokumentasi per titik (halaman baru; judul titik menempel ke tabel fotonya)
     out.append(_page_break())
-    out.append(clone(spec["docs_heading"]))
+    docs_heading = clone(spec["docs_heading"])
+    replace_in(docs_heading, "Assessment", "Penilaian")
+    out.append(docs_heading)
+    photo_note = omitted_note(data.omitted_photos)
+    if photo_note:
+        out.append(_note_paragraph(photo_note))
     half = (width - 0.6) / 2
     for n, point in enumerate(data.points):
         if n:
@@ -459,9 +481,11 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
                         tabs[-1].getparent().remove(tabs[-1])
                 out.append(p)
 
-    # Bill of Material
+    # Rincian volume dan biaya (estimasi)
     out.append(_page_break())
-    out.append(clone(spec["bom_heading"]))
+    bom_heading = clone(spec["bom_heading"])
+    set_text(bom_heading, "Rincian Volume dan Biaya" + (" CCTV" if data.format == "CCTV" else ""))
+    out.append(bom_heading)
     bom_tbl = clone(spec["bom_table"])
     # Lebih dari satu kelompok (jenis titik / Umum) → baris judul kelompok sebelum material-materialnya.
     grouped = len({g for *_x, g in data.bom}) > 1
@@ -480,6 +504,8 @@ def build_survey_docx(data: SurveyDoc) -> bytes:
     # Penutup & tanda tangan
     for i in spec["closing"]:
         p = clone(i)
+        replace_in(p, "report assessment", "laporan penilaian")
+        replace_in(p, "report survey", "laporan survei")
         if i == spec["signature"]:
             set_after(p, "hormat", f", {data.leader_name}")
         elif i == spec["team_line"]:

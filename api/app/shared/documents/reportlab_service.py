@@ -257,7 +257,7 @@ def build_completion_pdf_reportlab(r: Any) -> bytes:
     story.append(HRFlowable(width="100%", thickness=1.5, color=NAVY, spaceAfter=8, spaceBefore=4))
 
     # 2. JUDUL DOKUMEN
-    story.append(Paragraph("<b>BERITA ACARA SERAH TERIMA PEKERJAAN (BAST)</b>", styles["title"]))
+    story.append(Paragraph("<b>BERITA ACARA SERAH TERIMA PEKERJAAN</b>", styles["title"]))
     order_no = r.order.get("order_number") or r.order.get("spk_number") or "-"
     story.append(Paragraph(f"Nomor Referensi: <b>{order_no}</b>", styles["subtitle"]))
     story.append(Spacer(1, 8))
@@ -339,7 +339,7 @@ def build_completion_pdf_reportlab(r: Any) -> bytes:
 
     # 5. TABEL BILL OF MATERIALS (BOM TERPASANG)
     if r.bom:
-        story.append(Paragraph("<b>2. Material & Komponen Terpasang (BoM)</b>", styles["h2"]))
+        story.append(Paragraph("<b>2. Material & Komponen Terpasang</b>", styles["h2"]))
         bom_header = [
             Paragraph("No", styles["cell_header"]),
             Paragraph("Nama Material / Perangkat", styles["cell_header"]),
@@ -541,7 +541,7 @@ def build_survey_pdf_reportlab(data: Any) -> bytes:
     # 5. REKAPITULASI BOM HASIL SURVEI
     bom_list = getattr(data, "bom", None) or getattr(data, "general_bom", None) or []
     if bom_list:
-        story.append(Paragraph("<b>2. Rekapitulasi Kebutuhan Material (BoM Hasil Survei)</b>", styles["h2"]))
+        story.append(Paragraph("<b>2. Rekapitulasi Kebutuhan Material (Rincian Hasil Survei)</b>", styles["h2"]))
         bom_rows = [
             [
                 Paragraph("No", styles["cell_header"]),

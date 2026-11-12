@@ -9421,6 +9421,54 @@
     "title": "MissingCheckInResponse",
     "type": "object"
    },
+   "MonthlyExportRequest": {
+    "description": "Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan).",
+    "properties": {
+     "division_id": {
+      "format": "uuid",
+      "title": "Division Id",
+      "type": "string"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word",
+      "title": "Export Format"
+     },
+     "month": {
+      "description": "Bulan 1 sampai 12",
+      "maximum": 12.0,
+      "minimum": 1.0,
+      "title": "Month",
+      "type": "integer"
+     },
+     "year": {
+      "description": "Tahun, mis. 2026",
+      "maximum": 2100.0,
+      "minimum": 2020.0,
+      "title": "Year",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "division_id",
+     "year",
+     "month"
+    ],
+    "title": "MonthlyExportRequest",
+    "type": "object"
+   },
    "MyExecutionTodayOut": {
     "properties": {
      "bom": {
@@ -24951,6 +24999,69 @@
      }
     ],
     "summary": "Export Daily Report",
+    "tags": [
+     "Ekspor Dokumen"
+    ]
+   }
+  },
+  "/api/v1/exports/monthly": {
+   "post": {
+    "description": "Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word\n(bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar\ncakupan: 404. Mendukung Idempotency-Key.",
+    "operationId": "export_monthly_api_v1_exports_monthly_post",
+    "parameters": [
+     {
+      "description": "Kunci unik per aksi (UUID v4 disarankan).",
+      "in": "header",
+      "name": "Idempotency-Key",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MonthlyExportRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/octet-stream": {}
+      },
+      "description": "Berkas dokumen"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Export Monthly",
     "tags": [
      "Ekspor Dokumen"
     ]

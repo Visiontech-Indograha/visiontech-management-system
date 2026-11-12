@@ -67,6 +67,15 @@ class PeriodicExportRequest(BaseModel):
         return self
 
 
+class MonthlyExportRequest(BaseModel):
+    """Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan)."""
+
+    division_id: UUID
+    year: int = Field(..., ge=2020, le=2100, description="Tahun, mis. 2026")
+    month: int = Field(..., ge=1, le=12, description="Bulan 1 sampai 12")
+    export_format: ReportFormat | None = Field(None, description="PDF, WORD_DOCX, atau PPTX; kosong = Word")
+
+
 class ExportOut(BaseModel):
     export_id: UUID
     source_type: str

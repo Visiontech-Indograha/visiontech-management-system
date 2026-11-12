@@ -206,3 +206,16 @@ def coord_text(lat: Any, lng: Any) -> str:
         return "-"
     return f"{float(lat):.6f}, {float(lng):.6f}"
 
+
+
+BULAN = ("Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
+         "November", "Desember")
+
+
+def month_label(value: date) -> str:
+    """'Oktober 2026' untuk judul laporan bulanan."""
+    return f"{BULAN[value.month - 1]} {value.year}"
+
+
+def rupiah(value: float) -> str:
+    return f"Rp {value:,.0f}".replace(",", ".")

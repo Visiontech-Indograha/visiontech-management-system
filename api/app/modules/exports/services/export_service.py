@@ -23,12 +23,14 @@ from PIL import Image, UnidentifiedImageError
 
 from app.core import storage
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.list_params import check_date_range
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.exports.repositories.export_repository import ExportRepository, photo_refs
 from app.modules.exports.services.builders.docx_builders import (
     bast_docx,
     daily_report_docx,
+    monthly_docx,
     order_sheet_docx,
     progress_docx,
     survey_report_docx,
@@ -49,6 +51,7 @@ from app.modules.exports.services.builders.office_builders import (
     completion_pptx,
     completion_xlsx,
     daily_report_pptx,
+    monthly_pptx,
     order_sheet_pptx,
     periodic_pptx,
     periodic_xlsx,
@@ -147,7 +150,7 @@ FILE_LABEL = {
     "SURVEY_REPORT": "Laporan-survei", "SURVEY_ACS": "Laporan-survei-ACS", "SURVEY_CCTV": "Laporan-survei-CCTV",
     "PROGRESS_SLIDES": "Laporan-kemajuan-pekerjaan", "BOQ": "Rincian-volume-dan-biaya",
     "TEAM_WEEK_SLIDES": "Laporan-mingguan-tim", "PERIODIC_RECAP": "Rekap-divisi",
-    "PERIODIC_SLIDES": "Laporan-mingguan-divisi",
+    "PERIODIC_SLIDES": "Laporan-mingguan-divisi", "MONTHLY_REPORT": "Laporan-bulanan-divisi",
 }
 
 
@@ -424,6 +427,32 @@ class ExportService:
         record = await self._store(user, key, content, export_format, source_type="WORK_PLAN_PERIODIC",
                                    template_type=template_type, master=master, period=(start, end))
         return record, content
+
+    # ── Laporan bulanan divisi (bulan kalender) ──────────────────────────────
+    async def export_monthly(self, user: CurrentUser, division_id: UUID, year: int, month: int,
+                             export_format: str | None = None) -> tuple[Any, bytes]:
+        out_format = _check_format(export_format, "WORD_DOCX")
+        start = date(year, month, 1)
+        end = (date(year + (month == 12), month % 12 + 1, 1)) - timedelta(days=1)
+        check_date_range(start, end, start_name="start_date", end_name="end_date")
+        await self._manage_division(division_id, user, "Divisi")
+        prefix = f"exports/monthly/{division_id}/{year}{month:02d}_"
+        async with self._dedup(user, prefix, "MONTHLY_REPORT", out_format) as hit:
+            if hit is not None:
+                return hit
+            report = PeriodicReport(
+                division_name=await self.repo.division_name(division_id) or "-", start=start, end=end,
+                days=await self.repo.periodic_days(division_id, start, end),
+                boq=await self.repo.periodic_boq(division_id, start, end),
+                meal=await self.repo.periodic_meal(division_id, start, end),
+                generated_by=await self._printer(user), generated_at=jakarta_now(),
+            )
+            content = await _render(out_format, monthly_docx, monthly_pptx, report)
+            key = f"{prefix}{jakarta_now():%Y%m%d-%H%M%S}_laporan_bulanan.{EXT[out_format]}"
+            record = await self._store(user, key, content, out_format, source_type="WORK_PLAN_PERIODIC",
+                                       template_type="MONTHLY_REPORT", master="builtin:monthly-docx-v1",
+                                       period=(start, end))
+            return record, content
 
     async def list_periodic(self, user: CurrentUser) -> list[Any]:
         sees_all = is_admin(user) or user.has_role("OPERATIONAL_MANAGER")

@@ -1812,6 +1812,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/exports/monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Monthly
+         * @description Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word
+         *     (bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar
+         *     cakupan: 404. Mendukung Idempotency-Key.
+         */
+        post: operations["export_monthly_api_v1_exports_monthly_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/team-week": {
         parameters: {
             query?: never;
@@ -8578,6 +8600,32 @@ export interface components {
             alerted: boolean;
             /** Check Ins Today */
             check_ins_today: number;
+        };
+        /**
+         * MonthlyExportRequest
+         * @description Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan).
+         */
+        MonthlyExportRequest: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Year
+             * @description Tahun, mis. 2026
+             */
+            year: number;
+            /**
+             * Month
+             * @description Bulan 1 sampai 12
+             */
+            month: number;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = Word
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /** MyExecutionTodayOut */
         MyExecutionTodayOut: {
@@ -15844,6 +15892,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PeriodicExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_monthly_api_v1_exports_monthly_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthlyExportRequest"];
             };
         };
         responses: {

@@ -22,9 +22,11 @@ from app.modules.exports.services.builders.model import (
     DailyReport,
     PeriodicReport,
     TeamWeekReport,
+    month_label,
     omitted_note,
     plan_status_label,
     qty,
+    rupiah,
     tgl,
 )
 from app.modules.exports.services.builders.survey_template import SurveyDoc
@@ -302,4 +304,38 @@ def team_week_pptx(r: TeamWeekReport) -> bytes:
     _work_slides(prs, r.points, footer)
     _omitted_slide(prs, r.omitted_photos, footer)
     theme.closing(prs, f"{r.team_name} · {COMPANY}")
+    return theme.save(prs)
+
+
+def monthly_pptx(r: PeriodicReport) -> bytes:
+    """Laporan bulanan divisi (PowerPoint): isi setara versi Word-nya."""
+    prs = theme.deck()
+    footer = f"Laporan bulanan {r.division_name} · {month_label(r.start)}"
+    theme.cover(prs, f"Laporan Bulanan\n{r.division_name}",
+                f"{month_label(r.start)} · {tgl(r.start)} s.d. {tgl(r.end)}", COMPANY, badge="Laporan bulanan")
+    total = sum(d.items for d in r.days)
+    done = sum(d.items_done for d in r.days)
+    slide = theme.page(prs, "Ringkasan bulan ini", "Divisi", footer=footer)
+    theme.kpis(slide, [
+        (str(len(r.days)), "Jadwal tim", theme.NAVY),
+        (f"{done}/{total}", "Pekerjaan selesai", "1E6B43"),
+        (str(sum(d.items_shifted for d in r.days)), "Pindah hari", "C7892A"),
+        (rupiah(sum(m.total_amount for m in r.meal)), "Uang makan", "3569A0"),
+    ])
+    for start in range(0, len(r.days), 12):
+        slide = theme.page(prs, "Jadwal tim per hari", "Semua tim", footer=footer)
+        theme.table(slide, ["Tanggal", "Tim", "Lokasi", "Selesai", "Kemajuan"],
+                    [(tgl(d.work_date), d.team_name, d.site_name, f"{d.items_done} / {d.items}", f"{d.avg_progress}%")
+                     for d in r.days[start:start + 12]], [4.6, 7.5, 11.0, 4.0, 4.2])
+    for start in range(0, len(r.boq), 12):
+        slide = theme.page(prs, "Rincian material per pekerjaan klien", "Material", footer=footer)
+        theme.table(slide, ["No. kerja", "Pekerjaan", "Material", "Rencana", "Satuan"],
+                    [(b.order_number or "-", b.project_title, b.material_name, qty(b.estimated_qty), b.unit)
+                     for b in r.boq[start:start + 12]], [4.6, 10.0, 10.0, 3.6, 3.1])
+    for start in range(0, len(r.meal), 12):
+        slide = theme.page(prs, "Uang makan", "Karyawan", footer=footer)
+        theme.table(slide, ["NIK", "Nama", "Dalam kota", "Luar kota", "Total"],
+                    [(m.employee_no, m.full_name, m.in_city_days, m.out_city_days, rupiah(m.total_amount))
+                     for m in r.meal[start:start + 12]], [4.6, 11.0, 5.0, 5.0, 6.0])
+    theme.closing(prs, f"{COMPANY} · {r.division_name}")
     return theme.save(prs)

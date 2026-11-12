@@ -166,12 +166,10 @@ export function AllocateDialog({ divisionId, cells, teams, orders, today, onClos
               </ControlOption>
             ))}
           </SelectField>
-          {orderOptions.length === 0 && (
-            <TextBlock className="text-sm text-mist">
-              Belum ada order klien untuk divisi ini. Order muncul setelah survei work order selesai dan disetujui PM.
-              Tugaskan survei dulu dari halaman work order.
-            </TextBlock>
-          )}
+          <TextBlock className="text-sm text-mist">
+            Hanya order yang surveinya sudah disetujui yang bisa dialokasikan.
+            {orderOptions.length === 0 && " Belum ada order seperti itu untuk divisi ini; tugaskan survei dulu dari halaman tugas klien."}
+          </TextBlock>
           {completionId && (
             <div role="status" className="rounded-md bg-hover p-2 text-sm">
               {s ? (
@@ -222,7 +220,7 @@ export function AllocateDialog({ divisionId, cells, teams, orders, today, onClos
           <TextField label="Judul pekerjaan" value={title} onChange={(e) => setTitle(e.target.value)} />
           <TextField label="Target per hari" inputMode="decimal" value={target} onChange={(e) => setTarget(e.target.value)} />
           <TextField label="Lokasi (opsional)" value={location} onChange={(e) => setLocation(e.target.value)}
-                     hint="Lokasi default dari order belum tersedia di API; isi bila perlu." />
+                     hint="Isi bila pekerjaan dilakukan di lokasi tertentu." />
           <FormErrorText message={error} />
         </FormBlock>
       )}

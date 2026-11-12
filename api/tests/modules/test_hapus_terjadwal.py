@@ -22,6 +22,8 @@ from tests.conftest import _SETUP_URL, db_exclusive, requires_db, sync_query
 pytestmark = requires_db
 
 D = timedelta(days=1)
+# TEST_SETUP_DATABASE_URL boleh berbentuk sinkron (postgresql://) atau asyncpg; engine async butuh driver asyncpg.
+_ASYNC_SETUP_URL = _SETUP_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +55,7 @@ def _aktif(*types: str, on: bool = True) -> None:
 
 def _run(*, terapkan: bool, now=None, **kw) -> service.Summary:
     async def go() -> service.Summary:
-        engine = make_engine(_SETUP_URL)
+        engine = make_engine(_ASYNC_SETUP_URL)
         try:
             return await service.jalankan(engine, terapkan=terapkan, now=now or utcnow(), pause=0, **kw)
         finally:
@@ -269,7 +271,7 @@ def test_arsip_kendaraan_mengarsipkan_berkas_dan_inspeksi(office) -> None:
                "FROM pg_enum WHERE enumtypid = 'vehicle_file_type_enum'::regtype LIMIT 1", (vid,))
 
     async def go() -> None:
-        engine = _me(_SETUP_URL)
+        engine = _me(_ASYNC_SETUP_URL)
         try:
             async with AsyncSession(engine) as db, db.begin():
                 await AssetRepository(db).archive("VEHICLE", vid)

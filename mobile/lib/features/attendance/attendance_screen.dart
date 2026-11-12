@@ -188,7 +188,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       setState(() {
         _records = att.items;
         _runningSites = runningSites;
-        _sites = [...daySites, ...sites.items];
+        final authNow = ref.read(authControllerProvider);
+        final ownOffice = authNow is AuthAuthenticated ? authNow.user.officeId : null;
+        _sites = [...daySites, ...ownOfficeFirst(sites.items, ownOffice)];
         // Offline & belum pernah termuat → pesan jelas, bukan "data terakhir 1 Jan 1970".
         final never = SyncEngine.neverCached(att.cachedAt);
         _cachedAt = never ? null : att.cachedAt;
@@ -205,7 +207,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           // Tanpa GPS: lokasi absen terakhir pengguna sendiri, baru urutan abjad (bukan kantor acak).
           final lastId = att.items.map((r) => r['site_id']).whereType<String>().firstOrNull;
           final last = lastId != null && _sites.any((s) => s['id'] == lastId) ? lastId : null;
-          _siteId = near ?? last ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
+          _siteId = defaultSiteId(_sites, near: near, last: last, ownOfficeId: ownOffice);
         }
       });
       unawaited(_autoPickNearest());

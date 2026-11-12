@@ -124,11 +124,20 @@ abstract final class VmsTheme {
         ),
       ),
 
+      // ── IconButton: sasaran sentuh minimal 48 dp (B-46) ─────────────────────
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          minimumSize: const Size(VmsSizes.minTap, VmsSizes.minTap),
+          tapTargetSize: MaterialTapTargetSize.padded,
+        ),
+      ),
+
       // ── TextButton ──────────────────────────────────────────────────────────
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: VmsColors.brand700,
-          minimumSize: const Size(0, VmsSizes.control),
+          minimumSize: const Size(VmsSizes.minTap, VmsSizes.minTap),
+          tapTargetSize: MaterialTapTargetSize.padded,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(VmsSizes.radiusLg),
           ),

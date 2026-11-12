@@ -26,6 +26,8 @@ abstract final class VmsSizes {
   static const double controlSm = 36;
   static const double control = 48; // tinggi tombol / sasaran sentuh (R-14)
   static const double controlLg = 52;
+  /// Sasaran sentuh minimal semua kontrol yang bisa diketuk (48 dp, sarung tangan).
+  static const double minTap = 48;
 
   // ── Ikon ───────────────────────────────────────────────────────────────────
   static const double iconSm = 16;

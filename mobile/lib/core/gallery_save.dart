@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 const _channel = MethodChannel('vms/gallery');
@@ -37,4 +38,12 @@ Future<void> saveToPhoneGallery(String path) async {
   } catch (e) {
     throw const GallerySaveException('Foto gagal disimpan ke galeri HP.');
   }
+}
+
+/// Tampilkan galat galeri sekali sebagai pesan awam (pesan lama diganti, tidak menumpuk).
+void showGalleryError(BuildContext context, Object error, {required String fallback}) {
+  final msg = error is GallerySaveException ? error.message : fallback;
+  final m = ScaffoldMessenger.of(context);
+  m.hideCurrentSnackBar();
+  m.showSnackBar(SnackBar(content: Text(msg)));
 }

@@ -30,16 +30,29 @@ import 'support/fake_backend.dart';
 /// Uji widget layar utama (dulu belum ada — MVP mengejar tampilan dulu):
 /// memuat, kosong, galat/luring, berhasil; plus aturan K-12 di layar absensi.
 
+String? _officeIdUji;
+
 class _SignedIn extends AuthController {
   @override
-  AuthState build() => const AuthAuthenticated(
+  AuthState build() => AuthAuthenticated(
     AuthUser(
       id: 'u1',
       username: 'teknisi@contoh.test',
       role: UserRole.member,
       employeeId: 'e1',
+      officeId: _officeIdUji,
     ),
   );
+}
+
+/// GPS mati: tidak ada titik lokasi sama sekali.
+class _GpsMati extends GeolocatorPlatform {
+  @override
+  Future<bool> isLocationServiceEnabled() async => false;
+  @override
+  Future<LocationPermission> checkPermission() async => LocationPermission.denied;
+  @override
+  Future<LocationPermission> requestPermission() async => LocationPermission.denied;
 }
 
 /// GPS palsu: selalu mengembalikan [position] tanpa menyentuh plugin.
@@ -104,6 +117,7 @@ void main() {
       final dir = await Directory.systemTemp.createTemp('vms-swafoto');
       return (File('${dir.path}/swafoto.jpg')..writeAsBytesSync([1, 2, 3]), null);
     };
+    _officeIdUji = null;
     db = memoryDb();
     backend = FakeBackend();
     engine = engineWith(db, backend);
@@ -237,6 +251,19 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Lanjut'));
       await settle(tester);
     }
+
+    testWidgets('B-19: tanpa GPS dan tanpa riwayat, lokasi bawaan = kantor sendiri', (tester) async {
+      online();
+      backend.routes['/offices'] = (_) => [
+        {'id': 'lain', 'name': 'Kantor Lain', 'radius_m': 100, 'location': {'lat': 1.0, 'lng': 101.0}},
+        {'id': 'saya', 'name': 'Kantor Saya', 'radius_m': 100, 'location': {'lat': 2.0, 'lng': 102.0}},
+      ];
+      _officeIdUji = 'saya';
+      GeolocatorPlatform.instance = _GpsMati();
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Kantor Saya'), findsWidgets);
+      expect(find.text('Kantor Lain'), findsNothing);
+    });
 
     testWidgets(
       'K-12: akurasi GPS > 100 m ditolak sebelum swafoto/pengiriman',

@@ -42,6 +42,7 @@ class AuthUser {
     this.attendanceMode = 'FIELD',
     this.photoFileId,
     this.fullName,
+    this.officeId,
     this.mustChangePassword = false,
   });
 
@@ -56,6 +57,7 @@ class AuthUser {
     attendanceMode: attendanceMode,
     photoFileId: photoFileId,
     fullName: fullName,
+    officeId: officeId,
     mustChangePassword: value,
   );
 
@@ -76,6 +78,9 @@ class AuthUser {
 
   /// Nama lengkap karyawan (dari `/auth/me`); null bila akun belum tertaut ke karyawan.
   final String? fullName;
+
+  /// Kantor karyawan sendiri (dari `/auth/me`); dipakai sebagai lokasi absen bawaan.
+  final String? officeId;
 
   /// Nama untuk tampilan: nama lengkap, atau bagian depan email bila belum ada.
   String get displayName {
@@ -98,6 +103,7 @@ class AuthUser {
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,
       fullName: json['full_name'] as String?,
+      officeId: json['office_id'] as String?,
       mustChangePassword: json['must_change_password'] == true,
     );
   }

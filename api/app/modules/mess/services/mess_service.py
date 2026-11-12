@@ -238,7 +238,8 @@ class MessService:
         today = jakarta_now().date()
         if stay.status != "APPROVED" or stay.stay_start_date > today or stay.stay_end_date < today:
             raise AppError("MESS_NOT_ACTIVE", "Hanya hunian yang sedang berjalan yang dapat diselesaikan.", status=409)
-        await self.repo.set_end_date(mess_stay_id, today)
+        if not await self.repo.set_end_date(mess_stay_id, today):
+            raise AppError("MESS_NOT_ACTIVE", "Status hunian sudah berubah; muat ulang.", status=409)
         return await self.repo.get(mess_stay_id)
 
     async def update_stay(self, mess_stay_id: UUID, data: MessStayUpdate, user: CurrentUser | None = None) -> Any:

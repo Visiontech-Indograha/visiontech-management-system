@@ -128,6 +128,7 @@ GUARDED_IN_HANDLER = {
     # Work Orders V2
     ("GET", "/work-orders"): "WorkOrderService: filter peran dan divisi pengguna",
     ("GET", "/work-orders/team-surveys"): "WorkOrderService: hanya survei WO tim yang diikuti pemanggil (ketua/anggota)",
+    ("GET", "/work-orders/pm-candidates"): "WorkOrderService.list_pm_candidates: SA/OM semua divisi, PM divisinya (diuji), lain 403",
     ("POST", "/work-orders"): "WorkOrderService: hanya PM/OM/Super Admin",
     ("GET", "/work-orders/{work_order_id}"): "WorkOrderService: detail lengkap WO, titik survei & items",
     ("POST", "/work-orders/{work_order_id}/assign-survey"): "WorkOrderService: hanya PM menunjuk ketua tim survei",

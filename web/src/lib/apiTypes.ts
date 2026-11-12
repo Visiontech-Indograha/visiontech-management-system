@@ -229,6 +229,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/work-orders/pm-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calon PM untuk Buat Tugas Klien
+         * @description Karyawan berperan PM (utama atau tambahan) dengan id, nama, dan divisi saja. SA/OM: semua divisi; PM: divisi
+         *     yang ia pimpin atau tempati (divisi lain 404); peran lain 403. `q` = awalan nama; tanpa parameter = semua calon.
+         */
+        get: operations["list_pm_candidates_api_v1_work_orders_pm_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/work-orders/team-surveys": {
         parameters: {
             query?: never;
@@ -9562,6 +9583,23 @@ export interface components {
             /** Notes */
             notes?: string | null;
         };
+        /**
+         * PmCandidateOut
+         * @description Calon PM untuk form Buat Tugas Klien: hanya id, nama, dan divisi (tanpa kontak, email, atau peran).
+         */
+        PmCandidateOut: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
+        };
         /** PointIn */
         PointIn: {
             /** Name */
@@ -12568,6 +12606,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pm_candidates_api_v1_work_orders_pm_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Batasi pada satu divisi */
+                division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PmCandidateOut"][];
                 };
             };
             /** @description Validation Error */

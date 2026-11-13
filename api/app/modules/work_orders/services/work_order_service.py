@@ -466,6 +466,7 @@ class WorkOrderService:
         detail = await self.get_work_order(work_order_id, current_user)
         order_dict = {
             "completion_id": str(detail["work_order_id"]),
+            "order_number": str(detail["wo_number"]),
             "project_title": detail["title"],
             "client_name": detail["client_name"] or "PT Visiontech Indograha",
             "division_name": detail["division_name"] or "Operasional",
@@ -488,14 +489,21 @@ class WorkOrderService:
 
         template_upper = template.upper()
         wo_num = str(detail["wo_number"]).replace("/", "-")
+        if template_upper in ("PDF", "BAST_PDF", "DOCX", "BAST", "BAST_DOCX") and detail.get("status") != "BAST_SIGNED":
+            raise AppError(
+                "NOT_SIGNED",
+                "Surat serah terima baru tersedia setelah pekerjaan selesai dan disahkan PM. "
+                "Untuk hasil survei, gunakan Laporan Survei.",
+                status=409,
+            )
         docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
         if template_upper in ("PDF", "BAST_PDF"):
             content = await build_limited(completion_pdf, report)
-            return f"BAST_{wo_num}.pdf", "application/pdf", content
+            return f"Berita_Acara_Serah_Terima_{wo_num}.pdf", "application/pdf", content
         elif template_upper in ("DOCX", "BAST", "BAST_DOCX"):
             content = bast_docx(report)
-            return f"BAST_{wo_num}.docx", docx_mime, content
+            return f"Berita_Acara_Serah_Terima_{wo_num}.docx", docx_mime, content
         elif template_upper in ("SURVEY", "SURVEY_REPORT"):
             content = survey_report_docx(report)
             return f"Laporan_Survei_{wo_num}.docx", docx_mime, content
@@ -509,6 +517,6 @@ class WorkOrderService:
         elif template_upper in ("SLIDES", "PPTX", "PROGRESS_SLIDES"):
             content = completion_pptx(report)
             pptx_mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            return f"Slide_Progres_{wo_num}.pptx", pptx_mime, content
+            return f"Slide_Kemajuan_Pekerjaan_{wo_num}.pptx", pptx_mime, content
         else:
             raise ValidationError(f"Format ekspor tidak dikenali: {template}")

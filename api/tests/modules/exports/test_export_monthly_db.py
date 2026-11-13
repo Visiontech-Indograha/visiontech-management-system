@@ -10,9 +10,18 @@ import pytest
 from app.core.time import jakarta_now
 from app.modules.exports.services.builders.model import month_label
 from tests.conftest import World, requires_db, sync_query
+from tests.daily import make_daily_plan
 from tests.modules.exports.test_export_matrix_db import MIME, _env, text_of  # noqa: F401
 
 pytestmark = requires_db
+
+
+def plan_on(world: World, day: str) -> None:
+    """Satu jadwal harian tim pada tanggal tertentu (agar bulannya tidak kosong)."""
+    sync_query(
+        "INSERT INTO work_plan_daily (division_id, team_id, work_date, site_name, status, created_by_id) "
+        "VALUES (%s, %s, %s, 'Site uji', 'APPROVED', %s)",
+        (world.unit_id, world.team_id, day, world.employees["pm"]))
 
 
 def monthly(client, headers: dict, division_id: str, year: int, month: int, fmt: str | None = None):
@@ -27,6 +36,7 @@ def monthly(client, headers: dict, division_id: str, year: int, month: int, fmt:
 def test_monthly_report_for_managers_in_every_format_with_same_content(client, world: World, who: str,
                                                                        fmt: str | None):
     today = jakarta_now().date()
+    make_daily_plan(world)
     response = monthly(client, world.headers(client, who), world.unit_id, today.year, today.month, fmt)
     assert response.status_code == 200, response.text
     out = fmt or "WORD_DOCX"
@@ -38,6 +48,8 @@ def test_monthly_report_for_managers_in_every_format_with_same_content(client, w
 
 
 def test_monthly_covers_the_whole_calendar_month(client, world: World):
+    for day in ("2026-02-10", "2028-02-10", "2026-12-10"):
+        plan_on(world, day)
     response = monthly(client, world.headers(client, "pm"), world.unit_id, 2026, 2, "WORD_DOCX")
     assert response.status_code == 200
     text = text_of(response.content, "WORD_DOCX")
@@ -72,6 +84,7 @@ def test_monthly_validates_year_and_month(client, world: World, year: int, month
 
 def test_monthly_rejects_unknown_format_and_double_click_is_deduplicated(client, world: World):
     pm = world.headers(client, "pm")
+    plan_on(world, "2026-10-05")
     assert monthly(client, pm, world.unit_id, 2026, 10, "DOC").status_code == 422
     first = monthly(client, pm, world.unit_id, 2026, 10, "PPTX")
     second = monthly(client, pm, world.unit_id, 2026, 10, "PPTX")
@@ -79,3 +92,14 @@ def test_monthly_rejects_unknown_format_and_double_click_is_deduplicated(client,
     count = sync_query("SELECT count(*) FROM document_template_export WHERE template_type = 'MONTHLY_REPORT' "
                        "AND generated_by_id = %s", (world.employees["pm"],))[0][0]
     assert count == 1
+
+
+@pytest.mark.parametrize("fmt", [None, "WORD_DOCX", "PDF", "PPTX"])
+def test_monthly_without_work_is_422_no_work_not_empty_document(client, world: World, fmt: str | None):
+    response = monthly(client, world.headers(client, "pm"), world.unit_id, 2026, 2, fmt)
+    assert response.status_code == 422, response.text
+    assert response.json()["error"]["code"] == "NO_WORK"
+    assert "bulan tersebut" in response.json()["error"]["message"]
+    count = sync_query("SELECT count(*) FROM document_template_export WHERE template_type = 'MONTHLY_REPORT' "
+                       "AND generated_by_id = %s", (world.employees["pm"],))[0][0]
+    assert count == 0

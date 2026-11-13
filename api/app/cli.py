@@ -221,6 +221,27 @@ async def hikvision_tarik(
     return 0
 
 
+async def hikvision_impor(berkas: str, perangkat: str, dari: str | None, sampai: str | None, dry_run: bool) -> int:
+    """Impor ekspor iVMS-4200 ke hikvision_event (idempoten). Kode keluar 0/1; isi baris tidak dicetak."""
+    import json
+    from pathlib import Path
+
+    from app.modules.hikvision.services.impor_ekspor import ImporError
+    from app.modules.hikvision.services.impor_service import jalankan_impor, tanggal_cli
+
+    engine = make_engine(_operator_url())
+    try:
+        ringkas = await jalankan_impor(engine, berkas=Path(berkas), perangkat=perangkat, dry_run=dry_run,
+                                     dari=tanggal_cli(dari, "--dari"), sampai=tanggal_cli(sampai, "--sampai"))
+    except ImporError as exc:
+        print(f"Gagal: {exc}")
+        return 1
+    finally:
+        await engine.dispose()
+    print(json.dumps(ringkas.as_dict(), indent=2))
+    return 0
+
+
 async def hikvision_proses(
     dry_run: bool, bayangan: bool, banding: bool, dari: str | None, sampai: str | None, jarak_menit: int,
     batas_jam: str,
@@ -327,6 +348,13 @@ def main() -> None:
     hik_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung dan cari event tertua, tanpa simpan")
     hik_parser.add_argument("--jeda", type=float, default=1.0, help="Jeda antar permintaan ke perangkat (detik)")
     hik_parser.add_argument("--lanjutkan", action="store_true", help="Lanjut dari jendela terakhir yang tersimpan")
+    imp_parser = subparsers.add_parser(
+        "hikvision-impor-ekspor", help="Impor riwayat absensi dari ekspor iVMS-4200 (CSV/XLSX); cadangan tarik ISAPI")
+    imp_parser.add_argument("--berkas", required=True, help="Lokasi berkas ekspor (.xlsx atau .csv)")
+    imp_parser.add_argument("--perangkat", required=True, help="ID atau nomor seri perangkat yang terdaftar")
+    imp_parser.add_argument("--dari", help="Hanya tanggal mulai ini (YYYY-MM-DD, WIB)")
+    imp_parser.add_argument("--sampai", help="Hanya sampai tanggal ini (YYYY-MM-DD, WIB)")
+    imp_parser.add_argument("--dry-run", action="store_true", help="Hitung saja, tidak ada yang disimpan")
     prs_parser = subparsers.add_parser(
         "hikvision-proses", help="Bentuk absen dari event Hikvision (jalankan terjadwal, mis. tiap 5 menit)")
     prs_parser.add_argument("--dry-run", action="store_true", help="Kerjakan lalu batalkan; tidak ada yang disimpan")
@@ -373,6 +401,8 @@ def main() -> None:
     elif args.command == "hikvision-tarik":
         sys.exit(asyncio.run(hikvision_tarik(args.perangkat, args.dari, args.sampai, args.dry_run, args.jeda,
                                              args.lanjutkan)))
+    elif args.command == "hikvision-impor-ekspor":
+        sys.exit(asyncio.run(hikvision_impor(args.berkas, args.perangkat, args.dari, args.sampai, args.dry_run)))
     elif args.command == "hikvision-proses":
         sys.exit(asyncio.run(hikvision_proses(args.dry_run, args.bayangan, args.banding, args.dari, args.sampai,
                                               args.jarak_menit, args.batas_jam)))

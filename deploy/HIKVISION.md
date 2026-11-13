@@ -71,6 +71,19 @@ docker exec vms_api python -m app.cli hikvision-proses
 ```
 Bawaan menarik sampai 366 hari ke belakang; batasi dengan `--dari 2026-01-01`. Jalankan di luar jam kerja. Cadangan DB harian (01:30) sudah ada; jalankan `deploy/backup.sh` dulu bila ingin titik pulih tepat sebelum impor. Mundur: tidak ada penghapusan otomatis; hubungi arsitek (jangan hapus baris tabel manual).
 
+## Langkah 6b: cadangan bila tarik ISAPI belum bisa (impor ekspor iVMS-4200)
+Dipakai selama kredensial perangkat ditolak. Pemilik mengekspor laporan absensi dari iVMS-4200, lalu diimpor ke VMS.
+1. Di iVMS-4200: menu Time and Attendance > Attendance Records (atau laporan absensi mentah/Original Attendance Records) > pilih orang dan rentang tanggal (mis. 1 bulan per berkas; Oktober 2026 dulu) > Export > Excel (.xlsx) atau CSV. Pastikan kolom ID orang (Person ID/Employee ID), tanggal, dan jam ikut. Foto tidak perlu.
+2. Salin berkas ke server, lalu ke kontainer (`docker cp ekspor-okt-2026.xlsx vms_api:/tmp/`). Karyawan harus sudah dipetakan (ID di mesin = karyawan VMS) lewat halaman Absensi Mesin, kalau tidak event tersimpan tetapi belum jadi absen.
+3. Dry-run dulu (tidak menulis; hitungan sama persis dengan impor nyata):
+```
+docker exec vms_api python -m app.cli hikvision-impor-ekspor --berkas /tmp/ekspor-okt-2026.xlsx --perangkat <SERIAL> --dry-run
+docker exec vms_api python -m app.cli hikvision-impor-ekspor --berkas /tmp/ekspor-okt-2026.xlsx --perangkat <SERIAL> --dari 2026-10-01 --sampai 2026-10-31
+docker exec vms_api python -m app.cli hikvision-proses
+```
+4. Baca ringkasan: `event_baru`, `duplikat` (aman diulang), `event_tak_terpetakan`/`id_tak_terpetakan` (petakan dulu lalu `hikvision-proses`, yang memetakan ulang), `baris_tidak_valid` (judul/ringkasan, wajar bila kecil), `tanggal_tertua`/`tanggal_terbaru` dan `per_bulan` (cocokkan dengan rentang yang diekspor).
+Catatan: kolom dikenali lewat daftar nama (`SINONIM_KOLOM` di `app/modules/hikvision/services/impor_ekspor.py`, PERLU VERIFIKASI dari ekspor asli). Bila muncul "Kolom yang dibutuhkan tidak ditemukan", kirim DAFTAR NAMA KOLOM (bukan isi data) ke arsitek. Waktu dianggap WIB. Maks 100 MB per berkas (.xls lama: simpan ulang sebagai .xlsx). Event impor bertanda `payload.impor = IVMS4200` dan tidak mengganggu `--lanjutkan` tarik. Tarik ISAPI nanti pada rentang yang sama dapat menambah event kembar (kunci berbeda); pilih satu jalur per rentang.
+
 ## Langkah 7: pemantauan
 Event masuk (baca saja):
 ```

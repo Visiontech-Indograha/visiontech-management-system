@@ -1,6 +1,8 @@
 import { lazy } from "react";
 
 /** Halaman dimuat saat dibuka (code-splitting) — muatan awal kecil (R-12, performa). */
+export const VehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/VehicleDocsPage").then((m) => ({ default: m.VehicleDocsPage })));
+export const MyVehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/MyVehicleDocsPage").then((m) => ({ default: m.MyVehicleDocsPage })));
 export const AssetsPage = lazy(() => import("@/pages/assets/AssetsPage").then((m) => ({ default: m.AssetsPage })));
 export const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage").then((m) => ({ default: m.AttendancePage })));
 export const AuditLogPage = lazy(() => import("@/pages/audit/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));

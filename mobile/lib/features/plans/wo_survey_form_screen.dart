@@ -64,6 +64,10 @@ class _WoSurveyFormScreenState extends ConsumerState<WoSurveyFormScreen> {
       _snack('Lokasi belum didapat. Pastikan GPS menyala lalu coba lagi.');
       return;
     }
+    if (r.isMocked) {
+      _snack(mockLocationMessage);
+      return;
+    }
     setState(() {
       p.lat = r.position!.latitude;
       p.lng = r.position!.longitude;

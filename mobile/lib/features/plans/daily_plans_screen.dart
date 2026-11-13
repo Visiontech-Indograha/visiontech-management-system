@@ -54,6 +54,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   }
 
   int _loadSeq = 0;
+  int _refreshes = 0;
 
   Future<void> _load() async {
     final seq = ++_loadSeq; // respons minggu lama tidak boleh menimpa minggu yang sedang dilihat
@@ -132,7 +133,10 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     return Scaffold(
       appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () {
+          setState(() => _refreshes++);
+          return _load();
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           children: [
@@ -332,7 +336,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
                   child: _PlanCard(plan: p, today: today, onTap: () => _open(p)),
                 ),
             const SizedBox(height: 12),
-            WoTeamSurveysSection(key: ValueKey('wo-$_monday')),
+            WoTeamSurveysSection(key: ValueKey('wo-$_monday'), reloadToken: _refreshes),
           ],
         ),
       ),

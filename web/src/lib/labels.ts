@@ -28,7 +28,7 @@ export const STATUS_LABEL: Record<string, string> = {
   VERIFIED: "Terverifikasi",
   PENDING: "Menunggu verifikasi",
   CURRENT: "Berlaku",
-  NEEDS_REVIEW: "Perlu review",
+  NEEDS_REVIEW: "Perlu ditinjau",
   AUTO_VALID: "Valid otomatis",
   IN_USE: "Dipakai",
   RESERVED: "Direservasi",

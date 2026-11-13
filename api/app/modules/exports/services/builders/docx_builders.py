@@ -339,10 +339,10 @@ def survey_report_docx(r: CompletionReport) -> bytes:
     kit.letterhead(doc, COMPANY, "Laporan Survei", o.get("project_title"), o.get("client_name"),
                    logos=r.logos)
 
-    dates = sorted({p.work_date for p in points})
+    dates = r.survey_dates
     kit.heading(doc, "1. Informasi Survei")
     kit.info_table(doc, [
-        ("Tanggal", ", ".join(tgl(d) for d in dates) if dates else "-"),
+        ("Tanggal", ", ".join(tgl(d) for d in dates)),
         ("Lokasi", o.get("site_address") or (points[0].location if points else None)),
         ("Klien", o.get("client_name")),
         ("Tujuan", f"Survei lokasi untuk {o.get('project_title') or 'pekerjaan'}: menentukan posisi titik, "

@@ -284,7 +284,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return null;
     }
     if (loc.isMocked) {
-      _snack('Lokasi palsu terdeteksi. Matikan aplikasi pemalsu lokasi.');
+      _snack(mockLocationMessage);
       return null;
     }
     return loc.position;
@@ -455,6 +455,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _snack('Tidak ada sinyal — absen masuk tersimpan offline dan dikirim otomatis saat online.');
       }
       await _load();
+      // Layar lain (Jadwal harian) ikut menyegarkan status absen.
+      SyncEngine.appliedRevision.value++;
     } catch (e) {
       if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
@@ -646,6 +648,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
       }
       await _load();
+      // Layar lain (Jadwal harian) ikut menyegarkan status absen.
+      SyncEngine.appliedRevision.value++;
     } catch (e) {
       if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {

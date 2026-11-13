@@ -773,6 +773,21 @@ class VmsApi {
     (await _dio.get('$_p/assets/loans', queryParameters: {'open': true})).data,
   );
 
+  Future<List<Map<String, dynamic>>> myInspections() async =>
+      _list((await _dio.get('$_p/hse/inspections/mine')).data);
+
+  Future<Map<String, dynamic>> inspectionChecklistTemplate() async =>
+      _map((await _dio.get('$_p/hse/inspections/checklist-template')).data);
+
+  Future<Map<String, dynamic>> inspectionDetail(String id) async =>
+      _map((await _dio.get('$_p/hse/inspections/$id')).data);
+
+  Future<List<Map<String, dynamic>>> vehiclesForInspection() async =>
+      _list((await _dio.get('$_p/assets/vehicles')).data);
+
+  Future<Map<String, dynamic>> createInspection(Map<String, dynamic> body) async =>
+      _map((await _dio.post('$_p/hse/inspections', data: body)).data);
+
   Future<List<Map<String, dynamic>>> myLoanRequests() async =>
       _list((await _dio.get('$_p/assets/loan-requests')).data);
 

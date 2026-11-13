@@ -6,6 +6,7 @@ from .isapi_client import (
     IsapiUnavailable,
     PullClient,
 )
+from .proses_service import RingkasProses, proses_event
 from .tarik_service import RingkasanTarik, TarikError, tarik_riwayat
 
 __all__ = [
@@ -14,9 +15,11 @@ __all__ = [
     "IsapiResponseError",
     "IsapiUnavailable",
     "PullClient",
+    "RingkasProses",
     "RingkasanTarik",
     "TarikError",
     "parse_acs_item",
     "parse_push",
+    "proses_event",
     "tarik_riwayat",
 ]

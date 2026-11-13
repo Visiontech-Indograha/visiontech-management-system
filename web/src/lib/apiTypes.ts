@@ -13255,6 +13255,10 @@ export interface operations {
                 vehicle_id?: string | null;
                 /** @description Sertakan dokumen yang sudah diganti */
                 history?: boolean;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -13293,6 +13297,10 @@ export interface operations {
             query?: {
                 /** @description Jatuh tempo dalam N hari (yang sudah lewat ikut) */
                 days?: number;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */

@@ -34,14 +34,23 @@ class VehicleDocumentService:
         return await self.repo.document_types()
 
     async def list_documents(
-        self, user: CurrentUser, vehicle_id: UUID | None, history: bool, due_within: int | None
+        self, user: CurrentUser, vehicle_id: UUID | None, history: bool, due_within: int | None,
+        doc_type_code: str | None = None, office_id: UUID | None = None,
     ) -> list[Any]:
         offices = offices_in_scope(user)
         if offices is not None and not offices:
+            if office_id:
+                raise NotFoundError("Kantor")
             return []
+        if office_id:
+            if offices is not None and str(office_id) not in offices:
+                raise NotFoundError("Kantor")
+            offices = [str(office_id)]
+        if doc_type_code and not await self.repo.type_exists(doc_type_code):
+            raise ValidationError("Jenis dokumen tidak dikenal.")
         if vehicle_id:
             await self._vehicle_in_scope(user, vehicle_id)
-        return await self.repo.list_documents(today(), offices, vehicle_id, history, due_within)
+        return await self.repo.list_documents(today(), offices, vehicle_id, history, due_within, None, doc_type_code)
 
     async def mine(self, user: CurrentUser) -> list[Any]:
         if not user.employee_id:

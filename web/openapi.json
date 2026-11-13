@@ -607,6 +607,46 @@
       "description": "Sertakan dokumen yang sudah diganti"
      },
      {
+      "name": "doc_type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 30,
+         "pattern": "^[A-Z0-9_]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      },
+      "description": "Kode jenis dokumen (terdaftar di document_type)"
+     },
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
+      },
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)"
+     },
+     {
       "name": "q",
       "in": "query",
       "required": false,
@@ -721,6 +761,46 @@
        "title": "Days"
       },
       "description": "Jatuh tempo dalam N hari (yang sudah lewat ikut)"
+     },
+     {
+      "name": "doc_type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 30,
+         "pattern": "^[A-Z0-9_]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      },
+      "description": "Kode jenis dokumen (terdaftar di document_type)"
+     },
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
+      },
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)"
      },
      {
       "name": "q",

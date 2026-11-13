@@ -26,6 +26,9 @@ class VehicleDocumentRepository(BaseRepository):
             "WHERE aktif ORDER BY berlaku_untuk, code"
         ))
 
+    async def type_exists(self, code: str) -> bool:
+        return await self.fetchone("SELECT code FROM document_type WHERE code = :c", {"c": code}) is not None
+
     async def type_for_vehicle(self, code: str) -> Any:
         return await self.fetchone(
             "SELECT code FROM document_type WHERE code = :c AND aktif AND berlaku_untuk = 'KENDARAAN'", {"c": code}
@@ -70,7 +73,7 @@ class VehicleDocumentRepository(BaseRepository):
 
     async def list_documents(
         self, today: date, offices: list[str] | None, vehicle_id: UUID | None, history: bool,
-        due_within: int | None, driver_employee_id: str | None = None,
+        due_within: int | None, driver_employee_id: str | None = None, doc_type_code: str | None = None,
     ) -> list[Any]:
         """Daftar dokumen. `offices` None = semua kantor. `due_within`: hanya yang jatuh tempo dalam N hari (atau
         sudah lewat). `driver_employee_id`: hanya kendaraan yang sedang dikemudikan karyawan itu."""
@@ -79,6 +82,7 @@ class VehicleDocumentRepository(BaseRepository):
             WHERE vd.delete_at IS NULL AND v.delete_at IS NULL
               AND (CAST(:offices AS uuid[]) IS NULL OR vd.office_id = ANY(CAST(:offices AS uuid[])))
               AND (CAST(:vehicle AS uuid) IS NULL OR vd.vehicle_id = CAST(:vehicle AS uuid))
+              AND (CAST(:dtc AS text) IS NULL OR vd.doc_type_code = CAST(:dtc AS text))
               AND (:history OR vd.status = 'active')
               AND (CAST(:due AS int) IS NULL OR vd.expired_on <= CAST(:today AS date) + CAST(:due AS int))
               AND (CAST(:drv AS uuid) IS NULL OR EXISTS (
@@ -89,7 +93,8 @@ class VehicleDocumentRepository(BaseRepository):
             LIMIT :cap
             """,
             {"today": today, "offices": offices, "vehicle": str(vehicle_id) if vehicle_id else None,
-             "history": history, "due": due_within, "drv": driver_employee_id, "cap": MAX_ROWS_UNPAGED},
+             "history": history, "due": due_within, "drv": driver_employee_id,
+             "dtc": doc_type_code, "cap": MAX_ROWS_UNPAGED},
         ))
 
     # -- pengemudi --

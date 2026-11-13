@@ -23,6 +23,7 @@ import type { AssetKind, Loan, Tool, Vehicle } from "@/services/assetService";
 /** Dialog yang dibuka dari kartu aset. */
 export type AssetAction =
   | { kind: "lend"; asset: AssetKind; id: string; name: string }
+  | { kind: "lend-external"; asset: AssetKind; id: string; name: string }
   | { kind: "status"; asset: AssetKind; id: string; name: string; status: string }
   | { kind: "files"; vehicle: Vehicle }
   | { kind: "drivers"; vehicle: Vehicle }
@@ -138,11 +139,14 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
                 <div className="min-w-0 flex-1">
                   <TextBlock className="font-medium">{l.asset_name} · {l.asset_code}</TextBlock>
                   <TextBlock className="text-xs text-mist">
-                    {l.employee_name} · sejak {formatDate(l.loaned_at)}
+                    {l.employee_name}{l.borrower_instansi ? ` (${l.borrower_instansi})` : ""} · sejak {formatDate(l.loaned_at)}
                     {l.work_date ? ` · jadwal ${formatDate(l.work_date)}` : ""}
+                    {l.due_date ? ` · harus kembali ${formatDate(l.due_date)}` : ""}
                   </TextBlock>
                   {l.handover_file_id && <PhotoStrip photos={[{ file_id: l.handover_file_id }]} alt="Foto serah terima" />}
                 </div>
+                {l.external_borrower_id && <Pill tone="neutral">Pihak luar</Pill>}
+                {l.due_date && l.due_date < today() && <Pill tone="danger">Lewat tanggal kembali</Pill>}
                 <StatusBadge status={l.assignment_status} />
                 {canManage && (
                   <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "return", loan: l })}>
@@ -166,6 +170,11 @@ function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; c
       {actions.includes("lend") && (
         <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "VEHICLE", id: v.vehicle_id, name: v.name })}>
           Serahkan
+        </ActionButton>
+      )}
+      {actions.includes("lend") && (
+        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "VEHICLE", id: v.vehicle_id, name: v.name })}>
+          Serahkan ke pihak luar
         </ActionButton>
       )}
       {actions.includes("files") && (
@@ -193,6 +202,11 @@ function ToolActions({ tool: t, canManage, onOpen }: { tool: Tool; canManage: bo
       {actions.includes("lend") && (
         <ActionButton size="sm" onClick={() => onOpen({ kind: "lend", asset: "TOOL", id: t.tool_id, name: t.name })}>
           Serahkan
+        </ActionButton>
+      )}
+      {actions.includes("lend") && (
+        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "TOOL", id: t.tool_id, name: t.name })}>
+          Serahkan ke pihak luar
         </ActionButton>
       )}
       {actions.includes("status") && (

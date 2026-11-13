@@ -21,3 +21,12 @@ export const vehicleSchema = z.object({
   number_plate: z.string().trim().min(3, "Nomor polisi wajib diisi.").max(20, "Nomor polisi maksimal 20 karakter."),
 });
 export type VehicleValues = z.infer<typeof vehicleSchema>;
+
+/** Penerima eksternal: batas sama dengan BorrowerCreate di API (nama 1-150, instansi 150, kontak 100). */
+export const borrowerSchema = z.object({
+  office_id: required("Kantor"),
+  nama: z.string().trim().min(1, "Nama penerima wajib diisi.").max(150, "Nama penerima maksimal 150 karakter."),
+  instansi: z.string().trim().max(150, "Instansi maksimal 150 karakter."),
+  kontak: z.string().trim().max(100, "Kontak maksimal 100 karakter."),
+});
+export type BorrowerValues = z.infer<typeof borrowerSchema>;

@@ -12,9 +12,19 @@ export type Pemetaan = S["PemetaanOut"];
 export type UsulanPemetaan = S["UsulanPemetaan"];
 export type PemetaanOtomatis = S["PemetaanOtomatisOut"];
 export type PemetaanDiterapkan = S["PemetaanDiterapkan"];
+export type BandingBaris = S["BandingBaris"];
+export type BandingBayangan = S["BandingBayangan"];
 
 const KEY = ["hikvision"] as const;
 const dev = (id: string) => `/hikvision/devices/${id}`;
+
+/** GET /hikvision/devices/{id}/bayangan: tap mesin vs absen aplikasi per karyawan-hari (baca saja, maks 31 hari). */
+export const useBandingBayangan = (id: string, dari: string, sampai: string) =>
+  useQuery({
+    queryKey: [...KEY, "bayangan", id, dari, sampai],
+    enabled: Boolean(id && dari && sampai),
+    queryFn: async () => (await api.get<BandingBayangan>(`${dev(id)}/bayangan`, { params: { dari, sampai } })).data,
+  });
 
 /** GET /hikvision/devices (izin manage:hikvision). */
 export const useHikvisionDevices = () =>

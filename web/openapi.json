@@ -20947,6 +20947,35 @@
       ],
       "title": "Check Out Selfie File Id"
      },
+     "review_reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Review Reasons"
+     },
+     "location_accuracy_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Accuracy M"
+     },
+     "location_decision": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Decision"
+     },
      "check_out_explanation": {
       "anyOf": [
        {

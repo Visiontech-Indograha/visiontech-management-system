@@ -40,6 +40,10 @@ MIN_ENROLL_QUALITY = 0.30
 ENROLL_MIN, ENROLL_MAX = 3, 5
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 FIELD_ROLES = ("TEAM_LEADER", "EMPLOYEE")
+# Pekerja kantor absen lewat web (CHANNEL_OF_MODE OFFICE -> WEB; lihat attendance_mode_of): boleh mendaftarkan wajah
+# DIRINYA SENDIRI. Pendaftaran oleh HR untuk orang lain tidak didukung alur ini (butuh kamera orangnya).
+OFFICE_ROLES = ("SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "ADMIN_HR_GA", "FINANCE", "HSE")
+ENROLL_ROLES = FIELD_ROLES + OFFICE_ROLES
 FAKE_MODEL = "fake-dev"         # penanda model untuk embedding sintetis mode wajah palsu (hanya dev)
 FAKE_SIMILARITY = 0.95          # skor yang dikembalikan mode wajah palsu untuk setiap swafoto
 EMBED_DIM = 512
@@ -130,8 +134,8 @@ class FaceService:
 
     async def enroll(self, user_id: str, images: list[bytes]) -> EnrollResponse:
         employee = await self._employee(user_id)
-        if employee.role not in FIELD_ROLES:
-            raise ForbiddenError("Pendaftaran wajah hanya untuk pekerja lapangan (absen lewat aplikasi HP).")
+        if employee.role not in ENROLL_ROLES:
+            raise ForbiddenError("Peran Anda tidak dapat mendaftarkan wajah untuk absensi.")
         if not ENROLL_MIN <= len(images) <= ENROLL_MAX:
             raise ValidationError(f"Unggah {ENROLL_MIN}–{ENROLL_MAX} foto wajah dari sudut berbeda.")
         if parse_embedding(employee.face_embedding)[0] is not None:

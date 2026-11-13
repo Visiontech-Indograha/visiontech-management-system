@@ -90,3 +90,8 @@ Rilis MINOR (fitur, kompatibel mundur).
 - P5. Siapa peninjau: HR kantor tugas saja, atau HR + OM? Saran: HR kantor tugas; OM tetap untuk absen lapangan.
 - P6. Siapa relawan dan apakah boleh mengambil foto uji dari mereka (dengan persetujuan)? Saran: 10-20 orang, foto dihapus setelah pengukuran.
 - P7. Kepastian lisensi model wajah untuk pemakaian komersial/internal sebelum meluas. Saran: tanya pembuat model atau siapkan model alternatif berlisensi jelas.
+
+## G. Titik penyambungan persetujuan biometrik (belum dikerjakan; menunggu teks hukum pemilik)
+- Gerbang tunggal: `FaceService.enroll` (`api/app/modules/face/services/face_service.py`), tepat setelah pemeriksaan `ENROLL_ROLES` dan sebelum `set_embedding`. Di sana persetujuan dicek (mis. `consent_version` pada permintaan atau tabel `biometric_consent`), dan dicatat siapa/kapan/versi teks.
+- Penarikan persetujuan: sambungkan ke `reset_own` / `reset` (hapus templat) yang sudah ada.
+- Web: `FaceBiometricSection.tsx` menampilkan teks dan kotak persetujuan sebelum unggah. Skema permintaan hanya menambah field opsional.

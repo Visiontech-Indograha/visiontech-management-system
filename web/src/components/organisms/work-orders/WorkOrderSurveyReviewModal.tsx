@@ -533,11 +533,13 @@ export function WorkOrderSurveyReviewModal({
                     <TextBlock className="text-xs text-muted-foreground font-normal">KOP Logo Visiontech</TextBlock>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
+                    {detail.status === "BAST_SIGNED" && (
+                      <>
                     <ActionButton
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "pdf", `BAST_${detail.wo_number}.pdf`)}
+                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "pdf", `Berita_Acara_Serah_Terima_${detail.wo_number}.pdf`)}
                       className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-primary shrink-0" />
@@ -547,12 +549,14 @@ export function WorkOrderSurveyReviewModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "docx", `BAST_${detail.wo_number}.docx`)}
+                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "docx", `Berita_Acara_Serah_Terima_${detail.wo_number}.docx`)}
                       className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-blue-500 shrink-0" />
                       <TextBlock as="span" className="truncate">Surat serah terima (.docx)</TextBlock>
                     </ActionButton>
+                      </>
+                    )}
                     <ActionButton
                       type="button"
                       variant="outline"
@@ -587,7 +591,7 @@ export function WorkOrderSurveyReviewModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "slides", `Slide_Progres_${detail.wo_number}.pptx`)}
+                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "slides", `Slide_Kemajuan_Pekerjaan_${detail.wo_number}.pptx`)}
                       className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-orange-500 shrink-0" />

@@ -414,9 +414,12 @@ class ExportService:
             raise ValidationError(f"Rentang rekap paling lama {MAX_PERIOD_DAYS} hari.")
         await self._manage_division(division_id, user, "Divisi")
         template_type, build, master = PERIODIC[export_format]
+        days = await self.repo.periodic_days(division_id, start, end)
+        if not days:
+            raise AppError("NO_WORK", "Belum ada pekerjaan divisi ini pada periode tersebut.", status=422)
         report = PeriodicReport(
             division_name=await self.repo.division_name(division_id) or "-", start=start, end=end,
-            days=await self.repo.periodic_days(division_id, start, end),
+            days=days,
             boq=await self.repo.periodic_boq(division_id, start, end),
             meal=await self.repo.periodic_meal(division_id, start, end),
             generated_by=await self._printer(user), generated_at=jakarta_now(),
@@ -436,13 +439,16 @@ class ExportService:
         end = (date(year + (month == 12), month % 12 + 1, 1)) - timedelta(days=1)
         check_date_range(start, end, start_name="start_date", end_name="end_date")
         await self._manage_division(division_id, user, "Divisi")
+        days = await self.repo.periodic_days(division_id, start, end)
+        if not days:
+            raise AppError("NO_WORK", "Belum ada pekerjaan divisi ini pada bulan tersebut.", status=422)
         prefix = f"exports/monthly/{division_id}/{year}{month:02d}_"
         async with self._dedup(user, prefix, "MONTHLY_REPORT", out_format) as hit:
             if hit is not None:
                 return hit
             report = PeriodicReport(
                 division_name=await self.repo.division_name(division_id) or "-", start=start, end=end,
-                days=await self.repo.periodic_days(division_id, start, end),
+                days=days,
                 boq=await self.repo.periodic_boq(division_id, start, end),
                 meal=await self.repo.periodic_meal(division_id, start, end),
                 generated_by=await self._printer(user), generated_at=jakarta_now(),

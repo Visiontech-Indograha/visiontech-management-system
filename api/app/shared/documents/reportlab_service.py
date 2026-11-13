@@ -258,7 +258,7 @@ def build_completion_pdf_reportlab(r: Any) -> bytes:
 
     # 2. JUDUL DOKUMEN
     story.append(Paragraph("<b>BERITA ACARA SERAH TERIMA PEKERJAAN</b>", styles["title"]))
-    order_no = r.order.get("order_number") or r.order.get("spk_number") or "-"
+    order_no = r.number
     story.append(Paragraph(f"Nomor Referensi: <b>{order_no}</b>", styles["subtitle"]))
     story.append(Spacer(1, 8))
 

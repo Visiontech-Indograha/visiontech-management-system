@@ -431,7 +431,7 @@ export function WorkOrderList({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(wo.work_order_id, "pdf", `BAST_${wo.wo_number}.pdf`)}
+                      onClick={() => downloadWorkOrderExport(wo.work_order_id, "pdf", `Berita_Acara_Serah_Terima_${wo.wo_number}.pdf`)}
                       className="text-xs py-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 flex items-center gap-1.5"
                     >
                       <Download className="h-3.5 w-3.5" />

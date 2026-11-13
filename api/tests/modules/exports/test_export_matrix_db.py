@@ -173,6 +173,9 @@ def test_periodic_other_division_is_404_not_403(client, world: World, other_worl
     today = jakarta_now().date()
     body = {"division_id": world.unit_id, "start_date": today.isoformat(), "end_date": today.isoformat()}
     assert client.post("/exports/periodic", headers=other_world.headers(client, "pm"), json=body).status_code == 404
+    empty = client.post("/exports/periodic", headers=world.headers(client, "pm"), json=body)
+    assert empty.status_code == 422 and empty.json()["error"]["code"] == "NO_WORK", empty.text
+    make_daily_plan(world)
     ok = client.post("/exports/periodic", headers=world.headers(client, "pm"), json=body)
     assert ok.status_code == 200, ok.text
 
@@ -326,7 +329,7 @@ def test_periodic_and_completion_builders_are_offloaded(client, world: World, mo
     today = jakarta_now().date().isoformat()
     pm = world.headers(client, "pm")
     body = {"division_id": world.unit_id, "start_date": today, "end_date": today}
-    assert client.post("/exports/periodic", headers=pm, json=body).status_code == 200
     cid = make_order(client, world)
+    assert client.post("/exports/periodic", headers=pm, json=body).status_code == 200
     assert completion(client, pm, cid, "BOQ", None).status_code == 200
     assert "periodic_xlsx" in seen and "completion_xlsx" in seen

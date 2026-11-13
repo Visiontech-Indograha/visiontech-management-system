@@ -11,7 +11,7 @@ import { ChangePasswordTemplate } from "@/components/templates/auth/ChangePasswo
 
 /** Ganti sandi (wajib saat login pertama). Berhasil → token baru dipasang, kembali ke Beranda. */
 export function ChangePasswordPage() {
-  const { me, applyToken } = useSession();
+  const { me, applyToken, logout } = useSession();
   const navigate = useNavigate();
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<ChangePasswordValues>({ resolver: zodResolver(changePasswordSchema) });
@@ -37,5 +37,11 @@ export function ChangePasswordPage() {
     }
   });
 
-  return <ChangePasswordTemplate form={form} onSubmit={onSubmit} formError={formError} />;
+  return (
+    <ChangePasswordTemplate
+      form={form} onSubmit={onSubmit} formError={formError}
+      forced={!!me.must_change_password}
+      onLogout={() => void logout()}
+    />
+  );
 }

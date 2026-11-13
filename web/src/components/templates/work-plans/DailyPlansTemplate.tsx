@@ -8,10 +8,12 @@ import { DailyWeekMatrix, type MatrixTeam } from "@/components/organisms/work-pl
 import {
   ApproveWeekButton,
   DailyWeekToolbar,
+  MonthlyReportButtons,
   TeamWeekButton,
   WeekRecapButtons,
 } from "@/components/organisms/work-plans/DailyWeekToolbar";
-import type { DailyFormOptions, DailyPlan } from "@/services/dailyPlanService";
+import { WeekSurveysPanel } from "@/components/organisms/work-plans/WeekSurveysPanel";
+import type { DailyFormOptions, DailyPlan, ScheduledSurvey } from "@/services/dailyPlanService";
 import { PageTemplate } from "../PageTemplate";
 
 export type DailyDialog =
@@ -26,6 +28,7 @@ export function DailyPlansTemplate(props: {
   end: string;
   today: string;
   plans: UseQueryResult<DailyPlan[]>;
+  surveys: ScheduledSurvey[];
   options: DailyFormOptions | undefined;
   divisionId: string;
   canPlan: boolean;
@@ -41,6 +44,8 @@ export function DailyPlansTemplate(props: {
   const { start, end, options, divisionId, canPlan, dialog, onDialog } = props;
   const [presentationOpen, setPresentationOpen] = useState(false);
   const teams: MatrixTeam[] = (options?.teams ?? []).filter((t) => !divisionId || t.division_id === divisionId);
+
+  const recapDivision = divisionId || (options?.divisions.length === 1 ? options.divisions[0]!.division_id : "");
 
   return (
     <PageTemplate
@@ -69,14 +74,19 @@ export function DailyPlansTemplate(props: {
           )}
         </div>
         {canPlan && options && (
-          <WeekRecapButtons
-            divisionId={divisionId || (options.divisions.length === 1 ? options.divisions[0]!.division_id : "")}
-            start={start}
-            end={end}
-            onOpenPresentation={() => setPresentationOpen(true)}
-          />
+          <div className="flex flex-col gap-3">
+            <WeekRecapButtons
+              divisionId={recapDivision}
+              start={start}
+              end={end}
+              onOpenPresentation={() => setPresentationOpen(true)}
+            />
+            <MonthlyReportButtons divisionId={recapDivision} start={start} />
+          </div>
         )}
       </div>
+
+      <WeekSurveysPanel surveys={props.surveys} />
 
       <DailyWeekMatrix
         divisionId={divisionId}

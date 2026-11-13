@@ -22,6 +22,7 @@ from functools import lru_cache
 import jwt
 from fastapi import Request
 
+from app.core import system_settings
 from app.core.config import settings
 from app.core.errors import AppError
 from app.core.security import verify_jwt_token
@@ -32,6 +33,8 @@ GROUP_AUTH = "auth"  # /auth/login, /auth/refresh
 GROUP_FILE_URL = "file_url"  # /files/{id}/url
 GROUP_UPLOAD = "upload"  # unggahan berkas, logo ekspor, logo tim
 GROUP_FACE = "face"  # seluruh /face/*
+GROUP_HIKVISION = "hikvision"  # POST /hikvision/events/{token} (push perangkat)
+GROUP_SETUP = "setup"  # /setup/* (penyiapan awal; selalu ditegakkan)
 
 # Batas memori: di atas ini bucket yang sudah penuh dibuang; bila masih penuh, dibuang yang terlama.
 MAX_TRACKED_BUCKETS = 50_000
@@ -117,6 +120,8 @@ def get_limiter() -> TokenBucketLimiter:
                 GROUP_FILE_URL: settings.RATE_LIMIT_FILE_URL_PER_MIN,
                 GROUP_UPLOAD: settings.RATE_LIMIT_UPLOAD_PER_MIN,
                 GROUP_FACE: settings.RATE_LIMIT_FACE_PER_MIN,
+                GROUP_HIKVISION: settings.RATE_LIMIT_HIKVISION_PER_MIN,
+                GROUP_SETUP: settings.RATE_LIMIT_SETUP_PER_MIN,
             }
         )
     return _limiter
@@ -194,8 +199,9 @@ def _user_id(request: Request) -> str | None:
     return str(sub) if sub else None
 
 
-def rate_limit(group: str) -> Callable[[Request], Awaitable[None]]:
-    """Dependency FastAPI: konsumsi token per IP dan (bila ada) per pengguna untuk `group`."""
+def rate_limit(group: str, *, always: bool = False) -> Callable[[Request], Awaitable[None]]:
+    """Dependency FastAPI: konsumsi token per IP dan (bila ada) per pengguna untuk `group`.
+    `always=True`: selalu menolak 429 saat habis, tanpa memandang RATE_LIMIT_ENFORCE."""
 
     async def guard(request: Request) -> None:
         limiter = get_limiter()
@@ -208,7 +214,7 @@ def rate_limit(group: str) -> Callable[[Request], Awaitable[None]]:
             retry_after = limiter.hit(group, f"{scope}:{key}")
             if retry_after == 0:
                 continue
-            if settings.RATE_LIMIT_ENFORCE:
+            if always or system_settings.rate_limit_enforce():
                 raise RateLimitedError(retry_after)
             route = request.scope.get("route")
             path = getattr(route, "path", request.url.path)

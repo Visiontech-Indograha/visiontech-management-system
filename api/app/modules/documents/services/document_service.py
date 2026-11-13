@@ -15,6 +15,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, NotFoundError, ValidationError
+from app.core.file_cleanup import release_keys
 from app.core.permissions import Permission, SystemRole
 from app.core.security import CurrentUser
 from app.modules.documents.repositories.document_repository import DocumentRepository
@@ -81,7 +82,10 @@ class DocumentService:
     async def delete(self, user: CurrentUser, emp_id: UUID, doc_id: UUID) -> None:
         await self._reachable(user, emp_id)
         await self._doc(emp_id, doc_id)
+        key = await self.repo.path_of(doc_id)
         await self.repo.archive(doc_id)
+        if key:  # dokumen salah unggah: berkas pribadi (semua varian) ikut hilang bila tak dipakai lagi
+            await release_keys(self.repo.db, [key])
 
     async def expiring(self, user: CurrentUser, urgency: str | None) -> list[Any]:
         restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_EMPLOYEE_DOCUMENTS)

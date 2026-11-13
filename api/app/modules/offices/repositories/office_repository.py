@@ -33,6 +33,15 @@ _COLUMNS = """
 class OfficeRepository(BaseRepository):
     """Repositori master kantor (tabel `office`)."""
 
+    async def name_taken(self, name: str, exclude_id: UUID | str | None = None) -> bool:
+        """Periksa apakah nama kantor sudah dipakai (case-insensitive, trim, delete_at IS NULL)."""
+        sql = "SELECT 1 FROM office WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) AND delete_at IS NULL"
+        params: dict[str, Any] = {"name": name}
+        if exclude_id is not None:
+            sql += " AND office_id <> CAST(:exclude_id AS uuid)"
+            params["exclude_id"] = str(exclude_id)
+        return bool(await self.scalar(f"SELECT EXISTS ({sql})", params))
+
     async def list_active(self) -> list[Any]:
         """Semua kantor aktif, kantor utama lebih dulu."""
         return list(
@@ -87,6 +96,11 @@ class OfficeRepository(BaseRepository):
             {**data, "id": str(office_id)},
         )
         return await self.get(office_id)
+
+    async def has_main(self) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM office WHERE is_main_office AND delete_at IS NULL)"
+        ))
 
     async def set_main(self, office_id: UUID | str) -> None:
         """Jadikan kantor ini kantor utama (yang lama dilepas lebih dulu — uq_single_main_office)."""

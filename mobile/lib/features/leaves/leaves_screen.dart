@@ -11,6 +11,7 @@ import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import 'leave_backdate.dart';
 
 final _tgl = DateFormat('d MMM yyyy', 'id_ID');
 final _iso = DateFormat('yyyy-MM-dd');
@@ -42,6 +43,8 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
   Map<String, dynamic>? _balance;
   bool _loading = true;
   String? _error;
+  String? _notice; // hasil aksi batal: tetap terlihat di layar, tidak hilang seperti snackbar
+  bool _cancelling = false;
   final _query = ListQuery();
 
   @override
@@ -112,19 +115,31 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
         ],
       ),
     );
-    if (ok != true) return;
+    if (ok != true || _cancelling) return;
+    setState(() {
+      _cancelling = true;
+      _notice = null;
+    });
+    String? message;
     try {
       await ref
           .read(syncEngineProvider)
           .api
           .cancelLeave(leave['leave_id'] as String);
-      await _load();
+      message = 'Pengajuan cuti dibatalkan.';
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(apiErrorMessage(e))));
-      }
+      message = apiErrorMessage(e, fallback: 'Pengajuan cuti belum bisa dibatalkan. Coba lagi.');
     }
+    // Muat ulang apa pun hasilnya: status di server mungkin sudah berubah (mis. sudah disetujui atasan).
+    await _load();
+    if (!mounted) return;
+    setState(() {
+      _cancelling = false;
+      _notice = message;
+    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _apply() async {
@@ -158,6 +173,11 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
               const Padding(
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),
+              ),
+            if (_notice != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: SurfaceCard(child: Text(_notice!, style: VmsTextStyles.bodySm)),
               ),
             if (_error != null)
               Padding(
@@ -260,7 +280,7 @@ class _LeavesScreenState extends ConsumerState<LeavesScreen> with WidgetsBinding
                 const Spacer(),
                 if (leaveCancellable(status))
                   TextButton(
-                    onPressed: () => _cancel(l),
+                    onPressed: _cancelling ? null : () => _cancel(l),
                     child: const Text('Batalkan'),
                   ),
               ],
@@ -311,13 +331,23 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
     super.dispose();
   }
 
+  UserRole get _role {
+    final s = ref.read(authControllerProvider);
+    return s is AuthAuthenticated ? s.user.role : UserRole.member;
+  }
+
   Future<void> _pick(bool start) async {
-    final now = DateTime.now();
+    final today = jakartaToday();
+    final earliest = leaveEarliestStart(_role);
+    // Tanggal akhir tidak boleh sebelum tanggal mulai.
+    final first = start ? earliest : (_start ?? earliest);
+    var initial = (start ? _start : _end) ?? _start ?? today;
+    if (initial.isBefore(first)) initial = first;
     final d = await showDatePicker(
       context: context,
-      initialDate: (start ? _start : _end) ?? _start ?? now,
-      firstDate: now.subtract(const Duration(days: 30)),
-      lastDate: now.add(const Duration(days: 365)),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: today.add(const Duration(days: 365)),
     );
     if (d == null) return;
     setState(() {
@@ -351,6 +381,10 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
       setState(
         () => _error = 'Lengkapi tanggal dan alasan (minimal 3 karakter).',
       );
+      return;
+    }
+    if (!leaveBackdateExempt(_role) && _start!.isBefore(leaveEarliestStart(_role))) {
+      setState(() => _error = leaveBackdateMessage);
       return;
     }
     setState(() {

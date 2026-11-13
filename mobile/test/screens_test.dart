@@ -30,16 +30,29 @@ import 'support/fake_backend.dart';
 /// Uji widget layar utama (dulu belum ada — MVP mengejar tampilan dulu):
 /// memuat, kosong, galat/luring, berhasil; plus aturan K-12 di layar absensi.
 
+String? _officeIdUji;
+
 class _SignedIn extends AuthController {
   @override
-  AuthState build() => const AuthAuthenticated(
+  AuthState build() => AuthAuthenticated(
     AuthUser(
       id: 'u1',
       username: 'teknisi@contoh.test',
       role: UserRole.member,
       employeeId: 'e1',
+      officeId: _officeIdUji,
     ),
   );
+}
+
+/// GPS mati: tidak ada titik lokasi sama sekali.
+class _GpsMati extends GeolocatorPlatform {
+  @override
+  Future<bool> isLocationServiceEnabled() async => false;
+  @override
+  Future<LocationPermission> checkPermission() async => LocationPermission.denied;
+  @override
+  Future<LocationPermission> requestPermission() async => LocationPermission.denied;
 }
 
 /// GPS palsu: selalu mengembalikan [position] tanpa menyentuh plugin.
@@ -104,6 +117,7 @@ void main() {
       final dir = await Directory.systemTemp.createTemp('vms-swafoto');
       return (File('${dir.path}/swafoto.jpg')..writeAsBytesSync([1, 2, 3]), null);
     };
+    _officeIdUji = null;
     db = memoryDb();
     backend = FakeBackend();
     engine = engineWith(db, backend);
@@ -238,6 +252,19 @@ void main() {
       await settle(tester);
     }
 
+    testWidgets('B-19: tanpa GPS dan tanpa riwayat, lokasi bawaan = kantor sendiri', (tester) async {
+      online();
+      backend.routes['/offices'] = (_) => [
+        {'id': 'lain', 'name': 'Kantor Lain', 'radius_m': 100, 'location': {'lat': 1.0, 'lng': 101.0}},
+        {'id': 'saya', 'name': 'Kantor Saya', 'radius_m': 100, 'location': {'lat': 2.0, 'lng': 102.0}},
+      ];
+      _officeIdUji = 'saya';
+      GeolocatorPlatform.instance = _GpsMati();
+      await show(tester, const AttendanceScreen());
+      expect(find.text('Kantor Saya'), findsWidgets);
+      expect(find.text('Kantor Lain'), findsNothing);
+    });
+
     testWidgets(
       'K-12: akurasi GPS > 100 m ditolak sebelum swafoto/pengiriman',
       (tester) async {
@@ -281,6 +308,19 @@ void main() {
         expect(find.text('Absen masuk tercatat.'), findsOneWidget);
       },
     );
+
+    testWidgets('E5-5: absen masuk sukses memberi tahu layar Jadwal harian agar menyegarkan diri', (tester) async {
+      online();
+      GeolocatorPlatform.instance = _FakeGps(_at(1.6650, 101.4478, accuracy: 8));
+      await show(tester, const AttendanceScreen());
+      final before = SyncEngine.appliedRevision.value;
+
+      await tapCheckInSampaiSwafoto(tester);
+      await lanjutSwafoto(tester);
+
+      expect(find.text('Absen masuk tercatat.'), findsOneWidget);
+      expect(SyncEngine.appliedRevision.value, greaterThan(before));
+    });
 
     testWidgets('lokasi tugas hari ini (jadwal disetujui) didahulukan dan dikirim sebagai daily_plan_id', (tester) async {
       online();
@@ -522,6 +562,24 @@ void main() {
       await tester.tap(find.text('Kirim'));
       await settle(tester);
       expect(find.text('Jam lembur harus lebih dari 0 dan paling banyak 12 jam.'), findsOneWidget);
+    });
+
+    testWidgets('E5-6: jam lembur kosong: galat di dalam dialog, dialog tetap terbuka, bukan toast sukses', (tester) async {
+      backend.routes['/work-plans/daily/a'] = (_) => planDetail('ONGOING');
+      backend.routes['/report'] = (o) => throw httpError(o, 404, {'error': {'code': 'NOT_FOUND', 'message': 'x'}});
+      backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
+      await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
+      await tester.scrollUntilVisible(find.text('Ajukan lembur'), 300, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Ajukan lembur'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Jam lembur (maks. 12)'), '');
+      await tester.enterText(find.widgetWithText(TextField, 'Alasan'), 'Alasan lembur');
+      await tester.tap(find.text('Kirim'));
+      await settle(tester);
+      expect(find.byKey(const Key('lembur-galat')), findsOneWidget);
+      expect(find.text('Isi jam lembur dengan angka.'), findsOneWidget);
+      expect(find.text('Ajukan lembur'), findsWidgets);
+      expect(find.widgetWithText(TextField, 'Alasan'), findsOneWidget);
     });
 
     void routeReport({bool exists = true}) {

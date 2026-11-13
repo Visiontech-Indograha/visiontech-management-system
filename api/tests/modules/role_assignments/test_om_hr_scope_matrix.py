@@ -35,6 +35,14 @@ def _day(offset: int) -> str:
     return (jakarta_now().date() + timedelta(days=offset)).isoformat()
 
 
+def _workday(offset: int) -> str:
+    """Hari kerja (bukan Minggu) pada/setelah offset: cuti 1 hari di hari Minggu ditolak (422)."""
+    day = jakarta_now().date() + timedelta(days=offset)
+    while day.weekday() == 6:
+        day += timedelta(days=1)
+    return day.isoformat()
+
+
 @pytest.fixture
 def flag_on(monkeypatch):
     monkeypatch.setattr(settings, "ROLE_ASSIGNMENT_ENABLED", True)
@@ -130,7 +138,7 @@ def test_offboarding_flag_off_parity(client, world: World, other_world: World, f
 @pytest.fixture
 def leave_b(client, other_world: World):
     r = client.post("/leaves", headers=other_world.headers(client, "member"), json={
-        "leave_type": "SICK", "start_date": _day(40), "end_date": _day(40), "reason": "Uji matriks cakupan"})
+        "leave_type": "SICK", "start_date": _workday(40), "end_date": _workday(40), "reason": "Uji matriks cakupan"})
     assert r.status_code == 201, r.text
     return r.json()["leave_id"]
 

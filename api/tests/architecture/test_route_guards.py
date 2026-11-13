@@ -26,7 +26,7 @@ from tests.conftest import World, requires_db, sync_query
 SELF_SERVICE = {
     ("GET", "/hse/campaigns/active-popup"): "popup K3 wajib baca untuk pengguna yang login; hanya kampanye aktif yang menyasar akun itu",
     ("POST", "/hse/campaigns/{campaign_id}/acknowledge"): "konfirmasi baca atas nama akun sendiri (user_id dari token)",
-    ("POST", "/hse/inspections"): "pengemudi/karyawan lapangan mengirim formulir inspeksi kendaraan (pelapor dari token)",
+    ("GET", "/vehicle-documents/mine"): "hanya dokumen kendaraan yang sedang dikemudikan akun itu (employee_id dari token, diuji)",
     ("GET", "/auth/me"): "profil sendiri",
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
     ("POST", "/auth/sessions/revoke-others"): "mencabut perangkat lain milik sendiri (P1-7, diuji)",
@@ -105,6 +105,9 @@ GUARDED_IN_HANDLER = {
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
     ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",
     # M4: inspeksi oleh pengelola aset ATAU pemegang kendaraan saat itu (ditentukan peminjaman berjalan).
+    ("POST", "/hse/inspections"): "HseService: manage:vehicle_inspections, pengemudi aktif, atau ketua tim (diuji)",
+    ("GET", "/hse/inspections/mine"): "milik sendiri (pemeriksa atau pengemudi aktif), difilter di SQL",
+    ("GET", "/hse/inspections/checklist-template"): "daftar butir baku statis, tanpa data pribadi",
     ("POST", "/assets/vehicles/{vehicle_id}/inspections"): "AssetService: manage:assets atau pemegang (diuji)",
     ("POST", "/work-plans/daily/{daily_plan_id}/corrections"): "DailyCorrectionService: hanya ketua tim jadwal (diuji)",
     ("POST", "/work-plans/corrections/{correction_id}/decision"): "DailyCorrectionService: hanya PM/OM divisi (diuji)",
@@ -127,6 +130,8 @@ GUARDED_IN_HANDLER = {
         "WorkCompletionService._access: ketua di tim order atau PM; terkunci setelah disetujui PM",
     # Work Orders V2
     ("GET", "/work-orders"): "WorkOrderService: filter peran dan divisi pengguna",
+    ("GET", "/work-orders/team-surveys"): "WorkOrderService: hanya survei WO tim yang diikuti pemanggil (ketua/anggota)",
+    ("GET", "/work-orders/pm-candidates"): "WorkOrderService.list_pm_candidates: SA/OM semua divisi, PM divisinya (diuji), lain 403",
     ("POST", "/work-orders"): "WorkOrderService: hanya PM/OM/Super Admin",
     ("GET", "/work-orders/{work_order_id}"): "WorkOrderService: detail lengkap WO, titik survei & items",
     ("POST", "/work-orders/{work_order_id}/assign-survey"): "WorkOrderService: hanya PM menunjuk ketua tim survei",
@@ -206,6 +211,19 @@ def test_allowlists_have_no_stale_entries():
     routes = _routes()
     assert set(SELF_SERVICE) <= set(routes)
     assert set(GUARDED_IN_HANDLER) <= set(routes)
+
+
+def test_allowlist_entries_are_not_redundant_or_unexplained():
+    """B-32: rute yang sudah punya `require_permission`/penjaga tidak perlu masuk allowlist (entri basi menyamarkan
+    pelonggaran nanti), dan tiap entri wajib beralasan."""
+    routes = _routes()
+    for name, table in (("SELF_SERVICE", SELF_SERVICE), ("GUARDED_IN_HANDLER", GUARDED_IN_HANDLER)):
+        assert all(str(reason).strip() for reason in table.values()), f"{name}: alasan kosong"
+        redundant = sorted(
+            key for key in table
+            if key in routes and any(guard in dep for dep in routes[key] for guard in _GUARDS)
+        )
+        assert redundant == [], f"{name} memuat rute yang sudah berizin: {redundant}"
 
 
 def _other_unit_pm(world: World) -> None:

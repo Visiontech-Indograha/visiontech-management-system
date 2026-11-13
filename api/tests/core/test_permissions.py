@@ -18,7 +18,8 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     SystemRole.OPERATIONAL_MANAGER: {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
         P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES,
-        P.MANAGE_DIVISIONS, P.EXPORT_ATTENDANCE,
+        P.MANAGE_DIVISIONS, P.EXPORT_ATTENDANCE, P.MANAGE_FIELD_ROLE_ASSIGNMENTS, P.MANAGE_HIKVISION,
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
     },
     # Lokasi proyek PM ada di jadwal harian (bukan master kantor) — tanpa MANAGE_SITES.
     SystemRole.PROJECT_MANAGER: {
@@ -29,6 +30,7 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     SystemRole.ADMIN_HR_GA: {
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS, P.MANAGE_MESS,
         P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS, P.VIEW_ALL_ATTENDANCE,
+        P.REVIEW_ATTENDANCE, P.MANAGE_HIKVISION,
     },
     # Finance melihat, meninjau, dan mengekspor absensi seluruh karyawan; lembur; kelola kantor (sama V1).
     SystemRole.FINANCE: {
@@ -38,6 +40,7 @@ EXPECTED_EXTRA: dict[SystemRole, set[Permission]] = {
     SystemRole.HSE: {
         P.MANAGE_HSE_CAMPAIGNS, P.VIEW_HSE_CAMPAIGNS,
         P.MANAGE_VEHICLE_INSPECTIONS, P.VIEW_VEHICLE_INSPECTIONS,
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
         P.MANAGE_EMPLOYEE_DOCUMENTS, P.VERIFY_DOCUMENTS,
     },
     # Ketua/anggota tim mendapat wewenangnya dari keanggotaan tim, bukan peran global.

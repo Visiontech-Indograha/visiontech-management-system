@@ -10,8 +10,11 @@ import '../../core/team_logo.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
-import 'daily_plan_screen.dart' show DailyPlanScreen, phaseLabel;
-import 'survey_screen.dart' show MySurveysSection, openReportFile;
+import 'daily_plan_format.dart' show phaseLabel;
+import 'daily_plan_screen.dart' show DailyPlanScreen;
+import 'my_surveys_section.dart' show MySurveysSection;
+import 'survey_screen.dart' show openReportFile;
+import 'wo_team_surveys_section.dart';
 
 String isoDate(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
@@ -53,6 +56,7 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
   }
 
   int _loadSeq = 0;
+  int _refreshes = 0;
 
   Future<void> _load() async {
     final seq = ++_loadSeq; // respons minggu lama tidak boleh menimpa minggu yang sedang dilihat
@@ -131,7 +135,10 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
     return Scaffold(
       appBar: const VmsTopBar(trailing: NotificationBell()),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: () {
+          setState(() => _refreshes++);
+          return _load();
+        },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
           children: [
@@ -330,6 +337,8 @@ class _DailyPlansScreenState extends ConsumerState<DailyPlansScreen> {
                   index: n,
                   child: _PlanCard(plan: p, today: today, onTap: () => _open(p)),
                 ),
+            const SizedBox(height: 12),
+            WoTeamSurveysSection(key: ValueKey('wo-$_monday'), reloadToken: _refreshes),
           ],
         ),
       ),

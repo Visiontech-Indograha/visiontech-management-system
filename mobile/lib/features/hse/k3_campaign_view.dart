@@ -265,7 +265,11 @@ class _K3CampaignViewState extends State<K3CampaignView> with WidgetsBindingObse
             ),
           ),
         ),
-        TextButton(onPressed: _openText, child: const Text('Baca keterangan')),
+        TextButton(
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          onPressed: _openText,
+          child: const Text('Baca keterangan'),
+        ),
         IconButton(
           tooltip: _landscapeLocked ? 'Lepas kunci layar' : 'Putar layar',
           icon: const Icon(Icons.screen_rotation),
@@ -382,18 +386,21 @@ class _K3CampaignViewState extends State<K3CampaignView> with WidgetsBindingObse
           IconButton(
             tooltip: 'Perbesar',
             color: Colors.white,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(Icons.zoom_in),
             onPressed: () => _setScale(_scale * 1.5, _center),
           ),
           IconButton(
             tooltip: 'Perkecil',
             color: Colors.white,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(Icons.zoom_out),
             onPressed: () => _setScale(_scale / 1.5, _center),
           ),
           IconButton(
             tooltip: 'Pas layar',
             color: Colors.white,
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             icon: const Icon(Icons.fit_screen),
             onPressed: () => _setScale(1, _center),
           ),
@@ -437,7 +444,11 @@ class _K3CampaignViewState extends State<K3CampaignView> with WidgetsBindingObse
               children: [
                 Expanded(
                   child: TextButton.icon(
-                    style: TextButton.styleFrom(foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 4)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
                     onPressed: () => _goRelative(-1),
                     icon: const Icon(Icons.chevron_left),
                     label: const Text('Sebelumnya'),
@@ -445,7 +456,11 @@ class _K3CampaignViewState extends State<K3CampaignView> with WidgetsBindingObse
                 ),
                 Expanded(
                   child: TextButton.icon(
-                    style: TextButton.styleFrom(foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 4)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      minimumSize: const Size.fromHeight(48),
+                    ),
                     onPressed: () => _goRelative(1),
                     icon: const Icon(Icons.chevron_right),
                     label: const Text('Selanjutnya'),
@@ -502,7 +517,7 @@ class _K3CampaignViewState extends State<K3CampaignView> with WidgetsBindingObse
           )
         else
           const SizedBox(
-            height: 36,
+            height: 48,
             child: FilledButton(
               onPressed: null,
               child: Text('Baca sampai waktu habis', textAlign: TextAlign.center),

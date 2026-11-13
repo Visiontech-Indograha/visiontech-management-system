@@ -1,3 +1,4 @@
+import { leaderCandidates } from "@/lib/pmCandidates";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DialogActions } from "@/components/molecules/DialogActions";
@@ -71,7 +72,7 @@ export function TeamFormDialog({ onClose }: { onClose: () => void }) {
         <TextField label="Cari calon ketua" placeholder="Nama / NIK" value={q} onChange={(e) => setQ(e.target.value)} />
         <SelectField label="Ketua tim" value={leaderId} onChange={(e) => setLeaderId(e.target.value)}>
           <ControlOption value="">Pilih ketua tim</ControlOption>
-          {(employees.data?.items ?? []).map((e) => (
+          {leaderCandidates(employees.data?.items).map((e) => (
             <ControlOption key={e.employee_id} value={e.employee_id}>{`${e.full_name} (${e.employee_no})`}</ControlOption>
           ))}
         </SelectField>

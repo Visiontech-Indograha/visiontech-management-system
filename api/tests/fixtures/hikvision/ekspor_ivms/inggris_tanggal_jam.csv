@@ -1,0 +1,4 @@
+Person ID,Name,Date,Time,Attendance Status,Device Name,Card No.
+1001,Karyawan A,2026-10-01,07:55:10,Check-in,Pintu Utama,
+1001,Karyawan A,2026-10-01,17:05:00,Check-out,Pintu Utama,
+1002,Karyawan B,2026-10-02,08:01:00,Check-in,Pintu Utama,12345

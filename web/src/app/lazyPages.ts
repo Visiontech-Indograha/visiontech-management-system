@@ -1,6 +1,8 @@
 import { lazy } from "react";
 
 /** Halaman dimuat saat dibuka (code-splitting) — muatan awal kecil (R-12, performa). */
+export const VehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/VehicleDocsPage").then((m) => ({ default: m.VehicleDocsPage })));
+export const MyVehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/MyVehicleDocsPage").then((m) => ({ default: m.MyVehicleDocsPage })));
 export const AssetsPage = lazy(() => import("@/pages/assets/AssetsPage").then((m) => ({ default: m.AssetsPage })));
 export const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage").then((m) => ({ default: m.AttendancePage })));
 export const AuditLogPage = lazy(() => import("@/pages/audit/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
@@ -8,7 +10,10 @@ export const DirectoryPage = lazy(() => import("@/pages/directory/DirectoryPage"
 export const EmployeeDetailPage = lazy(() => import("@/pages/directory/EmployeeDetailPage").then((m) => ({ default: m.EmployeeDetailPage })));
 export const MyDocumentsPage = lazy(() => import("@/pages/directory/MyDocumentsPage").then((m) => ({ default: m.MyDocumentsPage })));
 export const WorkTypesPage = lazy(() => import("@/pages/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
+export const DivisionsPage = lazy(() => import("@/pages/divisions/DivisionsPage").then((m) => ({ default: m.DivisionsPage })));
 export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
+export const HikvisionDevicesPage = lazy(() => import("@/pages/hikvision/HikvisionDevicesPage").then((m) => ({ default: m.HikvisionDevicesPage })));
+export const SystemSettingsPage = lazy(() => import("@/pages/system/SystemSettingsPage").then((m) => ({ default: m.SystemSettingsPage })));
 export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
 export const AllocationPage = lazy(() => import("@/pages/alokasi/AllocationPage").then((m) => ({ default: m.AllocationPage })));
 export const AttendanceRecapPage = lazy(() => import("@/pages/monitoring/AttendanceRecapPage").then((m) => ({ default: m.AttendanceRecapPage })));
@@ -28,3 +33,4 @@ export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then
 export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));
 export const WorkOrdersPage = lazy(() => import("@/pages/work-orders/WorkOrderBoardPage").then((m) => ({ default: m.WorkOrderBoardPage })));
 export const HseCampaignsPage = lazy(() => import("@/pages/hse/HseCampaignsPage").then((m) => ({ default: m.HseCampaignsPage })));
+export const VehicleInspectionsPage = lazy(() => import("@/pages/hse/VehicleInspectionsPage").then((m) => ({ default: m.VehicleInspectionsPage })));

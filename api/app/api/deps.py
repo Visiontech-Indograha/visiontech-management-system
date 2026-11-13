@@ -54,7 +54,30 @@ def _unauthenticated() -> AppError:
     return AppError("UNAUTHENTICATED", "Sesi berakhir. Silakan masuk kembali.", status=401)
 
 
+# Klien baru (web, mobile) mengirim header ini agar dikenai kewajiban ganti sandi. APK lama tidak mengirimnya, jadi
+# tidak terkunci tanpa jalan keluar (ia tak punya layar ganti sandi paksa). /auth/me tetap melaporkan bendera.
+CAPABILITIES_HEADER = "X-App-Capabilities"
+CAP_MUST_CHANGE_PASSWORD = "must-change-password"
+_PASSWORD_CHANGE_ALLOWED = ("/auth/me", "/auth/change-password", "/auth/logout", "/version")
+
+
+def _enforce_password_change(request: Request, must_change: bool) -> None:
+    """403 MUST_CHANGE_PASSWORD bagi klien yang opt-in selama sandi sementara belum diganti."""
+    if not must_change:
+        return
+    caps = request.headers.get(CAPABILITIES_HEADER, "").lower().replace(" ", "").split(",")
+    if CAP_MUST_CHANGE_PASSWORD not in caps:
+        return
+    path = request.url.path.rstrip("/")
+    if any(path.endswith(allowed) for allowed in _PASSWORD_CHANGE_ALLOWED):
+        return
+    raise AppError(
+        "MUST_CHANGE_PASSWORD", "Anda harus mengganti kata sandi sementara terlebih dahulu.", status=403
+    )
+
+
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db, scope=DB_SCOPE),
 ) -> CurrentUser:
@@ -96,6 +119,8 @@ async def get_current_user(
     if not alive:
         raise _unauthenticated()
 
+    must_change = bool(getattr(identity, "must_change_password", False))
+    _enforce_password_change(request, must_change)
     roles = list(identity.roles)
     return CurrentUser(
         user_id=user_id,
@@ -106,10 +131,14 @@ async def get_current_user(
         session_id=session_id,
         permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
         employee_id=str(identity.employee_id) if getattr(identity, "employee_id", None) else None,
+        office_id=str(identity.office_id) if getattr(identity, "office_id", None) else None,
+        division_id=str(identity.division_id) if getattr(identity, "division_id", None) else None,
+        must_change_password=must_change,
     )
 
 
 async def get_file_viewer(
+    request: Request,
     file_id: UUID,
     token: str | None = Query(None, alias="token"),
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -161,6 +190,7 @@ async def get_file_viewer(
     identity = await CRUDUser(db).find_identity(user_id)
     if not identity or not identity.is_active:
         raise _unauthenticated()
+    _enforce_password_change(request, bool(getattr(identity, "must_change_password", False)))
 
     roles = list(identity.roles)
     return CurrentUser(
@@ -173,6 +203,8 @@ async def get_file_viewer(
         permissions=permissions_for_roles(roles or [NO_GLOBAL_ROLE]),
         # Tanpa ini pemeriksaan "boleh melihat jadwal" (foto bukti/survei) selalu gagal untuk <img>/tiket berkas.
         employee_id=str(identity.employee_id) if getattr(identity, "employee_id", None) else None,
+        office_id=str(identity.office_id) if getattr(identity, "office_id", None) else None,
+        division_id=str(identity.division_id) if getattr(identity, "division_id", None) else None,
     )
 
 
@@ -269,6 +301,10 @@ async def get_db_with_user(
             user_id=current_user.user_id,
             organization_id=current_user.organization_id,
             actor_label=current_user.email,
+            role=current_user.role,
+            office_id=current_user.office_id,
+            division_id=current_user.division_id,
+            is_system=False,
         )
     except SQLAlchemyError as exc:
         # Dok 17: tanpa data pribadi & tanpa isi galat DB ke Discord; detail lengkap ada di log.
@@ -308,6 +344,10 @@ async def get_file_viewer_db(
             user_id=current_user.user_id,
             organization_id=current_user.organization_id,
             actor_label=current_user.email,
+            role=current_user.role,
+            office_id=current_user.office_id,
+            division_id=current_user.division_id,
+            is_system=False,
         )
     except SQLAlchemyError as exc:
         logger.exception("Konteks RLS gagal disetel untuk akses berkas")

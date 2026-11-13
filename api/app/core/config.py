@@ -110,6 +110,10 @@ class Settings(BaseSettings):
 
     # Discord #vms-alerts (dok 17). Kosong = peringatan hanya dicatat di log.
     DISCORD_WEBHOOK_ALERTS: str = ""
+    # Hapus terjadwal (core/retention_job): pemutus otomatis, ukuran batch, batas waktu total satu jalan.
+    RETENTION_MAX_PER_TYPE: int = 500
+    RETENTION_BATCH_SIZE: int = 50
+    RETENTION_MAX_SECONDS: int = 1200
 
     # Konfigurasi penyimpanan objek (S3/MinIO)
     MINIO_ENDPOINT: str = "127.0.0.1:9000"
@@ -170,10 +174,21 @@ class Settings(BaseSettings):
     # Peran ganda (ADR 0002): bila true, izin dan cakupan kantor memakai union peran utama + penugasan aktif
     # (tabel user_role_assignment). Bawaan MATI = perilaku lama persis (peran utama saja).
     ROLE_ASSIGNMENT_ENABLED: bool = False
+    # Setelan sistem (tabel system_setting, lihat app/core/system_settings.py). Prioritas: override darurat ini
+    # > nilai di tabel > env biasa (ROLE_ASSIGNMENT_ENABLED, RATE_LIMIT_ENFORCE). Format "KUNCI=true,KUNCI=false".
+    # Kunci yang diisi di sini terkunci (tidak bisa diubah lewat API) sampai env dikosongkan.
+    SYSTEM_SETTINGS_FORCE: str = ""
     RATE_LIMIT_AUTH_PER_MIN: int = 30
     RATE_LIMIT_FILE_URL_PER_MIN: int = 120
     RATE_LIMIT_UPLOAD_PER_MIN: int = 60
     RATE_LIMIT_FACE_PER_MIN: int = 60
+    # Penerima push perangkat absensi Hikvision (per IP perangkat; selalu ditegakkan, burst saat jam masuk).
+    RATE_LIMIT_HIKVISION_PER_MIN: int = 600
+    # Penyiapan awal (POST /setup/admin): selalu ditegakkan (tidak ikut RATE_LIMIT_ENFORCE).
+    RATE_LIMIT_SETUP_PER_MIN: int = 10
+    # Kode penyiapan sekali pakai untuk membuat admin pertama lewat web. Kosong (atau < 24 karakter) = endpoint
+    # POST /setup/admin mati (404). Isi hanya saat memasang instalasi baru; kosongkan lagi sesudahnya.
+    SETUP_TOKEN: str = ""
     # Proxy tepercaya (IP atau CIDR, dipisah koma). X-Forwarded-For hanya dibaca bila koneksi datang dari sini.
     # Kosong = abaikan X-Forwarded-For (sama seperti login: pakai IP koneksi langsung).
     TRUSTED_PROXY_IPS: str = ""

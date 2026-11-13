@@ -5,13 +5,14 @@ import { LoginForm } from "@/components/organisms/auth/LoginForm";
 import type { LoginValues } from "@/schemas/loginSchema";
 
 /** Kerangka login: panel merek (desktop) + kartu login + tautan unduh aplikasi Android. */
-export function LoginTemplate({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds }: {
+export function LoginTemplate({ admin, form, onSubmit, formError, formErrorCode = null, lockSeconds, showSetupLink = false }: {
   admin: boolean;
   form: UseFormReturn<LoginValues>;
   onSubmit: () => void;
   formError: string | null;
   formErrorCode?: string | null;
   lockSeconds: number;
+  showSetupLink?: boolean;
 }) {
   return (
     <main className="no-reveal grid min-h-screen bg-background lg:grid-cols-[1.1fr_1fr]">
@@ -26,6 +27,7 @@ export function LoginTemplate({ admin, form, onSubmit, formError, formErrorCode 
           formError={formError}
           formErrorCode={formErrorCode}
           lockSeconds={lockSeconds}
+          showSetupLink={showSetupLink}
         />
         <AndroidAppLink />
       </section>

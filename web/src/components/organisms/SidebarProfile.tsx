@@ -49,7 +49,7 @@ export function SidebarProfile({ email, name, photoFileId, roleLabel, scopeLines
         open={confirmLogout}
         title="Keluar dari akun?"
         message="Anda akan keluar dari aplikasi di perangkat ini."
-        confirmLabel="Keluar"
+        confirmLabel="Ya, keluar"
         onConfirm={onLogout}
         onClose={() => setConfirmLogout(false)}
       />

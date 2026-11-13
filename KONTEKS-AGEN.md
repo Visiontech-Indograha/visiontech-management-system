@@ -1,3 +1,5 @@
+> Serah terima AI terbaru: [docs/SERAH-TERIMA-AI.md](docs/SERAH-TERIMA-AI.md)
+
 # Konteks untuk agen AI
 
 Repo ini adalah **VMS lama (v1.5.0, masih produksi)**. Aturan kerja, perintah, dan alur ada di `CLAUDE.md` (lokal) dan `README`. CHANGELOG.md bersifat lokal dan tidak di-commit; catatan rilis dibuat otomatis dari judul/deskripsi PR (rilis.yml --generate-notes).

@@ -76,7 +76,7 @@ function Callout({ point, n }: { point: Point; n: number }) {
     <div className="w-48">
       <TextBlock className="text-xs font-semibold">{`${n}. ${point.name}`}</TextBlock>
       {point.site_lat && point.site_lng && (
-        <TextBlock className="text-[10px] text-mist">{`${Number(point.site_lat).toFixed(5)}, ${Number(point.site_lng).toFixed(5)}`}</TextBlock>
+        <TextBlock className="text-xs text-mist">{`${Number(point.site_lat).toFixed(5)}, ${Number(point.site_lng).toFixed(5)}`}</TextBlock>
       )}
       {url && <ImageView src={url} alt={point.name} className="mt-1 h-32 w-full rounded object-cover shadow-sm" />}
     </div>
@@ -88,6 +88,7 @@ function Callout({ point, n }: { point: Point; n: number }) {
 export function SurveyLayoutMap({ survey }: { survey: Survey }) {
   const move = useMoveSurveyPoint(survey.task_id);
   const [placing, setPlacing] = useState<string | null>(null);
+  const [tileFailed, setTileFailed] = useState(false);
   const coords = useMemo(() => survey.points.map(coord).filter((c): c is LatLng => c !== null), [survey.points]);
   const missing = survey.points.filter((p) => !coord(p));
   const editable = survey.can_move;
@@ -118,10 +119,15 @@ export function SurveyLayoutMap({ survey }: { survey: Survey }) {
           ))}
         </div>
       )}
+      {tileFailed && (
+        <TextBlock role="alert" className="text-sm text-warning">
+          Gambar peta tidak bisa dimuat. Periksa sambungan internet, lalu coba lagi nanti.
+        </TextBlock>
+      )}
       <div className="h-[65vh] min-h-[400px] overflow-hidden rounded-panel border border-line shadow-card">
         <MapContainer center={coords[0] ?? [0.79, 101.45]} zoom={coords.length ? 18 : 12} maxZoom={19} scrollWheelZoom={false}
           className="h-full w-full">
-          <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} />
+          <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} eventHandlers={{ tileerror: () => setTileFailed(true) }} />
           <FitPoints coords={coords} />
           {placing && <MapClickToPlace onPick={(c) => { save(placing, c); setPlacing(null); }} />}
           {survey.points.map((p, i) => {

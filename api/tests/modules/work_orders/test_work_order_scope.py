@@ -54,7 +54,7 @@ def _post(client, world: World, who: str, path: str, body: dict | None = None):
 
 def test_assign_survey_only_managers_in_scope(client, world: World):
     _setup_scope(world)
-    body = {"lead_team_id": world.team_id}
+    body = {"lead_team_id": world.team_id, "survey_date": "2026-12-01"}
     for who in ("ops", "pm", "admin"):
         wo = _work_order(world, team=False)
         ok = _post(client, world, who, f"/work-orders/{wo['work_order_id']}/assign-survey", body)
@@ -226,7 +226,7 @@ def test_bast_out_of_scope_is_not_found(client, world: World):
 def test_export_document_managers_in_scope_only(client, world: World):
     _setup_scope(world)
     wo = _work_order(world, status="IN_PROGRESS", items_done=True)
-    path = f"/work-orders/{wo['work_order_id']}/export/DOCX"
+    path = f"/work-orders/{wo['work_order_id']}/export/SURVEY"
     for who in ("member", "leader"):
         denied = client.get(path, headers=world.headers(client, who))
         assert denied.status_code == 403, (who, denied.text)
@@ -234,6 +234,56 @@ def test_export_document_managers_in_scope_only(client, world: World):
     assert other_pm.status_code == 404, other_pm.text
     ok = client.get(path, headers=world.headers(client, "pm"))
     assert ok.status_code == 200, ok.text
+
+
+def _doc_text(content: bytes) -> str:
+    import io
+
+    import docx
+
+    d = docx.Document(io.BytesIO(content))
+    parts = [p.text for p in d.paragraphs]
+    for t in d.tables:
+        parts += [c.text for row in t.rows for c in row.cells]
+    for sec in d.sections:
+        parts += [p.text for p in sec.header.paragraphs]
+        for t in sec.header.tables:
+            parts += [c.text for row in t.rows for c in row.cells]
+    return chr(10).join(parts)
+
+
+def test_bast_export_refused_until_signed_and_points_to_survey_report(client, world: World):
+    _setup_scope(world)
+    wo = _work_order(world, status="SURVEY_SUBMITTED")
+    pm = world.headers(client, "pm")
+    for template in ("PDF", "DOCX", "BAST_PDF", "BAST"):
+        r = client.get(f"/work-orders/{wo['work_order_id']}/export/{template}", headers=pm)
+        assert r.status_code == 409, (template, r.text)
+        assert r.json()["error"]["code"] == "NOT_SIGNED"
+        assert "Laporan Survei" in r.json()["error"]["message"]
+    assert client.get(f"/work-orders/{wo['work_order_id']}/export/SURVEY", headers=pm).status_code == 200
+
+
+def test_signed_bast_uses_wo_number_and_plain_file_name(client, world: World):
+    _setup_scope(world)
+    wo = _work_order(world, status="BAST_SIGNED")
+    sync_query("UPDATE client_work_orders SET bast_signed_at = now(), bast_signer_name = 'PIC Uji' "
+               "WHERE work_order_id = %s", (wo["work_order_id"],))
+    number = sync_query("SELECT wo_number FROM client_work_orders WHERE work_order_id = %s",
+                        (wo["work_order_id"],))[0][0]
+    pm = world.headers(client, "pm")
+    word = client.get(f"/work-orders/{wo['work_order_id']}/export/DOCX", headers=pm)
+    assert word.status_code == 200, word.text
+    assert f"Berita_Acara_Serah_Terima_{number}.docx" in word.headers["content-disposition"]
+    assert "BAST_" not in word.headers["content-disposition"]
+    text = _doc_text(word.content)
+    assert f"Nomor: {number}" in text
+    assert wo["work_order_id"][:8].upper() not in text
+    pdf = client.get(f"/work-orders/{wo['work_order_id']}/export/PDF", headers=pm)
+    assert pdf.status_code == 200, pdf.text
+    assert f"Berita_Acara_Serah_Terima_{number}.pdf" in pdf.headers["content-disposition"]
+    slides = client.get(f"/work-orders/{wo['work_order_id']}/export/SLIDES", headers=pm)
+    assert f"Slide_Kemajuan_Pekerjaan_{number}.pptx" in slides.headers["content-disposition"]
 
 
 def test_detail_and_list_follow_scope(client, world: World):

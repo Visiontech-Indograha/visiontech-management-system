@@ -10,7 +10,9 @@ export interface ManagedDivision {
   is_om?: boolean;
 }
 
-export type Me = S["AuthUserMeResponseSchema"] & {
+/** `must_change_password` opsional di klien: server lama tidak mengirimnya (dianggap false). */
+export type Me = Omit<S["AuthUserMeResponseSchema"], "must_change_password"> & {
+  must_change_password?: boolean;
   managed_division_ids?: string[];
   managed_divisions?: ManagedDivision[];
 };

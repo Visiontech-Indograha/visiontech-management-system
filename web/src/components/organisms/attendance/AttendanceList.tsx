@@ -5,6 +5,7 @@ import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
 import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { accuracyText, reviewReasonTexts } from "@/lib/reviewReasons";
 import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/lib/format";
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
@@ -14,7 +15,8 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 
 /** Kartu absensi (jarak, wajah, penjelasan, status) + tombol Tinjau/Beri penjelasan + navigasi halaman. */
-export function AttendanceList({ list, more, meEmployeeId, onOpen }: {
+export function AttendanceList({ list, more, meEmployeeId, onOpen, emptyText = "Tidak ada catatan kehadiran yang cocok." }: {
+  emptyText?: string;
   list: UseQueryResult<AttendanceListData>;
   more: KeysetMore;
   meEmployeeId: string | null | undefined;
@@ -23,7 +25,7 @@ export function AttendanceList({ list, more, meEmployeeId, onOpen }: {
   const qc = useQueryClient();
   const data = list.data;
   return (
-      <QueryState query={list} errorText="Absensi tidak dapat dimuat." empty={data?.items.length === 0} emptyText="Tidak ada catatan kehadiran yang cocok.">
+      <QueryState query={list} errorText="Absensi tidak dapat dimuat." empty={data?.items.length === 0} emptyText={emptyText}>
         <ListBlock className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {data?.items.map((a) => (
             <ListEntry key={a.id} className="flex flex-col gap-2 rounded-panel border border-line bg-surface shadow-card p-4">
@@ -83,6 +85,17 @@ export function AttendanceList({ list, more, meEmployeeId, onOpen }: {
                         ? `Pulang: ${faceResultLabel(a.check_out_face_result)}${a.check_out_face_result !== "SKIPPED" && a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
                         : ""}
                     </TextBlock>
+                  </div>
+                )}
+                {a.review_reasons && a.review_reasons.length > 0 && (
+                  <div>
+                    <TextBlock as="dt" className="inline text-mist">Alasan perlu ditinjau: </TextBlock>
+                    <TextBlock as="dd" className="inline">{reviewReasonTexts(a.review_reasons).join(" ")}</TextBlock>
+                  </div>
+                )}
+                {accuracyText(a.location_accuracy_m) && (
+                  <div>
+                    <TextBlock as="dd" className="inline text-mist">{accuracyText(a.location_accuracy_m)}</TextBlock>
                   </div>
                 )}
                 {a.explanation && (

@@ -69,6 +69,10 @@ class Permission(StrEnum):
     MANAGE_DIVISIONS = "manage:divisions"
     # Penugasan peran ganda (ADR 0002): hanya SUPER_ADMIN
     MANAGE_ROLE_ASSIGNMENTS = "manage:role_assignments"
+    # Setelan sistem saat operasi (flag fitur): hanya SUPER_ADMIN
+    MANAGE_SYSTEM_SETTINGS = "manage:system_settings"
+    # Fase 2: OM boleh memberi/mencabut hanya peran tambahan PROJECT_MANAGER dan HSE (dicek di service)
+    MANAGE_FIELD_ROLE_ASSIGNMENTS = "manage:field_role_assignments"
 
     # Aset
     MANAGE_ASSETS = "manage:assets"
@@ -84,6 +88,9 @@ class Permission(StrEnum):
 
     # Offboarding & clearance aset (Master V2)
     MANAGE_OFFBOARDING = "manage:offboarding"
+    # Perangkat absensi Hikvision: kelola perangkat, token penerima, pemetaan ID perangkat ke karyawan, pantau status.
+    # HR hanya kantornya sendiri; OM dan Super Admin semua kantor (dicek di service).
+    MANAGE_HIKVISION = "manage:hikvision"
     VIEW_OFFBOARDING = "view:offboarding"
 
     # Syarat foto pekerjaan (Master V2)
@@ -97,6 +104,9 @@ class Permission(StrEnum):
     VIEW_HSE_CAMPAIGNS = "view:hse_campaigns"
     MANAGE_VEHICLE_INSPECTIONS = "manage:vehicle_inspections"
     VIEW_VEHICLE_INSPECTIONS = "view:vehicle_inspections"
+    # Dokumen kendaraan (STNK, KIR, pajak, asuransi) dan pengemudinya
+    MANAGE_VEHICLE_DOCUMENTS = "manage:vehicle_documents"
+    VIEW_VEHICLE_DOCUMENTS = "view:vehicle_documents"
 
     # Linimasa
     VIEW_TIMELINE = "view:timeline"
@@ -115,7 +125,9 @@ BASE_PERMISSIONS: frozenset[Permission] = frozenset({P.VIEW_USERS, P.VIEW_DOCUME
 
 # Izin tambahan per peran legacy (vms.role_code) - mematuhi dok 03 & test_permissions.py
 _ROLE_EXTRA: dict[RoleCode, frozenset[Permission]] = {
-    RoleCode.ADMIN: frozenset(Permission) - {Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS},
+    RoleCode.ADMIN: frozenset(Permission) - {
+        Permission.DELETE_ANY, Permission.MANAGE_ROLE_ASSIGNMENTS, Permission.MANAGE_SYSTEM_SETTINGS,
+    },
     RoleCode.OPS: frozenset({
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_TIMELINE, P.VIEW_AUDIT,
         P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
@@ -143,7 +155,9 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
+        P.MANAGE_FIELD_ROLE_ASSIGNMENTS, P.MANAGE_HIKVISION,
         P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({
@@ -151,11 +165,12 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
     # HR melihat absensi karyawan KANTORNYA SENDIRI saja (keputusan pemilik 2026-11-05; cakupan di SQL lewat
-    # shared/access/office_scope.py), tanpa wewenang mengekspor/meninjau. SA dan OM melihat semua kantor.
+    # shared/access/office_scope.py), tanpa wewenang mengekspor. Meninjau hanya karyawan kantornya (can_review).
+    # SA dan OM melihat semua kantor.
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
-        P.VIEW_ALL_ATTENDANCE,
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.MANAGE_HIKVISION,
     }),
     # Finance melihat & mengekspor absensi seluruh karyawan dan meninjau lembur (sama seperti FINANCE V1).
     SystemRole.FINANCE: frozenset({
@@ -165,6 +180,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     SystemRole.HSE: frozenset({
         P.MANAGE_HSE_CAMPAIGNS, P.VIEW_HSE_CAMPAIGNS,
         P.MANAGE_VEHICLE_INSPECTIONS, P.VIEW_VEHICLE_INSPECTIONS,
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
         P.MANAGE_EMPLOYEE_DOCUMENTS, P.VERIFY_DOCUMENTS,
     }),
     SystemRole.TEAM_LEADER: frozenset(),

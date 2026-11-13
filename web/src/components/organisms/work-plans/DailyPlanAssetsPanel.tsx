@@ -1,4 +1,5 @@
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { statusLabel } from "@/lib/labels";
 import { SectionTitle } from "@/components/molecules/SectionTitle";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { useAssetAvailability, useTools, useVehicles, type AssetKind } from "@/services/assetService";
@@ -45,7 +46,7 @@ export function DailyPlanAssetsPanel({ teamId, workDate }: { teamId: string; wor
               ) : free ? (
                 <TextBlock className="text-success">Tersedia</TextBlock>
               ) : (
-                <TextBlock className="text-mist">Tidak tersedia ({r.status})</TextBlock>
+                <TextBlock className="text-mist">Tidak tersedia ({statusLabel(r.status)})</TextBlock>
               )}
             </ListEntry>
           );

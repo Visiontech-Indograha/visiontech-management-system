@@ -148,7 +148,24 @@ buat token `read:packages`, `docker login ghcr.io` di server, ubah `compose.yml`
 
 ## Cadangan berkas MinIO dan uji pulih
 
-- `deploy/backup-minio.sh [label]`: `mc mirror` satu arah semua bucket (kecuali `vms-backups`) ke `$VMS_BACKUP_DIR/<NAME>-berkas/` plus manifest hitungan objek. Tidak menghapus sumber, idempoten. Kontainer MinIO: `VMS_MINIO_CT` (bawaan `${VMS_CONTAINER_PREFIX:-vms}_minio`). Pin citra mc lewat `VMS_MC_IMAGE`.
+- `deploy/backup-minio.sh [label]`: `mc mirror` satu arah semua bucket (kecuali `vms-backups`) ke `$VMS_BACKUP_DIR/<NAME>-berkas/` plus manifest hitungan objek. Mematuhi retensi UU PDP: berkas terhapus maksimal **35 hari** (30 hari retensi DB/MinIO + maks 5 hari cadangan). Bawaan mengaktifkan `--remove` (`VMS_MINIO_REMOVE=1`). Kontainer MinIO: `VMS_MINIO_CT` (bawaan `${VMS_CONTAINER_PREFIX:-vms}_minio`). Pin citra mc lewat `VMS_MC_IMAGE`.
 - Integrasi opsional: `VMS_BACKUP_MINIO=1 ./backup.sh` (bawaan mati). Cron terpisah juga boleh.
 - `deploy/uji-pulih.sh`: pulihkan dump terbaru ke Postgres sementara (tanpa jaringan) dan cocokkan hitungan berkas dengan manifest. Hanya membaca cadangan.
 - Rencana pengganti MinIO: `docs/RENCANA-KELUAR-MINIO.md`.
+
+## Cadangan terenkripsi age, kepatuhan PDP, dan pemulihan (LANGKAH PEMILIK)
+
+> [!IMPORTANT]
+> **EKSEKUSI SERVER ADALAH LANGKAH PEMILIK:** Seluruh perintah pemulihan, penjadwalan cron, atau pengubahan konfigurasi di server produksi Linux dan mesin Windows adalah kewenangan manual pemilik. Agen AI dilarang menjalankan perintah langsung di server.
+
+1. **Enkripsi Cadangan age (`deploy/backup-terenkripsi.sh`, `deploy/backup-offsite.sh`)**:
+   - Seluruh cadangan yang keluar dari server Linux wajib terenkripsi `age` menggunakan kunci publik dari `age-recipients.txt`. Kunci privat hanya disimpan offline dan di mesin Windows penarik (`pobonguar`).
+   - `backup-offsite.sh` secara otomatis mengenkripsi dump dengan `age` sebelum rsync ke server cadangan lain dan menolak pengiriman dump polos tanpa enkripsi.
+2. **Perlindungan Biometrik PDP (UU PDP No. 27/2022)**:
+   - Kolom `face_embedding` pada tabel `employee` adalah Data Pribadi Spesifik.
+   - Opsi `VMS_BACKUP_EXCLUDE_BIOMETRIC=1` pada `backup.sh` dan `backup-terenkripsi.sh` mengecualikan data biometrik mentah dari dump.
+   - Untuk lingkungan pengujian / non-produksi, gunakan skrip `deploy/sanitasi-dump-biometrik.sh` (`--db` atau `--berkas`) untuk membersihkan `face_embedding` menjadi `NULL`.
+3. **Panduan Lengkap Tarik & Pemulihan Cadangan**:
+   - Rincian konfigurasi Windows Task Scheduler, SFTP baca-saja, BitLocker, VSS, dan langkah pemulihan bencana (DR) terdokumentasi di [`docs/CADANGAN-WINDOWS.md`](../docs/CADANGAN-WINDOWS.md).
+4. **Penanganan Insiden PDP**:
+   - Bila terjadi insiden kebocoran data pribadi (kredensial, biometrik, berkas, atau database), ikuti prosedur wajib notifikasi tertulis **3x24 jam (72 jam)** sesuai [`docs/RUNBOOK-INSIDEN-PDP.md`](../docs/RUNBOOK-INSIDEN-PDP.md).

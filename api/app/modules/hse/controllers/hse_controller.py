@@ -19,6 +19,7 @@ from app.modules.hse.schemas.hse_schema import (
     HseCampaignCreate,
     HseCampaignResponse,
     HseCampaignUpdate,
+    InspectionChecklistTemplate,
     VehicleInspectionCreate,
     VehicleInspectionResponse,
     VehicleInspectionVerify,
@@ -62,8 +63,8 @@ class HseController:
     ) -> HseCampaignResponse:
         return await self.service.update_campaign(campaign_id, data, current_user)
 
-    async def delete_campaign(self, campaign_id: UUID) -> dict[str, bool]:
-        success = await self.service.delete_campaign(campaign_id)
+    async def delete_campaign(self, campaign_id: UUID, user: CurrentUser | None = None) -> dict[str, bool]:
+        success = await self.service.delete_campaign(campaign_id, user)
         return {"success": success}
 
     async def get_active_popup(self, current_user: CurrentUser) -> dict[str, Any]:
@@ -84,8 +85,10 @@ class HseController:
         )
         return {"acknowledged": True, "detail": result}
 
-    async def get_campaign_audit_stats(self, campaign_id: UUID) -> HseCampaignAuditStats:
-        return await self.service.get_campaign_audit_stats(campaign_id)
+    async def get_campaign_audit_stats(
+        self, campaign_id: UUID, user: CurrentUser | None = None,
+    ) -> HseCampaignAuditStats:
+        return await self.service.get_campaign_audit_stats(campaign_id, user)
 
     async def list_vehicle_inspections(
         self,
@@ -96,7 +99,10 @@ class HseController:
         to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[VehicleInspectionResponse]:
+        user: CurrentUser | None = None,
+        q: str | None = None,
+        mine: str | None = None,
+    ) -> tuple[list[VehicleInspectionResponse], int]:
         return await self.service.list_vehicle_inspections(
             vehicle_id=vehicle_id,
             period_type=period_type,
@@ -105,7 +111,13 @@ class HseController:
             to_date=to_date,
             limit=limit,
             offset=offset,
+            user=user,
+            q=q,
+            mine=mine,
         )
+
+    def inspection_checklist_template(self) -> InspectionChecklistTemplate:
+        return self.service.inspection_checklist_template()
 
     async def create_vehicle_inspection(
         self,
@@ -114,8 +126,10 @@ class HseController:
     ) -> VehicleInspectionResponse:
         return await self.service.create_vehicle_inspection(data, current_user)
 
-    async def get_vehicle_inspection(self, inspection_id: UUID) -> VehicleInspectionResponse:
-        return await self.service.get_vehicle_inspection(inspection_id)
+    async def get_vehicle_inspection(
+        self, inspection_id: UUID, user: CurrentUser | None = None,
+    ) -> VehicleInspectionResponse:
+        return await self.service.get_vehicle_inspection(inspection_id, user)
 
     async def verify_vehicle_inspection(
         self,

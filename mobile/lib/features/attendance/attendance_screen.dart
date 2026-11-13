@@ -21,6 +21,7 @@ import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import '../dokumen/dokumen_kendaraan.dart';
 import '../face/face_enroll_gate.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
@@ -160,7 +161,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       // Tanggal server (WIB) bila sudah diketahui; jam HP bisa salah atau beda zona.
       final today = _serverToday ??
           DateFormat('yyyy-MM-dd').format(
-              DateTime.now().toUtc().add(const Duration(hours: 7)));
+              attendanceClock().toUtc().add(const Duration(hours: 7)));
       final plans = await engine.fetchList('daily_today', () => engine.api.dailyPlans(start: today, end: today));
       if (!NetworkHint.probablyOffline) {
         try {
@@ -188,7 +189,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       setState(() {
         _records = att.items;
         _runningSites = runningSites;
-        _sites = [...daySites, ...sites.items];
+        final authNow = ref.read(authControllerProvider);
+        final ownOffice = authNow is AuthAuthenticated ? authNow.user.officeId : null;
+        _sites = [...daySites, ...ownOfficeFirst(sites.items, ownOffice)];
         // Offline & belum pernah termuat → pesan jelas, bukan "data terakhir 1 Jan 1970".
         final never = SyncEngine.neverCached(att.cachedAt);
         _cachedAt = never ? null : att.cachedAt;
@@ -202,7 +205,10 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           // Tanpa tugas berjalan: pilih lokasi terdekat dari titik GPS terakhir yang segar (bila ada).
           final fix = runningSites.isEmpty ? LocationWarmer.instance.freshFix() : null;
           final near = fix == null ? null : nearestSiteId(_sites, fix.latitude, fix.longitude);
-          _siteId = near ?? (_sites.isNotEmpty ? _sites.first['id'] as String : null);
+          // Tanpa GPS: lokasi absen terakhir pengguna sendiri, baru urutan abjad (bukan kantor acak).
+          final lastId = att.items.map((r) => r['site_id']).whereType<String>().firstOrNull;
+          final last = lastId != null && _sites.any((s) => s['id'] == lastId) ? lastId : null;
+          _siteId = defaultSiteId(_sites, near: near, last: last, ownOfficeId: ownOffice);
         }
       });
       unawaited(_autoPickNearest());
@@ -220,7 +226,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   /// Label tombol pulang; bila sesi yang dibuka berasal dari hari lain, sebut tanggalnya agar tidak membingungkan.
   String _openSessionLabel(Map<String, dynamic> today) {
     final day = today['work_date'] as String?;
-    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final current = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     if (day == null || day == current) return 'Absen pulang';
     return 'Absen pulang (masuk ${DateFormat('d MMM', 'id_ID').format(DateTime.parse(day))})';
   }
@@ -241,7 +247,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     // R-33: hanya sesi valid yang bisa absen pulang; absen hari lalu yang menunggu pemeriksaan tidak
     // mengunci hari baru, jadi tidak didahulukan di kartu "hari ini". Sesi tanggal sebelumnya (lupa pulang,
     // kerja malam) sudah berakhir pada tengah malam: tidak ditawarkan sebagai "Absen pulang" hari ini.
-    final dayNow = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final dayNow = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     for (final r in _records) {
       if (r['check_in_at'] != null &&
           r['check_out_at'] == null &&
@@ -254,7 +260,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         return r;
       }
     }
-    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     for (final r in _records) {
       if (r['work_date'] == today) return r;
     }
@@ -266,7 +272,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   static const _maxAttemptsPerDay = 2;
 
   int get _rejectedToday {
-    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final today = _serverToday ?? DateFormat('yyyy-MM-dd').format(attendanceClock());
     return _records.where((r) => r['work_date'] == today && r['status'] == 'REJECTED').length;
   }
 
@@ -279,7 +285,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return null;
     }
     if (loc.isMocked) {
-      _snack('Lokasi palsu terdeteksi. Matikan aplikasi pemalsu lokasi.');
+      _snack(mockLocationMessage);
       return null;
     }
     return loc.position;
@@ -450,6 +456,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         _snack('Tidak ada sinyal — absen masuk tersimpan offline dan dikirim otomatis saat online.');
       }
       await _load();
+      // Layar lain (Jadwal harian) ikut menyegarkan status absen.
+      SyncEngine.appliedRevision.value++;
     } catch (e) {
       if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
@@ -641,6 +649,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         }
       }
       await _load();
+      // Layar lain (Jadwal harian) ikut menyegarkan status absen.
+      SyncEngine.appliedRevision.value++;
     } catch (e) {
       if (!await _handleFaceNotEnrolled(e)) _snack(apiErrorMessage(e));
     } finally {
@@ -769,7 +779,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     final auth = ref.watch(authControllerProvider);
     final name = auth is AuthAuthenticated ? auth.user.displayName.split(' ').first : '';
     final lewatWeb = auth is AuthAuthenticated && auth.user.absensiLewatWeb;
-    final hour = DateTime.now().hour;
+    final hour = attendanceClock().hour;
     final greet = hour < 11
         ? 'Selamat pagi'
         : hour < 15
@@ -788,7 +798,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             HeroHeader(
               eyebrow: 'Absensi',
               title: name.isEmpty ? greet : '$greet, $name',
-              subtitle: _day.format(DateTime.now()),
+              subtitle: _day.format(attendanceClock()),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -800,6 +810,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       icon: Icons.cloud_off_rounded,
                       text: 'Offline — data terakhir ${DateFormat('d MMM HH:mm', 'id_ID').format(_cachedAt!)}',
                     ),
+                  const DokumenPengingatBanner(),
                   if (_error != null)
                     NoticeBanner(icon: Icons.error_outline_rounded, text: _error!, accent: Accent.rose),
                   FadeSlideIn(

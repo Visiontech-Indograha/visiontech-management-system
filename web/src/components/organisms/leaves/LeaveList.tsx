@@ -168,7 +168,7 @@ export function LeaveList({
                       <TextBlock as="p" className="text-xs text-foreground">{APPROVAL_STEP_TEXT[l.status]}</TextBlock>
                     )}
                     <div className="p-2 rounded-control bg-hover text-xs text-foreground mt-2">
-                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Alasan:</TextBlock>
+                      <TextBlock as="span" className="text-mist block text-xs mb-0.5">Alasan:</TextBlock>
                       <TextBlock as="span">{l.reason}</TextBlock>
                     </div>
                   </div>
@@ -184,14 +184,14 @@ export function LeaveList({
 
                   {l.cancel_note && (
                     <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
-                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Alasan pembatalan:</TextBlock>
+                      <TextBlock as="span" className="text-mist block text-xs mb-0.5">Alasan pembatalan:</TextBlock>
                       <TextBlock as="span">{l.cancel_note}</TextBlock>
                     </div>
                   )}
 
                   {l.review_note && (
                     <div className="mt-2 p-2 rounded-control bg-hover text-xs text-foreground">
-                      <TextBlock as="span" className="text-mist block text-[11px] mb-0.5">Catatan persetujuan:</TextBlock>
+                      <TextBlock as="span" className="text-mist block text-xs mb-0.5">Catatan persetujuan:</TextBlock>
                       <TextBlock as="span">{l.review_note}</TextBlock>
                     </div>
                   )}
@@ -204,7 +204,7 @@ export function LeaveList({
                   )}
 
                   {l.reviewed_by_name && (
-                    <div className="mt-2 text-[11px] text-mist flex items-center gap-1">
+                    <div className="mt-2 text-xs text-mist flex items-center gap-1">
                       <CheckCircle2 size={12} className="text-leaf" />
                       <TextBlock as="span">
                         Ditinjau oleh {l.reviewed_by_name} ({String(l.reviewed_at ?? "").slice(0, 10)})
@@ -233,9 +233,9 @@ export function LeaveList({
                         variant="outline"
                         size="sm"
                         onClick={() => onCancel(l)}
-                        aria-label={`Batalkan cuti ${l.employee_name}`}
+                        aria-label={`${l.status === "PENDING" ? "Batalkan pengajuan" : "Batalkan cuti"} ${l.employee_name}`}
                       >
-                        Batalkan cuti
+                        {l.status === "PENDING" ? "Batalkan pengajuan" : "Batalkan cuti"}
                       </ActionButton>
                     )}
                   </div>

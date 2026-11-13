@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+import { listenTabSync, refreshAcrossTabs } from "@/lib/tabSync";
 
 /** Bentuk error seragam dari backend (docs/05-API-SPEC §4). */
 export class ApiError extends Error {
@@ -30,6 +31,25 @@ export const setAccessToken = (token: string | null) => {
 export const getAccessToken = () => accessToken;
 export const setSessionExpiredHandler = (fn: (() => void) | null) => {
   onSessionExpired = fn;
+};
+
+// Siaran dari tab lain: token baru hanya diterima bila tab ini sudah punya sesi (tetap di memori).
+let onRemoteLogout: (() => void) | null = null;
+export const setLogoutBroadcastReceiver = (fn: (() => void) | null) => {
+  onRemoteLogout = fn;
+};
+listenTabSync({
+  onToken: (token) => {
+    if (accessToken) accessToken = token;
+  },
+  onLogout: () => onRemoteLogout?.(),
+});
+
+/** Penanda kemampuan klien: server baru menjawab 403 MUST_CHANGE_PASSWORD bila sandi sementara belum diganti. */
+export const APP_CAPABILITIES = "must-change-password";
+let onMustChangePassword: (() => void) | null = null;
+export const setMustChangePasswordHandler = (fn: (() => void) | null) => {
+  onMustChangePassword = fn;
 };
 
 function getOrCreateDeviceFingerprint(): string {
@@ -71,8 +91,21 @@ api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
   config.headers["X-Device-Fingerprint"] = getOrCreateDeviceFingerprint();
   config.headers["X-Device-Label"] = getDeviceLabel();
+  config.headers["X-App-Capabilities"] = APP_CAPABILITIES;
   return config;
 });
+
+/** Unduhan (responseType blob) yang gagal membawa galat JSON sebagai Blob: baca jadi objek agar pesan awam API tampil. */
+async function unwrapBlobError(error: AxiosError): Promise<void> {
+  const data = error.response?.data;
+  if (typeof Blob === "undefined" || !(data instanceof Blob)) return;
+  try {
+    const raw = typeof data.text === "function" ? await data.text() : await new Response(data).text();
+    error.response!.data = JSON.parse(raw);
+  } catch (err) {
+    void err; // bukan JSON: biarkan pesan umum
+  }
+}
 
 function toApiError(error: AxiosError): ApiError {
   const body = error.response?.data as
@@ -96,21 +129,27 @@ function toApiError(error: AxiosError): ApiError {
 let refreshing: Promise<string> | null = null;
 
 export async function refreshAccessToken(): Promise<string> {
-  refreshing ??= axios
-    .post<{ access_token: string }>(
-      `${baseURL}/auth/refresh`,
-      null,
-      {
-        withCredentials: true,
-        headers: {
-          "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
-          "X-Device-Label": getDeviceLabel(),
+  // Lintas tab: kunci "vms-refresh" mencegah dua tab memakai cookie refresh yang sama bersamaan
+  // (refresh kedua dianggap pemakaian ulang dan mencabut semua sesi).
+  refreshing ??= refreshAcrossTabs(() =>
+    axios
+      .post<{ access_token: string }>(
+        `${baseURL}/auth/refresh`,
+        null,
+        {
+          withCredentials: true,
+          headers: {
+            "X-Device-Fingerprint": getOrCreateDeviceFingerprint(),
+            "X-Device-Label": getDeviceLabel(),
+            "X-App-Capabilities": APP_CAPABILITIES,
+          },
         },
-      },
-    )
-    .then((r) => {
-      accessToken = r.data.access_token;
-      return accessToken;
+      )
+      .then((r) => r.data.access_token),
+  )
+    .then((token) => {
+      accessToken = token;
+      return token;
     })
     .finally(() => {
       refreshing = null;
@@ -137,6 +176,9 @@ api.interceptors.response.use(
         onSessionExpired?.();
       }
     }
-    return Promise.reject(toApiError(error));
+    await unwrapBlobError(error);
+    const apiError = toApiError(error);
+    if (apiError.status === 403 && apiError.code === "MUST_CHANGE_PASSWORD") onMustChangePassword?.();
+    return Promise.reject(apiError);
   },
 );

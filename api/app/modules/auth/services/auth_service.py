@@ -11,8 +11,8 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from typing import Any
 
+from app.core import system_settings
 from app.core.alerts import send_security_alert
-from app.core.config import settings
 from app.core.errors import AppError, NotFoundError
 from app.core.events import broker
 from app.core.security import create_jwt_token, hash_password, verify_password
@@ -118,7 +118,14 @@ class AuthService:
         """Konteks RLS & audit transaksi ini = pengguna ini, setelah identitasnya pasti (sandi benar / token sah).
         Tanpa ini kueri tabel ber-RLS (mis. `employee`) diam-diam kosong di bawah peran runtime `vms_api` (P9-2)."""
         await set_request_context(
-            self.users.db, user_id=str(user.id), organization_id=str(user.organization_id), actor_label=str(user.login)
+            self.users.db,
+            user_id=str(user.id),
+            organization_id=str(user.organization_id),
+            actor_label=str(user.login),
+            role=getattr(user, "system_role", None) or (user.roles[0] if getattr(user, "roles", None) else None),
+            office_id=getattr(user, "office_id", None),
+            division_id=getattr(user, "division_id", None),
+            is_system=False,
         )
 
     async def _user(self, user_id: str) -> Any:
@@ -218,7 +225,7 @@ class AuthService:
         peran utama (perilaku lama). Memakai find_identity agar logika union tidak digandakan."""
         if primary_role in OFFICE_ROLES:
             return True
-        if not settings.ROLE_ASSIGNMENT_ENABLED:
+        if not system_settings.role_assignment_enabled():
             return False
         identity = await self.users.find_identity(user.id)
         return identity is not None and any(r in OFFICE_ROLES for r in (identity.roles or []))
@@ -405,6 +412,15 @@ class AuthService:
                 "Kata sandi saat ini salah.",
                 status=422,
                 details={"fields": {"current_password": "Kata sandi saat ini salah."}},
+            )
+
+        # Sandi baru tidak boleh sama dengan sandi saat ini (cek lewat verifikasi hash).
+        if await asyncio.to_thread(verify_password, new_password, user.password_hash):
+            raise AppError(
+                "VALIDATION_ERROR",
+                "Sandi baru tidak boleh sama dengan sandi lama.",
+                status=422,
+                details={"fields": {"new_password": "Sandi baru tidak boleh sama dengan sandi lama."}},
             )
 
         new_hash = await asyncio.to_thread(hash_password, new_password)

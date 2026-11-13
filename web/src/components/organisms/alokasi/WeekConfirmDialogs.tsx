@@ -59,18 +59,27 @@ export function CopyWeekConfirmDialog({ matrix, onClose }: { matrix: WeeklyMatri
     setBusy(true);
     let ok = 0;
     let failed = 0;
+    let lastError: unknown = null;
     for (const t of targets) {
       try {
         await copy.mutateAsync({ id: t.daily_plan_id, work_dates: [t.work_date] });
         ok += 1;
-      } catch {
+      } catch (err) {
+        lastError = err;
         failed += 1;
       }
     }
     setBusy(false);
-    toast[failed ? "error" : "success"](
-      `${ok} jadwal disalin${failed ? `, ${failed} gagal (tanggal sudah terisi atau tidak valid)` : ""}.`,
-    );
+    if (failed > 0) {
+      toast.error(
+        errorMessage(
+          lastError,
+          `${ok} jadwal disalin, ${failed} gagal karena tanggal sudah terisi atau tidak valid.`
+        )
+      );
+    } else {
+      toast.success(`${ok} jadwal berhasil disalin ke minggu berikutnya.`);
+    }
     onClose();
   };
   return (

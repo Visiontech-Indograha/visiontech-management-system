@@ -153,3 +153,39 @@ describe("aturan peran dan tampilan peran efektif", () => {
     expect((await screen.findAllByText("HR · berlaku untuk kantor Kantor Timur")).length).toBeGreaterThan(0);
   });
 });
+
+describe("Peran tambahan PM dan HSE", () => {
+  const om = { ...mockMe("HR"), permissions: [...mockMe("HR")!.permissions, "manage:field_role_assignments"] } as never;
+  const optionsOf = () => Array.from(screen.getByLabelText("Peran tambahan").querySelectorAll("option")).map((o) => o.textContent);
+
+  it("SA melihat semua peran termasuk PM dan HSE", async () => {
+    api();
+    renderRoute(`/directory/${EID}`, { me: sa });
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah peran" }));
+    expect(optionsOf()).toEqual(expect.arrayContaining(["HR", "Finance", "Operational Manager", "Penanggung jawab proyek (PM)", "Petugas K3 (HSE)"]));
+  });
+
+  it("OM hanya melihat PM dan HSE", async () => {
+    api();
+    renderRoute(`/directory/${EID}`, { me: om });
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah peran" }));
+    expect(optionsOf()).toEqual(["Pilih peran", "Penanggung jawab proyek (PM)", "Petugas K3 (HSE)"]);
+  });
+
+  it("PM wajib memilih kantor dan menampilkan teks bantu", async () => {
+    api();
+    renderRoute(`/directory/${EID}`, { me: om });
+    fireEvent.click(await screen.findByRole("button", { name: "Tambah peran" }));
+    fireEvent.change(screen.getByLabelText("Peran tambahan"), { target: { value: "PROJECT_MANAGER" } });
+    expect(await screen.findByText("Berlaku hanya untuk kantor yang dipilih.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    expect(await screen.findByText("Pilih kantor.")).toBeInTheDocument();
+  });
+
+  it("HR tanpa izin tidak melihat bagian ini", async () => {
+    api();
+    renderRoute(`/directory/${EID}`, { me: hr });
+    await screen.findByText("Test User");
+    expect(screen.queryByRole("button", { name: "Tambah peran" })).not.toBeInTheDocument();
+  });
+});

@@ -149,8 +149,8 @@ export function LeaveReviewDialog({
         </div>
 
         <TextAreaField
-          label="Catatan Persetujuan / Alasan Penolakan"
-          placeholder="Wajib diisi jika menolak pengajuan cuti..."
+          label="Catatan persetujuan atau alasan penolakan"
+          hint="Wajib diisi jika menolak pengajuan cuti."
           rows={3}
           value={note}
           onChange={(e) => setNote(e.target.value)}

@@ -1,7 +1,8 @@
 ---
 name: mobile-engineer
-description: Engineer lapisan mobile (Flutter/Dart) VMS. Mengerjakan brief arsitek di worktree terisolasi: alur offline-first, absensi, kamera, dan pembaruan aplikasi. Pakai untuk perubahan di `mobile/`.
-tools: Read, Grep, Glob, Edit, Write, Bash
+description: "Engineer lapisan mobile (Flutter/Dart) VMS. Mengerjakan brief arsitek di worktree terisolasi: alur offline-first, absensi, kamera, dan pembaruan aplikasi. Pakai untuk perubahan di `mobile/`."
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-mobile, vms-ux-design-system
 model: sonnet
 ---
 

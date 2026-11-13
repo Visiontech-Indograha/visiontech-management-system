@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
@@ -19,6 +20,14 @@ from app.modules.leaves.repositories.leave_repository import LeaveRepository
 from app.modules.leaves.schemas.leave_schema import LeaveCancel, LeaveCreate, LeaveReview
 from app.modules.notifications.services.notification_service import NotificationService
 from app.shared.access.office_scope import ensure_employee_in_scope, office_restriction, offices_param
+
+# Batas mundur tanggal mulai cuti (hari, zona Jakarta) untuk pemohon biasa. Web dan mobile harus memakai angka sama.
+LEAVE_MAX_BACKDATE_DAYS = 3
+
+
+def _today() -> date:
+    return jakarta_now().date()
+
 
 LEAVE_TYPES = (
     ("ANNUAL", "Cuti tahunan", True),
@@ -93,6 +102,14 @@ class LeaveService:
         if data.end_date < data.start_date:
             raise ValidationError("Tanggal akhir cuti tidak boleh sebelum tanggal mulai.")
 
+        # Cuti mundur lebih dari batas hanya boleh dicatatkan HR/Admin
+        if (not user.has_role("ADMIN_HR_GA", "OPERATIONAL_MANAGER", "SUPER_ADMIN")
+                and data.start_date < _today() - timedelta(days=LEAVE_MAX_BACKDATE_DAYS)):
+            raise ValidationError(
+                f"Tanggal mulai cuti paling lambat {LEAVE_MAX_BACKDATE_DAYS} hari ke belakang. "
+                "Hubungi HR untuk cuti yang lebih lama."
+            )
+
         # Cegah permohonan dengan tanggal bertabrakan (overlapping) dengan cuti aktif/pending
         if await self.repo.has_overlapping_leave(emp_id, data.start_date, data.end_date):
             raise ValidationError("Anda sudah memiliki permohonan cuti aktif pada rentang tanggal tersebut.")
@@ -156,13 +173,14 @@ class LeaveService:
         if str(user.employee_id) == str(leave.employee_id):
             raise ForbiddenError("Pemohon cuti tidak dapat menyetujui atau menolak permohonannya sendiri.")
 
-        if user.has_role("PROJECT_MANAGER") and not await self._pm_owns(user, leave.employee_id):
+        if not pm_path and not user.has_role(*ORG_WIDE_ROLES):
             raise ForbiddenError("PM hanya dapat meninjau cuti karyawan di divisinya.")
 
         if leave.status in ("APPROVED_BY_HR", "REJECTED", "CANCELLED"):
             raise AppError("ALREADY_DECIDED", "Permohonan cuti ini sudah diputuskan.", status=409)
 
-        is_pm = user.has_role("PROJECT_MANAGER")
+        # PM yang juga HR/OM/SA memutus sebagai peran lebarnya (satu langkah), bukan sebagai PM divisi.
+        is_pm = pm_path and not user.has_role(*ORG_WIDE_ROLES)
         if is_pm and leave.status == "APPROVED_BY_PM":
             raise AppError(
                 "ALREADY_APPROVED_BY_PM",
@@ -245,9 +263,12 @@ class LeaveService:
             raise ForbiddenError("Hanya pemohon, HR, atau OM yang dapat membatalkan permohonan cuti ini.")
         if leave.status not in CANCELLABLE_STATUSES:
             raise AppError("NOT_CANCELLABLE", "Permohonan cuti ini sudah tidak dapat dibatalkan.", status=409)
-        if leave.end_date < jakarta_now().date():
+        # Pengajuan yang masih menunggu belum memakai saldo: boleh dibatalkan kapan pun sebelum diputus.
+        # Cuti yang sudah disetujui hanya dapat dibatalkan sampai hari terakhirnya.
+        if leave.status != "PENDING" and leave.end_date < _today():
             raise AppError(
-                "NOT_CANCELLABLE", "Cuti yang hari terakhirnya sudah lewat tidak dapat dibatalkan.", status=409,
+                "NOT_CANCELLABLE",
+                "Cuti yang sudah disetujui dan hari terakhirnya sudah lewat tidak dapat dibatalkan.", status=409,
             )
 
         reason = ((data.reason or "").strip() if data else "") or None
@@ -256,6 +277,14 @@ class LeaveService:
         # Kuota tahunan sudah dipotong saat persetujuan pertama; kembalikan sesuai status sebelum dibatalkan
         if leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES:
             await self.repo.deduct_balance(leave.employee_id, leave.start_date.year, -leave.total_days)
+        await write_delete_audit(
+            self.repo.db, actor_user_id=user.user_id, actor_role=user.role, actor_email=user.email,
+            entity_type="leave_request", entity_id=leave_id, action="LEAVE_CANCEL",
+            detail={
+                "before": leave.status, "after": "CANCELLED", "by_owner": is_owner,
+                "quota_refunded": leave.leave_type == "ANNUAL" and leave.status in QUOTA_HELD_STATUSES,
+            },
+        )
 
         notifier = self._notify()
         who = await notifier.employee_name(leave.employee_id)
@@ -325,7 +354,7 @@ class LeaveService:
         year: int | None = None,
     ) -> list[Any]:
         pm_id = None
-        if user.has_role("PROJECT_MANAGER"):
+        if user.has_role("PROJECT_MANAGER") and not user.has_role(*ORG_WIDE_ROLES):
             pm_id = user.employee_id
         elif not user.has_role(*ORG_WIDE_ROLES):
             if user.employee_id is None:

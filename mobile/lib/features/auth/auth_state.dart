@@ -42,7 +42,26 @@ class AuthUser {
     this.attendanceMode = 'FIELD',
     this.photoFileId,
     this.fullName,
+    this.officeId,
+    this.mustChangePassword = false,
+    this.systemRole,
   });
+
+  /// True bila sandi sementara dari admin belum diganti: aplikasi hanya boleh membuka layar Ganti sandi.
+  final bool mustChangePassword;
+
+  AuthUser withMustChange(bool value) => AuthUser(
+    id: id,
+    username: username,
+    role: role,
+    employeeId: employeeId,
+    attendanceMode: attendanceMode,
+    photoFileId: photoFileId,
+    fullName: fullName,
+    officeId: officeId,
+    mustChangePassword: value,
+    systemRole: systemRole,
+  );
 
   final String id;
   final String username;
@@ -61,6 +80,16 @@ class AuthUser {
 
   /// Nama lengkap karyawan (dari `/auth/me`); null bila akun belum tertaut ke karyawan.
   final String? fullName;
+
+  /// Kantor karyawan sendiri (dari `/auth/me`); dipakai sebagai lokasi absen bawaan.
+  final String? officeId;
+
+  /// Kode peran mentah dari server (mis. `HSE`); `role` memetakan HSE ke member.
+  final String? systemRole;
+
+  /// HSE dan Operational Manager boleh melihat dokumen kendaraan kantor.
+  bool get bisaLihatDokumenKantor =>
+      systemRole == 'HSE' || systemRole == 'OPERATIONAL_MANAGER' || role == UserRole.ops;
 
   /// Nama untuk tampilan: nama lengkap, atau bagian depan email bila belum ada.
   String get displayName {
@@ -83,6 +112,9 @@ class AuthUser {
       attendanceMode: (json['attendance_mode'] as String?) ?? 'FIELD',
       photoFileId: json['photo_file_id'] as String?,
       fullName: json['full_name'] as String?,
+      officeId: json['office_id'] as String?,
+      mustChangePassword: json['must_change_password'] == true,
+      systemRole: json['role'] as String?,
     );
   }
 }

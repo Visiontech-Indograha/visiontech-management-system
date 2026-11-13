@@ -20,6 +20,24 @@ export const AUDIT_ENTITIES: Record<string, string> = {
   work_completion: "Penyelesaian pekerjaan",
   work_plan_item: "Item pekerjaan",
   work_plan_daily: "Rencana kerja harian",
+  office: "Lokasi kerja",
+  client: "Klien",
+  client_sites: "Lokasi klien",
+  tool: "Alat",
+  vehicle: "Kendaraan",
+  employee: "Karyawan",
+  overtime: "Lembur",
+};
+
+/** Entitas yang tampil di filter (Akun = tabel users). */
+export const AUDIT_FILTER_ENTITIES: Record<string, string> = {
+  office: "Lokasi kerja",
+  client: "Klien",
+  client_sites: "Lokasi klien",
+  tool: "Alat",
+  vehicle: "Kendaraan",
+  employee: "Karyawan",
+  ...AUDIT_ENTITIES,
 };
 
 export const ACTION_LABEL: Record<string, string> = {
@@ -51,6 +69,28 @@ export const ACTION_LABEL: Record<string, string> = {
   DEVICE_CRED_ISSUED: "Kunci perangkat dibuat untuk login sidik jari",
   DEVICE_CRED_USED: "Masuk dengan sidik jari",
   DEVICE_CRED_REVOKED: "Kunci perangkat sidik jari dicabut",
+  HARD_DELETE: "Dihapus permanen",
+  OFFICE_CREATE: "Menambah lokasi kerja",
+  OFFICE_UPDATE: "Mengubah data lokasi kerja",
+  OFFICE_DELETE: "Menghapus lokasi kerja",
+  CLIENT_CREATE: "Menambah klien",
+  CLIENT_UPDATE: "Mengubah data klien",
+  CLIENT_DELETE: "Menghapus klien",
+  CLIENT_SITE_CREATE: "Menambah lokasi klien",
+  CLIENT_SITE_UPDATE: "Mengubah lokasi klien",
+  CLIENT_SITE_DELETE: "Menghapus lokasi klien",
+  TOOL_CREATE: "Menambah alat",
+  TOOL_UPDATE: "Mengubah data alat",
+  TOOL_STATUS: "Mengubah status alat",
+  TOOL_DELETE: "Menghapus alat",
+  VEHICLE_CREATE: "Menambah kendaraan",
+  VEHICLE_UPDATE: "Mengubah data kendaraan",
+  VEHICLE_STATUS: "Mengubah status kendaraan",
+  VEHICLE_DELETE: "Menghapus kendaraan",
+  EMPLOYEE_CREATE: "Menambah karyawan",
+  EMPLOYEE_UPDATE: "Mengubah data karyawan",
+  EMPLOYEE_ARCHIVE: "Mengarsipkan karyawan",
+  EMPLOYEE_RESTORE: "Memulihkan karyawan",
   DEVICE_CRED_REUSE: "Kunci perangkat dipakai ulang, dicabut demi keamanan",
 };
 

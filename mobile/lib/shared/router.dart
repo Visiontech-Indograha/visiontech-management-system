@@ -9,8 +9,11 @@ import '../features/attendance/recap_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/auth/auth_state.dart';
 import '../features/auth/biometric_lock_screen.dart';
+import '../features/auth/change_password_screen.dart';
 import '../features/auth/login_screen.dart';
+import '../features/dokumen/dokumen_kendaraan.dart';
 import '../features/gallery/photo_gallery_screen.dart';
+import '../features/hse/inspeksi_kendaraan_screen.dart';
 import '../features/leaves/leaves_screen.dart';
 import '../features/mess/mess_screen.dart';
 import '../features/overtime/overtime_screen.dart';
@@ -26,10 +29,16 @@ import 'splash_screen.dart';
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      if (previous.runtimeType != next.runtimeType) notifyListeners();
+      if (previous.runtimeType != next.runtimeType || _must(previous) != _must(next)) {
+        notifyListeners();
+      }
     });
   }
 }
+
+bool _must(AuthState? s) =>
+    (s is AuthAuthenticated && s.user.mustChangePassword) ||
+    (s is AuthLocked && s.user.mustChangePassword);
 
 /// Halaman untuk rute tak dikenal / tautan kedaluwarsa (Bahasa Indonesia) dengan jalan kembali ke Beranda.
 Widget vmsNotFoundScreen(BuildContext context, GoRouterState state) => Scaffold(
@@ -74,6 +83,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isBiometricLockRoute ? null : '/biometric-lock';
       }
       if (authState is AuthAuthenticated) {
+        // Sandi sementara belum diganti: hanya layar Ganti sandi yang boleh dibuka.
+        if (authState.user.mustChangePassword) {
+          return state.matchedLocation == '/ganti-sandi' ? null : '/ganti-sandi';
+        }
         return (isLoginRoute || isSplashRoute || isBiometricLockRoute)
             ? '/'
             : null;
@@ -87,6 +100,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
       ),
+      GoRoute(path: '/ganti-sandi', builder: (context, state) => const ChangePasswordScreen()),
       GoRoute(
         path: '/biometric-lock',
         builder: (context, state) => const BiometricLockScreen(),
@@ -99,9 +113,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/assets',
         builder: (context, state) => const AssetsScreen(),
       ),
+      GoRoute(path: '/inspeksi-kendaraan', builder: (context, state) => const InspeksiKendaraanScreen()),
       GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
       GoRoute(path: '/overtime', builder: (context, state) => const OvertimeScreen()),
       GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),
+      GoRoute(path: '/dokumen-kendaraan', builder: (context, state) => const DokumenSayaScreen()),
+      GoRoute(path: '/dokumen-kantor', builder: (context, state) => const DokumenKantorScreen()),
       GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

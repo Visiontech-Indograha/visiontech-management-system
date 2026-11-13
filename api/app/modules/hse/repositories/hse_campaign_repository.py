@@ -292,8 +292,11 @@ class HseCampaignRepository(BaseRepository):
             return dict(existing._mapping) if existing else {}
         return dict(row._mapping)
 
-    async def list_readers_by_campaign(self, campaign_id: UUID) -> Sequence[dict[str, Any]]:
-        query = """
+    async def list_readers_by_campaign(
+        self, campaign_id: UUID, offices: list[str] | None = None,
+    ) -> Sequence[dict[str, Any]]:
+        office_filter = "AND e.office_id = ANY(CAST(:offices AS uuid[]))" if offices is not None else ""
+        query = f"""
             SELECT
                 a.acknowledgment_id, a.campaign_id, a.user_id,
                 COALESCE(e.full_name, u.email) AS full_name,
@@ -308,10 +311,13 @@ class HseCampaignRepository(BaseRepository):
             FROM hse_campaign_acknowledgments a
             JOIN users u ON u.user_id = a.user_id
             LEFT JOIN employee e ON e.employee_id = u.employee_id
-            WHERE a.campaign_id = :campaign_id
+            WHERE a.campaign_id = :campaign_id {office_filter}
             ORDER BY a.acknowledged_at DESC;
         """
-        rows = await self.fetchall(query, {"campaign_id": campaign_id})
+        params: dict[str, Any] = {"campaign_id": campaign_id}
+        if offices is not None:
+            params["offices"] = offices
+        rows = await self.fetchall(query, params)
         return [dict(r._mapping) for r in rows]
 
     async def get_media_files(self, file_ids: list[UUID]) -> dict[str, dict[str, Any]]:

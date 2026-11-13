@@ -5,6 +5,7 @@ import { visibleNav } from "@/app/navigation";
 import { useSession } from "@/stores/sessionStore";
 import { roleScopeLines } from "@/lib/roleAssignments";
 import { useLiveEvents } from "@/hooks/useLiveEvents";
+import { useExpiringCount } from "@/services/vehicleDocumentService";
 import { useHomeSummary } from "@/services/homeService";
 import { ROLE_LABEL } from "@/lib/types";
 import { MobileBottomNav } from "../organisms/MobileBottomNav";
@@ -21,11 +22,14 @@ export function AppShell() {
   const { me, logout } = useSession();
   useLiveEvents(!!me);
   const summary = useHomeSummary(!!me).data;
+  const canSeeDocs = (me?.permissions ?? []).some((p) => p === "view:vehicle_documents" || p === "manage:vehicle_documents");
+  const expiring = useExpiringCount(canSeeDocs);
   const badges: Record<string, number> = {
     "/leaves": summary?.leaves_to_review ?? 0,
     "/attendance": summary?.attendance_to_review ?? 0,
     "/mess": summary?.mess_to_review ?? 0,
     "/assets": summary?.loan_requests_to_review ?? 0,
+    "/vehicle-documents": expiring.data ?? 0,
     "/offboarding": summary?.offboarding_open ?? 0,
     "/work-plans": summary?.corrections_to_review ?? 0,
   };
@@ -46,7 +50,7 @@ export function AppShell() {
           "fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar",
           "transition-[transform,width] duration-[var(--motion-base)] ease-out md:sticky md:top-0 md:h-screen md:translate-x-0",
           collapsed && "md:w-[76px]",
-          drawerOpen ? "translate-x-0" : "-translate-x-full",
+          drawerOpen ? "translate-x-0" : "-translate-x-full max-md:invisible",
         )}
       >
         <SidebarBrand

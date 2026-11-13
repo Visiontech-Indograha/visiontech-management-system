@@ -15,8 +15,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core import system_settings
 from app.core.errors import AppError, ValidationError
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.hse.repositories.hse_campaign_repository import HseCampaignRepository
 from app.modules.hse.repositories.vehicle_inspection_repository import VehicleInspectionRepository
@@ -33,9 +34,19 @@ from app.modules.hse.schemas.hse_schema import (
     HseCampaignResponse,
     HseCampaignUpdate,
     HseReaderItem,
+    InspectionChecklistItem,
+    InspectionChecklistTemplate,
     VehicleInspectionCreate,
     VehicleInspectionResponse,
     VehicleInspectionVerify,
+)
+from app.shared.access.office_scope import office_restriction, offices_param
+
+_INSPECTION_ITEMS: tuple[tuple[str, str], ...] = (
+    ("rem", "Rem"), ("ban", "Ban dan tekanan angin"), ("oli_mesin", "Oli mesin"),
+    ("lampu", "Lampu depan, belakang, dan sein"), ("klakson", "Klakson"), ("spion", "Spion"),
+    ("wiper", "Wiper dan air kaca"), ("sabuk_pengaman", "Sabuk pengaman"), ("apar", "Alat pemadam api (APAR)"),
+    ("p3k", "Kotak P3K"), ("air_radiator", "Air radiator"), ("bbm", "Bahan bakar"),
 )
 
 
@@ -45,6 +56,47 @@ class HseService:
         self.campaign_repo = HseCampaignRepository(db)
         self.inspection_repo = VehicleInspectionRepository(db)
 
+    async def _offices(self, user: CurrentUser | None, perm: Permission) -> list[str] | None:
+        """None = semua kantor. HSE yang hanya peran tambahan (ADR 0002 fase 2) dibatasi ke kantor penugasannya
+        bila ROLE_ASSIGNMENT_ENABLED; HSE utama, SA, dan flag mati = perilaku lama."""
+        if user is None:
+            return None
+        restriction = await office_restriction(self.db, user, perm)
+        return None if restriction is None else offices_param(restriction) or ["00000000-0000-0000-0000-000000000000"]
+
+    async def _ensure_campaign_scope(
+        self, user: CurrentUser | None, audience: str | None, target_user_ids: list[Any] | None,
+        *, existing: bool = False,
+    ) -> None:
+        """Penerbit K3 yang dibatasi kantor (HSE peran tambahan, ADR 0002) hanya boleh menerbitkan kampanye yang
+        seluruhnya menjangkau pengguna di kantor penugasannya: audiens INDIVIDUAL dengan semua sasaran di kantor itu.
+        Audiens ALL/FIELD/OFFICE menjangkau semua kantor, jadi ditolak sampai K3 punya kolom kantor (G2-K3).
+        `existing`: kampanye yang sudah ada di luar cakupan dijawab 404 (keberadaannya tidak dibocorkan)."""
+        offices = await self._offices(user, Permission.MANAGE_HSE_CAMPAIGNS)
+        if offices is None:
+            return
+        ids = [str(u) for u in (target_user_ids or [])]
+        ok = False
+        if audience == "INDIVIDUAL" and ids:
+            ok = bool(await self.campaign_repo.scalar(
+                """
+                SELECT COUNT(*) = CAST(:n AS int) FROM users u
+                JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+                WHERE u.user_id = ANY(CAST(:ids AS uuid[])) AND u.delete_at IS NULL
+                  AND e.office_id = ANY(CAST(:offices AS uuid[]))
+                """,
+                {"ids": ids, "n": len(set(ids)), "offices": offices},
+            )) if len(set(ids)) == len(ids) else False
+        if ok:
+            return
+        if existing:
+            raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        raise AppError(
+            "OFFICE_SCOPE_FORBIDDEN",
+            "Anda hanya dapat menerbitkan K3 untuk karyawan di kantor penugasan Anda (pilih sasaran perorangan).",
+            status=403,
+        )
+
     # ================= Kampanye K3 =================
     async def create_campaign(
         self,
@@ -53,6 +105,7 @@ class HseService:
     ) -> HseCampaignResponse:
         if data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir kampanye tidak boleh sebelum tanggal awal.", status=400)
+        await self._ensure_campaign_scope(current_user, data.target_audience, data.target_user_ids)
         await self._validate_media(data.media_paths, data.cooldown_seconds, current_user, existing_ids=set())
         self._validate_captions(data.media_paths, data.media_captions)
         if data.media_paths:
@@ -95,6 +148,13 @@ class HseService:
         existing = await self.campaign_repo.get_by_id(campaign_id)
         if not existing:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        await self._ensure_campaign_scope(
+            current_user, existing.get("target_audience"), existing.get("target_user_ids"), existing=True)
+        if data.target_audience is not None or data.target_user_ids is not None:
+            await self._ensure_campaign_scope(
+                current_user,
+                data.target_audience if data.target_audience is not None else existing.get("target_audience"),
+                data.target_user_ids if data.target_user_ids is not None else existing.get("target_user_ids"))
 
         if data.start_date and data.end_date and data.end_date < data.start_date:
             raise AppError("INVALID_DATE_RANGE", "Tanggal akhir tidak boleh sebelum tanggal awal.", status=400)
@@ -120,10 +180,12 @@ class HseService:
             raise AppError("UPDATE_FAILED", "Gagal memperbarui kampanye K3.", status=500)
         return HseCampaignResponse.model_validate(updated)
 
-    async def delete_campaign(self, campaign_id: UUID) -> bool:
+    async def delete_campaign(self, campaign_id: UUID, user: CurrentUser | None = None) -> bool:
         existing = await self.campaign_repo.get_by_id(campaign_id)
         if not existing:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
+        await self._ensure_campaign_scope(
+            user, existing.get("target_audience"), existing.get("target_user_ids"), existing=True)
         return await self.campaign_repo.delete(campaign_id)
 
     @staticmethod
@@ -181,7 +243,7 @@ class HseService:
         system_role = str(current_user.role)
         # Flag hidup: peran efektif (utama + penugasan aktif) agar peran tambahan ikut melihat kampanye K3
         # untuk perannya. Flag mati: hanya peran utama (persis lama).
-        roles = list(current_user.roles) if settings.ROLE_ASSIGNMENT_ENABLED else None
+        roles = list(current_user.roles) if system_settings.role_assignment_enabled() else None
         return await self.campaign_repo.get_active_popup_for_user(user_uuid, system_role, roles)
 
     async def acknowledge_campaign(
@@ -204,12 +266,15 @@ class HseService:
         )
         return result
 
-    async def get_campaign_audit_stats(self, campaign_id: UUID) -> HseCampaignAuditStats:
+    async def get_campaign_audit_stats(
+        self, campaign_id: UUID, user: CurrentUser | None = None,
+    ) -> HseCampaignAuditStats:
         campaign = await self.campaign_repo.get_by_id(campaign_id)
         if not campaign:
             raise AppError("NOT_FOUND", "Kampanye K3 tidak ditemukan.", status=404)
 
-        raw_readers = await self.campaign_repo.list_readers_by_campaign(campaign_id)
+        raw_readers = await self.campaign_repo.list_readers_by_campaign(
+            campaign_id, await self._offices(user, Permission.VIEW_HSE_CAMPAIGNS))
         readers = [HseReaderItem.model_validate(r) for r in raw_readers]
 
         return HseCampaignAuditStats(
@@ -226,9 +291,17 @@ class HseService:
         data: VehicleInspectionCreate,
         current_user: CurrentUser,
     ) -> VehicleInspectionResponse:
-        inspector_id = data.inspector_id or (
-            UUID(str(current_user.employee_id)) if current_user.employee_id else None
-        )
+        me = str(current_user.employee_id) if current_user.employee_id else None
+        manager = Permission.MANAGE_VEHICLE_INSPECTIONS.value in current_user.permissions
+        leader = current_user.has_role("TEAM_LEADER")
+        inspector_id: UUID | None
+        if manager:
+            inspector_id = data.inspector_id or (UUID(me) if me else None)
+        else:
+            # Pengemudi terdaftar aktif atau ketua tim: hanya atas nama sendiri.
+            inspector_id = UUID(me) if me else None
+            if not me or not (leader or await self.inspection_repo.has_active_driver_row(me)):
+                raise AppError("FORBIDDEN", "Anda tidak berhak mengirim inspeksi kendaraan.", status=403)
         if not inspector_id:
             raise AppError(
                 "MISSING_INSPECTOR",
@@ -236,6 +309,18 @@ class HseService:
                 status=400,
             )
 
+        exists, office = await self.inspection_repo.vehicle_office(data.vehicle_id)
+        if manager:
+            offices = await self._offices(current_user, Permission.MANAGE_VEHICLE_INSPECTIONS)
+            allowed = exists and (offices is None or office in offices)
+        else:
+            assert me is not None
+            allowed = exists and (
+                await self.inspection_repo.is_active_driver(data.vehicle_id, me)
+                or (leader and office is not None and office == await self.inspection_repo.employee_office(me))
+            )
+        if not allowed:
+            raise AppError("NOT_FOUND", "Kendaraan tidak ditemukan.", status=404)
         created = await self.inspection_repo.create(data, inspector_id)
         full_data = await self.inspection_repo.get_by_id(UUID(str(created["inspection_id"])))
         if not full_data:
@@ -251,8 +336,11 @@ class HseService:
         to_date: date | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> list[VehicleInspectionResponse]:
-        items = await self.inspection_repo.list_inspections(
+        user: CurrentUser | None = None,
+        q: str | None = None,
+        mine: str | None = None,
+    ) -> tuple[list[VehicleInspectionResponse], int]:
+        items, total = await self.inspection_repo.list_inspections(
             vehicle_id=vehicle_id,
             period_type=period_type,
             status=status,
@@ -260,12 +348,32 @@ class HseService:
             to_date=to_date,
             limit=limit,
             offset=offset,
+            offices=None if mine else await self._offices(user, Permission.VIEW_VEHICLE_INSPECTIONS),
+            q=q,
+            mine=mine,
         )
-        return [VehicleInspectionResponse.model_validate(item) for item in items]
+        return [VehicleInspectionResponse.model_validate(item) for item in items], total
 
-    async def get_vehicle_inspection(self, inspection_id: UUID) -> VehicleInspectionResponse:
-        item = await self.inspection_repo.get_by_id(inspection_id)
+    def inspection_checklist_template(self) -> InspectionChecklistTemplate:
+        """Butir daftar periksa baku untuk layar Buat inspeksi (web dan HP memakai daftar yang sama)."""
+        ok = ["BAIK", "PERLU_PERBAIKAN", "RUSAK"]
+        return InspectionChecklistTemplate(
+            period_types=["DAILY", "WEEKLY", "MONTHLY"],
+            items=[InspectionChecklistItem(key=k, label=label, options=ok) for k, label in _INSPECTION_ITEMS],
+        )
+
+    async def _inspection_visible(self, item: dict[str, Any] | None, user: CurrentUser | None,
+                                  perm: Permission) -> bool:
         if not item:
+            return False
+        offices = await self._offices(user, perm)
+        return offices is None or str(item.get("office_id")) in offices
+
+    async def get_vehicle_inspection(
+        self, inspection_id: UUID, user: CurrentUser | None = None,
+    ) -> VehicleInspectionResponse:
+        item = await self.inspection_repo.get_by_id(inspection_id)
+        if not await self._inspection_visible(item, user, Permission.VIEW_VEHICLE_INSPECTIONS) or item is None:
             raise AppError("NOT_FOUND", "Data inspeksi kendaraan tidak ditemukan.", status=404)
         return VehicleInspectionResponse.model_validate(item)
 
@@ -275,6 +383,9 @@ class HseService:
         data: VehicleInspectionVerify,
         current_user: CurrentUser,
     ) -> VehicleInspectionResponse:
+        existing = await self.inspection_repo.get_by_id(inspection_id)
+        if not await self._inspection_visible(existing, current_user, Permission.MANAGE_VEHICLE_INSPECTIONS):
+            raise AppError("NOT_FOUND", "Data inspeksi tidak ditemukan untuk diverifikasi.", status=404)
         verifier_uuid = UUID(str(current_user.user_id))
         updated = await self.inspection_repo.verify(inspection_id, data, verifier_uuid)
         if not updated:

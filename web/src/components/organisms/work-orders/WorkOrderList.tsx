@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { statusLabel } from "@/lib/labels";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import {
   Briefcase,
@@ -106,7 +107,7 @@ export function WorkOrderList({
       case "SURVEY_IN_PROGRESS":
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-info-bg text-info border border-info-border">
-            <TextBlock as="span">Survei Berjalan</TextBlock>
+            <TextBlock as="span">Survei sedang berjalan</TextBlock>
           </div>
         );
       case "SURVEY_SUBMITTED":
@@ -148,7 +149,7 @@ export function WorkOrderList({
       default:
         return (
           <div className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground">
-            <TextBlock as="span">{status}</TextBlock>
+            <TextBlock as="span">{statusLabel(status)}</TextBlock>
           </div>
         );
     }
@@ -174,7 +175,7 @@ export function WorkOrderList({
             onChange={(e) => onDivisionChange(e.target.value)}
             className="w-full sm:w-56"
           >
-            <ControlOption value="">Semua Divisi</ControlOption>
+            <ControlOption value="">Semua divisi saya</ControlOption>
             {divisions.map((d) => (
               <ControlOption key={d.id} value={d.id}>
                 {d.name}
@@ -430,7 +431,7 @@ export function WorkOrderList({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(wo.work_order_id, "pdf", `BAST_${wo.wo_number}.pdf`)}
+                      onClick={() => downloadWorkOrderExport(wo.work_order_id, "pdf", `Berita_Acara_Serah_Terima_${wo.wo_number}.pdf`)}
                       className="text-xs py-1 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 flex items-center gap-1.5"
                     >
                       <Download className="h-3.5 w-3.5" />

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { pageTitle } from "@/app/pageTitle";
+import { EnvBar } from "@/components/organisms/EnvBar";
 
 /** Layout tanpa tampilan: menyetel `document.title` mengikuti rute, lalu merender halamannya. */
 export function TitleLayout() {
@@ -8,5 +9,10 @@ export function TitleLayout() {
   useEffect(() => {
     document.title = pageTitle(pathname);
   }, [pathname]);
-  return <Outlet />;
+  return (
+    <>
+      <EnvBar />
+      <Outlet />
+    </>
+  );
 }

@@ -1,4 +1,4 @@
-"""Rute kelola penugasan peran tambahan (ADR 0002). Hanya SUPER_ADMIN (`manage:role_assignments`)."""
+"""Rute kelola penugasan peran tambahan (ADR 0002). SUPER_ADMIN (`manage:role_assignments`); OM hanya untuk PM/HSE."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Response, status
 
-from app.api.deps import IdempotencyGuard, idempotency_guard, require_permission
+from app.api.deps import IdempotencyGuard, idempotency_guard, require_any_permission
 from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -14,7 +14,8 @@ from app.modules.role_assignments.controllers.role_assignment_controller import 
 from app.modules.role_assignments.schemas.role_assignment_schema import RoleAssignmentCreate, RoleAssignmentOut
 
 router = APIRouter(prefix="/users/{user_id}/role-assignments", tags=["Role Assignments"])
-_MANAGE = Depends(require_permission(Permission.MANAGE_ROLE_ASSIGNMENTS))
+# SUPER_ADMIN: semua peran. OM: hanya PROJECT_MANAGER/HSE (dibatasi di service). HR/Finance/lainnya: 403.
+_MANAGE = Depends(require_any_permission(Permission.MANAGE_ROLE_ASSIGNMENTS, Permission.MANAGE_FIELD_ROLE_ASSIGNMENTS))
 
 
 @router.get("", response_model=list[RoleAssignmentOut])

@@ -68,8 +68,8 @@ def _text(content: bytes) -> str:
 def test_survey_report_follows_reference_outline():
     text = _text(survey_report_docx(_report()))
     for section in ("1. Informasi Survei", "2. Jadwal Survei", "3. Uraian Aktivitas & Tim", "4. Layout Titik",
-                    "5. Kebutuhan Instalasi per Titik", "6. Dokumentasi per Titik", "7. Bill of Material (Estimasi)",
-                    "8. Penutup"):
+                    "5. Kebutuhan Instalasi per Titik", "6. Dokumentasi per Titik",
+                    "7. Rincian Volume dan Biaya (Estimasi)", "8. Penutup"):
         assert section in text
     assert "Survei Titik 03" in text and "Instalasi 03" not in text  # hanya item fase SURVEY
     assert "Keterangan: Butuh tiang 6 m" in text
@@ -85,15 +85,16 @@ def test_bast_docx_lists_points_bom_and_signers():
 
 def test_office_builders_produce_valid_files():
     wb = load_workbook(io.BytesIO(completion_xlsx(_report())))
-    assert wb.sheetnames == ["BoQ", "Titik"]
-    assert wb["BoQ"]["C5"].value == "Kabel FO" and wb["BoQ"]["G5"].value == -20
+    assert wb.sheetnames == ["Rincian Volume dan Biaya", "Titik"]
+    sheet = wb["Rincian Volume dan Biaya"]
+    assert sheet["C5"].value == "Kabel FO" and sheet["G5"].value == -20
     assert len(Presentation(io.BytesIO(completion_pptx(_report()))).slides) >= 4
     meal = [SimpleNamespace(employee_no="VT-7", full_name="Riko", in_city_days=2, out_city_days=1,
                             total_amount=135000.0, pending_days=0)]
     per = PeriodicReport("MEP", date(2026, 9, 14), date(2026, 9, 20), [], [], meal, "pm",
                          datetime(2026, 9, 21, tzinfo=UTC))
     wb = load_workbook(io.BytesIO(periodic_xlsx(per)))
-    assert wb.sheetnames == ["Jadwal", "BoQ", "Uang Makan"]
+    assert wb.sheetnames == ["Jadwal", "Rincian Volume dan Biaya", "Uang Makan"]
     assert wb["Uang Makan"]["E6"].value == 135000.0  # baris TOTAL
 
 
@@ -131,6 +132,8 @@ def _service(order: dict) -> es.ExportService:
     repo.image_keys = AsyncMock(return_value={})
     repo.requirement_names = AsyncMock(return_value={})
     repo.employee_name = AsyncMock(return_value="Pengguna Uji")
+    repo.lock_export = AsyncMock()
+    repo.recent_export = AsyncMock(return_value=None)
     return es.ExportService(repo, orders)
 
 
@@ -178,3 +181,21 @@ def test_periodic_schedule_sheet_prints_plan_status_in_indonesian():
     ws = load_workbook(io.BytesIO(periodic_xlsx(per)))["Jadwal"]
     values = [c.value for row in ws.iter_rows() for c in row]
     assert "Disetujui" in values and "APPROVED" not in values
+
+
+def _info_date(content: bytes) -> str:
+    d = docx.Document(io.BytesIO(content))
+    return next(r.cells[1].text for t in d.tables for r in t.rows if r.cells[0].text == "Tanggal")
+
+
+def test_survey_report_date_uses_survey_point_date_in_indonesian_format():
+    assert _info_date(survey_report_docx(_report())) == "14 September 2026"
+
+
+def test_survey_report_date_never_blank_without_survey_points():
+    report = _report()
+    report.points = []
+    assert _info_date(survey_report_docx(report)) == "16 September 2026"  # tanggal pengesahan PM
+    report.order.pop("pm_signed_at")
+    report.order.pop("leader_signed_at")
+    assert _info_date(survey_report_docx(report)) == "17 September 2026"  # hari laporan dibuat

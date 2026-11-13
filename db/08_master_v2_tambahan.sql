@@ -130,10 +130,13 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object OR invalid_table_definition THEN NULL; END $$;
 CREATE INDEX IF NOT EXISTS idx_expense_daily_plan ON public.operational_expense USING btree (daily_plan_id) WHERE (delete_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_expense_requester ON public.operational_expense USING btree (requester_id) WHERE (delete_at IS NULL);
+-- v2_0039: indeks komposit organisasi/kantor pendukung RLS tenant (B-08)
+CREATE INDEX IF NOT EXISTS ix_operational_expense_office_date ON public.operational_expense USING btree (office_id, expense_date DESC) WHERE (delete_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_job_position_division ON public.job_position USING btree (division_id) WHERE (delete_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_leave_request_dates ON public.leave_request USING btree (start_date, end_date) WHERE (delete_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_leave_request_employee ON public.leave_request USING btree (employee_id) WHERE (delete_at IS NULL);
 CREATE INDEX IF NOT EXISTS idx_project_division ON public.project USING btree (division_id) WHERE (delete_at IS NULL);
+CREATE INDEX IF NOT EXISTS ix_project_office_status ON public.project USING btree (office_id, status) WHERE (delete_at IS NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_client_code_active ON public.client USING btree (lower((client_code)::text)) WHERE (delete_at IS NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_job_position_code_active ON public.job_position USING btree (lower((code)::text)) WHERE (delete_at IS NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_leave_balance_emp_year ON public.leave_balance USING btree (employee_id, period_year) WHERE (delete_at IS NULL);
@@ -333,3 +336,14 @@ CREATE TABLE IF NOT EXISTS work_order_bom (
 );
 CREATE INDEX IF NOT EXISTS idx_wo_bom_wo ON work_order_bom(work_order_id) WHERE delete_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_wo_bom_item ON work_order_bom(work_order_item_id) WHERE delete_at IS NULL;
+
+-- Hak untuk peran runtime vms_api bila sudah ada (idempoten)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vms_api') THEN
+        GRANT USAGE ON SCHEMA public TO vms_api;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO vms_api;
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO vms_api;
+    END IF;
+END $$;
+

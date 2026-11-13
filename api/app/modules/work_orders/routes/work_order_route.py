@@ -5,18 +5,22 @@ Rute REST API untuk modul Work Orders VMS V2.
 """
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_current_user
+from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.security import CurrentUser
 from app.modules.work_orders.controllers.work_order_controller import WorkOrderController
 from app.modules.work_orders.schemas.work_order_schema import (
+    PmCandidateOut,
     SurveySubmitIn,
+    TeamSurveyOut,
     WorkOrderAssignSurvey,
     WorkOrderCreate,
     WorkOrderDetailOut,
@@ -62,6 +66,20 @@ async def list_work_orders(
     )
 
 
+@router.get("/pm-candidates", response_model=list[PmCandidateOut], summary="Calon PM untuk Buat Tugas Klien")
+async def list_pm_candidates(
+    response: Response,
+    params: ListParams = Depends(),
+    division_id: UUID | None = Query(None, description="Batasi pada satu divisi"),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkOrderController = Depends(),
+) -> list[PmCandidateOut]:
+    """Karyawan berperan PM (utama atau tambahan) dengan id, nama, dan divisi saja. SA/OM: semua divisi; PM: divisi
+    yang ia pimpin atau tempati (divisi lain 404); peran lain 403. `q` = awalan nama; tanpa parameter = semua calon."""
+    rows = await controller.list_pm_candidates(current_user, division_id)
+    return list(apply_list(rows, params, response, lambda r: (r.full_name,), prefix=True))
+
+
 @router.post("", response_model=WorkOrderDetailOut, status_code=status.HTTP_201_CREATED)
 async def create_work_order(
     data: WorkOrderCreate,
@@ -70,6 +88,32 @@ async def create_work_order(
 ) -> WorkOrderDetailOut:
     """Buat Work Order baru dari klien (Status awal: WAITING_SURVEY)."""
     return await controller.create_work_order(current_user, data)
+
+
+@router.get("/team-surveys", response_model=list[TeamSurveyOut])
+async def list_team_surveys(
+    response: Response,
+    params: ListParams = Depends(),
+    scope: Literal["team", "all"] = Query("team", description="team = tim pemanggil; all = ditambah WO kelolaan PM"),
+    date_from: date | None = Query(None, description="Tanggal survei paling awal"),
+    date_to: date | None = Query(None, description="Tanggal survei paling akhir"),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: WorkOrderController = Depends(),
+) -> list[TeamSurveyOut]:
+    """Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.
+    Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;
+    `scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua."""
+    check_date_range(date_from, date_to)
+    rows = await controller.list_team_surveys(
+        current_user, scope_all=scope == "all", date_from=date_from, date_to=date_to
+    )
+    return list(
+        apply_list(
+            rows, params, response,
+            lambda r: (r.wo_number, r.title, r.client_name, r.site_name, r.surveyor_team_name),
+            prefix=True,
+        )
+    )
 
 
 @router.get("/{work_order_id}", response_model=WorkOrderDetailOut)

@@ -110,10 +110,24 @@ class CompletionReport:
     map_image: bytes | None = None  # PNG peta + penanda titik (None: tanpa koneksi / tanpa koordinat)
     has_coordinates: bool = False  # ada titik berkoordinat (beda 'tanpa koneksi' dan 'tanpa titik')
     logos: KopLogos = field(default_factory=default_kop_logos)  # (logo Visiontech, logo tim | None)
+    omitted_photos: int = 0  # foto yang terpotong batas jumlah (dicatat di dokumen)
 
     @property
     def survey_points(self) -> list[ReportPoint]:
         return [p for p in self.points if p.phase == "SURVEY"]
+
+    @property
+    def survey_dates(self) -> list[date]:
+        """Tanggal survei: tanggal kerja titik survei; bila tak ada titik, tanggal pengesahan PM/ketua, lalu hari
+        laporan dibuat. Tidak pernah kosong supaya kolom Tanggal tidak tampil '-'."""
+        dates = sorted({p.work_date for p in self.survey_points if p.work_date})
+        if dates:
+            return dates
+        for key in ("pm_signed_at", "leader_signed_at"):
+            value = self.order.get(key)
+            if isinstance(value, datetime):
+                return [value.date()]
+        return [self.generated_at.date()]
 
     @property
     def all_photos(self) -> list[tuple[str, bytes]]:
@@ -157,6 +171,7 @@ class DailyReport:
     report_submitted_at: datetime | None = None
     logos: KopLogos = field(default_factory=default_kop_logos)
     assets: list[AssetLine] = field(default_factory=list)
+    omitted_photos: int = 0
 
 
 @dataclass
@@ -185,6 +200,12 @@ class TeamWeekReport:
     generated_at: datetime
     logos: KopLogos = field(default_factory=default_kop_logos)
     assets: list[AssetLine] = field(default_factory=list)
+    omitted_photos: int = 0
+
+
+def omitted_note(count: int) -> str | None:
+    """Catatan di dokumen bila sebagian foto tidak muat (batas jumlah foto per dokumen)."""
+    return f"Catatan: {count} foto lain tidak disertakan dalam dokumen ini." if count > 0 else None
 
 
 def plan_status_label(value: str | None) -> str:
@@ -198,3 +219,16 @@ def coord_text(lat: Any, lng: Any) -> str:
         return "-"
     return f"{float(lat):.6f}, {float(lng):.6f}"
 
+
+
+BULAN = ("Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober",
+         "November", "Desember")
+
+
+def month_label(value: date) -> str:
+    """'Oktober 2026' untuk judul laporan bulanan."""
+    return f"{BULAN[value.month - 1]} {value.year}"
+
+
+def rupiah(value: float) -> str:
+    return f"Rp {value:,.0f}".replace(",", ".")

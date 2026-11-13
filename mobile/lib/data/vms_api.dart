@@ -281,6 +281,14 @@ class VmsApi {
   Future<void> readAllNotifications() async =>
       _dio.post('$_p/notifications/read-all');
 
+  /// Dokumen kendaraan yang dikemudikan akun ini (STNK, SIM, dll).
+  Future<List<Map<String, dynamic>>> vehicleDocumentsMine() async =>
+      _list((await _dio.get('$_p/vehicle-documents/mine')).data);
+
+  /// HSE/OM: dokumen kantor yang jatuh tempo dalam [days] hari (yang lewat ikut).
+  Future<List<Map<String, dynamic>>> vehicleDocumentsExpiring({int days = 30}) async =>
+      _list((await _dio.get('$_p/vehicle-documents/expiring', queryParameters: {'days': days})).data);
+
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async => _list(
     (await _dio.get(
@@ -470,6 +478,14 @@ class VmsApi {
       queryParameters: {'state': ?state},
     )).data,
   );
+
+  /// Jenis pekerjaan (kunci id) untuk rekomendasi titik survei.
+  Future<List<Map<String, dynamic>>> workTypes() async =>
+      _list((await _dio.get('$_p/work-types')).data);
+
+  /// Survei work order milik tim saya (ketua atau anggota aktif), untuk bagian "Survei dari work order".
+  Future<List<Map<String, dynamic>>> teamSurveys() async =>
+      _list((await _dio.get('$_p/work-orders/team-surveys')).data);
 
   /// Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari mulai [start] — foto, keterangan, status.
   Future<List<int>> teamWeekSlides(String teamId, String start) async {
@@ -756,6 +772,21 @@ class VmsApi {
   Future<List<Map<String, dynamic>>> myLoans() async => _list(
     (await _dio.get('$_p/assets/loans', queryParameters: {'open': true})).data,
   );
+
+  Future<List<Map<String, dynamic>>> myInspections() async =>
+      _list((await _dio.get('$_p/hse/inspections/mine')).data);
+
+  Future<Map<String, dynamic>> inspectionChecklistTemplate() async =>
+      _map((await _dio.get('$_p/hse/inspections/checklist-template')).data);
+
+  Future<Map<String, dynamic>> inspectionDetail(String id) async =>
+      _map((await _dio.get('$_p/hse/inspections/$id')).data);
+
+  Future<List<Map<String, dynamic>>> vehiclesForInspection() async =>
+      _list((await _dio.get('$_p/assets/vehicles')).data);
+
+  Future<Map<String, dynamic>> createInspection(Map<String, dynamic> body) async =>
+      _map((await _dio.post('$_p/hse/inspections', data: body)).data);
 
   Future<List<Map<String, dynamic>>> myLoanRequests() async =>
       _list((await _dio.get('$_p/assets/loan-requests')).data);

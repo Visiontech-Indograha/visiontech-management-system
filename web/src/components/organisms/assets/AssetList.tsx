@@ -25,6 +25,7 @@ export type AssetAction =
   | { kind: "lend"; asset: AssetKind; id: string; name: string }
   | { kind: "status"; asset: AssetKind; id: string; name: string; status: string }
   | { kind: "files"; vehicle: Vehicle }
+  | { kind: "drivers"; vehicle: Vehicle }
   | { kind: "return"; loan: Loan };
 
 type Tab = "VEHICLE" | "TOOL" | "LOANS";
@@ -47,7 +48,7 @@ function Holder({ name }: { name?: string | null }) {
 
 function TabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
   return (
-    <ActionButton variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="h-9 text-xs">
+    <ActionButton variant={active ? "default" : "outline"} size="sm" onClick={onClick} className="h-11 text-xs">
       {count !== undefined ? `${label} (${count})` : label}
     </ActionButton>
   );
@@ -172,6 +173,9 @@ function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; c
           Berkas
         </ActionButton>
       )}
+      <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "drivers", vehicle: v })}>
+        Pengemudi
+      </ActionButton>
       {actions.includes("status") && (
         <ActionButton size="sm" variant="ghost" onClick={() => onOpen({ kind: "status", asset: "VEHICLE", id: v.vehicle_id, name: v.name, status: v.status })}>
           Status

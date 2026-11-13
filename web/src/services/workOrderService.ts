@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
+import type { components } from "@/lib/apiTypes";
 import { saveBlob } from "./exportService";
 
 export type WorkOrderStatus =
@@ -86,6 +87,10 @@ export interface WorkOrderDetail extends WorkOrder {
   survey_points: SurveyPoint[];
   items: WorkOrderItem[];
   bom: WorkOrderBom[];
+  /** Hanya terisi pada jawaban penugasan survei: "Tim X akan melihat di HP pada tanggal Y." */
+  survey_assignment_summary?: string | null;
+  /** Hanya terisi pada jawaban pembuatan WO: klien sama sudah punya WO berjudul sama (peringatan, bukan blokir). */
+  duplicate_title_warning?: string | null;
 }
 
 export interface WorkOrderCreateInput {
@@ -100,7 +105,7 @@ export interface WorkOrderCreateInput {
 
 export interface AssignSurveyInput {
   lead_team_id: string;
-  survey_date?: string | null;
+  survey_date: string;
   notes?: string | null;
 }
 
@@ -157,7 +162,10 @@ export function useAssignSurvey(workOrderId: string) {
       const res = await api.post<WorkOrderDetail>(`/work-orders/${workOrderId}/assign-survey`, payload);
       return res.data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: KEY });
+      await qc.invalidateQueries({ queryKey: ["daily-plans", "surveys"] }); // Jadwal harian ikut menampilkan survei baru
+    },
   });
 }
 
@@ -192,4 +200,19 @@ export async function downloadWorkOrderExport(
     responseType: "blob",
   });
   saveBlob(res.data, res.headers["content-disposition"] as string | undefined, fallbackName);
+}
+
+export type PmCandidate = components["schemas"]["PmCandidateOut"];
+
+/** Calon PM untuk form Buat Tugas Klien (GET /work-orders/pm-candidates), disaring per divisi. */
+export function usePmCandidates(divisionId?: string) {
+  return useQuery({
+    queryKey: ["work-orders", "pm-candidates", { division_id: divisionId ?? null }],
+    queryFn: async (): Promise<PmCandidate[]> =>
+      (
+        await api.get<PmCandidate[]>("/work-orders/pm-candidates", {
+          params: { size: 100, ...(divisionId ? { division_id: divisionId } : {}) },
+        })
+      ).data,
+  });
 }

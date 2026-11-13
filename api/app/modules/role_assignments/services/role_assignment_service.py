@@ -1,4 +1,5 @@
-"""Aturan penugasan peran tambahan (ADR 0002 bagian 8 dan 12). Hanya SUPER_ADMIN (izin di route)."""
+"""Aturan penugasan peran tambahan (ADR 0002 bagian 8 dan 12 + perluasan fase 2). SUPER_ADMIN: semua peran;
+OM: hanya PM/HSE (izin di route, batas peran di sini)."""
 
 from __future__ import annotations
 
@@ -7,11 +8,15 @@ from uuid import UUID
 
 from app.core.errors import AppError, NotFoundError, ValidationError
 from app.core.hard_delete import write_delete_audit
+from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.role_assignments.repositories.role_assignment_repository import RoleAssignmentRepository
 
 HR, FINANCE, OM, SA = "ADMIN_HR_GA", "FINANCE", "OPERATIONAL_MANAGER", "SUPER_ADMIN"
+PM, HSE = "PROJECT_MANAGER", "HSE"
 PHASE1_ROLES = {HR, FINANCE, OM}
+PHASE2_ROLES = {PM, HSE}  # per kantor; boleh diberi OM
+ASSIGNABLE_ROLES = PHASE1_ROLES | PHASE2_ROLES
 MAX_EXTRA_ROLES = 2
 
 
@@ -24,6 +29,14 @@ class RoleAssignmentService:
             self.repo.db, actor_user_id=actor.user_id, actor_role=actor.role, actor_email=actor.email,
             entity_type="users", entity_id=target, action=action, detail=detail,
         )
+
+    @staticmethod
+    def _can_touch(actor: CurrentUser, role: str) -> None:
+        """SUPER_ADMIN semua peran; pemegang izin lapangan (OM) hanya PM/HSE."""
+        if Permission.MANAGE_ROLE_ASSIGNMENTS.value in actor.permissions:
+            return
+        if role not in PHASE2_ROLES:
+            raise AppError("FORBIDDEN", "Anda hanya boleh mengatur peran Project Manager dan HSE.", status=403)
 
     @staticmethod
     def _not_self(actor: CurrentUser, user_id: UUID) -> None:
@@ -40,8 +53,11 @@ class RoleAssignmentService:
         target = await self.repo.lock_user(user_id)  # kunci: cek batas/larangan lalu tulis tidak boleh balapan
         if target is None:
             raise NotFoundError("Pengguna")
-        if role not in PHASE1_ROLES:
-            raise ValidationError("Peran ini belum bisa ditambahkan. Pilih HR/GA, Finance, atau Operational Manager.")
+        if role not in ASSIGNABLE_ROLES:
+            raise ValidationError(
+                "Peran ini belum bisa ditambahkan. Pilih HR/GA, Finance, Operational Manager, "
+                "Project Manager, atau HSE.")
+        self._can_touch(actor, role)
         primary = target.system_role
         if primary == SA:
             raise ValidationError("Super Admin tidak bisa digabung dengan peran lain.")
@@ -50,6 +66,8 @@ class RoleAssignmentService:
                 raise ValidationError("Operational Manager berlaku untuk semua kantor. Kosongkan pilihan kantor.")
             if primary == OM:
                 raise ValidationError("Akun ini sudah menjadi Operational Manager.")
+        elif primary == role and role in PHASE2_ROLES:  # HR/Finance utama boleh kantor kedua
+            raise ValidationError("Akun ini sudah memegang peran tersebut sebagai peran utama.")
         elif office_id is None:
             raise ValidationError("Pilih kantor untuk peran ini.")
         elif not await self.repo.office_active(office_id):
@@ -82,6 +100,7 @@ class RoleAssignmentService:
         row = await self.repo.get_active(user_id, assignment_id)
         if row is None:
             raise NotFoundError("Penugasan")
+        self._can_touch(actor, row.role)
         if row.source == "PRIMARY":
             raise ValidationError("Peran utama tidak bisa dicabut di sini.")
         if await self.repo.revoke(assignment_id, actor.user_id) != 1:

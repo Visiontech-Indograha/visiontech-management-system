@@ -1,4 +1,8 @@
 import L from "leaflet";
+import { statusLabel } from "@/lib/labels";
+import { errorMessage } from "@/lib/errors";
+import { SurveyApproveButton } from "./SurveyApproveButton";
+import { BastDownloadButtons } from "./BastDownloadButtons";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { toast } from "sonner";
@@ -7,7 +11,6 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import {
-  CheckCircle2,
   MapPin,
   Camera,
   Layers,
@@ -26,6 +29,13 @@ import {
 import "leaflet/dist/leaflet.css";
 
 const SAT_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+/** Tombol tutup bawaan Leaflet berlabel "Close popup" (tanpa opsi bahasa); labelnya diganti saat popup dibuka. */
+function indonesianCloseButton(e: L.PopupEvent) {
+  const button = e.popup.getElement()?.querySelector(".leaflet-popup-close-button");
+  button?.setAttribute("aria-label", "Tutup keterangan titik");
+  button?.setAttribute("title", "Tutup keterangan titik");
+}
+
 const SAT_ATTR = "Imagery &copy; Esri, Maxar, Earthstar Geographics";
 
 const createSurveyPin = (n: number) =>
@@ -134,6 +144,7 @@ export function WorkOrderSurveyReviewModal({
   const { data: detail, isLoading } = useWorkOrderDetail(workOrderId || undefined);
   const applyMutation = useApplySurvey(workOrderId || "");
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [tileFailed, setTileFailed] = useState(false);
   const [activeTab, setActiveTab] = useState<"both" | "map" | "list">("both");
 
   const surveyPoints = detail?.survey_points;
@@ -151,8 +162,8 @@ export function WorkOrderSurveyReviewModal({
       await applyMutation.mutateAsync();
       toast.success("Hasil survei berhasil disetujui! Work order kini siap dijadwalkan.");
       onClose();
-    } catch {
-      toast.error("Gagal menyetujui hasil survei");
+    } catch (err) {
+      toast.error(errorMessage(err, "Hasil survei belum bisa disetujui. Coba lagi."));
     }
   };
 
@@ -180,7 +191,7 @@ export function WorkOrderSurveyReviewModal({
                 <TextBlock as="span">Klien: </TextBlock>
                 <TextBlock as="span" className="font-semibold text-ink">{detail.client_name}</TextBlock>
                 <TextBlock as="span"> | Lokasi: </TextBlock>
-                <TextBlock as="span" className="font-semibold text-ink">{detail.site_name || "Pusat"}</TextBlock>
+                <TextBlock as="span" className="font-semibold text-ink">{detail.site_name || "Belum ada site"}</TextBlock>
                 <TextBlock as="span"> ({detail.site_address || "-"})</TextBlock>
                 <TextBlock as="span"> | Tim: </TextBlock>
                 <TextBlock as="span" className="font-semibold text-ink">{detail.team_name || "Belum ditunjuk"}</TextBlock>
@@ -229,7 +240,7 @@ export function WorkOrderSurveyReviewModal({
                     : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30"
                 }`}
               >
-                <TextBlock as="span">{detail.status}</TextBlock>
+                <TextBlock as="span">{statusLabel(detail.status)}</TextBlock>
               </div>
             </div>
           </div>
@@ -261,6 +272,11 @@ export function WorkOrderSurveyReviewModal({
                     </TextBlock>
                   </div>
 
+                  {tileFailed && (
+                    <TextBlock role="alert" className="text-sm text-warning">
+          Gambar peta tidak bisa dimuat. Periksa sambungan internet, lalu coba lagi nanti.
+        </TextBlock>
+                  )}
                   <div className="h-[380px] w-full relative">
                     {validCoords.length > 0 ? (
                       <MapContainer
@@ -270,24 +286,24 @@ export function WorkOrderSurveyReviewModal({
                         scrollWheelZoom={false}
                         className="h-full w-full"
                       >
-                        <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} />
+                        <TileLayer url={SAT_URL} attribution={SAT_ATTR} maxZoom={19} maxNativeZoom={18} eventHandlers={{ tileerror: () => setTileFailed(true) }} />
                         <FitSurveyMap coords={validCoords} />
                         {detail.survey_points?.map((pt, idx) => {
                           if (pt.site_lat == null || pt.site_lng == null) return null;
                           const pos: [number, number] = [Number(pt.site_lat), Number(pt.site_lng)];
                           return (
-                            <Marker key={pt.point_id || idx} position={pos} icon={createSurveyPin(idx + 1)}>
+                            <Marker key={pt.point_id || idx} position={pos} icon={createSurveyPin(idx + 1)} eventHandlers={{ popupopen: indonesianCloseButton }}>
                               <Popup className="vms-map-popup">
                                 <div className="w-56 p-1 space-y-1.5 text-ink">
                                   <div className="font-bold text-xs"><TextBlock as="span">{idx + 1}. {pt.point_name}</TextBlock></div>
                                   {pt.location_detail && (
-                                    <div className="text-[11px] text-muted-foreground">{pt.location_detail}</div>
+                                    <div className="text-xs text-muted-foreground">{pt.location_detail}</div>
                                   )}
-                                  <div className="text-[10px] text-primary font-medium">
+                                  <div className="text-xs text-primary font-medium">
                                     <TextBlock as="span">{pos[0].toFixed(5)}, {pos[1].toFixed(5)}</TextBlock>
                                   </div>
                                   {pt.recommended_work_type_name && (
-                                    <div className="text-[10px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded inline-block">
+                                    <div className="text-xs font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded inline-block">
                                       {pt.recommended_work_type_name}
                                     </div>
                                   )}
@@ -360,7 +376,7 @@ export function WorkOrderSurveyReviewModal({
                                 variant="outline"
                                 size="xs"
                                 onClick={() => window.open(`https://maps.google.com/?q=${pt.site_lat},${pt.site_lng}`, "_blank")}
-                                className="text-[11px] font-medium text-primary flex items-center gap-1 px-2.5 py-1 rounded-lg border-primary/30 h-auto"
+                                className="text-xs font-medium text-primary flex items-center gap-1 px-2.5 py-1 rounded-lg border-primary/30 h-auto"
                               >
                                 <MapPin className="h-3 w-3" />
                                 <TextBlock as="span">
@@ -440,11 +456,11 @@ export function WorkOrderSurveyReviewModal({
                         >
                           <div>
                             <TextBlock className="font-semibold text-ink">{pt.point_name}</TextBlock>
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               <TextBlock as="span">{pt.recommended_work_type_name || "Pekerjaan Standar"}</TextBlock>
                             </div>
                           </div>
-                          <div className="text-[11px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
+                          <div className="text-xs font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
                             <TextBlock as="span">Target: 1 Titik</TextBlock>
                           </div>
                         </div>
@@ -457,12 +473,12 @@ export function WorkOrderSurveyReviewModal({
                         >
                           <div>
                             <TextBlock className="font-semibold text-ink">{item.title}</TextBlock>
-                            <div className="text-[11px] text-muted-foreground">
+                            <div className="text-xs text-muted-foreground">
                               <TextBlock as="span">{item.work_type_name || "Jenis Pekerjaan"}</TextBlock>
                             </div>
                           </div>
                           <div
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            className={`text-xs font-bold px-2 py-0.5 rounded-md ${
                               item.status === "DONE"
                                 ? "bg-emerald-500/10 text-emerald-500"
                                 : item.status === "IN_PROGRESS"
@@ -515,35 +531,16 @@ export function WorkOrderSurveyReviewModal({
                       <Download className="h-3.5 w-3.5 text-primary" />
                       <TextBlock as="span">Unduh Dokumen Resmi</TextBlock>
                     </div>
-                    <TextBlock className="text-[10px] text-muted-foreground font-normal">KOP Logo Visiontech</TextBlock>
+                    <TextBlock className="text-xs text-muted-foreground font-normal">KOP Logo Visiontech</TextBlock>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <ActionButton
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "pdf", `BAST_${detail.wo_number}.pdf`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
-                    >
-                      <Download className="h-3 w-3 mr-1.5 text-primary shrink-0" />
-                      <TextBlock as="span" className="truncate">Surat serah terima (.pdf)</TextBlock>
-                    </ActionButton>
-                    <ActionButton
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "docx", `BAST_${detail.wo_number}.docx`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
-                    >
-                      <Download className="h-3 w-3 mr-1.5 text-blue-500 shrink-0" />
-                      <TextBlock as="span" className="truncate">Surat serah terima (.docx)</TextBlock>
-                    </ActionButton>
+                    {detail.status === "BAST_SIGNED" && <BastDownloadButtons id={detail.work_order_id} number={detail.wo_number} />}
                     <ActionButton
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => downloadWorkOrderExport(detail.work_order_id, "survey", `Survei_${detail.wo_number}.docx`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
+                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-amber-500 shrink-0" />
                       <TextBlock as="span" className="truncate">Laporan survei (.docx)</TextBlock>
@@ -553,7 +550,7 @@ export function WorkOrderSurveyReviewModal({
                       variant="outline"
                       size="sm"
                       onClick={() => downloadWorkOrderExport(detail.work_order_id, "order", `Surat_Tugas_${detail.wo_number}.docx`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
+                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-purple-500 shrink-0" />
                       <TextBlock as="span" className="truncate">Tugas (.docx)</TextBlock>
@@ -563,7 +560,7 @@ export function WorkOrderSurveyReviewModal({
                       variant="outline"
                       size="sm"
                       onClick={() => downloadWorkOrderExport(detail.work_order_id, "boq", `BOQ_${detail.wo_number}.xlsx`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
+                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-emerald-500 shrink-0" />
                       <TextBlock as="span" className="truncate">Daftar material (.xlsx)</TextBlock>
@@ -572,8 +569,8 @@ export function WorkOrderSurveyReviewModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "slides", `Slide_Progres_${detail.wo_number}.pptx`)}
-                      className="text-[11px] justify-start h-8 px-2 bg-card hover:bg-surface-elevated"
+                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "slides", `Slide_Kemajuan_Pekerjaan_${detail.wo_number}.pptx`)}
+                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
                     >
                       <Download className="h-3 w-3 mr-1.5 text-orange-500 shrink-0" />
                       <TextBlock as="span" className="truncate">Slide (.pptx)</TextBlock>
@@ -591,32 +588,17 @@ export function WorkOrderSurveyReviewModal({
                           <TextBlock className="font-bold text-emerald-700 dark:text-emerald-300">
                             Persetujuan hasil survei
                           </TextBlock>
-                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                          <div className="text-xs text-muted-foreground mt-0.5">
                             <TextBlock as="span">
                               Mengunci titik survei, menyalin tugas ke jadwal harian, dan mengubah status menjadi{" "}
                             </TextBlock>
-                            <TextBlock as="span" className="font-bold text-ink">READY_TO_EXECUTE</TextBlock>
+                            <TextBlock as="span" className="font-bold text-ink">{statusLabel("READY_TO_EXECUTE")}</TextBlock>
                             <TextBlock as="span">.</TextBlock>
                           </div>
                         </div>
                       </div>
 
-                      <ActionButton
-                        type="button"
-                        variant="default"
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 shadow-sm"
-                        disabled={applyMutation.isPending}
-                        onClick={handleApply}
-                      >
-                        {applyMutation.isPending ? (
-                          <TextBlock as="span">Memproses Persetujuan...</TextBlock>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1.5">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <TextBlock as="span">Setujui hasil survei dan kunci tugas</TextBlock>
-                          </div>
-                        )}
-                      </ActionButton>
+                      <SurveyApproveButton pending={applyMutation.isPending} onApprove={handleApply} />
                     </div>
                   </div>
                 )}
@@ -642,7 +624,7 @@ export function WorkOrderSurveyReviewModal({
               variant="outline"
               size="sm"
               onClick={() => setSelectedPhoto(null)}
-              className="absolute -top-3 -right-3 h-9 w-9 rounded-full bg-surface text-ink font-bold shadow-lg flex items-center justify-center p-0 border border-line"
+              className="absolute -top-3 -right-3 size-11 rounded-full bg-surface text-ink font-bold shadow-lg flex items-center justify-center p-0 border border-line"
             >
               <X className="h-5 w-5" />
             </ActionButton>

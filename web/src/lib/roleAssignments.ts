@@ -1,7 +1,7 @@
 import { ROLE_LABEL, type Me } from "@/lib/types";
 
 /** Peran yang boleh ditambahkan sebagai peran tambahan (sama dengan skema API RoleAssignmentCreate). */
-export const EXTRA_ROLES = ["ADMIN_HR_GA", "FINANCE", "OPERATIONAL_MANAGER"] as const;
+export const EXTRA_ROLES = ["ADMIN_HR_GA", "FINANCE", "OPERATIONAL_MANAGER", "PROJECT_MANAGER", "HSE"] as const;
 export type ExtraRole = (typeof EXTRA_ROLES)[number];
 export const MAX_EXTRA_ROLES = 2;
 
@@ -9,12 +9,25 @@ export const EXTRA_ROLE_LABEL: Record<ExtraRole, string> = {
   ADMIN_HR_GA: "HR",
   FINANCE: "Finance",
   OPERATIONAL_MANAGER: "Operational Manager",
+  PROJECT_MANAGER: "Penanggung jawab proyek (PM)",
+  HSE: "Petugas K3 (HSE)",
 };
+
+/** Peran yang boleh diberi OM: hanya PM dan HSE (SA boleh semua). */
+export const FIELD_EXTRA_ROLES: ExtraRole[] = ["PROJECT_MANAGER", "HSE"];
+
+/** Pilihan peran tambahan menurut izin: SA semua, OM (manage:field_role_assignments) hanya PM/HSE, lainnya kosong. */
+export function allowedExtraRoles(permissions: string[] | undefined): ExtraRole[] {
+  const p = permissions ?? [];
+  if (p.includes("manage:role_assignments")) return [...EXTRA_ROLES];
+  if (p.includes("manage:field_role_assignments")) return FIELD_EXTRA_ROLES;
+  return [];
+}
 
 export const roleName = (role: string) => EXTRA_ROLE_LABEL[role as ExtraRole] ?? ROLE_LABEL[role] ?? role;
 
-/** HR dan Finance wajib memilih kantor; OM otomatis semua kantor. */
-export const needsOffice = (role: string) => role === "ADMIN_HR_GA" || role === "FINANCE";
+/** HR, Finance, PM, dan HSE wajib memilih kantor; OM otomatis semua kantor. */
+export const needsOffice = (role: string) => role !== "OPERATIONAL_MANAGER" && (EXTRA_ROLES as readonly string[]).includes(role);
 
 /**
  * Cek di layar sebelum kirim (API tetap memeriksa). Mengembalikan pesan sederhana, atau null bila boleh.
@@ -46,8 +59,12 @@ export function roleAddBlocker(opts: {
 }
 
 /** Baris "Peran · berlaku untuk kantor X" dari role_scopes; kosong bila field tidak ada (tampilan lama). */
-export function roleScopeLines(me: Pick<Me, "role_scopes"> | null | undefined): string[] {
+export function roleScopeLines(me: (Pick<Me, "role_scopes"> & { role?: string }) | null | undefined): string[] {
   const scopes = me?.role_scopes;
   if (!scopes || scopes.length === 0) return [];
-  return scopes.map((s) => (s.office_name ? `${roleName(s.role)} · berlaku untuk kantor ${s.office_name}` : roleName(s.role)));
+  // Peran utama sudah tampil sebagai label; jangan ulangi tanpa keterangan kantor.
+  const utama = me?.role ? roleName(me.role) : null;
+  return scopes
+    .filter((s) => s.office_name || roleName(s.role) !== utama)
+    .map((s) => (s.office_name ? `${roleName(s.role)} · berlaku untuk kantor ${s.office_name}` : roleName(s.role)));
 }

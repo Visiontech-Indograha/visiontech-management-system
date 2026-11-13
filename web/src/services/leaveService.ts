@@ -87,8 +87,8 @@ export async function reviewLeave(leaveId: string, body: LeaveReviewInput): Prom
   return (await api.post<LeaveRequest>(`/leaves/${leaveId}/review`, body)).data;
 }
 
-export async function cancelLeave(leaveId: string, reason: string): Promise<LeaveRequest> {
-  return (await api.post<LeaveRequest>(`/leaves/${leaveId}/cancel`, { reason })).data;
+export async function cancelLeave(leaveId: string, reason?: string): Promise<LeaveRequest> {
+  return (await api.post<LeaveRequest>(`/leaves/${leaveId}/cancel`, reason ? { reason } : {})).data;
 }
 
 export async function getLeaveBalance(employeeId: string, year = new Date().getFullYear()): Promise<LeaveBalance> {
@@ -136,7 +136,7 @@ export function useReviewLeave() {
 export function useCancelLeave() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ leaveId, reason }: { leaveId: string; reason: string }) => cancelLeave(leaveId, reason),
+    mutationFn: ({ leaveId, reason }: { leaveId: string; reason?: string }) => cancelLeave(leaveId, reason),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["leaves"] });
       await qc.invalidateQueries({ queryKey: ["leave-balance"] });

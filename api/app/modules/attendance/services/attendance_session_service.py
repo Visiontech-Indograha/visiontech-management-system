@@ -36,19 +36,24 @@ from app.shared.org_clock import CRUDOrgClock
 class AttendanceRowWithEncouragement:
     """Pembungkus row absensi agar menyertakan pesan penyemangat dan kompatibel dengan _mapping."""
 
-    def __init__(self, row: Any, encouragement_message: str | None = None) -> None:
+    def __init__(self, row: Any, encouragement_message: str | None = None,
+                 extra: dict[str, Any] | None = None) -> None:
         self._row = row
         self.encouragement_message = encouragement_message
+        self.extra = extra or {}
 
     @property
     def _mapping(self) -> dict[str, Any]:
         d = dict(self._row._mapping) if hasattr(self._row, "_mapping") else dict(self._row)
         d["encouragement_message"] = self.encouragement_message
+        d.update(self.extra)
         return d
 
     def __getattr__(self, name: str) -> Any:
         if name == "encouragement_message":
             return self.encouragement_message
+        if name in self.__dict__.get("extra", {}):
+            return self.extra[name]
         return getattr(self._row, name)
 
     def __getitem__(self, item: Any) -> Any:
@@ -88,6 +93,33 @@ ATTEMPTS_USED = "Absensi hari ini sudah ditolak {n} kali dan tidak dapat diajuka
 MAX_GPS_ACCURACY_M = 100  # K-12 (docs/10): akurasi GPS > 100 m ditolak
 # Absen web: lokasi browser laptop/PC berasal dari WiFi, bukan GPS — lebih kabur (docs/10 Bagian C).
 MAX_WEB_ACCURACY_M = 300
+# Alasan awam mengapa absen menunggu pemeriksaan (field opsional `review_reasons` di respons).
+REASON_FACE_NOT_ENROLLED = "FACE_NOT_ENROLLED"      # wajah belum didaftarkan
+REASON_FACE_MISMATCH = "FACE_MISMATCH"              # wajah pada swafoto tidak cocok
+REASON_FACE_UNAVAILABLE = "FACE_UNAVAILABLE"        # layanan wajah mati / tidak diperiksa / pendaftaran usang
+REASON_OUTSIDE_ZONE = "LOKASI_DI_LUAR_ZONA"         # titik lokasi di luar radius
+REASON_COARSE_LOCATION = "LOKASI_KASAR"             # akurasi lokasi terlalu kasar (laptop tanpa GPS)
+COARSE_LOCATION_NOTE = "lokasi kasar (akurasi {a:.0f} m): menunggu verifikasi HR kantor"
+_FACE_REASON = {"NOT_ENROLLED": REASON_FACE_NOT_ENROLLED, "MISMATCH": REASON_FACE_MISMATCH,
+                "UNAVAILABLE": REASON_FACE_UNAVAILABLE, "STALE": REASON_FACE_UNAVAILABLE,
+                "NOT_CHECKED": REASON_FACE_UNAVAILABLE}
+
+
+def review_reasons(outcome: FaceOutcome | None, *, outside: bool, coarse: bool) -> list[str]:
+    """Kode alasan terpisah mengapa absen perlu ditinjau (kosong = tidak ada)."""
+    reasons: list[str] = []
+    if outcome is not None and outcome.result in _FACE_REASON:
+        reasons.append(_FACE_REASON[outcome.result])
+    if coarse:
+        reasons.append(REASON_COARSE_LOCATION)
+    elif outside:
+        reasons.append(REASON_OUTSIDE_ZONE)
+    return reasons
+
+
+def location_decision(*, outside: bool, coarse: bool) -> str:
+    """Keputusan lokasi: ACCEPTED | OUTSIDE_ZONE | PENDING_COARSE (menunggu verifikasi HR kantor)."""
+    return "PENDING_COARSE" if coarse else ("OUTSIDE_ZONE" if outside else "ACCEPTED")
 # Lapangan absen di HP, kantor di web (docs/10 Bagian C, 2026-10-01).
 CHANNEL_OF_MODE = {"FIELD": "MOBILE", "OFFICE": "WEB"}
 WRONG_CHANNEL = {
@@ -286,11 +318,21 @@ class AttendanceSessionService:
             note = f"wajah absen {label} belum diperiksa ({outcome.result})"
         return await self.repo.flag_missing_face(row.id, event, note)
 
-    async def _flag_for_review(self, org_id: str, row: Any, template: str) -> None:
+    @staticmethod
+    def _is_coarse_office_web(worker: Any, channel: str, accuracy_m: float | None) -> bool:
+        """Akurasi lokasi kasar pada absen WEB pekerja kantor (jalur utama laptop tanpa GPS); bukan aturan HP."""
+        return (
+            channel == "WEB"
+            and worker.attendance_mode == "OFFICE"
+            and accuracy_m is not None
+            and accuracy_m > MAX_WEB_ACCURACY_M
+        )
+
+    async def _flag_for_review(self, org_id: str, row: Any, template: str, *, office_hr: bool = False) -> None:
         """T8: absen yang menjadi Perlu review → beri tahu peninjau berwenang (notifikasi + peristiwa realtime)."""
         if str(row.status) != "NEEDS_REVIEW":
             return
-        reviewers = await self.repo.reviewer_employee_ids(org_id, row.employee_id)
+        reviewers = await self.repo.reviewer_employee_ids(org_id, row.employee_id, office_hr=office_hr)
         if not reviewers:
             return
         name = await self.repo.employee_name(row.employee_id)
@@ -332,8 +374,10 @@ class AttendanceSessionService:
         if selfie_file_id is None:
             raise ValidationError("Ambil swafoto wajah Anda untuk absen.")
         # K-12: titik GPS yang terlalu kabur tidak bisa membuktikan kehadiran — tolak dengan alasan.
+        # Pekerja kantor di web (laptop tanpa GPS): titik kasar TIDAK ditolak, absen menunggu HR kantor tugas.
+        coarse = self._is_coarse_office_web(worker, channel, accuracy_m)
         if channel == "WEB":
-            if accuracy_m is not None and accuracy_m > MAX_WEB_ACCURACY_M:
+            if accuracy_m is not None and accuracy_m > MAX_WEB_ACCURACY_M and not coarse:
                 raise AppError(
                     "GPS_INACCURATE",
                     f"Akurasi lokasi browser {accuracy_m:.0f} m terlalu rendah (maksimal "
@@ -426,7 +470,8 @@ class AttendanceSessionService:
             if nearest is not None and float(nearest.distance_m) <= nearest.radius_m:
                 site_id, site = nearest.id, nearest
         note = (explanation or "").strip() or None
-        if note is None and float(site.distance_m) > site.radius_m:
+        outside = float(site.distance_m) > site.radius_m
+        if note is None and outside and not coarse:
             raise AppError(
                 "EXPLANATION_REQUIRED",
                 EXPLANATION_OUTSIDE.format(d=float(site.distance_m), site=site.name, r=site.radius_m),
@@ -434,6 +479,9 @@ class AttendanceSessionService:
             )
         if note is None and rejected >= 1:
             raise AppError("EXPLANATION_REQUIRED", EXPLANATION_RESUBMIT, status=422)
+        coarse_note = COARSE_LOCATION_NOTE.format(a=accuracy_m or 0.0)
+        if note is None and outside and coarse:
+            note = coarse_note
         await self._check_daily_target(site, employee_id, today)
         outcome = await self.verify_face(employee_id, selfie_file_id, online=online, mobile=channel == "MOBILE")
         try:
@@ -456,8 +504,18 @@ class AttendanceSessionService:
                 at=at or (local_clock.local_now if local_clock else None),
             )
             row = await self.record_face(row, "CHECK_IN", outcome, online=online)
-            await self._flag_for_review(org_id, row, "Absen masuk {name} perlu diperiksa")
-            return row
+            if coarse:
+                row = await self.repo.flag_missing_face(row.id, "CHECK_IN", coarse_note)
+            await self._flag_for_review(
+                org_id, row, "Absen masuk {name} perlu diperiksa", office_hr=worker.attendance_mode == "OFFICE"
+            )
+            if channel != "WEB":
+                return row  # HP lapangan: respons tidak berubah
+            return AttendanceRowWithEncouragement(row, None, {
+                "review_reasons": review_reasons(outcome, outside=outside, coarse=coarse),
+                "location_accuracy_m": accuracy_m,
+                "location_decision": location_decision(outside=outside, coarse=coarse),
+            })
         except IntegrityError as exc:
             # Aturan dari trigger (mis. di luar radius tanpa swafoto) → 422 dengan pesannya.
             rule = trigger_rule_message(exc)
@@ -550,7 +608,7 @@ class AttendanceSessionService:
 
         if accuracy_m is not None:  # K-12: titik yang terlalu kabur tidak bisa membuktikan kehadiran
             limit = MAX_WEB_ACCURACY_M if channel == "WEB" else MAX_GPS_ACCURACY_M
-            if accuracy_m > limit:
+            if accuracy_m > limit and not self._is_coarse_office_web(worker, channel, accuracy_m):
                 raise AppError(
                     "GPS_INACCURATE",
                     f"Akurasi lokasi {accuracy_m:.0f} m terlalu rendah (maksimal {limit} m). "
@@ -598,12 +656,18 @@ class AttendanceSessionService:
             raise
         if org_id is not None:
             row = await self.record_face(row, "CHECK_OUT", outcome, online=online)
+            if self._is_coarse_office_web(worker, channel, accuracy_m):
+                row = await self.repo.flag_missing_face(
+                    session.id, "CHECK_OUT", COARSE_LOCATION_NOTE.format(a=accuracy_m or 0.0))
             if getattr(row, "check_out_outside", False):
                 await self._flag_for_review(
-                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)"
+                    org_id, row, "Absen pulang {name} di luar radius (" + f"{round(row.check_out_distance_m)} m)",
+                    office_hr=worker.attendance_mode == "OFFICE",
                 )
             else:
-                await self._flag_for_review(org_id, row, "Absen pulang {name} perlu diperiksa")
+                await self._flag_for_review(
+                    org_id, row, "Absen pulang {name} perlu diperiksa", office_hr=worker.attendance_mode == "OFFICE"
+                )
 
         encouragement_msg = None
         if is_under_required_hours:
@@ -624,7 +688,14 @@ class AttendanceSessionService:
                     effective_org_id, str(worker.employee_id), encouragement_msg
                 )
 
-        return AttendanceRowWithEncouragement(row, encouragement_msg)
+        if channel != "WEB":
+            return AttendanceRowWithEncouragement(row, encouragement_msg)
+        coarse_final = self._is_coarse_office_web(worker, channel, accuracy_m)
+        return AttendanceRowWithEncouragement(row, encouragement_msg, {
+            "review_reasons": review_reasons(outcome, outside=False, coarse=coarse_final),
+            "location_accuracy_m": accuracy_m,
+            "location_decision": location_decision(outside=False, coarse=coarse_final),
+        })
 
     async def list_attendance(
         self,

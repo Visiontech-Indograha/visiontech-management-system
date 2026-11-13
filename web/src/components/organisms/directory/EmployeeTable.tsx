@@ -56,9 +56,9 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
               <div className="min-w-0">
                 <TextBlock className="truncate font-semibold text-lens">{e.full_name}</TextBlock>
                 <TextBlock className="truncate text-xs text-mist">
-                  {`${e.employee_no} · ${e.position_name ?? e.division_name ?? e.office_name ?? "-"}`}
+                  {`${e.employee_no} · ${e.position_name ?? "-"}`}
                 </TextBlock>
-                <TextBlock className="text-[11px] text-mist">{`Bergabung ${formatDate(e.join_date)}`}</TextBlock>
+                <TextBlock className="text-xs text-mist">{`Bergabung ${formatDate(e.join_date)}`}</TextBlock>
               </div>
             </div>
             <EmployeeStatusPill status={e.offboarding_status} />
@@ -117,7 +117,7 @@ export function EmployeeTable({ list }: { list: UseQueryResult<EmployeeList> }) 
                   </div>
                 </div>
               </TableBlockCell>
-              <TableBlockCell className="px-4 py-2">{e.position_name ?? e.division_name ?? e.office_name ?? "-"}{e.position_name && <div className="text-xs text-mist">{e.division_name ?? e.office_name}</div>}</TableBlockCell>
+              <TableBlockCell className="px-4 py-2">{e.position_name ?? "-"}</TableBlockCell>
               <TableBlockCell className="px-4 py-2">{formatDate(e.join_date)}</TableBlockCell>
               <TableBlockCell className="px-4 py-2"><EmployeeStatusPill status={e.offboarding_status} /></TableBlockCell>
             </TableBlockRow>

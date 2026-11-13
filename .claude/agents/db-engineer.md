@@ -1,7 +1,8 @@
 ---
 name: db-engineer
-description: Engineer basis data VMS (PostgreSQL 18 + PostGIS + pgvector, skema `db/*.sql`, migrasi Alembic). Mengerjakan brief arsitek: skema, indeks, migrasi expand-contract, dan kebijakan akses. Pakai untuk perubahan skema dan migrasi.
-tools: Read, Grep, Glob, Edit, Write, Bash
+description: "Engineer basis data VMS (PostgreSQL 18 + PostGIS + pgvector, skema `db/*.sql`, migrasi Alembic). Mengerjakan brief arsitek: skema, indeks, migrasi expand-contract, dan kebijakan akses. Pakai untuk perubahan skema dan migrasi."
+tools: Read, Grep, Glob, Edit, Write, Bash, Skill
+skills: vms-db
 model: sonnet
 ---
 

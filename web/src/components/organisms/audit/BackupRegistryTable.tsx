@@ -4,6 +4,7 @@
  * Menampilkan siklus backup, periode data, ukuran terkompresi, SHA-256, dan aksi unduh berkas.
  */
 
+import { statusLabel } from "@/lib/labels";
 import React, { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { toDownloadUrl } from "@/lib/mediaUtils";
@@ -120,7 +121,7 @@ export const BackupRegistryTable: React.FC = () => {
                   <TableBlockCell className="px-4 py-2">
                     <TextBlock
                       as="span"
-                      className={`mr-2 inline-block rounded border px-2 py-0.5 text-[11px] font-semibold ${getCycleBadge(
+                      className={`mr-2 inline-block rounded border px-2 py-0.5 text-xs font-semibold ${getCycleBadge(
                         item.backup_cycle
                       )}`}
                     >
@@ -165,13 +166,13 @@ export const BackupRegistryTable: React.FC = () => {
                     ) : (
                       <TextBlock as="span" className="inline-flex items-center gap-1 text-xs font-medium text-danger">
                         <ShieldAlert className="h-3.5 w-3.5" />
-                        {item.status}
+                        {statusLabel(item.status)}
                       </TextBlock>
                     )}
                   </TableBlockCell>
 
                   <TableBlockCell className="px-4 py-2 text-right">
-                    <ActionButton asChild size="sm" variant="outline" className="h-8 px-2.5 text-xs">
+                    <ActionButton asChild size="sm" variant="outline" className="h-11 px-2.5 text-xs">
                       <ExternalLink href={downloadUrl} download>
                         <Download className="mr-1 h-3.5 w-3.5 text-lens" />
                         Unduh

@@ -84,29 +84,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_photoBusy) return;
     final choice = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Ambil foto'),
-              onTap: () => Navigator.pop(context, 'camera'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Pilih dari galeri'),
-              onTap: () => Navigator.pop(context, 'gallery'),
-            ),
-            if (_currentPhotoId() != null)
-              ListTile(
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Hapus foto'),
-                onTap: () => Navigator.pop(context, 'remove'),
-              ),
-          ],
-        ),
-      ),
+      builder: (sheetContext) => ProfilePhotoSheet(hasPhoto: _currentPhotoId() != null),
     );
     if (choice == null || !mounted) return;
     setState(() => _photoBusy = true);
@@ -376,9 +354,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ('/recap', Icons.event_available_rounded, 'Rekap absen dan uang makan', Accent.teal),
     ('/leaves', Icons.beach_access_rounded, 'Cuti dan Izin', Accent.blue),
     ('/assets', Icons.directions_car_rounded, 'Kendaraan dan Alat', Accent.amber),
+    ('/inspeksi-kendaraan', Icons.car_crash_rounded, 'Inspeksi kendaraan', Accent.rose),
     ('/overtime', Icons.more_time_rounded, 'Riwayat lembur', Accent.indigo),
     ('/mess', Icons.home_work_rounded, 'Mess karyawan', Accent.violet),
     ('/documents', Icons.badge_rounded, 'Dokumen saya', Accent.emerald),
+    ('/dokumen-kendaraan', Icons.fact_check_rounded, 'Dokumen kendaraan saya', Accent.teal),
   ];
 
   @override
@@ -432,7 +412,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisSpacing: 8,
                   childAspectRatio: 1.55,
                   children: [
-                    for (final (route, icon, label, accent) in _services)
+                    for (final (route, icon, label, accent) in [
+                      ..._services,
+                      if (user?.bisaLihatDokumenKantor == true)
+                        ('/dokumen-kantor', Icons.event_busy_rounded, 'Dokumen akan habis', Accent.rose),
+                    ])
                       SurfaceCard(
                         onTap: () => context.push(route),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -690,6 +674,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                SurfaceCard(
+                  onTap: () => context.push('/ganti-sandi'),
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.lock_reset_rounded, accent: Accent.blue, size: 40),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Ganti sandi', style: VmsTextStyles.subheading),
+                            Text('Ubah sandi akun Anda', style: VmsTextStyles.caption),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: VmsColors.neutral400),
+                    ],
+                  ),
+                ),
                 const SectionTitle('Tentang aplikasi'),
                 const FadeSlideIn(index: 2, child: AboutAppCard()),
                 const SizedBox(height: 20),
@@ -721,6 +726,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Isi sheet foto profil. Menutup lewat tombol "Tutup" (hasil null = batal).
+class ProfilePhotoSheet extends StatelessWidget {
+  const ProfilePhotoSheet({super.key, required this.hasPhoto});
+  final bool hasPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Ambil foto'),
+              onTap: () => Navigator.of(context).pop('camera'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Pilih dari galeri'),
+              onTap: () => Navigator.of(context).pop('gallery'),
+            ),
+            if (hasPhoto)
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Hapus foto'),
+                onTap: () => Navigator.of(context).pop('remove'),
+              ),
+            const Divider(height: 1),
+            ListTile(
+              key: const Key('profile-photo-sheet-close'),
+              leading: const Icon(Icons.close_rounded),
+              title: const Text('Tutup'),
+              onTap: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
       ),
     );
   }

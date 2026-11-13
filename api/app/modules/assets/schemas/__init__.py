@@ -4,6 +4,9 @@ Paket skema untuk modul assets.
 from app.modules.assets.schemas.asset_schema import (
     AssetAvailabilityOut,
     AssetStatusUpdate,
+    BorrowerCreate,
+    BorrowerOut,
+    BorrowerUpdate,
     InspectionCreate,
     InspectionOut,
     LoanCreate,
@@ -22,6 +25,9 @@ from app.modules.assets.schemas.asset_schema import (
 __all__ = [
     "AssetAvailabilityOut",
     "AssetStatusUpdate",
+    "BorrowerCreate",
+    "BorrowerOut",
+    "BorrowerUpdate",
     "InspectionCreate",
     "InspectionOut",
     "LoanCreate",

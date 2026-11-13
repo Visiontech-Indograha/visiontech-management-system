@@ -27,6 +27,7 @@ describe("Akun dan keamanan", () => {
     expect(within(list).getByText(/Aplikasi Visiontech · Android/)).toBeInTheDocument();
 
     fireEvent.click(within(list).getByRole("button", { name: "Keluarkan Aplikasi Visiontech · Android" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Keluarkan perangkat" }));
     await waitFor(() => expect(calls.some((c) => c.method === "post" && c.url === "/auth/sessions/s2/revoke")).toBe(true));
     expect(within(list).queryByRole("button", { name: /Keluarkan Chrome/ })).toBeNull(); // perangkat ini tidak bisa
   });
@@ -37,6 +38,7 @@ describe("Akun dan keamanan", () => {
       if (c.url === "/auth/sessions/revoke-others") return { data: { revoked: 1, message: "ok" } };
     });
     renderRoute("/account", { role: "field" });
+    fireEvent.click(await screen.findByRole("button", { name: "Keluarkan perangkat lain" }));
     fireEvent.click(await screen.findByRole("button", { name: "Keluarkan perangkat lain" }));
     await waitFor(() => expect(calls.some((c) => c.url === "/auth/sessions/revoke-others")).toBe(true));
   });
@@ -59,7 +61,7 @@ describe("Akun dan keamanan", () => {
     it("tanpa persetujuan terpisah: tidak ada /face/consent maupun kotak centang", async () => {
       const calls = setup(faceStatus({ required: false }));
       renderRoute("/account", { role: "field" });
-      expect(await screen.findByText(/hanya diwajibkan untuk karyawan lapangan/)).toBeInTheDocument();
+      expect(await screen.findByText(/Teks resmi menyusul/)).toBeInTheDocument();
       expect(screen.getByText("Tidak diwajibkan")).toBeInTheDocument();
       expect(screen.queryByRole("checkbox")).toBeNull();
       expect(calls.some((c) => c.url === "/face/consent")).toBe(false);

@@ -114,13 +114,40 @@ def employee_params(user: CurrentUser) -> dict[str, Any]:
         **viewer_params(user),
         "dir_all": sees_all_employees(user),
         "sens_all": sees_sensitive_employee_fields(user),
+        "dir_bound": False,
+        "dir_offices": [],
     }
+
+
+def directory_is_cross_office(user: CurrentUser) -> bool:
+    """SA/OM (dan V1 OPS) melihat direktori lintas kantor; pemegang izin direktori lain dibatasi kantor tugasnya."""
+    return user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER, "OPS")
+
+
+async def directory_offices(db: AsyncSession, user: CurrentUser) -> list[str]:
+    """Kantor tugas pengguna: kantor utama (`employee.office_id`) + kantor penugasan peran aktif (ADR 0002 12c)."""
+    rows = await BaseRepository(db).fetchall(
+        """
+        SELECT e.office_id::text AS office_id FROM users u
+        JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
+        WHERE u.user_id = CAST(:uid AS uuid) AND e.office_id IS NOT NULL
+        UNION
+        SELECT a.office_id::text FROM user_role_assignment a
+        JOIN office o ON o.office_id = a.office_id AND o.delete_at IS NULL
+        WHERE a.user_id = CAST(:uid AS uuid) AND a.delete_at IS NULL AND a.office_id IS NOT NULL
+        """,
+        {"uid": user.user_id},
+    )
+    return sorted(r.office_id for r in rows)
 
 
 async def employee_params_scoped(db: AsyncSession, user: CurrentUser) -> dict[str, Any]:
     """`employee_params` + pembatasan kantor HR/Finance atas kolom sensitif (ADR 0002): izin sensitif yang hanya
     datang dari peran HR berlaku untuk kantor jangkauannya; SA/OM tetap semua. Flag mati = `employee_params`."""
     params = {**employee_params(user), "sens_offices": []}
+    if params["dir_all"] and not directory_is_cross_office(user):
+        params["dir_bound"] = True
+        params["dir_offices"] = await directory_offices(db, user)
     if params["sens_all"] and not user.has_role(SystemRole.SUPER_ADMIN, SystemRole.OPERATIONAL_MANAGER):
         restriction = await office_restriction(db, user, Permission.MANAGE_USERS)
         if restriction is not None:
@@ -131,12 +158,15 @@ async def employee_params_scoped(db: AsyncSession, user: CurrentUser) -> dict[st
 
 async def employee_directory_visible(db: AsyncSession, user: CurrentUser, employee_id: UUID | str) -> bool:
     """Apakah satu karyawan terlihat di direktori pengguna (dasar akses foto profil)."""
-    if sees_all_employees(user):
+    if sees_all_employees(user) and directory_is_cross_office(user):
         return True
+    bound = sees_all_employees(user)
     row = await BaseRepository(db).scalar(
         f"SELECT EXISTS (SELECT 1 FROM employee e WHERE e.employee_id = CAST(:target AS uuid) "
-        f"AND {employee_visible_sql('e.employee_id')})",
-        {**viewer_params(user), "target": str(employee_id)},
+        f"AND (CAST(:bound AS boolean) AND e.office_id = ANY(CAST(:offices AS uuid[])) "
+        f"OR NOT CAST(:bound AS boolean) AND {employee_visible_sql('e.employee_id')}))",
+        {**viewer_params(user), "target": str(employee_id), "bound": bound,
+         "offices": await directory_offices(db, user) if bound else []},
     )
     return bool(row)
 
@@ -215,6 +245,15 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
         veh_ok = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_ok})"
         tool_by_holder = f"(t.office_id = ANY(CAST(:offices AS uuid[])) OR {tool_by_holder})"
         veh_by_holder = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_by_holder})"
+    # Dokumen serah terima (BAST) penerima eksternal: hanya pengelola aset, dibatasi kantor aset (ADR 0003).
+    bast = ""
+    if sees_all_assets(user):
+        bast = (
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN tool t ON t.tool_id = aa.tool_id WHERE bf.storage_key = :key AND {tool_ok}) "
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN vehicle v ON v.vehicle_id = aa.vehicle_id WHERE bf.storage_key = :key AND {veh_ok})"
+        )
     row = await BaseRepository(db).scalar(
         f"""
         SELECT (
@@ -230,11 +269,30 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
                        WHERE aa.handover_photo_path = :key AND {tool_by_holder})
             OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
                        WHERE aa.handover_photo_path = :key AND {veh_by_holder})
+            {bast}
         )
         """,
         {**viewer_params(user), "key": storage_key, **({} if offices is None else {"offices": offices})},
     )
     return bool(row)
+
+
+async def inspection_photo_visible(db: AsyncSession, user: CurrentUser, file_id: Any) -> bool:
+    """Foto bukti inspeksi kendaraan: pemegang view:vehicle_inspections, dibatasi kantor kendaraan bila perannya
+    dibatasi kantor (sama dengan daftar inspeksi)."""
+    restriction = await office_restriction(db, user, Permission.VIEW_VEHICLE_INSPECTIONS)
+    offices = None if restriction is None else offices_param(restriction) or ["00000000-0000-0000-0000-000000000000"]
+    extra = "" if offices is None else "AND v.office_id = ANY(CAST(:offices AS uuid[]))"
+    value = await BaseRepository(db).scalar(
+        f"""
+        SELECT EXISTS (
+            SELECT 1 FROM vehicle_safety_inspections vsi JOIN vehicle v ON v.vehicle_id = vsi.vehicle_id
+            WHERE vsi.photos_json ? :fid AND vsi.delete_at IS NULL {extra}
+        )
+        """,
+        {"fid": str(file_id), **({} if offices is None else {"offices": offices})},
+    )
+    return bool(value)
 
 
 # ── Work order ──────────────────────────────────────────────────────────────────

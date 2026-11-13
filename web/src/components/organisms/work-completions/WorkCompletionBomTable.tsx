@@ -18,6 +18,7 @@ import { TextField, TextAreaField } from "@/components/molecules/Field";
 import { FormBlock } from "@/components/molecules/FormBlock";
 import { DialogActions } from "@/components/molecules/DialogActions";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
+import { errorMessage } from "@/lib/errors";
 import {
   useWorkCompletionBom,
   useCreateWorkCompletionBom,
@@ -108,8 +109,8 @@ export function WorkCompletionBomTable({
       toast.success("Material ditambahkan.");
       setIsAddOpen(false);
       addForm.reset();
-    } catch {
-      toast.error("Gagal menambahkan material.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Material belum bisa ditambahkan. Periksa kembali isian lalu coba lagi."));
     }
   };
 
@@ -127,8 +128,8 @@ export function WorkCompletionBomTable({
       });
       toast.success("Jumlah terpakai disimpan.");
       setEditingItem(null);
-    } catch {
-      toast.error("Jumlah terpakai gagal disimpan.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Jumlah terpakai belum bisa disimpan. Periksa kembali isian lalu coba lagi."));
     }
   };
 
@@ -141,8 +142,8 @@ export function WorkCompletionBomTable({
         overwrite_existing: false,
       });
       toast.success(res.message || `${res.synced_count} material default berhasil disinkronkan.`);
-    } catch {
-      toast.error("Gagal menarik material default jenis pekerjaan.");
+    } catch (err) {
+      toast.error(errorMessage(err, "Material default belum bisa ditarik. Coba lagi sebentar lagi."));
     }
   };
 
@@ -443,8 +444,8 @@ export function WorkCompletionBomTable({
               completionId,
             });
             toast.success(`Material '${itemToDelete.material_name}' berhasil dihapus.`);
-          } catch {
-            toast.error("Gagal menghapus material.");
+          } catch (err) {
+            toast.error(errorMessage(err, "Material belum bisa dihapus. Coba lagi sebentar lagi."));
           } finally {
             setItemToDelete(null);
           }

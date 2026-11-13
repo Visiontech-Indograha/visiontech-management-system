@@ -13,7 +13,8 @@ from app.core.repository import BaseRepository, escape_like
 from app.shared.access.scope_rules import employee_sensitive_sql, employee_visible_sql
 
 # Cakupan default = tanpa pembatasan (pemanggil internal). Pengguna biasa memakai `employee_params(user)`.
-UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "sens_offices": [], "viewer_emp": None, "pm": False}
+UNSCOPED: dict[str, Any] = {"dir_all": True, "sens_all": True, "sens_offices": [], "viewer_emp": None, "pm": False,
+                         "dir_bound": False, "dir_offices": []}
 
 _SELECT = f"""
     SELECT e.employee_id, e.employee_no, e.full_name, e.office_id, o.name AS office_name,
@@ -44,6 +45,7 @@ _FILTER = """
       AND (CAST(:q AS varchar) IS NULL OR e.full_name ILIKE '%' || CAST(:q AS varchar) || '%'
            OR e.employee_no ILIKE '%' || CAST(:q AS varchar) || '%' OR u.email ILIKE '%' || CAST(:q AS varchar) || '%')
       AND (CAST(:dir_all AS boolean) OR """ + employee_visible_sql("e.employee_id") + """)
+      AND (NOT CAST(:dir_bound AS boolean) OR e.office_id = ANY(CAST(:dir_offices AS uuid[])))
 """
 _UUIDS = ("office_id", "division_id", "position_id")
 
@@ -91,7 +93,8 @@ class EmployeeRepository(BaseRepository):
         """Karyawan satu baris; di luar cakupan `scope` → None (pemanggil mengubahnya menjadi 404)."""
         return await self.fetchone(
             _SELECT + " WHERE e.employee_id = CAST(:id AS uuid) AND (CAST(:dir_all AS boolean) OR "
-            + employee_visible_sql("e.employee_id") + ")",
+            + employee_visible_sql("e.employee_id") + ") "
+            "AND (NOT CAST(:dir_bound AS boolean) OR e.office_id = ANY(CAST(:dir_offices AS uuid[])))",
             {"id": str(employee_id), **(scope or UNSCOPED)},
         )
 
@@ -242,12 +245,23 @@ class EmployeeRepository(BaseRepository):
                                   "WHERE employee_id = CAST(:id AS uuid)", {"id": str(employee_id)})
         return [k for k in (row or ()) if k]
 
+    async def clear_face_embedding(self, employee_id: UUID) -> None:
+        """Kosongkan data biometrik (embedding wajah) sebelum baris dihapus."""
+        await self.execute("UPDATE employee SET face_embedding = NULL WHERE employee_id = CAST(:id AS uuid)",
+                           {"id": str(employee_id)})
+
     async def hard_delete(self, employee_id: UUID) -> None:
         """Hapus permanen: akun login (beserta sesinya) dulu, lalu karyawan beserta semua rujukannya."""
         for (uid,) in (await self.fetchall("SELECT user_id FROM users WHERE employee_id = CAST(:id AS uuid)",
                                            {"id": str(employee_id)})):
             await purge_row(self.db, "users", "user_id", uid)
         await purge_row(self.db, "employee", "employee_id", employee_id)
+
+    async def separated_at(self, employee_id: UUID) -> Any:
+        """Waktu karyawan keluar (selesai offboarding); None bila belum/tidak tercatat."""
+        row = await self.fetchone("SELECT separated_at FROM employee WHERE employee_id = CAST(:id AS uuid)",
+                                  {"id": str(employee_id)})
+        return row[0] if row else None
 
     async def restore(self, employee_id: UUID) -> None:
         """Batal arsip: data kembali terlihat, status tetap offboarded (akses baru lewat HR)."""

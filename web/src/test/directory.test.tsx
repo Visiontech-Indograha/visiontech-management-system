@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { apiError, mockApi, renderRoute } from "./utils";
 
 const page = (items: unknown[]) => ({ items, total: items.length, page: 1, size: 25 });
@@ -343,6 +343,33 @@ describe("akun login karyawan (M1-01)", () => {
     expect(calls.find((c) => c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post")!.data).toEqual({ login: "baru@contoh.id", system_role: "EMPLOYEE" });
   });
 
+  it("tombol Salin menyalin sandi sementara tanpa menulis ke konsol", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((m) => vi.spyOn(console, m).mockImplementation(() => {}));
+    let exists = false;
+    mockApi((c) => {
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "get")
+        return { data: exists ? { exists: true, login: "baru@contoh.id", is_active: true, last_login_at: null } : { exists: false } };
+      if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1/account" && c.method === "post") {
+        exists = true;
+        return { data: { exists: true, login: "baru@contoh.id", is_active: true, temporary_password: "Sementara123" } };
+      }
+    });
+    renderRoute("/directory/00000000-0000-4000-8000-0000000000e1", { role: "HR" });
+    await screen.findByText("Karyawan ini belum punya akun login.");
+    fireEvent.change(screen.getByLabelText("Email login"), { target: { value: "baru@contoh.id" } });
+    fireEvent.click(screen.getByRole("button", { name: "Buat akun" }));
+    await screen.findByText("Sementara123");
+    fireEvent.click(screen.getByRole("button", { name: "Salin" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("Sementara123"));
+    for (const s of spies) {
+      expect(s.mock.calls.flat().join(" ")).not.toContain("Sementara123");
+      s.mockRestore();
+    }
+  });
+
   it("HR melihat penanda akun terkunci karena gagal login (R-21)", async () => {
     mockApi((c) => {
       if (c.url === "/employees/00000000-0000-4000-8000-0000000000e1") return { data: employee() };
@@ -416,8 +443,9 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
     renderRoute(`/directory/${ID}`, { role: "HR" });
     const simpan = await screen.findByRole("button", { name: "Simpan peran" });
     expect(simpan).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Peran"), { target: { value: "TEAM_LEADER" } });
+    fireEvent.change(screen.getByLabelText("Peran utama"), { target: { value: "TEAM_LEADER" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, ubah peran" }));
     await waitFor(() => expect(calls.find((c) => c.url === `${ACCOUNT}/role`)).toBeDefined());
     expect(calls.find((c) => c.url === `${ACCOUNT}/role`)!.data).toEqual({ system_role: "TEAM_LEADER" });
   });
@@ -431,8 +459,9 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
         return apiError(409, "LEADER_ACTIVE_TEAM", "Karyawan ini masih memimpin tim; ganti ketua tim sebelum menurunkan perannya.");
     });
     renderRoute(`/directory/${ID}`, { role: "HR" });
-    fireEvent.change(await screen.findByLabelText("Peran"), { target: { value: "EMPLOYEE" } });
+    fireEvent.change(await screen.findByLabelText("Peran utama"), { target: { value: "EMPLOYEE" } });
     fireEvent.click(screen.getByRole("button", { name: "Simpan peran" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ya, ubah peran" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("masih memimpin tim");
   });
 
@@ -444,6 +473,6 @@ describe("peran lapangan akun (HR/SUPER_ADMIN)", () => {
     });
     renderRoute(`/directory/${ID}`, { role: "HR" });
     expect(await screen.findByText(/Peran kantor: PROJECT_MANAGER/)).toBeInTheDocument();
-    expect(screen.queryByLabelText("Peran")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Peran utama")).not.toBeInTheDocument();
   });
 });

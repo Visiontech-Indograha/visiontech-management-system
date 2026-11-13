@@ -9,6 +9,7 @@ import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { InlineLink } from "@/components/molecules/Links";
 import { koordinatError } from "@/lib/inputRules";
+import { errorMessage } from "@/lib/errors";
 import { useCreateWorkCompletion, useUpdateWorkCompletion, type WorkCompletionOrder } from "@/services/workCompletionService";
 import { useUserDivisions } from "@/services/employeeService";
 import { useClients } from "@/services/clientService";
@@ -164,8 +165,12 @@ export function WorkCompletionFormDialog({ onClose, order }: { onClose: () => vo
         toast.success("Pekerjaan klien berhasil dibuat.");
       }
       onClose();
-    } catch {
-      setFormError(editing ? "Gagal memperbarui pekerjaan klien. Periksa input." : "Gagal membuat order proyek klien. Pastikan input terisi dengan benar.");
+    } catch (err) {
+      const fallback = editing
+        ? "Gagal memperbarui pekerjaan klien. Periksa input."
+        : "Gagal membuat order proyek klien. Pastikan input terisi dengan benar.";
+      const msg = errorMessage(err, fallback);
+      setFormError(msg === fallback ? fallback : `${fallback} (${msg})`);
     }
   };
 

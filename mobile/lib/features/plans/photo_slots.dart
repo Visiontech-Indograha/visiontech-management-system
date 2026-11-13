@@ -64,8 +64,13 @@ Future<PendingPhoto?> pickReportPhoto({
     if (err != null) onError(err);
     return null;
   }
-  // T10: foto laporan dari kamera ikut tampil di album "Visiontech" galeri HP (galat tidak menggagalkan apa pun).
-  unawaited(saveToPhoneGallery(file.path));
+  // T10: foto laporan dari kamera ikut tampil di album "Visiontech" galeri HP.
+  try {
+    await saveToPhoneGallery(file.path);
+  } catch (e) {
+    final msg = e is GallerySaveException ? e.message : 'Foto gagal disimpan ke galeri HP.';
+    onError(msg);
+  }
   return PendingPhoto(path: file.path, slot: slot, source: 'CAMERA');
 }
 
@@ -178,16 +183,20 @@ class PhotoSlots extends StatelessWidget {
                           : null,
                     ),
                   if (enabled)
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         TextButton.icon(
                           key: Key('photo-camera-${slot ?? 'other'}'),
+                          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                           onPressed: () => onAdd(slot, PhotoOrigin.camera),
                           icon: const Icon(Icons.add_a_photo_rounded),
                           label: const Text('Kamera'),
                         ),
                         TextButton.icon(
                           key: Key('photo-gallery-${slot ?? 'other'}'),
+                          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                           onPressed: () =>
                               onAdd(slot, PhotoOrigin.phoneGallery),
                           icon: const Icon(Icons.photo_library_rounded),
@@ -195,6 +204,7 @@ class PhotoSlots extends StatelessWidget {
                         ),
                         TextButton.icon(
                           key: Key('photo-app-${slot ?? 'other'}'),
+                          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
                           onPressed: () => onAdd(slot, PhotoOrigin.appGallery),
                           icon: const Icon(Icons.collections_rounded),
                           label: const Text('Foto saya'),
@@ -247,7 +257,11 @@ class ExampleThumb extends StatelessWidget {
               child: VmsNetworkImage(fileId: fileId, variant: 'view', fit: BoxFit.contain),
             ),
           ),
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
         ],
       ),
     ),

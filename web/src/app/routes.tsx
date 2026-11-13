@@ -4,6 +4,7 @@ import { AppShell } from "@/components/templates/AppShell";
 import { RequireAuth } from "@/app/RequireAuth";
 import { RequireAccess } from "@/app/RequireAccess";
 import { TitleLayout } from "@/components/templates/TitleLayout";
+import { SetupPage } from "@/pages/auth/SetupPage";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { HomePage } from "@/pages/home/HomePage";
 import { ComingSoonPage } from "@/pages/system/ComingSoonPage";
@@ -26,14 +27,20 @@ import {
   OffboardingPage,
   OvertimePage,
   OvertimeRecapPage,
+  HikvisionDevicesPage,
   SitesPage,
   TeamsPage,
   DailyPlansPage,
   AllocationPage,
   WorkTypesPage,
+  DivisionsPage,
   SurveyDetailPage,
+  SystemSettingsPage,
   WorkOrdersPage,
+  VehicleDocsPage,
+  MyVehicleDocsPage,
   HseCampaignsPage,
+  VehicleInspectionsPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
@@ -42,10 +49,15 @@ import { RouteErrorPage } from "@/pages/system/RouteErrorPage";
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
+  "/vehicle-documents": <VehicleDocsPage />,
+  "/dokumen-saya": <MyVehicleDocsPage />,
+  "/system-settings": <SystemSettingsPage />,
   "/directory": <DirectoryPage />,
   "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
+  "/hikvision": <HikvisionDevicesPage />,
   "/work-types": <WorkTypesPage />,
+  "/divisions": <DivisionsPage />,
   "/work-orders": <WorkOrdersPage />,
   "/work-plans": <DailyPlansPage />,
   "/alokasi-mingguan": <AllocationPage />,
@@ -60,6 +72,7 @@ const PAGES: Record<string, ReactNode> = {
   "/overtime": <OvertimePage />,
   "/overtime-recap": <OvertimeRecapPage />,
   "/safety-campaigns": <HseCampaignsPage />,
+  "/vehicle-inspections": <VehicleInspectionsPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */
@@ -69,6 +82,7 @@ export const routes: RouteObject[] = [
     errorElement: <RouteErrorPage />,
     children: [
       { path: "/login", element: <LoginPage /> },
+      { path: "/setup", element: <SetupPage /> }, // publik; isinya menyesuaikan GET /setup/status
       { path: "/admin-login", element: <LoginPage admin /> }, // sengaja tidak ditautkan dari menu/halaman lain
       // QR BAST resmi, publik
       {

@@ -5,10 +5,26 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VideoView } from "@/components/molecules/VideoView";
 import { uploadForm } from "@/services/uploadService";
+import { useCameraHint } from "@/hooks/useCameraHint";
+import { accuracyText, captureBest, scoreImageData } from "@/lib/kualitasKamera";
 
 interface Point {
   lat: number;
   lng: number;
+  /** Akurasi lokasi dalam meter (bila ada); hanya untuk ditampilkan. */
+  accuracy?: number;
+}
+
+/** Satu bingkai video ke kanvas penuh beserta skor kecerahan/ketajamannya. */
+function grabFrame(video: HTMLVideoElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const score = scoreImageData(ctx.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+  return { frame: canvas, score };
 }
 
 /**
@@ -34,6 +50,8 @@ export function SelfieCaptureDialog({
   const [ready, setReady] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const hint = useCameraHint(videoRef, ready && !uploading);
+  const acc = accuracyText(position.accuracy);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -82,12 +100,13 @@ export function SelfieCaptureDialog({
     setUploading(true);
     setUploadError(null);
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("canvas");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Beberapa bingkai beruntun (~1 detik), pakai yang paling terang dan tajam.
+      const canvas = await captureBest(
+        () => grabFrame(video),
+        (ms) => new Promise((r) => setTimeout(r, ms)),
+      );
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) throw new Error("canvas");
       // Watermark: koordinat, waktu, lokasi — sama dengan swafoto HP.
       const lines = [
         `${position.lat.toFixed(6)}, ${position.lng.toFixed(6)}`,
@@ -143,6 +162,17 @@ export function SelfieCaptureDialog({
           aria-label="Pratinjau kamera"
           className="aspect-video w-full rounded-control bg-black object-cover"
         />
+      )}
+      {!cameraError && hint && (
+        <TextBlock role="status" className="mt-3 rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
+          {hint}
+        </TextBlock>
+      )}
+      {acc && (
+        <TextBlock role="status" className="mt-3 text-sm text-mist">
+          {acc.label}
+          {acc.note ? `. ${acc.note}` : ""}
+        </TextBlock>
       )}
       {uploadError && (
         <TextBlock role="alert" className="mt-3 rounded-control bg-danger-soft px-3 py-2 text-sm text-danger">

@@ -37,7 +37,7 @@ def _face_visible(att_emp: str) -> str:
         CAST(:view_all AS boolean)
         OR {att_emp} IS NOT DISTINCT FROM (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
         OR EXISTS (SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE'))
+                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE'))
         OR EXISTS (SELECT 1 FROM employee x JOIN division dv ON dv.division_id = x.division_id AND dv.delete_at IS NULL
                    WHERE x.employee_id = {att_emp}
                      AND dv.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)))
@@ -48,6 +48,16 @@ def _pm_reach(emp_expr: str) -> str:
     """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
     dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
     return pm_reaches_employee(VIEWER_EMPLOYEE_BY_USER, emp_expr)
+
+
+def _hr_office_reach(emp_expr: str) -> str:
+    """HR (ADMIN_HR_GA) peninjau (:viewer) hanya meninjau karyawan di kantornya sendiri (putusan pemilik)."""
+    return f"""(
+        EXISTS (SELECT 1 FROM users hr WHERE hr.user_id = CAST(:viewer AS uuid) AND hr.system_role = 'ADMIN_HR_GA')
+        AND (SELECT ee.office_id FROM employee ee WHERE ee.employee_id = {emp_expr}) IS NOT DISTINCT FROM
+            (SELECT ev.office_id FROM employee ev JOIN users hu ON hu.employee_id = ev.employee_id
+             WHERE hu.user_id = CAST(:viewer AS uuid))
+    )"""
 
 
 class AttendanceSessionRepository(BaseRepository):
@@ -466,7 +476,23 @@ class AttendanceSessionRepository(BaseRepository):
             """
         )
         if main_office is None:
-            raise LookupError("kantor utama belum ditetapkan (office.is_main_office)")
+            # Instalasi baru tanpa kantor utama: jangan jatuh ke 500. Pakai kantor karyawan sendiri (lalu kantor mana
+            # pun yang tertua) sebagai acuan zona kota & uang makan sampai admin menetapkan kantor utama.
+            main_office = await self.fetchone(
+                """
+                SELECT o.office_id, o.latitude, o.longitude, o.city_boundary_radius_m,
+                       o.in_city_meal_rate, o.out_city_meal_rate
+                FROM office o
+                WHERE o.delete_at IS NULL
+                ORDER BY (o.office_id = (SELECT e.office_id FROM employee e
+                                         WHERE e.employee_id = CAST(:emp AS uuid))) DESC,
+                         o.create_at ASC, o.office_id ASC
+                LIMIT 1
+                """,
+                {"emp": str(employee_id)},
+            )
+        if main_office is None:
+            raise LookupError("belum ada kantor sama sekali")
         dist_main = _haversine_distance(lat, lng, float(main_office.latitude), float(main_office.longitude))
         out_of_town_plan = bool(
             await self.scalar(
@@ -647,8 +673,11 @@ class AttendanceSessionRepository(BaseRepository):
              "evid": str(evidence_file_id) if evidence_file_id else None},
         )
 
-    async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu."""
+    async def reviewer_employee_ids(
+        self, org_id: UUID | str, employee_id: UUID | str, *, office_hr: bool = False
+    ) -> list[str]:
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu.
+        `office_hr` (pekerja kantor): ditambah HR (ADMIN_HR_GA) di kantor tugas karyawan yang sama."""
         rows = await self.fetchall(
             f"""
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
@@ -658,9 +687,12 @@ class AttendanceSessionRepository(BaseRepository):
               AND u.delete_at IS NULL
               AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                    OR (u.system_role = 'PROJECT_MANAGER'
-                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')}))
+                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')})
+                   OR (CAST(:hr AS boolean) AND u.system_role = 'ADMIN_HR_GA'
+                       AND (SELECT ee.office_id FROM employee ee WHERE ee.employee_id = CAST(:emp AS uuid)) =
+                           (SELECT hh.office_id FROM employee hh WHERE hh.employee_id = u.employee_id)))
             """,
-            {"emp": str(employee_id)},
+            {"emp": str(employee_id), "hr": office_hr},
         )
         return [r.employee_id for r in rows]
 
@@ -781,8 +813,9 @@ class AttendanceSessionRepository(BaseRepository):
                        EXISTS (
                            SELECT 1 FROM users
                            WHERE user_id = CAST(:viewer AS uuid)
-                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                        )
+                       OR {_hr_office_reach('CAST(:emp AS uuid)')}
                        OR (
                            EXISTS (
                                SELECT 1 FROM users
@@ -842,7 +875,7 @@ class AttendanceSessionRepository(BaseRepository):
                         CAST(:view_all AS boolean)
                         OR EXISTS (
                             SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                              AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                              AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                         )
                     )
                     AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')}
@@ -956,8 +989,9 @@ class AttendanceSessionRepository(BaseRepository):
                            EXISTS (
                                SELECT 1 FROM users u
                                WHERE u.user_id = CAST(:viewer AS uuid)
-                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                            )
+                           OR {_hr_office_reach('a.employee_id')}
                            OR (
                                EXISTS (
                                    SELECT 1 FROM users u

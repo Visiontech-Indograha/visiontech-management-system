@@ -161,6 +161,371 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/archive/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Peralatan */
+        get: operations["list_archived_tools_api_v1_archive_tools_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/tools/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Peralatan */
+        post: operations["restore_tools_api_v1_archive_tools__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/vehicles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Kendaraan */
+        get: operations["list_archived_vehicles_api_v1_archive_vehicles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/vehicles/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Kendaraan */
+        post: operations["restore_vehicles_api_v1_archive_vehicles__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Klien */
+        get: operations["list_archived_clients_api_v1_archive_clients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/clients/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Klien */
+        post: operations["restore_clients_api_v1_archive_clients__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/divisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Divisi */
+        get: operations["list_archived_divisions_api_v1_archive_divisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/divisions/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Divisi */
+        post: operations["restore_divisions_api_v1_archive_divisions__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/job-positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Jabatan */
+        get: operations["list_archived_job_positions_api_v1_archive_job_positions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/job-positions/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Jabatan */
+        post: operations["restore_job_positions_api_v1_archive_job_positions__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/mess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Arsip Mess */
+        get: operations["list_archived_mess_api_v1_archive_mess_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/archive/mess/{item_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pulihkan Mess */
+        post: operations["restore_mess_api_v1_archive_mess__item_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Types
+         * @description Jenis dokumen yang aktif (STNK, KIR, pajak, SIM, asuransi).
+         */
+        get: operations["list_types_api_v1_vehicle_documents_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Documents
+         * @description Dokumen kendaraan di kantor yang boleh dilihat. Cari `q` = awalan nomor polisi/nama/jenis/nomor dokumen.
+         */
+        get: operations["list_documents_api_v1_vehicle_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/expiring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Expiring
+         * @description Dokumen berlaku yang akan atau sudah jatuh tempo, terdekat dulu.
+         */
+        get: operations["list_expiring_api_v1_vehicle_documents_expiring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Mine
+         * @description Dokumen berlaku kendaraan yang sedang dikemudikan akun ini.
+         */
+        get: operations["list_mine_api_v1_vehicle_documents_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Document
+         * @description Catat dokumen baru; dokumen berlaku sejenis menjadi `replaced` dan berhenti diingatkan.
+         */
+        post: operations["create_document_api_v1_vehicles__vehicle_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/drivers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Drivers */
+        get: operations["list_drivers_api_v1_vehicles__vehicle_id__drivers_get"];
+        put?: never;
+        /**
+         * Add Driver
+         * @description Tambah pengemudi (karyawan kantor yang sama). Sudah aktif = 409.
+         */
+        post: operations["add_driver_api_v1_vehicles__vehicle_id__drivers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/drivers/{driver_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Driver
+         * @description Akhiri penugasan pengemudi (hari ini).
+         */
+        post: operations["end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/cron/remind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cron Remind
+         * @description Pemicu manual pengingat dokumen (sama dengan `python -m app.cli pengingat-dokumen`); aman diulang.
+         */
+        post: operations["cron_remind_api_v1_vehicle_documents_cron_remind_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}/role-assignments": {
         parameters: {
             query?: never;
@@ -223,6 +588,49 @@ export interface paths {
          * @description Buat Work Order baru dari klien (Status awal: WAITING_SURVEY).
          */
         post: operations["create_work_order_api_v1_work_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/pm-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Calon PM untuk Buat Tugas Klien
+         * @description Karyawan berperan PM (utama atau tambahan) dengan id, nama, dan divisi saja. SA/OM: semua divisi; PM: divisi
+         *     yang ia pimpin atau tempati (divisi lain 404); peran lain 403. `q` = awalan nama; tanpa parameter = semua calon.
+         */
+        get: operations["list_pm_candidates_api_v1_work_orders_pm_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-orders/team-surveys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Team Surveys
+         * @description Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.
+         *     Hanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;
+         *     `scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.
+         */
+        get: operations["list_team_surveys_api_v1_work_orders_team_surveys_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1664,7 +2072,9 @@ export interface paths {
         put?: never;
         /**
          * Export Work Completion
-         * @description BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).
+         * @description Berita acara serah terima, laporan survei, surat tugas, atau laporan kemajuan: PDF, Word, atau PowerPoint
+         *     (`export_format`; kosong = bawaan jenisnya) dengan isi setara. Juga: berita acara resmi ber-QR (.pdf) dan
+         *     rincian volume dan biaya (.xlsx). Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.
          */
         post: operations["export_work_completion_api_v1_exports_work_completions__completion_id__post"];
         delete?: never;
@@ -1753,7 +2163,8 @@ export interface paths {
         put?: never;
         /**
          * Export Survey
-         * @description Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.
+         * @description Laporan survei ACS/CCTV format baku (docs/37) dalam PDF, Word (bawaan), atau PowerPoint; tersedia setelah
+         *     survei dikirim. Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.
          */
         post: operations["export_survey_api_v1_exports_surveys__task_id__post"];
         delete?: never;
@@ -1777,9 +2188,32 @@ export interface paths {
         put?: never;
         /**
          * Export Periodic
-         * @description Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx).
+         * @description Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide
+         *     mingguan (.pptx). Mendukung Idempotency-Key.
          */
         post: operations["export_periodic_api_v1_exports_periodic_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/monthly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export Monthly
+         * @description Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word
+         *     (bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar
+         *     cakupan: 404. Mendukung Idempotency-Key.
+         */
+        post: operations["export_monthly_api_v1_exports_monthly_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1797,8 +2231,9 @@ export interface paths {
         put?: never;
         /**
          * Export Team Week
-         * @description Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim
-         *     atau PM/OM divisinya.
+         * @description Laporan mingguan tim: semua pekerjaan tim 7 hari (Senin sampai Minggu) — foto, keterangan, status — dalam
+         *     PowerPoint (bawaan), PDF, atau Word. Ketua/anggota tim atau PM/OM divisinya; tim di luar cakupan: 404.
+         *     Mendukung Idempotency-Key.
          */
         post: operations["export_team_week_api_v1_exports_team_week_post"];
         delete?: never;
@@ -1818,8 +2253,9 @@ export interface paths {
         put?: never;
         /**
          * Export Daily Report
-         * @description Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan
-         *     ketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+         * @description Laporan harian satu jadwal: header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan ketua,
+         *     dalam Word (bawaan), PDF, atau PowerPoint. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).
+         *     Mendukung Idempotency-Key.
          */
         post: operations["export_daily_report_api_v1_exports_daily_report_post"];
         delete?: never;
@@ -2642,11 +3078,56 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Daftar riwayat inspeksi keselamatan kendaraan */
+        /**
+         * Daftar riwayat inspeksi keselamatan kendaraan
+         * @description `q` = awalan plat/nama kendaraan/nama pemeriksa. `page`/`size` (bila ada) menggantikan `limit`/`offset`;
+         *     total baris di header `X-Total-Count`. Tanpa parameter = perilaku lama (50 terbaru).
+         */
         get: operations["list_inspections_api_v1_hse_inspections_get"];
         put?: never;
-        /** Kirim formulir inspeksi kendaraan (checklist & foto) */
+        /**
+         * Kirim formulir inspeksi kendaraan (checklist & foto)
+         * @description HSE (manage:vehicle_inspections, kendaraan di kantornya), pengemudi aktif kendaraan itu, atau ketua tim
+         *     (kendaraan di kantornya). Peran lain 403; kendaraan di luar hak/kantor 404.
+         */
         post: operations["create_inspection_api_v1_hse_inspections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Inspeksi yang saya kirim atau untuk kendaraan yang saya kemudikan
+         * @description Milik sendiri: pemeriksa = saya, atau pengemudi aktif kendaraannya. Tanpa page/size: 50 terbaru.
+         */
+        get: operations["my_inspections_api_v1_hse_inspections_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/checklist-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Butir daftar periksa baku untuk layar Buat inspeksi */
+        get: operations["inspection_checklist_template_api_v1_hse_inspections_checklist_template_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3463,7 +3944,8 @@ export interface paths {
         put?: never;
         /**
          * Set Field Role
-         * @description Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.
+         * @description Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN
+         *     (bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.
          */
         post: operations["set_field_role_api_v1_employees__emp_id__account_role_post"];
         delete?: never;
@@ -3684,6 +4166,284 @@ export interface paths {
          * @description Operasi milik pengguna sendiri — dasar layar "Perlu perhatian" (REJECTED).
          */
         get: operations["sync_status_api_v1_sync_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List System Settings
+         * @description Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).
+         */
+        get: operations["list_system_settings_api_v1_system_settings_get"];
+        /**
+         * Update System Settings
+         * @description Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.
+         */
+        put: operations["update_system_settings_api_v1_system_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Setup Status
+         * @description Apakah instalasi ini belum punya admin (perlu penyiapan awal).
+         */
+        get: operations["setup_status_api_v1_setup_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Setup Admin
+         * @description Buat Super Admin pertama. 404 bila SETUP_TOKEN tidak diisi, 403 kode salah, 409 bila sudah ada admin.
+         */
+        post: operations["setup_admin_api_v1_setup_admin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/events/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Terima Event
+         * @description Terima satu kiriman event dari perangkat. 404 bila token/perangkat/IP tidak dikenal, 413 bila terlalu besar,
+         *     422 bila rusak. Event bukan verifikasi lolos (mis. sinyal hidup) dijawab 200 `diabaikan`.
+         */
+        post: operations["terima_event_api_v1_hikvision_events__token__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar Perangkat */
+        get: operations["daftar_perangkat_api_v1_hikvision_devices_get"];
+        put?: never;
+        /**
+         * Buat Perangkat
+         * @description Buat perangkat. Token dan alamat penerima ditampilkan SEKALI di jawaban ini.
+         */
+        post: operations["buat_perangkat_api_v1_hikvision_devices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail Perangkat */
+        get: operations["detail_perangkat_api_v1_hikvision_devices__device_id__get"];
+        put?: never;
+        post?: never;
+        /** Hapus Perangkat */
+        delete: operations["hapus_perangkat_api_v1_hikvision_devices__device_id__delete"];
+        options?: never;
+        head?: never;
+        /** Ubah Perangkat */
+        patch: operations["ubah_perangkat_api_v1_hikvision_devices__device_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ganti Token
+         * @description Ganti token penerima. Token lama langsung tidak berlaku; yang baru ditampilkan SEKALI.
+         */
+        post: operations["ganti_token_api_v1_hikvision_devices__device_id__token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Status Perangkat */
+        get: operations["status_perangkat_api_v1_hikvision_devices__device_id__status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Daftar Pemetaan */
+        get: operations["daftar_pemetaan_api_v1_hikvision_devices__device_id__mappings_get"];
+        put?: never;
+        /** Buat Pemetaan */
+        post: operations["buat_pemetaan_api_v1_hikvision_devices__device_id__mappings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/mappings/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usulan Pemetaan
+         * @description Usulan: nomor perangkat yang sama dengan nomor karyawan di kantor perangkat, dan yang tidak cocok.
+         */
+        get: operations["usulan_pemetaan_api_v1_hikvision_devices__device_id__mappings_suggestions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/mappings/auto": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pemetaan Otomatis
+         * @description Buat semua pemetaan yang cocok, lalu terapkan ke event lama yang belum terpetakan.
+         */
+        post: operations["pemetaan_otomatis_api_v1_hikvision_devices__device_id__mappings_auto_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/mappings/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Terapkan Pemetaan
+         * @description Terapkan pemetaan ke event yang karyawannya masih kosong (per kelompok).
+         */
+        post: operations["terapkan_pemetaan_api_v1_hikvision_devices__device_id__mappings_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/mappings/{map_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Hapus Pemetaan */
+        delete: operations["hapus_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__delete"];
+        options?: never;
+        head?: never;
+        /** Ubah Pemetaan */
+        patch: operations["ubah_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hikvision/devices/{device_id}/bayangan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Banding Bayangan
+         * @description Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.
+         */
+        get: operations["banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4354,13 +5114,15 @@ export interface paths {
         };
         /**
          * List Loans
-         * @description Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.
+         * @description Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya;
+         *     peminjaman ke penerima eksternal hanya terlihat oleh pengelola aset.
          */
         get: operations["list_loans_api_v1_assets_loans_get"];
         put?: never;
         /**
          * Lend Asset
-         * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         * @description Serah terima aset ke karyawan (`employee_id`, opsional dikaitkan ke jadwal harian tim) ATAU ke
+         *     penerima eksternal (`external_borrower_id`, dengan `due_date` dan dokumen `bast_file_id`); isi tepat satu.
          *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["lend_asset_api_v1_assets_loans_post"];
@@ -4384,6 +5146,50 @@ export interface paths {
          * @description Pengembalian aset dengan kondisinya (ready/damaged/lost).
          */
         post: operations["return_asset_api_v1_assets_loans__assignment_id__return_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/external-borrowers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Borrowers
+         * @description Daftar penerima eksternal (klien sewa, subkontraktor) di kantor jangkauan pengelola aset.
+         */
+        get: operations["list_borrowers_api_v1_assets_external_borrowers_get"];
+        put?: never;
+        /**
+         * Create Borrower
+         * @description Mendaftarkan penerima eksternal baru (nama, instansi, kontak) untuk peminjaman aset.
+         */
+        post: operations["create_borrower_api_v1_assets_external_borrowers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/external-borrowers/{borrower_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Borrower
+         * @description Mengubah data penerima eksternal (sebagian).
+         */
+        put: operations["update_borrower_api_v1_assets_external_borrowers__borrower_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4951,14 +5757,14 @@ export interface components {
         };
         /**
          * AccountRoleUpdate
-         * @description Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER).
+         * @description Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN.
          */
         AccountRoleUpdate: {
             /**
              * System Role
              * @enum {string}
              */
-            system_role: "EMPLOYEE" | "TEAM_LEADER";
+            system_role: "OPERATIONAL_MANAGER" | "PROJECT_MANAGER" | "HSE" | "ADMIN_HR_GA" | "FINANCE" | "TEAM_LEADER" | "EMPLOYEE";
         };
         /**
          * AccountSessionsRevoked
@@ -5044,6 +5850,19 @@ export interface components {
              */
             notes: string[];
             download?: components["schemas"]["ReleaseFileOut"] | null;
+        };
+        /** ArchiveItemOut */
+        ArchiveItemOut: {
+            /** Id */
+            id: string;
+            /** Module */
+            module: string;
+            /** Name */
+            name: string;
+            /** Code */
+            code?: string | null;
+            /** Deleted At */
+            deleted_at?: string | null;
         };
         /**
          * AssetAvailabilityOut
@@ -5291,6 +6110,12 @@ export interface components {
             check_out_outside: boolean;
             /** Check Out Selfie File Id */
             check_out_selfie_file_id?: string | null;
+            /** Review Reasons */
+            review_reasons?: string[];
+            /** Location Accuracy M */
+            location_accuracy_m?: number | null;
+            /** Location Decision */
+            location_decision?: string | null;
             /** Check Out Explanation */
             check_out_explanation?: string | null;
             /** City Category */
@@ -5449,10 +6274,19 @@ export interface components {
             photo_file_id?: string | null;
             /** Full Name */
             full_name?: string | null;
+            /** Office Id */
+            office_id?: string | null;
+            /** Office Name */
+            office_name?: string | null;
             /** Effective Roles */
             effective_roles?: string[];
             /** Role Scopes */
             role_scopes?: components["schemas"]["RoleScopeOut"][];
+            /**
+             * Must Change Password
+             * @default false
+             */
+            must_change_password: boolean;
         };
         /** AvailableMemberOut */
         AvailableMemberOut: {
@@ -5532,6 +6366,77 @@ export interface components {
              */
             created_at: string;
         };
+        /** BandingBaris */
+        BandingBaris: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Tgl
+             * Format: date
+             */
+            tgl: string;
+            /**
+             * Pertama
+             * Format: date-time
+             */
+            pertama: string;
+            /**
+             * Terakhir
+             * Format: date-time
+             */
+            terakhir: string;
+            /** Jumlah */
+            jumlah: number;
+            /** Clock In At */
+            clock_in_at: string | null;
+            /** Clock Out At */
+            clock_out_at: string | null;
+            /** Selisih Masuk Menit */
+            selisih_masuk_menit: number | null;
+            /** Selisih Pulang Menit */
+            selisih_pulang_menit: number | null;
+        };
+        /**
+         * BandingBayangan
+         * @description Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari.
+         */
+        BandingBayangan: {
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "SHADOW" | "AKTIF";
+            /**
+             * Dari
+             * Format: date
+             */
+            dari: string;
+            /**
+             * Sampai
+             * Format: date
+             */
+            sampai: string;
+            /** Akan Menghasilkan Absen */
+            akan_menghasilkan_absen: number;
+            /** Total Karyawan Hari */
+            total_karyawan_hari: number;
+            /** Tak Terpetakan */
+            tak_terpetakan: number;
+            /** Terpotong */
+            terpotong: boolean;
+            /** Items */
+            items: components["schemas"]["BandingBaris"][];
+        };
         /** BiometricLoginRequestSchema */
         BiometricLoginRequestSchema: {
             /** Device Token */
@@ -5597,6 +6502,63 @@ export interface components {
              * @default false
              */
             custom: boolean;
+        };
+        /**
+         * BorrowerCreate
+         * @description Penerima eksternal (klien sewa, subkontraktor). Data seminimal mungkin: tanpa NIK/alamat.
+         */
+        BorrowerCreate: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Nama */
+            nama: string;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
+        };
+        /** BorrowerOut */
+        BorrowerOut: {
+            /**
+             * Borrower Id
+             * Format: uuid
+             */
+            borrower_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Nama */
+            nama: string;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
+            /**
+             * Has Open Loan
+             * @default false
+             */
+            has_open_loan: boolean;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** BorrowerUpdate */
+        BorrowerUpdate: {
+            /** Nama */
+            nama?: string | null;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
         };
         /** BulkApproveIn */
         BulkApproveIn: {
@@ -5909,6 +6871,11 @@ export interface components {
              * @enum {string}
              */
             template: "BAST" | "SURVEY_REPORT" | "BAST_PDF" | "BOQ" | "PROGRESS_SLIDES" | "ORDER_SHEET";
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = bawaan jenisnya
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /**
          * CopyToDivisionIn
@@ -6536,6 +7503,11 @@ export interface components {
              * Format: uuid
              */
             daily_plan_id: string;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = Word
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /** DailyReportOut */
         DailyReportOut: {
@@ -6764,6 +7736,22 @@ export interface components {
             items: components["schemas"]["EmployeeDocumentResponse"][];
             /** Total */
             total: number;
+        };
+        /** DocumentTypeOut */
+        DocumentTypeOut: {
+            /** Code */
+            code: string;
+            /** Nama */
+            nama: string;
+            /**
+             * Berlaku Untuk
+             * @enum {string}
+             */
+            berlaku_untuk: "KENDARAAN" | "KARYAWAN";
+            /** Ambang Hari */
+            ambang_hari: number[];
+            /** Harian Mulai Hari */
+            harian_mulai_hari: number;
         };
         /** EmployeeCreate */
         EmployeeCreate: {
@@ -7651,6 +8639,22 @@ export interface components {
              */
             acknowledged_at: string;
         };
+        /** InspectionChecklistItem */
+        InspectionChecklistItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+        };
+        /** InspectionChecklistTemplate */
+        InspectionChecklistTemplate: {
+            /** Period Types */
+            period_types: string[];
+            /** Items */
+            items: components["schemas"]["InspectionChecklistItem"][];
+        };
         /** InspectionCreate */
         InspectionCreate: {
             /**
@@ -8014,11 +9018,14 @@ export interface components {
             tool_id?: string | null;
             /** Vehicle Id */
             vehicle_id?: string | null;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
+            /** Employee Id */
+            employee_id?: string | null;
+            /** External Borrower Id */
+            external_borrower_id?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Bast File Id */
+            bast_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Handover File Id */
@@ -8045,15 +9052,22 @@ export interface components {
             asset_name: string;
             /** Asset Code */
             asset_code: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
+            /** Employee Id */
+            employee_id?: string | null;
             /** Employee Name */
             employee_name: string;
             /** Employee Photo File Id */
             employee_photo_file_id?: string | null;
+            /** External Borrower Id */
+            external_borrower_id?: string | null;
+            /** Borrower Name */
+            borrower_name?: string | null;
+            /** Borrower Instansi */
+            borrower_instansi?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Bast File Id */
+            bast_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Work Date */
@@ -8466,6 +9480,32 @@ export interface components {
             alerted: boolean;
             /** Check Ins Today */
             check_ins_today: number;
+        };
+        /**
+         * MonthlyExportRequest
+         * @description Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan).
+         */
+        MonthlyExportRequest: {
+            /**
+             * Division Id
+             * Format: uuid
+             */
+            division_id: string;
+            /**
+             * Year
+             * @description Tahun, mis. 2026
+             */
+            year: number;
+            /**
+             * Month
+             * @description Bulan 1 sampai 12
+             */
+            month: number;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = Word
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
         };
         /** MyExecutionTodayOut */
         MyExecutionTodayOut: {
@@ -9177,6 +10217,189 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** PemetaanBuat */
+        PemetaanBuat: {
+            /**
+             * Employee No String
+             * @description Nomor karyawan di perangkat
+             */
+            employee_no_string: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+        };
+        /** PemetaanDiterapkan */
+        PemetaanDiterapkan: {
+            /** Event Diperbarui */
+            event_diperbarui: number;
+            /**
+             * Masih Ada Sisa
+             * @description True bila masih ada event lain; jalankan lagi
+             */
+            masih_ada_sisa: boolean;
+        };
+        /** PemetaanOtomatisOut */
+        PemetaanOtomatisOut: {
+            /** Dibuat */
+            dibuat: number;
+            /** Event Diperbarui */
+            event_diperbarui: number;
+            /** Masih Ada Sisa */
+            masih_ada_sisa: boolean;
+            /** Tidak Cocok */
+            tidak_cocok: components["schemas"]["UsulanTakCocok"][];
+        };
+        /** PemetaanOut */
+        PemetaanOut: {
+            /**
+             * Map Id
+             * Format: uuid
+             */
+            map_id: string;
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /** Employee No String */
+            employee_no_string: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee No */
+            employee_no: string;
+            /** Full Name */
+            full_name: string;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** PemetaanUbah */
+        PemetaanUbah: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+        };
+        /**
+         * PenerimaOut
+         * @description Jawaban singkat ke perangkat. Tanpa data pribadi.
+         */
+        PenerimaOut: {
+            /** Status */
+            status: string;
+            /** Kode */
+            kode: string;
+        };
+        /** PerangkatBuat */
+        PerangkatBuat: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Name */
+            name: string;
+            /** Ip Address */
+            ip_address: string;
+            /**
+             * Http Port
+             * @default 80
+             */
+            http_port: number;
+            /** Serial No */
+            serial_no: string;
+            /** Model */
+            model?: string | null;
+            /**
+             * Mode
+             * @default SHADOW
+             * @enum {string}
+             */
+            mode: "SHADOW" | "AKTIF";
+            /**
+             * Aktif
+             * @default true
+             */
+            aktif: boolean;
+            /** Catatan */
+            catatan?: string | null;
+        };
+        /** PerangkatDibuat */
+        PerangkatDibuat: {
+            perangkat: components["schemas"]["PerangkatOut"];
+            penerima: components["schemas"]["TokenBaru"];
+        };
+        /** PerangkatOut */
+        PerangkatOut: {
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Name */
+            name: string;
+            /** Ip Address */
+            ip_address: string;
+            /** Http Port */
+            http_port: number;
+            /** Serial No */
+            serial_no: string;
+            /** Model */
+            model: string | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "SHADOW" | "AKTIF";
+            /** Aktif */
+            aktif: boolean;
+            /** Catatan */
+            catatan: string | null;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+            /**
+             * Update At
+             * Format: date-time
+             */
+            update_at: string;
+        };
+        /** PerangkatUbah */
+        PerangkatUbah: {
+            /** Name */
+            name?: string | null;
+            /** Ip Address */
+            ip_address?: string | null;
+            /** Http Port */
+            http_port?: number | null;
+            /** Serial No */
+            serial_no?: string | null;
+            /** Model */
+            model?: string | null;
+            /** Mode */
+            mode?: ("SHADOW" | "AKTIF") | null;
+            /** Aktif */
+            aktif?: boolean | null;
+            /** Catatan */
+            catatan?: string | null;
+        };
         /** PeriodicExportRequest */
         PeriodicExportRequest: {
             /**
@@ -9449,6 +10672,23 @@ export interface components {
             assigned_employee_ids?: string[] | null;
             /** Notes */
             notes?: string | null;
+        };
+        /**
+         * PmCandidateOut
+         * @description Calon PM untuk form Buat Tugas Klien: hanya id, nama, dan divisi (tanpa kontak, email, atau peran).
+         */
+        PmCandidateOut: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Division Id */
+            division_id?: string | null;
+            /** Division Name */
+            division_name?: string | null;
         };
         /** PointIn */
         PointIn: {
@@ -9829,14 +11069,14 @@ export interface components {
         };
         /**
          * RoleAssignmentCreate
-         * @description Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor).
+         * @description Tambah peran. HR/Finance/PM/HSE wajib `office_id`; OM tanpa `office_id` (semua kantor).
          */
         RoleAssignmentCreate: {
             /**
              * Role
              * @enum {string}
              */
-            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER";
+            role: "ADMIN_HR_GA" | "FINANCE" | "OPERATIONAL_MANAGER" | "PROJECT_MANAGER" | "HSE";
             /** Office Id */
             office_id?: string | null;
         };
@@ -9909,6 +11149,31 @@ export interface components {
             /** Completed Qty */
             completed_qty: number | string;
         };
+        /** SetupAdminIn */
+        SetupAdminIn: {
+            /** Setup Token */
+            setup_token: string;
+            /** Full Name */
+            full_name: string;
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** SetupAdminOut */
+        SetupAdminOut: {
+            /** User Id */
+            user_id: string;
+            /** Email */
+            email: string;
+        };
+        /** SetupStatusOut */
+        SetupStatusOut: {
+            /** Needs Setup */
+            needs_setup: boolean;
+            /** Enabled */
+            enabled: boolean;
+        };
         /** SlotOut */
         SlotOut: {
             /**
@@ -9924,6 +11189,34 @@ export interface components {
             hint?: string | null;
             /** Example File Id */
             example_file_id?: string | null;
+        };
+        /** StatusPerangkat */
+        StatusPerangkat: {
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "SHADOW" | "AKTIF";
+            /** Aktif */
+            aktif: boolean;
+            /** Event 24 Jam */
+            event_24_jam: number;
+            /** Event 7 Hari */
+            event_7_hari: number;
+            /** Event Terakhir Diterima */
+            event_terakhir_diterima: string | null;
+            /** Belum Terpetakan 7 Hari */
+            belum_terpetakan_7_hari: number;
+            /**
+             * Kemungkinan Duplikat 7 Hari
+             * @description Kelompok event dengan nomor, waktu, dan jenis sama (duplikat murni ditolak penyimpanan)
+             */
+            kemungkinan_duplikat_7_hari: number;
         };
         /** SurveyListItem */
         SurveyListItem: {
@@ -10207,6 +11500,44 @@ export interface components {
             /** Results */
             results: components["schemas"]["OperationResult"][];
         };
+        /** SystemSettingOut */
+        SystemSettingOut: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /**
+             * Type
+             * @default bool
+             * @constant
+             */
+            type: "bool";
+            /** Value */
+            value: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "env_force" | "db" | "env_default";
+            /** Env Default */
+            env_default: boolean;
+            /** Locked */
+            locked: boolean;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * SystemSettingsUpdate
+         * @description Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka).
+         */
+        SystemSettingsUpdate: {
+            /** Values */
+            values: {
+                [key: string]: boolean;
+            };
+        };
         /** TeamAvailabilityItem */
         TeamAvailabilityItem: {
             /**
@@ -10414,6 +11745,52 @@ export interface components {
             /** Leader Name */
             leader_name: string;
         };
+        /**
+         * TeamSurveyOut
+         * @description Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim).
+         */
+        TeamSurveyOut: {
+            /**
+             * Survey Id
+             * Format: uuid
+             */
+            survey_id: string;
+            /**
+             * Work Order Id
+             * Format: uuid
+             */
+            work_order_id: string;
+            /** Wo Number */
+            wo_number: string;
+            /** Title */
+            title: string;
+            /** Client Name */
+            client_name?: string | null;
+            /** Site Name */
+            site_name?: string | null;
+            /** Site Lat */
+            site_lat?: string | null;
+            /** Site Lng */
+            site_lng?: string | null;
+            /** Site Radius M */
+            site_radius_m?: number | null;
+            /**
+             * Survey Date
+             * Format: date
+             */
+            survey_date: string;
+            /** Survey Status */
+            survey_status: string;
+            /** Surveyor Team Id */
+            surveyor_team_id?: string | null;
+            /** Surveyor Team Name */
+            surveyor_team_name?: string | null;
+            /**
+             * Filled Points
+             * @default 0
+             */
+            filled_points: number;
+        };
         /** TeamUpdate */
         TeamUpdate: {
             /** Office Id */
@@ -10439,6 +11816,33 @@ export interface components {
              * Format: date
              */
             start_date: string;
+            /**
+             * End Date
+             * @description Opsional; bila diisi harus Minggu (tepat 7 hari dari Senin)
+             */
+            end_date?: string | null;
+            /**
+             * Export Format
+             * @description PDF, WORD_DOCX, atau PPTX; kosong = PowerPoint
+             */
+            export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
+        };
+        /**
+         * TokenBaru
+         * @description Ditampilkan SATU kali. Simpan sekarang; yang tersimpan di server hanya sidik jarinya.
+         */
+        TokenBaru: {
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /** Token */
+            token: string;
+            /** Receiver Url */
+            receiver_url: string;
+            /** Receiver Path */
+            receiver_path: string;
         };
         /** ToolCreate */
         ToolCreate: {
@@ -10474,6 +11878,8 @@ export interface components {
             assignment_id?: string | null;
             /** Holder Employee Id */
             holder_employee_id?: string | null;
+            /** Holder External Borrower Id */
+            holder_external_borrower_id?: string | null;
             /** Holder Name */
             holder_name?: string | null;
             /** Daily Plan Id */
@@ -10539,6 +11945,38 @@ export interface components {
             /** Photo File Id */
             photo_file_id?: string | null;
         };
+        /** UsulanCocok */
+        UsulanCocok: {
+            /** Employee No String */
+            employee_no_string: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee No */
+            employee_no: string;
+            /** Full Name */
+            full_name: string;
+            /** Jumlah Event */
+            jumlah_event: number;
+        };
+        /** UsulanPemetaan */
+        UsulanPemetaan: {
+            /** Cocok */
+            cocok: components["schemas"]["UsulanCocok"][];
+            /** Tidak Cocok */
+            tidak_cocok: components["schemas"]["UsulanTakCocok"][];
+        };
+        /** UsulanTakCocok */
+        UsulanTakCocok: {
+            /** Employee No String */
+            employee_no_string: string;
+            /** Jumlah Event */
+            jumlah_event: number;
+            /** Alasan */
+            alasan: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -10577,6 +12015,113 @@ export interface components {
             number_plate: string;
             /** Photo File Id */
             photo_file_id?: string | null;
+        };
+        /**
+         * VehicleDocumentCreate
+         * @description Dokumen baru menggantikan dokumen berlaku sejenis pada kendaraan itu (yang lama menjadi `replaced`).
+         */
+        VehicleDocumentCreate: {
+            /** Doc Type Code */
+            doc_type_code: string;
+            /** Doc No */
+            doc_no?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /**
+             * Expired On
+             * Format: date
+             */
+            expired_on: string;
+            /** File Id */
+            file_id?: string | null;
+            /** Catatan */
+            catatan?: string | null;
+        };
+        /** VehicleDocumentOut */
+        VehicleDocumentOut: {
+            /**
+             * Vehicle Document Id
+             * Format: uuid
+             */
+            vehicle_document_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /** Vehicle Name */
+            vehicle_name: string;
+            /** Number Plate */
+            number_plate: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Doc Type Code */
+            doc_type_code: string;
+            /** Doc Type Name */
+            doc_type_name: string;
+            /** Doc No */
+            doc_no: string | null;
+            /** Issued On */
+            issued_on: string | null;
+            /**
+             * Expired On
+             * Format: date
+             */
+            expired_on: string;
+            /** File Id */
+            file_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "replaced";
+            /** Catatan */
+            catatan: string | null;
+            /** Days Left */
+            days_left: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** VehicleDriverCreate */
+        VehicleDriverCreate: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+        };
+        /** VehicleDriverOut */
+        VehicleDriverOut: {
+            /**
+             * Vehicle Driver Id
+             * Format: uuid
+             */
+            vehicle_driver_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Mulai On
+             * Format: date
+             */
+            mulai_on: string;
+            /** Selesai On */
+            selesai_on: string | null;
         };
         /** VehicleFileCreate */
         VehicleFileCreate: {
@@ -10659,14 +12204,14 @@ export interface components {
             odometer_km?: number | null;
             /**
              * Checklist Json
-             * @description Status checklist per item (rem, ban, oli, lampu, dll)
+             * @description Status per butir; butir baku: GET /hse/inspections/checklist-template
              */
             checklist_json?: {
                 [key: string]: unknown;
             };
             /**
              * Photos Json
-             * @description Array URL/Path foto bukti inspeksi kendaraan
+             * @description ID berkas foto bukti (hasil POST /files/upload), maks 10
              */
             photos_json?: string[];
             /** Notes */
@@ -10742,6 +12287,8 @@ export interface components {
             assignment_id?: string | null;
             /** Holder Employee Id */
             holder_employee_id?: string | null;
+            /** Holder External Borrower Id */
+            holder_external_borrower_id?: string | null;
             /** Holder Name */
             holder_name?: string | null;
             /** Daily Plan Id */
@@ -11384,7 +12931,10 @@ export interface components {
              * Format: uuid
              */
             lead_team_id: string;
-            /** Survey Date */
+            /**
+             * Survey Date
+             * @description Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP
+             */
             survey_date?: string | null;
             /** Notes */
             notes?: string | null;
@@ -11529,6 +13079,16 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Survey Assignment Summary
+             * @description Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'
+             */
+            survey_assignment_summary?: string | null;
+            /**
+             * Duplicate Title Warning
+             * @description Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama
+             */
+            duplicate_title_warning?: string | null;
             /** Survey Points */
             survey_points?: components["schemas"]["SurveyPointOut"][];
             /** Items */
@@ -12161,6 +13721,715 @@ export interface operations {
             };
         };
     };
+    list_archived_tools_api_v1_archive_tools_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_tools_api_v1_archive_tools__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archived_vehicles_api_v1_archive_vehicles_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_vehicles_api_v1_archive_vehicles__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archived_clients_api_v1_archive_clients_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_clients_api_v1_archive_clients__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archived_divisions_api_v1_archive_divisions_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_divisions_api_v1_archive_divisions__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archived_job_positions_api_v1_archive_job_positions_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_job_positions_api_v1_archive_job_positions__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_archived_mess_api_v1_archive_mess_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_mess_api_v1_archive_mess__item_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveItemOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_types_api_v1_vehicle_documents_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTypeOut"][];
+                };
+            };
+        };
+    };
+    list_documents_api_v1_vehicle_documents_get: {
+        parameters: {
+            query?: {
+                vehicle_id?: string | null;
+                /** @description Sertakan dokumen yang sudah diganti */
+                history?: boolean;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_expiring_api_v1_vehicle_documents_expiring_get: {
+        parameters: {
+            query?: {
+                /** @description Jatuh tempo dalam N hari (yang sudah lewat ikut) */
+                days?: number;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mine_api_v1_vehicle_documents_mine_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_document_api_v1_vehicles__vehicle_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleDocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drivers_api_v1_vehicles__vehicle_id__drivers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_driver_api_v1_vehicles__vehicle_id__drivers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleDriverCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+                driver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cron_remind_api_v1_vehicle_documents_cron_remind_post: {
+        parameters: {
+            query?: {
+                dry_run?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_role_assignments_api_v1_users__user_id__role_assignments_get: {
         parameters: {
             query?: {
@@ -12324,6 +14593,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkOrderDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_pm_candidates_api_v1_work_orders_pm_candidates_get: {
+        parameters: {
+            query?: {
+                /** @description Batasi pada satu divisi */
+                division_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PmCandidateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_team_surveys_api_v1_work_orders_team_surveys_get: {
+        parameters: {
+            query?: {
+                /** @description team = tim pemanggil; all = ditambah WO kelolaan PM */
+                scope?: "team" | "all";
+                /** @description Tanggal survei paling awal */
+                date_from?: string | null;
+                /** @description Tanggal survei paling akhir */
+                date_to?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamSurveyOut"][];
                 };
             };
             /** @description Validation Error */
@@ -15305,7 +17654,10 @@ export interface operations {
     export_work_completion_api_v1_exports_work_completions__completion_id__post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 completion_id: string;
             };
@@ -15487,8 +17839,14 @@ export interface operations {
     };
     export_survey_api_v1_exports_surveys__task_id__post: {
         parameters: {
-            query?: never;
-            header?: never;
+            query?: {
+                /** @description PDF, WORD_DOCX, atau PPTX; kosong = Word */
+                export_format?: ("PDF" | "WORD_DOCX" | "PPTX") | null;
+            };
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 task_id: string;
             };
@@ -15539,7 +17897,10 @@ export interface operations {
     export_periodic_api_v1_exports_periodic_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15569,10 +17930,49 @@ export interface operations {
             };
         };
     };
+    export_monthly_api_v1_exports_monthly_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MonthlyExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Berkas dokumen */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     export_team_week_api_v1_exports_team_week_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15605,7 +18005,10 @@ export interface operations {
     export_daily_report_api_v1_exports_daily_report_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Kunci unik per aksi (UUID v4 disarankan). */
+                "Idempotency-Key"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17444,6 +19847,12 @@ export interface operations {
                 to_date?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -17500,6 +19909,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_inspections_api_v1_hse_inspections_mine_get: {
+        parameters: {
+            query?: {
+                vehicle_id?: string | null;
+                from_date?: string | null;
+                to_date?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inspection_checklist_template_api_v1_hse_inspections_checklist_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectionChecklistTemplate"];
                 };
             };
         };
@@ -19381,6 +21849,636 @@ export interface operations {
             };
         };
     };
+    list_system_settings_api_v1_system_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingOut"][];
+                };
+            };
+        };
+    };
+    update_system_settings_api_v1_system_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_status_api_v1_setup_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatusOut"];
+                };
+            };
+        };
+    };
+    setup_admin_api_v1_setup_admin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupAdminIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terima_event_api_v1_hikvision_events__token__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PenerimaOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daftar_perangkat_api_v1_hikvision_devices_get: {
+        parameters: {
+            query?: {
+                office_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerangkatOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    buat_perangkat_api_v1_hikvision_devices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerangkatBuat"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerangkatDibuat"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    detail_perangkat_api_v1_hikvision_devices__device_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerangkatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hapus_perangkat_api_v1_hikvision_devices__device_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ubah_perangkat_api_v1_hikvision_devices__device_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PerangkatUbah"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerangkatOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ganti_token_api_v1_hikvision_devices__device_id__token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenBaru"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_perangkat_api_v1_hikvision_devices__device_id__status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusPerangkat"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daftar_pemetaan_api_v1_hikvision_devices__device_id__mappings_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PemetaanOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    buat_pemetaan_api_v1_hikvision_devices__device_id__mappings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PemetaanBuat"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PemetaanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usulan_pemetaan_api_v1_hikvision_devices__device_id__mappings_suggestions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsulanPemetaan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pemetaan_otomatis_api_v1_hikvision_devices__device_id__mappings_auto_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PemetaanOtomatisOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terapkan_pemetaan_api_v1_hikvision_devices__device_id__mappings_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PemetaanDiterapkan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hapus_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ubah_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                device_id: string;
+                map_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PemetaanUbah"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PemetaanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get: {
+        parameters: {
+            query?: {
+                dari?: string | null;
+                sampai?: string | null;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BandingBayangan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     attendance_recap_api_v1_recaps_attendance_get: {
         parameters: {
             query?: {
@@ -20602,6 +23700,7 @@ export interface operations {
                 open?: boolean;
                 employee_id?: string | null;
                 daily_plan_id?: string | null;
+                borrower_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -20693,6 +23792,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_borrowers_api_v1_assets_external_borrowers_get: {
+        parameters: {
+            query?: {
+                office_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_borrower_api_v1_assets_external_borrowers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_borrower_api_v1_assets_external_borrowers__borrower_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                borrower_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"];
                 };
             };
             /** @description Validation Error */

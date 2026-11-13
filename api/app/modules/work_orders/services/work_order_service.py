@@ -13,6 +13,7 @@ import hashlib
 import json
 import uuid
 from collections.abc import Sequence
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -20,8 +21,9 @@ from uuid import UUID
 import filetype
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import storage
+from app.core import storage, system_settings
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.list_params import MAX_ROWS_UNPAGED
 from app.core.security import CurrentUser
 from app.core.time import utcnow
 from app.modules.exports.services.builders.docx_builders import (
@@ -39,7 +41,7 @@ from app.modules.work_orders.schemas.work_order_schema import (
     WorkOrderCreate,
     WorkOrderSignBast,
 )
-from app.shared.access.scope_rules import sees_all_work_orders, viewer_params
+from app.shared.access.scope_rules import is_pm, sees_all_work_orders, viewer_params
 from app.shared.documents.branding import default_kop_logos
 from app.shared.documents.build_limiter import build_limited
 
@@ -129,9 +131,29 @@ class WorkOrderService:
             raise ForbiddenError(message)
         return access
 
+    async def list_pm_candidates(self, current_user: CurrentUser, division_id: UUID | None) -> Sequence[Any]:
+        """Calon PM per divisi untuk form tugas klien. SA/OM: semua divisi; PM (utama atau tambahan): hanya divisi
+        yang ia pimpin atau tempati; peran lain 403. Divisi di luar cakupan atau tak ada → 404."""
+        everywhere = current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER")
+        if not everywhere and not is_pm(current_user):
+            raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat melihat calon PM.")
+        scope: list[str] | None = None
+        if not everywhere:
+            led = await self.repo.pm_division_ids(current_user.employee_id) if current_user.employee_id else []
+            if division_id is not None and str(division_id) not in led:
+                raise NotFoundError("Divisi tidak ditemukan.")
+            scope = [str(division_id)] if division_id is not None else led
+            if not scope:
+                return []
+        elif division_id is not None:
+            if not await self.repo.division_exists(str(division_id)):
+                raise NotFoundError("Divisi tidak ditemukan.")
+            scope = [str(division_id)]
+        return await self.repo.pm_candidates(scope, with_extra_roles=system_settings.role_assignment_enabled())
+
     async def create_work_order(self, data: WorkOrderCreate, current_user: CurrentUser) -> Any:
         # Cek kewenangan
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat membuat Work Order.")
 
         wo_number = await self.repo.generate_wo_number()
@@ -145,14 +167,25 @@ class WorkOrderService:
             "title": data.title.strip(),
             "initial_complaint": data.initial_complaint.strip() if data.initial_complaint else None,
         }
+        # Peringatan, bukan blokir: judul sama untuk klien yang sama bisa sah (pekerjaan berulang).
+        same = await self.repo.same_title_numbers(data.client_id, data.title.strip())
         new_id = await self.repo.create_work_order(payload)
-        return await self.get_work_order(new_id)
+        detail = await self.get_work_order(new_id)
+        if same:
+            detail["duplicate_title_warning"] = (
+                f"Sudah ada tugas klien dengan judul yang sama untuk klien ini ({', '.join(same)}). "
+                "Tugas baru tetap dibuat; periksa bila ini tidak disengaja."
+            )
+        return detail
 
     async def assign_survey(
         self, work_order_id: UUID | str, data: WorkOrderAssignSurvey, current_user: CurrentUser
     ) -> Any:
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat menugaskan survei.")
+        survey_date = data.survey_date
+        if survey_date is None:
+            raise ValidationError("Tanggal survei wajib diisi agar tim bisa melihat tugasnya di HP.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat menugaskan survei.")
         wo = await self.repo.get_work_order(work_order_id)
@@ -167,7 +200,26 @@ class WorkOrderService:
             survey_date=data.survey_date,
             notes=data.notes,
         )
-        return await self.get_work_order(work_order_id)
+        detail = await self.get_work_order(work_order_id)
+        team_name = await self.repo.team_name(data.lead_team_id) or "yang ditugaskan"
+        detail["survey_assignment_summary"] = (
+            f"Tim {team_name} akan melihat di HP pada tanggal {survey_date.strftime('%d-%m-%Y')}."
+        )
+        return detail
+
+    async def list_team_surveys(
+        self, current_user: CurrentUser, *, scope_all: bool = False,
+        date_from: date | None = None, date_to: date | None = None,
+    ) -> Sequence[Any]:
+        """Survei WO aktif milik tim yang diikuti pemanggil. `scope_all` (Jadwal harian web) menambah WO yang
+        dikelola PM; SA/OM melihat semua. Tanpa karyawan terkait dan bukan SA/OM = daftar kosong."""
+        all_orgs = scope_all and sees_all_work_orders(current_user)
+        if not all_orgs and not current_user.employee_id:
+            return []
+        return await self.repo.list_team_surveys(
+            None if all_orgs else viewer_params(current_user), MAX_ROWS_UNPAGED,
+            scope_all=scope_all, date_from=date_from, date_to=date_to,
+        )
 
     async def submit_survey(
         self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
@@ -180,6 +232,9 @@ class WorkOrderService:
         if wo.status not in ("WAITING_SURVEY", "SURVEY_IN_PROGRESS", "SURVEY_SUBMITTED"):
             raise AppError("INVALID_STATE", f"Laporan survei tidak dapat dikirim untuk status {wo.status}.", status=409)
 
+        wt_ids = sorted({str(p.recommended_work_type_id) for p in data.points})
+        if wt_ids and await self.repo.count_work_types(wt_ids) != len(wt_ids):
+            raise ValidationError("Jenis pekerjaan yang dipilih pada titik survei tidak ditemukan.")
         points_payload = [p.model_dump() for p in data.points]
         if not await self.repo.submit_survey(
             work_order_id=work_order_id,
@@ -193,11 +248,26 @@ class WorkOrderService:
                            status=409)
         return await self.get_work_order(work_order_id)
 
+    async def submit_survey_offline(
+        self, work_order_id: UUID | str, data: SurveySubmitIn, current_user: CurrentUser
+    ) -> None:
+        """Kirim survei dari antrean sinkron offline. Cakupan tim sama dengan jalur online (404/403).
+        Survei yang sudah SURVEY_SUBMITTED dianggap sudah terkirim (aman idempoten, tidak ditimpa);
+        status lain di luar survei (mis. sudah disetujui) -> 409 dan ditolak oleh sinkron."""
+        await self._authorize(current_user, work_order_id, "team",
+                              "Hanya anggota tim yang ditugaskan ke WO ini yang dapat mengirim laporan survei.")
+        wo = await self.repo.get_work_order(work_order_id)
+        if not wo:
+            raise NotFoundError("Work Order tidak ditemukan.")
+        if wo.status == "SURVEY_SUBMITTED":
+            return
+        await self.submit_survey(work_order_id, data, current_user)
+
     async def apply_survey(self, work_order_id: UUID | str, current_user: CurrentUser) -> Any:
         """
         Fitur Inti: PM menyetujui survei dan mengunci item tugas & BOM.
         """
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM atau OM yang dapat menyetujui survei dan mengunci daftar tugas.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat menyetujui survei.")
@@ -389,13 +459,14 @@ class WorkOrderService:
         """Menghasilkan dokumen resmi ekspor untuk Work Order.
         Mendukung BAST_PDF, BAST_DOCX, SURVEY_REPORT, ORDER_SHEET, BOQ, PROGRESS_SLIDES.
         """
-        if not current_user.has_role("SUPER_ADMIN", "PROJECT_MANAGER", "OPERATIONAL_MANAGER"):
+        if not (current_user.has_role("SUPER_ADMIN", "OPERATIONAL_MANAGER") or current_user.role == "PROJECT_MANAGER"):
             raise ForbiddenError("Hanya PM, OM, atau Super Admin yang dapat mengunduh dokumen resmi.")
         await self._authorize(current_user, work_order_id, "manage",
                               "Hanya PM WO ini atau PM/OM divisinya yang dapat mengunduh dokumen resmi.")
         detail = await self.get_work_order(work_order_id, current_user)
         order_dict = {
             "completion_id": str(detail["work_order_id"]),
+            "order_number": str(detail["wo_number"]),
             "project_title": detail["title"],
             "client_name": detail["client_name"] or "PT Visiontech Indograha",
             "division_name": detail["division_name"] or "Operasional",
@@ -418,14 +489,21 @@ class WorkOrderService:
 
         template_upper = template.upper()
         wo_num = str(detail["wo_number"]).replace("/", "-")
+        if template_upper in ("PDF", "BAST_PDF", "DOCX", "BAST", "BAST_DOCX") and detail.get("status") != "BAST_SIGNED":
+            raise AppError(
+                "NOT_SIGNED",
+                "Surat serah terima baru tersedia setelah pekerjaan selesai dan disahkan PM. "
+                "Untuk hasil survei, gunakan Laporan Survei.",
+                status=409,
+            )
         docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
         if template_upper in ("PDF", "BAST_PDF"):
             content = await build_limited(completion_pdf, report)
-            return f"BAST_{wo_num}.pdf", "application/pdf", content
+            return f"Berita_Acara_Serah_Terima_{wo_num}.pdf", "application/pdf", content
         elif template_upper in ("DOCX", "BAST", "BAST_DOCX"):
             content = bast_docx(report)
-            return f"BAST_{wo_num}.docx", docx_mime, content
+            return f"Berita_Acara_Serah_Terima_{wo_num}.docx", docx_mime, content
         elif template_upper in ("SURVEY", "SURVEY_REPORT"):
             content = survey_report_docx(report)
             return f"Laporan_Survei_{wo_num}.docx", docx_mime, content
@@ -439,6 +517,6 @@ class WorkOrderService:
         elif template_upper in ("SLIDES", "PPTX", "PROGRESS_SLIDES"):
             content = completion_pptx(report)
             pptx_mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            return f"Slide_Progres_{wo_num}.pptx", pptx_mime, content
+            return f"Slide_Kemajuan_Pekerjaan_{wo_num}.pptx", pptx_mime, content
         else:
             raise ValidationError(f"Format ekspor tidak dikenali: {template}")

@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
+import { idempotencyHeaders, newIdempotencyKey } from "@/lib/idempotency";
+import type { ExportFormat } from "@/services/exportService";
 
 type S = components["schemas"];
 export type Survey = S["SurveyOut"];
@@ -60,17 +62,21 @@ export async function fetchSurveyPreview(taskId: string): Promise<{ blob: Blob; 
   return { blob: res.data, isPdf: res.headers["x-preview-format"] === "PDF" };
 }
 
-/** Laporan resmi (.docx) — tercatat di riwayat dokumen order, langsung terunduh. */
+/** Laporan resmi (PDF, Word, atau PowerPoint) — tercatat di riwayat dokumen order, langsung terunduh. */
 export function useOfficialSurveyReport(taskId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const res = await api.post<Blob>(`/exports/surveys/${taskId}`, null, { responseType: "blob" });
+    mutationFn: async (format: ExportFormat = "WORD_DOCX") => {
+      const res = await api.post<Blob>(`/exports/surveys/${taskId}`, null, {
+        responseType: "blob",
+        params: { export_format: format },
+        headers: idempotencyHeaders(newIdempotencyKey()),
+      });
       const name = /filename="([^"]+)"/.exec((res.headers["content-disposition"] as string | undefined) ?? "")?.[1];
       const url = window.URL.createObjectURL(res.data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = name ?? "laporan-survei.docx";
+      link.download = name ?? "laporan-survei";
       document.body.appendChild(link);
       link.click();
       link.remove();

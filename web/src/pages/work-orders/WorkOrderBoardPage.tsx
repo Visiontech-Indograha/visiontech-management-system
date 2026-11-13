@@ -3,13 +3,13 @@ import { WorkOrdersTemplate } from "@/components/templates/work-orders/WorkOrder
 import { useWorkOrders, type WorkOrder } from "@/services/workOrderService";
 import { useDivisions } from "@/services/employeeService";
 import { useSession } from "@/stores/sessionStore";
-import { divisionScopeIds } from "@/lib/divisionScope";
+import { defaultBoardDivisionId, divisionScopeIds } from "@/lib/divisionScope";
 
 export function WorkOrderBoardPage() {
   const { me } = useSession();
   // Filter default untuk PM = divisinya sendiri; OM/SA mulai dari semua divisi.
   const scopeIds = divisionScopeIds(me);
-  const [selectedDivisionId, setSelectedDivisionId] = useState<string>(scopeIds?.[0] ?? "");
+  const [selectedDivisionId, setSelectedDivisionId] = useState<string>(defaultBoardDivisionId(me));
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Modals state

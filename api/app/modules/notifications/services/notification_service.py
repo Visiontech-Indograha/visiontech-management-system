@@ -14,7 +14,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core import system_settings
 from app.modules.notifications.repositories.notification_repository import NotificationRepository
 
 _MONTH = ("Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des")
@@ -88,6 +88,12 @@ class NotificationService:
         users = await self.repo.user_ids_for_employees(str(e) for e in employee_ids if e)
         await self.repo.insert_for_users(users, kind, title, body, plan_id, target)
 
+    async def notify_users(
+        self, user_ids: Iterable[str], kind: str, title: str, body: str = "", *, target: str | None = None,
+    ) -> None:
+        """Notifikasi ke akun tertentu (user_id), mis. dari pekerjaan terjadwal."""
+        await self.repo.insert_for_users(user_ids, kind, title, body, None, target)
+
     async def notify_roles(
         self, roles: Iterable[str], kind: str, title: str, body: str = "",
         *, office_id: UUID | str | None = None, division_id: UUID | str | None = None,
@@ -104,7 +110,7 @@ class NotificationService:
     ) -> None:
         """Notifikasi ke HR/GA. Flag ROLE_ASSIGNMENT_ENABLED mati = semua ADMIN_HR_GA (perilaku lama); hidup =
         hanya HR yang cakupannya meliputi `office_id` (kantor sendiri + penugasan HR)."""
-        if not settings.ROLE_ASSIGNMENT_ENABLED:
+        if not system_settings.role_assignment_enabled():
             await self.notify_roles(["ADMIN_HR_GA"], kind, title, body, target=target)
             return
         users = await self.repo.hr_user_ids_for_office(office_id)

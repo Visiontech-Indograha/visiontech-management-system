@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Cadangan BERKAS (bucket MinIO) VMS: `mc mirror` satu arah ke folder cadangan, per lingkungan.
-# Aman: sumber tidak pernah dihapus/diubah (mirror tanpa --remove), idempoten (hanya salin yang baru/berubah),
-# ringan (satu kontainer mc sementara, tanpa port, ~30-60 MB), rahasia tidak dicetak/tidak ada di argumen.
+# Menghormati keputusan PDP pemilik: retensi berkas terhapus maksimal 35 hari (30 hari di DB/MinIO + maks 5 hari cadangan).
+# Bawaan mengaktifkan --remove agar berkas yang dihapus di MinIO ikut terhapus di folder mirror kerja.
 # Pemakaian: backup-minio.sh [label]   (kode keluar != 0 bila gagal; mencetak folder hasil)
 #   VMS_DEPLOY_DIR      : folder deploy (bawaan ~/deploy/vms-mvp), deploy.env dibaca bila ada.
 #   VMS_MINIO_CT        : nama kontainer MinIO (bawaan ${VMS_CONTAINER_PREFIX:-vms}_minio).
 #   VMS_BACKUP_DIR/NAME : sama dengan backup.sh (bawaan "backups" dan nama DB/prod).
 #   VMS_MINIO_BUCKETS   : daftar bucket dipisah spasi (bawaan: semua kecuali vms-backups).
 #   VMS_MINIO_KEEP      : jumlah rekaman manifest yang disimpan (bawaan 14).
+#   VMS_MINIO_REMOVE    : bawaan 1 (aktif, --remove). Setel 0 bila ingin mematikan sinkronisasi penghapusan.
 #   VMS_MC_IMAGE        : citra mc (bawaan quay.io/minio/mc, SEBAIKNYA dipin ke digest).
 # Hasil: $BKDIR/<NAME>-berkas/<bucket>/... (salinan terkini) + <NAME>-berkas-<stempel>.manifest (hitungan objek/bita).
 set -euo pipefail
@@ -42,8 +43,12 @@ fi
 
 MAN="$BKDIR/$BKNAME-berkas-$(date +%Y%m%d-%H%M%S).manifest"
 : > "$MAN"
+REMOVE_OPT=""
+if [ "${VMS_MINIO_REMOVE:-1}" != 0 ]; then
+  REMOVE_OPT="--remove"
+fi
 for b in $BUCKETS; do
-  mc mirror --overwrite --quiet "src/$b" "/backup/$b" >&2 || { echo "Mirror bucket $b gagal" >&2; rm -f "$MAN"; exit 4; }
+  mc mirror --overwrite $REMOVE_OPT --quiet "src/$b" "/backup/$b" >&2 || { echo "Mirror bucket $b gagal" >&2; rm -f "$MAN"; exit 4; }
   n=$(find "$DEST/$b" -type f | wc -l | tr -d ' ')
   s=$(du -sb "$DEST/$b" 2>/dev/null | cut -f1)
   echo "$b objek=$n bita=${s:-0} label=$LABEL" >> "$MAN"

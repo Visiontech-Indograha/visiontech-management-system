@@ -94,3 +94,31 @@ def test_export_and_recap_scoped(client, duo):
                    params={"start_date": DAY, "end_date": DAY})
     assert r.status_code == 200, r.text
     assert {x["employee_no"] for x in r.json()} == {emp_a}
+
+
+# ── E5-2: tombol Tinjau (can_review) harus sejalan dengan izin endpoint /review ──────────────────
+def _needs_review(att_id: str) -> None:
+    sync_query("UPDATE attendance SET om_approval_status = 'PENDING_OM' WHERE attendance_id = %s", (att_id,))
+
+
+def test_hr_review_matches_can_review_flag_and_office(client, duo):
+    wa, _wb, a, b = duo
+    _needs_review(a)
+    _needs_review(b)
+    hr = wa.headers(client, "hr")
+    rows = {r["id"]: r for r in client.get("/attendance", headers=hr,
+                                           params={"date_from": DAY, "date_to": DAY}).json()["items"]}
+    assert rows[a]["can_review"] is True  # tombol tampil -> endpoint harus mengizinkan
+    assert b not in rows  # kantor lain tidak terlihat sama sekali
+    body = {"is_approved": True, "note": "Sesuai surat tugas"}
+    assert client.post(f"/attendance/{b}/review", headers=hr, json=body).status_code in (403, 404)
+    assert client.post(f"/attendance/{a}/review", headers=hr, json=body).status_code == 200
+
+
+@pytest.mark.parametrize("who,expected", [("leader", 403), ("member", 403), ("fin", 200), ("ops", 200)])
+def test_review_role_matrix_for_office_attendance(client, duo, who, expected):
+    wa, _wb, a, _b = duo
+    _needs_review(a)
+    r = client.post(f"/attendance/{a}/review", headers=wa.headers(client, who),
+                    json={"is_approved": True, "note": "Sesuai surat tugas"})
+    assert r.status_code == expected, r.text

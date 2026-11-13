@@ -1,9 +1,11 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 import { Label } from "../atoms/Label";
 import { Input } from "../atoms/Input";
+import { Button } from "../atoms/Button";
 import { Select } from "../atoms/Select";
 import { Text } from "../atoms/Text";
 import { Textarea } from "../atoms/Textarea";
+import { Eye, EyeOff } from "../atoms/Icon";
 import { cn } from "@/lib/utils";
 
 interface FieldShellProps {
@@ -49,6 +51,40 @@ export const TextField = forwardRef<
           className={cn("bg-surface", error && "border-destructive focus-visible:ring-destructive", className)}
           {...props}
         />
+      )}
+    </FieldShell>
+  );
+});
+
+export const PasswordField = forwardRef<
+  HTMLInputElement,
+  Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string; error?: string; hint?: string }
+>(function PasswordField({ label, error, hint, className, ...props }, ref) {
+  const [show, setShow] = useState(false);
+  return (
+    <FieldShell label={label} error={error} hint={hint}>
+      {(id, describedBy) => (
+        <div className="relative">
+          <Input
+            id={id}
+            ref={ref}
+            type={show ? "text" : "password"}
+            aria-invalid={!!error}
+            aria-describedby={describedBy}
+            className={cn("bg-surface pr-12", error && "border-destructive focus-visible:ring-destructive", className)}
+            {...props}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setShow((v) => !v)}
+            aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+            className="absolute right-0 top-0 h-full min-h-[44px] min-w-[44px] rounded-r-md px-3 text-muted-foreground hover:text-foreground"
+          >
+            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
+        </div>
       )}
     </FieldShell>
   );

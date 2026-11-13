@@ -532,6 +532,1646 @@
     }
    }
   },
+  "/api/v1/archive/tools": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Peralatan",
+    "operationId": "list_archived_tools_api_v1_archive_tools_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Tools Api V1 Archive Tools Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/tools/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Peralatan",
+    "operationId": "restore_tools_api_v1_archive_tools__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/vehicles": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Kendaraan",
+    "operationId": "list_archived_vehicles_api_v1_archive_vehicles_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Vehicles Api V1 Archive Vehicles Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/vehicles/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Kendaraan",
+    "operationId": "restore_vehicles_api_v1_archive_vehicles__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/clients": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Klien",
+    "operationId": "list_archived_clients_api_v1_archive_clients_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Clients Api V1 Archive Clients Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/clients/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Klien",
+    "operationId": "restore_clients_api_v1_archive_clients__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/divisions": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Divisi",
+    "operationId": "list_archived_divisions_api_v1_archive_divisions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Divisions Api V1 Archive Divisions Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/divisions/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Divisi",
+    "operationId": "restore_divisions_api_v1_archive_divisions__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/job-positions": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Jabatan",
+    "operationId": "list_archived_job_positions_api_v1_archive_job_positions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Job Positions Api V1 Archive Job Positions Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/job-positions/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Jabatan",
+    "operationId": "restore_job_positions_api_v1_archive_job_positions__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/mess": {
+   "get": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Arsip Mess",
+    "operationId": "list_archived_mess_api_v1_archive_mess_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ArchiveItemOut"
+         },
+         "title": "Response List Archived Mess Api V1 Archive Mess Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/archive/mess/{item_id}/restore": {
+   "post": {
+    "tags": [
+     "Archive"
+    ],
+    "summary": "Pulihkan Mess",
+    "operationId": "restore_mess_api_v1_archive_mess__item_id__restore_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ArchiveItemOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/types": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Types",
+    "description": "Jenis dokumen yang aktif (STNK, KIR, pajak, SIM, asuransi).",
+    "operationId": "list_types_api_v1_vehicle_documents_types_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/DocumentTypeOut"
+         },
+         "type": "array",
+         "title": "Response List Types Api V1 Vehicle Documents Types Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/vehicle-documents": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Documents",
+    "description": "Dokumen kendaraan di kantor yang boleh dilihat. Cari `q` = awalan nomor polisi/nama/jenis/nomor dokumen.",
+    "operationId": "list_documents_api_v1_vehicle_documents_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "history",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Sertakan dokumen yang sudah diganti",
+       "default": false,
+       "title": "History"
+      },
+      "description": "Sertakan dokumen yang sudah diganti"
+     },
+     {
+      "name": "doc_type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 30,
+         "pattern": "^[A-Z0-9_]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      },
+      "description": "Kode jenis dokumen (terdaftar di document_type)"
+     },
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
+      },
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Documents Api V1 Vehicle Documents Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/expiring": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Expiring",
+    "description": "Dokumen berlaku yang akan atau sudah jatuh tempo, terdekat dulu.",
+    "operationId": "list_expiring_api_v1_vehicle_documents_expiring_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 90,
+       "minimum": 1,
+       "description": "Jatuh tempo dalam N hari (yang sudah lewat ikut)",
+       "default": 30,
+       "title": "Days"
+      },
+      "description": "Jatuh tempo dalam N hari (yang sudah lewat ikut)"
+     },
+     {
+      "name": "doc_type_code",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "minLength": 2,
+         "maxLength": 30,
+         "pattern": "^[A-Z0-9_]+$"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      },
+      "description": "Kode jenis dokumen (terdaftar di document_type)"
+     },
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
+      },
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Expiring Api V1 Vehicle Documents Expiring Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/mine": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Mine",
+    "description": "Dokumen berlaku kendaraan yang sedang dikemudikan akun ini.",
+    "operationId": "list_mine_api_v1_vehicle_documents_mine_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Mine Api V1 Vehicle Documents Mine Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/documents": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Create Document",
+    "description": "Catat dokumen baru; dokumen berlaku sejenis menjadi `replaced` dan berhenti diingatkan.",
+    "operationId": "create_document_api_v1_vehicles__vehicle_id__documents_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleDocumentCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleDocumentOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/drivers": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Drivers",
+    "operationId": "list_drivers_api_v1_vehicles__vehicle_id__drivers_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response List Drivers Api V1 Vehicles  Vehicle Id  Drivers Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Add Driver",
+    "description": "Tambah pengemudi (karyawan kantor yang sama). Sudah aktif = 409.",
+    "operationId": "add_driver_api_v1_vehicles__vehicle_id__drivers_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleDriverCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response Add Driver Api V1 Vehicles  Vehicle Id  Drivers Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/drivers/{driver_id}/end": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "End Driver",
+    "description": "Akhiri penugasan pengemudi (hari ini).",
+    "operationId": "end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "driver_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Driver Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response End Driver Api V1 Vehicles  Vehicle Id  Drivers  Driver Id  End Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/cron/remind": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Cron Remind",
+    "description": "Pemicu manual pengingat dokumen (sama dengan `python -m app.cli pengingat-dokumen`); aman diulang.",
+    "operationId": "cron_remind_api_v1_vehicle_documents_cron_remind_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "dry_run",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Dry Run"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Cron Remind Api V1 Vehicle Documents Cron Remind Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/users/{user_id}/role-assignments": {
    "get": {
     "tags": [
@@ -954,6 +2594,283 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/WorkOrderDetailOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/pm-candidates": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "Calon PM untuk Buat Tugas Klien",
+    "description": "Karyawan berperan PM (utama atau tambahan) dengan id, nama, dan divisi saja. SA/OM: semua divisi; PM: divisi\nyang ia pimpin atau tempati (divisi lain 404); peran lain 403. `q` = awalan nama; tanpa parameter = semua calon.",
+    "operationId": "list_pm_candidates_api_v1_work_orders_pm_candidates_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "division_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi pada satu divisi",
+       "title": "Division Id"
+      },
+      "description": "Batasi pada satu divisi"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PmCandidateOut"
+         },
+         "title": "Response List Pm Candidates Api V1 Work Orders Pm Candidates Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/work-orders/team-surveys": {
+   "get": {
+    "tags": [
+     "Work Orders"
+    ],
+    "summary": "List Team Surveys",
+    "description": "Survei WO aktif milik tim yang diikuti pemanggil (ketua atau anggota aktif), untuk layar survei di HP.\nHanya WO berstatus SURVEY_IN_PROGRESS dan survei belum dikirim/disetujui. Bawaan cakupan = keanggotaan tim;\n`scope=all` (Jadwal harian web) menambah WO yang dikelola PM, dan SA/OM melihat semua.",
+    "operationId": "list_team_surveys_api_v1_work_orders_team_surveys_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "scope",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "team",
+        "all"
+       ],
+       "type": "string",
+       "description": "team = tim pemanggil; all = ditambah WO kelolaan PM",
+       "default": "team",
+       "title": "Scope"
+      },
+      "description": "team = tim pemanggil; all = ditambah WO kelolaan PM"
+     },
+     {
+      "name": "date_from",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling awal",
+       "title": "Date From"
+      },
+      "description": "Tanggal survei paling awal"
+     },
+     {
+      "name": "date_to",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Tanggal survei paling akhir",
+       "title": "Date To"
+      },
+      "description": "Tanggal survei paling akhir"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/TeamSurveyOut"
+         },
+         "title": "Response List Team Surveys Api V1 Work Orders Team Surveys Get"
         }
        }
       }
@@ -6019,7 +7936,7 @@
      "Ekspor Dokumen"
     ],
     "summary": "Export Work Completion",
-    "description": "BAST (.docx), Survey Report (.docx), BAST resmi ber-QR (.pdf), BoQ (.xlsx), atau slide progres (.pptx).",
+    "description": "Berita acara serah terima, laporan survei, surat tugas, atau laporan kemajuan: PDF, Word, atau PowerPoint\n(`export_format`; kosong = bawaan jenisnya) dengan isi setara. Juga: berita acara resmi ber-QR (.pdf) dan\nrincian volume dan biaya (.xlsx). Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.",
     "operationId": "export_work_completion_api_v1_exports_work_completions__completion_id__post",
     "security": [
      {
@@ -6036,6 +7953,24 @@
        "format": "uuid",
        "title": "Completion Id"
       }
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
      }
     ],
     "requestBody": {
@@ -6367,7 +8302,7 @@
      "Ekspor Dokumen"
     ],
     "summary": "Export Survey",
-    "description": "Laporan survei ACS/CCTV (.docx) persis format baku (docs/37); tersedia setelah survei dikirim.",
+    "description": "Laporan survei ACS/CCTV format baku (docs/37) dalam PDF, Word (bawaan), atau PowerPoint; tersedia setelah\nsurvei dikirim. Mendukung Idempotency-Key; klik ganda mengembalikan dokumen yang sama.",
     "operationId": "export_survey_api_v1_exports_surveys__task_id__post",
     "security": [
      {
@@ -6384,6 +8319,47 @@
        "format": "uuid",
        "title": "Task Id"
       }
+     },
+     {
+      "name": "export_format",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "PDF",
+          "WORD_DOCX",
+          "PPTX"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word",
+       "title": "Export Format"
+      },
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word"
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
      }
     ],
     "responses": {
@@ -6407,51 +8383,47 @@
    }
   },
   "/api/v1/exports/periodic": {
-   "get": {
-    "tags": [
-     "Ekspor Dokumen"
-    ],
-    "summary": "List Periodic Exports",
-    "description": "Rekap periodik: OM & SUPER_ADMIN melihat semua, PM miliknya sendiri.",
-    "operationId": "list_periodic_exports_api_v1_exports_periodic_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/ExportOut"
-         },
-         "type": "array",
-         "title": "Response List Periodic Exports Api V1 Exports Periodic Get"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   },
    "post": {
     "tags": [
      "Ekspor Dokumen"
     ],
     "summary": "Export Periodic",
-    "description": "Rekap divisi per rentang (maks. 31 hari): jadwal, BoQ & uang makan (.xlsx) atau slide mingguan (.pptx).",
+    "description": "Rekap divisi per rentang (maks. 31 hari): jadwal, rincian volume dan biaya, uang makan (.xlsx) atau slide\nmingguan (.pptx). Mendukung Idempotency-Key.",
     "operationId": "export_periodic_api_v1_exports_periodic_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/PeriodicExportRequest"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "200": {
@@ -6470,12 +8442,99 @@
        }
       }
      }
-    },
+    }
+   },
+   "get": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "List Periodic Exports",
+    "description": "Rekap periodik: OM & SUPER_ADMIN melihat semua, PM miliknya sendiri.",
+    "operationId": "list_periodic_exports_api_v1_exports_periodic_get",
     "security": [
      {
       "HTTPBearer": []
      }
-    ]
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/ExportOut"
+         },
+         "title": "Response List Periodic Exports Api V1 Exports Periodic Get"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/exports/monthly": {
+   "post": {
+    "tags": [
+     "Ekspor Dokumen"
+    ],
+    "summary": "Export Monthly",
+    "description": "Laporan bulanan divisi (satu bulan kalender): jadwal tim, rincian material, dan uang makan dalam Word\n(bawaan), PDF, atau PowerPoint. Izin sama dengan rekap divisi (PM/OM divisi atau SUPER_ADMIN); divisi di luar\ncakupan: 404. Mendukung Idempotency-Key.",
+    "operationId": "export_monthly_api_v1_exports_monthly_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MonthlyExportRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Berkas dokumen",
+      "content": {
+       "application/octet-stream": {}
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
    }
   },
   "/api/v1/exports/team-week": {
@@ -6484,17 +8543,42 @@
      "Ekspor Dokumen"
     ],
     "summary": "Export Team Week",
-    "description": "Laporan mingguan tim (.pptx): semua pekerjaan tim 7 hari — foto, keterangan, status. Ketua/anggota tim\natau PM/OM divisinya.",
+    "description": "Laporan mingguan tim: semua pekerjaan tim 7 hari (Senin sampai Minggu) — foto, keterangan, status — dalam\nPowerPoint (bawaan), PDF, atau Word. Ketua/anggota tim atau PM/OM divisinya; tim di luar cakupan: 404.\nMendukung Idempotency-Key.",
     "operationId": "export_team_week_api_v1_exports_team_week_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/TeamWeekExportRequest"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "200": {
@@ -6513,12 +8597,7 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/exports/daily-report": {
@@ -6527,17 +8606,42 @@
      "Ekspor Dokumen"
     ],
     "summary": "Export Daily Report",
-    "description": "Laporan harian satu jadwal (.docx): header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan\nketua. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).",
+    "description": "Laporan harian satu jadwal: header jadwal, tim, item + status/catatan/alasan tunda, foto, laporan ketua,\ndalam Word (bawaan), PDF, atau PowerPoint. Ketua/anggota tim atau PM/OM divisi (jadwal yang sudah dirilis).\nMendukung Idempotency-Key.",
     "operationId": "export_daily_report_api_v1_exports_daily_report_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kunci unik per aksi (UUID v4 disarankan).",
+       "title": "Idempotency-Key"
+      },
+      "description": "Kunci unik per aksi (UUID v4 disarankan)."
+     }
+    ],
     "requestBody": {
+     "required": true,
      "content": {
       "application/json": {
        "schema": {
         "$ref": "#/components/schemas/DailyReportExportRequest"
        }
       }
-     },
-     "required": true
+     }
     },
     "responses": {
      "200": {
@@ -6556,12 +8660,7 @@
        }
       }
      }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
+    }
    }
   },
   "/api/v1/exports/{export_id}/file": {
@@ -10006,6 +12105,7 @@
      "HSE & Keselamatan Kerja"
     ],
     "summary": "Daftar riwayat inspeksi keselamatan kendaraan",
+    "description": "`q` = awalan plat/nama kendaraan/nama pemeriksa. `page`/`size` (bila ada) menggantikan `limit`/`offset`;\ntotal baris di header `X-Total-Count`. Tanpa parameter = perilaku lama (50 terbaru).",
     "operationId": "list_inspections_api_v1_hse_inspections_get",
     "security": [
      {
@@ -10037,7 +12137,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(DAILY|WEEKLY|MONTHLY)$"
         },
         {
          "type": "null"
@@ -10053,7 +12154,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(SUBMITTED|VERIFIED|REJECTED)$"
         },
         {
          "type": "null"
@@ -10114,10 +12216,70 @@
       "required": false,
       "schema": {
        "type": "integer",
+       "maximum": 100000,
        "minimum": 0,
        "default": 0,
        "title": "Offset"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -10152,6 +12314,7 @@
      "HSE & Keselamatan Kerja"
     ],
     "summary": "Kirim formulir inspeksi kendaraan (checklist & foto)",
+    "description": "HSE (manage:vehicle_inspections, kendaraan di kantornya), pengemudi aktif kendaraan itu, atau ketua tim\n(kendaraan di kantornya). Peran lain 403; kendaraan di luar hak/kantor 404.",
     "operationId": "create_inspection_api_v1_hse_inspections_post",
     "security": [
      {
@@ -10190,6 +12353,185 @@
       }
      }
     }
+   }
+  },
+  "/api/v1/hse/inspections/mine": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Inspeksi yang saya kirim atau untuk kendaraan yang saya kemudikan",
+    "description": "Milik sendiri: pemeriksa = saya, atau pengemudi aktif kendaraannya. Tanpa page/size: 50 terbaru.",
+    "operationId": "my_inspections_api_v1_hse_inspections_mine_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "from_date",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From Date"
+      }
+     },
+     {
+      "name": "to_date",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To Date"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleInspectionResponse"
+         },
+         "title": "Response My Inspections Api V1 Hse Inspections Mine Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hse/inspections/checklist-template": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Butir daftar periksa baku untuk layar Buat inspeksi",
+    "operationId": "inspection_checklist_template_api_v1_hse_inspections_checklist_template_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InspectionChecklistTemplate"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
    }
   },
   "/api/v1/hse/inspections/{inspection_id}": {
@@ -12852,7 +15194,7 @@
      "Employee Account"
     ],
     "summary": "Set Field Role",
-    "description": "Mengubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER). Hanya HR/SUPER_ADMIN; tercatat di audit.",
+    "description": "Mengubah peran utama akun. HR/SUPER_ADMIN: EMPLOYEE/TEAM_LEADER; peran OM/PM/HSE/HR/FINANCE hanya SUPER_ADMIN\n(bukan diri sendiri, bukan SUPER_ADMIN). Sesi dicabut; tercatat di audit.",
     "operationId": "set_field_role_api_v1_employees__emp_id__account_role_post",
     "security": [
      {
@@ -13460,6 +15802,1110 @@
           "$ref": "#/components/schemas/OperationStatus"
          },
          "title": "Response Sync Status Api V1 Sync Status Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/system/settings": {
+   "get": {
+    "tags": [
+     "System"
+    ],
+    "summary": "List System Settings",
+    "description": "Daftar setelan, nilai efektif, dan asalnya (env_force > db > env_default).",
+    "operationId": "list_system_settings_api_v1_system_settings_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "type": "array",
+         "title": "Response List System Settings Api V1 System Settings Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   },
+   "put": {
+    "tags": [
+     "System"
+    ],
+    "summary": "Update System Settings",
+    "description": "Ubah satu atau lebih setelan (boolean). 422 kunci/tipe salah; 409 SETTING_LOCKED bila dikunci env.",
+    "operationId": "update_system_settings_api_v1_system_settings_put",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SystemSettingsUpdate"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/SystemSettingOut"
+         },
+         "type": "array",
+         "title": "Response Update System Settings Api V1 System Settings Put"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/setup/status": {
+   "get": {
+    "tags": [
+     "Setup"
+    ],
+    "summary": "Setup Status",
+    "description": "Apakah instalasi ini belum punya admin (perlu penyiapan awal).",
+    "operationId": "setup_status_api_v1_setup_status_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupStatusOut"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/setup/admin": {
+   "post": {
+    "tags": [
+     "Setup"
+    ],
+    "summary": "Setup Admin",
+    "description": "Buat Super Admin pertama. 404 bila SETUP_TOKEN tidak diisi, 403 kode salah, 409 bila sudah ada admin.",
+    "operationId": "setup_admin_api_v1_setup_admin_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SetupAdminIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupAdminOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/events/{token}": {
+   "post": {
+    "tags": [
+     "Hikvision"
+    ],
+    "summary": "Terima Event",
+    "description": "Terima satu kiriman event dari perangkat. 404 bila token/perangkat/IP tidak dikenal, 413 bila terlalu besar,\n422 bila rusak. Event bukan verifikasi lolos (mis. sinyal hidup) dijawab 200 `diabaikan`.",
+    "operationId": "terima_event_api_v1_hikvision_events__token__post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PenerimaOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Daftar Perangkat",
+    "operationId": "daftar_perangkat_api_v1_hikvision_devices_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PerangkatOut"
+         },
+         "title": "Response Daftar Perangkat Api V1 Hikvision Devices Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Buat Perangkat",
+    "description": "Buat perangkat. Token dan alamat penerima ditampilkan SEKALI di jawaban ini.",
+    "operationId": "buat_perangkat_api_v1_hikvision_devices_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PerangkatBuat"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatDibuat"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Detail Perangkat",
+    "operationId": "detail_perangkat_api_v1_hikvision_devices__device_id__get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Ubah Perangkat",
+    "operationId": "ubah_perangkat_api_v1_hikvision_devices__device_id__patch",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PerangkatUbah"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Hapus Perangkat",
+    "operationId": "hapus_perangkat_api_v1_hikvision_devices__device_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/token": {
+   "post": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Ganti Token",
+    "description": "Ganti token penerima. Token lama langsung tidak berlaku; yang baru ditampilkan SEKALI.",
+    "operationId": "ganti_token_api_v1_hikvision_devices__device_id__token_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TokenBaru"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/status": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Status Perangkat",
+    "operationId": "status_perangkat_api_v1_hikvision_devices__device_id__status_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StatusPerangkat"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Daftar Pemetaan",
+    "operationId": "daftar_pemetaan_api_v1_hikvision_devices__device_id__mappings_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/PemetaanOut"
+         },
+         "title": "Response Daftar Pemetaan Api V1 Hikvision Devices  Device Id  Mappings Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Buat Pemetaan",
+    "operationId": "buat_pemetaan_api_v1_hikvision_devices__device_id__mappings_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PemetaanBuat"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/suggestions": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Usulan Pemetaan",
+    "description": "Usulan: nomor perangkat yang sama dengan nomor karyawan di kantor perangkat, dan yang tidak cocok.",
+    "operationId": "usulan_pemetaan_api_v1_hikvision_devices__device_id__mappings_suggestions_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UsulanPemetaan"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/auto": {
+   "post": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Pemetaan Otomatis",
+    "description": "Buat semua pemetaan yang cocok, lalu terapkan ke event lama yang belum terpetakan.",
+    "operationId": "pemetaan_otomatis_api_v1_hikvision_devices__device_id__mappings_auto_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOtomatisOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/apply": {
+   "post": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Terapkan Pemetaan",
+    "description": "Terapkan pemetaan ke event yang karyawannya masih kosong (per kelompok).",
+    "operationId": "terapkan_pemetaan_api_v1_hikvision_devices__device_id__mappings_apply_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanDiterapkan"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/{map_id}": {
+   "patch": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Ubah Pemetaan",
+    "operationId": "ubah_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__patch",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PemetaanUbah"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Hapus Pemetaan",
+    "operationId": "hapus_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__delete",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     },
+     {
+      "name": "map_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Map Id"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/bayangan": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Banding Bayangan",
+    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.",
+    "operationId": "banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     },
+     {
+      "name": "dari",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dari"
+      }
+     },
+     {
+      "name": "sampai",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Sampai"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BandingBayangan"
         }
        }
       }
@@ -15737,7 +19183,7 @@
      "Assets"
     ],
     "summary": "List Loans",
-    "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.",
+    "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya;\npeminjaman ke penerima eksternal hanya terlihat oleh pengelola aset.",
     "operationId": "list_loans_api_v1_assets_loans_get",
     "security": [
      {
@@ -15787,6 +19233,23 @@
         }
        ],
        "title": "Daily Plan Id"
+      }
+     },
+     {
+      "name": "borrower_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Borrower Id"
       }
      },
      {
@@ -15881,7 +19344,7 @@
      "Assets"
     ],
     "summary": "Lend Asset",
-    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).\nMendukung Idempotency-Key (opsional).",
+    "description": "Serah terima aset ke karyawan (`employee_id`, opsional dikaitkan ke jadwal harian tim) ATAU ke\npenerima eksternal (`external_borrower_id`, dengan `due_date` dan dokumen `bast_file_id`); isi tepat satu.\nMendukung Idempotency-Key (opsional).",
     "operationId": "lend_asset_api_v1_assets_loans_post",
     "security": [
      {
@@ -15984,6 +19447,229 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/LoanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/external-borrowers": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "List Borrowers",
+    "description": "Daftar penerima eksternal (klien sewa, subkontraktor) di kantor jangkauan pengelola aset.",
+    "operationId": "list_borrowers_api_v1_assets_external_borrowers_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/BorrowerOut"
+         },
+         "title": "Response List Borrowers Api V1 Assets External Borrowers Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Create Borrower",
+    "description": "Mendaftarkan penerima eksternal baru (nama, instansi, kontak) untuk peminjaman aset.",
+    "operationId": "create_borrower_api_v1_assets_external_borrowers_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BorrowerCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BorrowerOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/external-borrowers/{borrower_id}": {
+   "put": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Update Borrower",
+    "description": "Mengubah data penerima eksternal (sebagian).",
+    "operationId": "update_borrower_api_v1_assets_external_borrowers__borrower_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "borrower_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Borrower Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BorrowerUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BorrowerOut"
         }
        }
       }
@@ -17843,8 +21529,13 @@
      "system_role": {
       "type": "string",
       "enum": [
-       "EMPLOYEE",
-       "TEAM_LEADER"
+       "OPERATIONAL_MANAGER",
+       "PROJECT_MANAGER",
+       "HSE",
+       "ADMIN_HR_GA",
+       "FINANCE",
+       "TEAM_LEADER",
+       "EMPLOYEE"
       ],
       "title": "System Role"
      }
@@ -17854,7 +21545,7 @@
      "system_role"
     ],
     "title": "AccountRoleUpdate",
-    "description": "Ubah peran lapangan akun karyawan (EMPLOYEE ↔ TEAM_LEADER)."
+    "description": "Ubah peran utama akun. HR: EMPLOYEE/TEAM_LEADER saja; peran lain hanya SUPER_ADMIN."
    },
    "AccountSessionsRevoked": {
     "properties": {
@@ -18113,6 +21804,52 @@
     ],
     "title": "AppUpdateOut",
     "description": "Jawaban pemeriksaan pembaruan untuk satu HP."
+   },
+   "ArchiveItemOut": {
+    "properties": {
+     "id": {
+      "type": "string",
+      "title": "Id"
+     },
+     "module": {
+      "type": "string",
+      "title": "Module"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Code"
+     },
+     "deleted_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Deleted At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "module",
+     "name"
+    ],
+    "title": "ArchiveItemOut"
    },
    "AssetAvailabilityOut": {
     "properties": {
@@ -18796,6 +22533,35 @@
       ],
       "title": "Check Out Selfie File Id"
      },
+     "review_reasons": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Review Reasons"
+     },
+     "location_accuracy_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Accuracy M"
+     },
+     "location_decision": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Decision"
+     },
      "check_out_explanation": {
       "anyOf": [
        {
@@ -19252,6 +23018,28 @@
       ],
       "title": "Full Name"
      },
+     "office_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Id"
+     },
+     "office_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Office Name"
+     },
      "effective_roles": {
       "items": {
        "type": "string"
@@ -19265,6 +23053,11 @@
       },
       "type": "array",
       "title": "Role Scopes"
+     },
+     "must_change_password": {
+      "type": "boolean",
+      "title": "Must Change Password",
+      "default": false
      }
     },
     "type": "object",
@@ -19447,6 +23240,162 @@
     ],
     "title": "BackupOut"
    },
+   "BandingBaris": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "tgl": {
+      "type": "string",
+      "format": "date",
+      "title": "Tgl"
+     },
+     "pertama": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Pertama"
+     },
+     "terakhir": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Terakhir"
+     },
+     "jumlah": {
+      "type": "integer",
+      "title": "Jumlah"
+     },
+     "clock_in_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock In At"
+     },
+     "clock_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Out At"
+     },
+     "selisih_masuk_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Masuk Menit"
+     },
+     "selisih_pulang_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Pulang Menit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "employee_name",
+     "tgl",
+     "pertama",
+     "terakhir",
+     "jumlah",
+     "clock_in_at",
+     "clock_out_at",
+     "selisih_masuk_menit",
+     "selisih_pulang_menit"
+    ],
+    "title": "BandingBaris"
+   },
+   "BandingBayangan": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode"
+     },
+     "dari": {
+      "type": "string",
+      "format": "date",
+      "title": "Dari"
+     },
+     "sampai": {
+      "type": "string",
+      "format": "date",
+      "title": "Sampai"
+     },
+     "akan_menghasilkan_absen": {
+      "type": "integer",
+      "title": "Akan Menghasilkan Absen"
+     },
+     "total_karyawan_hari": {
+      "type": "integer",
+      "title": "Total Karyawan Hari"
+     },
+     "tak_terpetakan": {
+      "type": "integer",
+      "title": "Tak Terpetakan"
+     },
+     "terpotong": {
+      "type": "boolean",
+      "title": "Terpotong"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/BandingBaris"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "mode",
+     "dari",
+     "sampai",
+     "akan_menghasilkan_absen",
+     "total_karyawan_hari",
+     "tak_terpetakan",
+     "terpotong",
+     "items"
+    ],
+    "title": "BandingBayangan",
+    "description": "Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari."
+   },
    "BiometricLoginRequestSchema": {
     "properties": {
      "device_token": {
@@ -19604,6 +23553,158 @@
      "unit"
     ],
     "title": "BomRow"
+   },
+   "BorrowerCreate": {
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "nama": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     }
+    },
+    "type": "object",
+    "required": [
+     "office_id",
+     "nama"
+    ],
+    "title": "BorrowerCreate",
+    "description": "Penerima eksternal (klien sewa, subkontraktor). Data seminimal mungkin: tanpa NIK/alamat."
+   },
+   "BorrowerOut": {
+    "properties": {
+     "borrower_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Borrower Id"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "office_name": {
+      "type": "string",
+      "title": "Office Name"
+     },
+     "nama": {
+      "type": "string",
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     },
+     "has_open_loan": {
+      "type": "boolean",
+      "title": "Has Open Loan",
+      "default": false
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "borrower_id",
+     "office_id",
+     "office_name",
+     "nama",
+     "create_at"
+    ],
+    "title": "BorrowerOut"
+   },
+   "BorrowerUpdate": {
+    "properties": {
+     "nama": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     }
+    },
+    "type": "object",
+    "title": "BorrowerUpdate"
    },
    "BulkApproveIn": {
     "properties": {
@@ -20609,6 +24710,23 @@
        "ORDER_SHEET"
       ],
       "title": "Template"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = bawaan jenisnya"
      }
     },
     "type": "object",
@@ -22181,6 +26299,23 @@
       "type": "string",
       "format": "uuid",
       "title": "Daily Plan Id"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word"
      }
     },
     "type": "object",
@@ -22758,6 +26893,46 @@
      "total"
     ],
     "title": "DocumentListResponse"
+   },
+   "DocumentTypeOut": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "nama": {
+      "type": "string",
+      "title": "Nama"
+     },
+     "berlaku_untuk": {
+      "type": "string",
+      "enum": [
+       "KENDARAAN",
+       "KARYAWAN"
+      ],
+      "title": "Berlaku Untuk"
+     },
+     "ambang_hari": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Ambang Hari"
+     },
+     "harian_mulai_hari": {
+      "type": "integer",
+      "title": "Harian Mulai Hari"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "nama",
+     "berlaku_untuk",
+     "ambang_hari",
+     "harian_mulai_hari"
+    ],
+    "title": "DocumentTypeOut"
    },
    "EmployeeCreate": {
     "properties": {
@@ -24865,6 +29040,56 @@
     ],
     "title": "HseReaderItem"
    },
+   "InspectionChecklistItem": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "options": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Options"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "options"
+    ],
+    "title": "InspectionChecklistItem"
+   },
+   "InspectionChecklistTemplate": {
+    "properties": {
+     "period_types": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Period Types"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/InspectionChecklistItem"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "period_types",
+     "items"
+    ],
+    "title": "InspectionChecklistTemplate"
+   },
    "InspectionCreate": {
     "properties": {
      "type": {
@@ -25823,9 +30048,52 @@
       "title": "Vehicle Id"
      },
      "employee_id": {
-      "type": "string",
-      "format": "uuid",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Employee Id"
+     },
+     "external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Borrower Id"
+     },
+     "due_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Date"
+     },
+     "bast_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast File Id"
      },
      "daily_plan_id": {
       "anyOf": [
@@ -25854,8 +30122,7 @@
     },
     "type": "object",
     "required": [
-     "asset_type",
-     "employee_id"
+     "asset_type"
     ],
     "title": "LoanCreate",
     "description": "Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional)."
@@ -25889,8 +30156,15 @@
       "title": "Asset Code"
      },
      "employee_id": {
-      "type": "string",
-      "format": "uuid",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Employee Id"
      },
      "employee_name": {
@@ -25908,6 +30182,64 @@
        }
       ],
       "title": "Employee Photo File Id"
+     },
+     "external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Borrower Id"
+     },
+     "borrower_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Borrower Name"
+     },
+     "borrower_instansi": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Borrower Instansi"
+     },
+     "due_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Date"
+     },
+     "bast_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast File Id"
      },
      "daily_plan_id": {
       "anyOf": [
@@ -26033,7 +30365,6 @@
      "asset_id",
      "asset_name",
      "asset_code",
-     "employee_id",
      "employee_name",
      "assignment_status",
      "loaned_at"
@@ -27062,6 +31393,54 @@
     ],
     "title": "MissingCheckInResponse",
     "description": "Schema for missing check-in alerts (moved from attendance cron endpoint)."
+   },
+   "MonthlyExportRequest": {
+    "properties": {
+     "division_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Division Id"
+     },
+     "year": {
+      "type": "integer",
+      "maximum": 2100.0,
+      "minimum": 2020.0,
+      "title": "Year",
+      "description": "Tahun, mis. 2026"
+     },
+     "month": {
+      "type": "integer",
+      "maximum": 12.0,
+      "minimum": 1.0,
+      "title": "Month",
+      "description": "Bulan 1 sampai 12"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = Word"
+     }
+    },
+    "type": "object",
+    "required": [
+     "division_id",
+     "year",
+     "month"
+    ],
+    "title": "MonthlyExportRequest",
+    "description": "Laporan bulanan satu divisi: seluruh bulan kalender (tanggal 1 sampai akhir bulan)."
    },
    "MyExecutionTodayOut": {
     "properties": {
@@ -28872,6 +33251,458 @@
     "title": "OvertimeReview",
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service."
    },
+   "PemetaanBuat": {
+    "properties": {
+     "employee_no_string": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]{1,50}$",
+      "title": "Employee No String",
+      "description": "Nomor karyawan di perangkat"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_no_string",
+     "employee_id"
+    ],
+    "title": "PemetaanBuat"
+   },
+   "PemetaanDiterapkan": {
+    "properties": {
+     "event_diperbarui": {
+      "type": "integer",
+      "title": "Event Diperbarui"
+     },
+     "masih_ada_sisa": {
+      "type": "boolean",
+      "title": "Masih Ada Sisa",
+      "description": "True bila masih ada event lain; jalankan lagi"
+     }
+    },
+    "type": "object",
+    "required": [
+     "event_diperbarui",
+     "masih_ada_sisa"
+    ],
+    "title": "PemetaanDiterapkan"
+   },
+   "PemetaanOtomatisOut": {
+    "properties": {
+     "dibuat": {
+      "type": "integer",
+      "title": "Dibuat"
+     },
+     "event_diperbarui": {
+      "type": "integer",
+      "title": "Event Diperbarui"
+     },
+     "masih_ada_sisa": {
+      "type": "boolean",
+      "title": "Masih Ada Sisa"
+     },
+     "tidak_cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanTakCocok"
+      },
+      "type": "array",
+      "title": "Tidak Cocok"
+     }
+    },
+    "type": "object",
+    "required": [
+     "dibuat",
+     "event_diperbarui",
+     "masih_ada_sisa",
+     "tidak_cocok"
+    ],
+    "title": "PemetaanOtomatisOut"
+   },
+   "PemetaanOut": {
+    "properties": {
+     "map_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Map Id"
+     },
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "employee_no_string": {
+      "type": "string",
+      "title": "Employee No String"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_no": {
+      "type": "string",
+      "title": "Employee No"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "map_id",
+     "device_id",
+     "employee_no_string",
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "create_at"
+    ],
+    "title": "PemetaanOut"
+   },
+   "PemetaanUbah": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id"
+    ],
+    "title": "PemetaanUbah"
+   },
+   "PenerimaOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "kode": {
+      "type": "string",
+      "title": "Kode"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "kode"
+    ],
+    "title": "PenerimaOut",
+    "description": "Jawaban singkat ke perangkat. Tanpa data pribadi."
+   },
+   "PerangkatBuat": {
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "name": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name"
+     },
+     "ip_address": {
+      "type": "string",
+      "maxLength": 45,
+      "minLength": 3,
+      "title": "Ip Address"
+     },
+     "http_port": {
+      "type": "integer",
+      "maximum": 65535.0,
+      "minimum": 1.0,
+      "title": "Http Port",
+      "default": 80
+     },
+     "serial_no": {
+      "type": "string",
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "title": "Serial No"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode",
+      "default": "SHADOW"
+     },
+     "aktif": {
+      "type": "boolean",
+      "title": "Aktif",
+      "default": true
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     }
+    },
+    "type": "object",
+    "required": [
+     "office_id",
+     "name",
+     "ip_address",
+     "serial_no"
+    ],
+    "title": "PerangkatBuat"
+   },
+   "PerangkatDibuat": {
+    "properties": {
+     "perangkat": {
+      "$ref": "#/components/schemas/PerangkatOut"
+     },
+     "penerima": {
+      "$ref": "#/components/schemas/TokenBaru"
+     }
+    },
+    "type": "object",
+    "required": [
+     "perangkat",
+     "penerima"
+    ],
+    "title": "PerangkatDibuat"
+   },
+   "PerangkatOut": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "office_name": {
+      "type": "string",
+      "title": "Office Name"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "ip_address": {
+      "type": "string",
+      "title": "Ip Address"
+     },
+     "http_port": {
+      "type": "integer",
+      "title": "Http Port"
+     },
+     "serial_no": {
+      "type": "string",
+      "title": "Serial No"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode"
+     },
+     "aktif": {
+      "type": "boolean",
+      "title": "Aktif"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     },
+     "update_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Update At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "office_id",
+     "office_name",
+     "name",
+     "ip_address",
+     "http_port",
+     "serial_no",
+     "model",
+     "mode",
+     "aktif",
+     "catatan",
+     "create_at",
+     "update_at"
+    ],
+    "title": "PerangkatOut"
+   },
+   "PerangkatUbah": {
+    "properties": {
+     "name": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 45,
+        "minLength": 3
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "http_port": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "maximum": 65535.0,
+        "minimum": 1.0
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Http Port"
+     },
+     "serial_no": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._-]+$"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Serial No"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 64
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "mode": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "SHADOW",
+         "AKTIF"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mode"
+     },
+     "aktif": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Aktif"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     }
+    },
+    "type": "object",
+    "title": "PerangkatUbah"
+   },
    "PeriodicExportRequest": {
     "properties": {
      "division_id": {
@@ -29806,6 +34637,49 @@
     },
     "type": "object",
     "title": "PlanItemUpdate"
+   },
+   "PmCandidateOut": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "division_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Id"
+     },
+     "division_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Division Name"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "full_name"
+    ],
+    "title": "PmCandidateOut",
+    "description": "Calon PM untuk form Buat Tugas Klien: hanya id, nama, dan divisi (tanpa kontak, email, atau peran)."
    },
    "PointIn": {
     "properties": {
@@ -30788,7 +35662,9 @@
       "enum": [
        "ADMIN_HR_GA",
        "FINANCE",
-       "OPERATIONAL_MANAGER"
+       "OPERATIONAL_MANAGER",
+       "PROJECT_MANAGER",
+       "HSE"
       ],
       "title": "Role"
      },
@@ -30810,7 +35686,7 @@
      "role"
     ],
     "title": "RoleAssignmentCreate",
-    "description": "Tambah peran. HR/Finance wajib `office_id`; OM tanpa `office_id` (semua kantor)."
+    "description": "Tambah peran. HR/Finance/PM/HSE wajib `office_id`; OM tanpa `office_id` (semua kantor)."
    },
    "RoleAssignmentOut": {
     "properties": {
@@ -31003,6 +35879,79 @@
     "title": "RolloverRequest",
     "description": "Ketua: pekerjaan belum selesai (hujan, izin, material) → minta digeser."
    },
+   "SetupAdminIn": {
+    "properties": {
+     "setup_token": {
+      "type": "string",
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Setup Token"
+     },
+     "full_name": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 2,
+      "title": "Full Name"
+     },
+     "email": {
+      "type": "string",
+      "maxLength": 254,
+      "minLength": 5,
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+      "title": "Email"
+     },
+     "password": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 12,
+      "title": "Password"
+     }
+    },
+    "type": "object",
+    "required": [
+     "setup_token",
+     "full_name",
+     "email",
+     "password"
+    ],
+    "title": "SetupAdminIn"
+   },
+   "SetupAdminOut": {
+    "properties": {
+     "user_id": {
+      "type": "string",
+      "title": "User Id"
+     },
+     "email": {
+      "type": "string",
+      "title": "Email"
+     }
+    },
+    "type": "object",
+    "required": [
+     "user_id",
+     "email"
+    ],
+    "title": "SetupAdminOut"
+   },
+   "SetupStatusOut": {
+    "properties": {
+     "needs_setup": {
+      "type": "boolean",
+      "title": "Needs Setup"
+     },
+     "enabled": {
+      "type": "boolean",
+      "title": "Enabled"
+     }
+    },
+    "type": "object",
+    "required": [
+     "needs_setup",
+     "enabled"
+    ],
+    "title": "SetupStatusOut"
+   },
    "SlotOut": {
     "properties": {
      "requirement_id": {
@@ -31048,6 +35997,68 @@
      "mandatory"
     ],
     "title": "SlotOut"
+   },
+   "StatusPerangkat": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode"
+     },
+     "aktif": {
+      "type": "boolean",
+      "title": "Aktif"
+     },
+     "event_24_jam": {
+      "type": "integer",
+      "title": "Event 24 Jam"
+     },
+     "event_7_hari": {
+      "type": "integer",
+      "title": "Event 7 Hari"
+     },
+     "event_terakhir_diterima": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Event Terakhir Diterima"
+     },
+     "belum_terpetakan_7_hari": {
+      "type": "integer",
+      "title": "Belum Terpetakan 7 Hari"
+     },
+     "kemungkinan_duplikat_7_hari": {
+      "type": "integer",
+      "title": "Kemungkinan Duplikat 7 Hari",
+      "description": "Kelompok event dengan nomor, waktu, dan jenis sama (duplikat murni ditolak penyimpanan)"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "mode",
+     "aktif",
+     "event_24_jam",
+     "event_7_hari",
+     "event_terakhir_diterima",
+     "belum_terpetakan_7_hari",
+     "kemungkinan_duplikat_7_hari"
+    ],
+    "title": "StatusPerangkat"
    },
    "SurveyListItem": {
     "properties": {
@@ -31730,6 +36741,91 @@
     ],
     "title": "SyncResponse"
    },
+   "SystemSettingOut": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "type": {
+      "type": "string",
+      "const": "bool",
+      "title": "Type",
+      "default": "bool"
+     },
+     "value": {
+      "type": "boolean",
+      "title": "Value"
+     },
+     "source": {
+      "type": "string",
+      "enum": [
+       "env_force",
+       "db",
+       "env_default"
+      ],
+      "title": "Source"
+     },
+     "env_default": {
+      "type": "boolean",
+      "title": "Env Default"
+     },
+     "locked": {
+      "type": "boolean",
+      "title": "Locked"
+     },
+     "updated_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Updated At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "description",
+     "value",
+     "source",
+     "env_default",
+     "locked"
+    ],
+    "title": "SystemSettingOut"
+   },
+   "SystemSettingsUpdate": {
+    "properties": {
+     "values": {
+      "additionalProperties": {
+       "type": "boolean"
+      },
+      "type": "object",
+      "maxProperties": 20,
+      "minProperties": 1,
+      "title": "Values"
+     }
+    },
+    "type": "object",
+    "required": [
+     "values"
+    ],
+    "title": "SystemSettingsUpdate",
+    "description": "Kunci = nama setelan (lihat GET). Nilai harus boolean sungguhan (bukan teks/angka)."
+   },
    "TeamAvailabilityItem": {
     "properties": {
      "team_id": {
@@ -32135,6 +37231,131 @@
     ],
     "title": "TeamOption"
    },
+   "TeamSurveyOut": {
+    "properties": {
+     "survey_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Survey Id"
+     },
+     "work_order_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Work Order Id"
+     },
+     "wo_number": {
+      "type": "string",
+      "title": "Wo Number"
+     },
+     "title": {
+      "type": "string",
+      "title": "Title"
+     },
+     "client_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Client Name"
+     },
+     "site_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Name"
+     },
+     "site_lat": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lat"
+     },
+     "site_lng": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Lng"
+     },
+     "site_radius_m": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Site Radius M"
+     },
+     "survey_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Survey Date"
+     },
+     "survey_status": {
+      "type": "string",
+      "title": "Survey Status"
+     },
+     "surveyor_team_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Id"
+     },
+     "surveyor_team_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Surveyor Team Name"
+     },
+     "filled_points": {
+      "type": "integer",
+      "title": "Filled Points",
+      "default": 0
+     }
+    },
+    "type": "object",
+    "required": [
+     "survey_id",
+     "work_order_id",
+     "wo_number",
+     "title",
+     "survey_date",
+     "survey_status"
+    ],
+    "title": "TeamSurveyOut",
+    "description": "Survei work order aktif milik tim pemanggil (untuk HP ketua/anggota tim)."
+   },
    "TeamUpdate": {
     "properties": {
      "office_id": {
@@ -32212,6 +37433,36 @@
       "type": "string",
       "format": "date",
       "title": "Start Date"
+     },
+     "end_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "End Date",
+      "description": "Opsional; bila diisi harus Minggu (tepat 7 hari dari Senin)"
+     },
+     "export_format": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "PDF",
+         "WORD_DOCX",
+         "PPTX"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Export Format",
+      "description": "PDF, WORD_DOCX, atau PPTX; kosong = PowerPoint"
      }
     },
     "type": "object",
@@ -32220,6 +37471,36 @@
      "start_date"
     ],
     "title": "TeamWeekExportRequest"
+   },
+   "TokenBaru": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "token": {
+      "type": "string",
+      "title": "Token"
+     },
+     "receiver_url": {
+      "type": "string",
+      "title": "Receiver Url"
+     },
+     "receiver_path": {
+      "type": "string",
+      "title": "Receiver Path"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "token",
+     "receiver_url",
+     "receiver_path"
+    ],
+    "title": "TokenBaru",
+    "description": "Ditampilkan SATU kali. Simpan sekarang; yang tersimpan di server hanya sidik jarinya."
    },
    "ToolCreate": {
     "properties": {
@@ -32332,6 +37613,18 @@
        }
       ],
       "title": "Holder Employee Id"
+     },
+     "holder_external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder External Borrower Id"
      },
      "holder_name": {
       "anyOf": [
@@ -32596,6 +37889,87 @@
     "type": "object",
     "title": "ToolUpdate"
    },
+   "UsulanCocok": {
+    "properties": {
+     "employee_no_string": {
+      "type": "string",
+      "title": "Employee No String"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_no": {
+      "type": "string",
+      "title": "Employee No"
+     },
+     "full_name": {
+      "type": "string",
+      "title": "Full Name"
+     },
+     "jumlah_event": {
+      "type": "integer",
+      "title": "Jumlah Event"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_no_string",
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "jumlah_event"
+    ],
+    "title": "UsulanCocok"
+   },
+   "UsulanPemetaan": {
+    "properties": {
+     "cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanCocok"
+      },
+      "type": "array",
+      "title": "Cocok"
+     },
+     "tidak_cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanTakCocok"
+      },
+      "type": "array",
+      "title": "Tidak Cocok"
+     }
+    },
+    "type": "object",
+    "required": [
+     "cocok",
+     "tidak_cocok"
+    ],
+    "title": "UsulanPemetaan"
+   },
+   "UsulanTakCocok": {
+    "properties": {
+     "employee_no_string": {
+      "type": "string",
+      "title": "Employee No String"
+     },
+     "jumlah_event": {
+      "type": "integer",
+      "title": "Jumlah Event"
+     },
+     "alasan": {
+      "type": "string",
+      "title": "Alasan"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_no_string",
+     "jumlah_event",
+     "alasan"
+    ],
+    "title": "UsulanTakCocok"
+   },
    "ValidationError": {
     "properties": {
      "loc": {
@@ -32703,6 +38077,263 @@
      "number_plate"
     ],
     "title": "VehicleCreate"
+   },
+   "VehicleDocumentCreate": {
+    "properties": {
+     "doc_type_code": {
+      "type": "string",
+      "maxLength": 30,
+      "minLength": 2,
+      "pattern": "^[A-Z0-9_]+$",
+      "title": "Doc Type Code"
+     },
+     "doc_no": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Doc No"
+     },
+     "issued_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued On"
+     },
+     "expired_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired On"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     }
+    },
+    "type": "object",
+    "required": [
+     "doc_type_code",
+     "expired_on"
+    ],
+    "title": "VehicleDocumentCreate",
+    "description": "Dokumen baru menggantikan dokumen berlaku sejenis pada kendaraan itu (yang lama menjadi `replaced`)."
+   },
+   "VehicleDocumentOut": {
+    "properties": {
+     "vehicle_document_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Document Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "vehicle_name": {
+      "type": "string",
+      "title": "Vehicle Name"
+     },
+     "number_plate": {
+      "type": "string",
+      "title": "Number Plate"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "doc_type_code": {
+      "type": "string",
+      "title": "Doc Type Code"
+     },
+     "doc_type_name": {
+      "type": "string",
+      "title": "Doc Type Name"
+     },
+     "doc_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Doc No"
+     },
+     "issued_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued On"
+     },
+     "expired_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired On"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "active",
+       "replaced"
+      ],
+      "title": "Status"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "days_left": {
+      "type": "integer",
+      "title": "Days Left"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_document_id",
+     "vehicle_id",
+     "vehicle_name",
+     "number_plate",
+     "office_id",
+     "doc_type_code",
+     "doc_type_name",
+     "doc_no",
+     "issued_on",
+     "expired_on",
+     "file_id",
+     "status",
+     "catatan",
+     "days_left",
+     "created_at"
+    ],
+    "title": "VehicleDocumentOut"
+   },
+   "VehicleDriverCreate": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id"
+    ],
+    "title": "VehicleDriverCreate"
+   },
+   "VehicleDriverOut": {
+    "properties": {
+     "vehicle_driver_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Driver Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "mulai_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Mulai On"
+     },
+     "selesai_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selesai On"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_driver_id",
+     "vehicle_id",
+     "employee_id",
+     "employee_name",
+     "mulai_on",
+     "selesai_on"
+    ],
+    "title": "VehicleDriverOut"
    },
    "VehicleFileCreate": {
     "properties": {
@@ -32837,6 +38468,7 @@
      },
      "period_type": {
       "type": "string",
+      "pattern": "^(DAILY|WEEKLY|MONTHLY)$",
       "title": "Period Type",
       "description": "DAILY, WEEKLY, MONTHLY",
       "default": "DAILY"
@@ -32857,6 +38489,7 @@
       "anyOf": [
        {
         "type": "integer",
+        "maximum": 10000000.0,
         "minimum": 0.0
        },
        {
@@ -32868,21 +38501,25 @@
      "checklist_json": {
       "additionalProperties": true,
       "type": "object",
+      "maxProperties": 60,
       "title": "Checklist Json",
-      "description": "Status checklist per item (rem, ban, oli, lampu, dll)"
+      "description": "Status per butir; butir baku: GET /hse/inspections/checklist-template"
      },
      "photos_json": {
       "items": {
-       "type": "string"
+       "type": "string",
+       "maxLength": 255
       },
       "type": "array",
+      "maxItems": 10,
       "title": "Photos Json",
-      "description": "Array URL/Path foto bukti inspeksi kendaraan"
+      "description": "ID berkas foto bukti (hasil POST /files/upload), maks 10"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 1000
        },
        {
         "type": "null"
@@ -33053,13 +38690,15 @@
     "properties": {
      "status": {
       "type": "string",
+      "pattern": "^(VERIFIED|REJECTED)$",
       "title": "Status",
       "description": "VERIFIED atau REJECTED"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 1000
        },
        {
         "type": "null"
@@ -33099,6 +38738,18 @@
        }
       ],
       "title": "Holder Employee Id"
+     },
+     "holder_external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder External Borrower Id"
      },
      "holder_name": {
       "anyOf": [
@@ -35107,12 +40758,14 @@
         "type": "null"
        }
       ],
-      "title": "Survey Date"
+      "title": "Survey Date",
+      "description": "Tanggal survei (wajib diisi; kosong = 422 pesan awam); tim melihatnya di HP"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 2000
        },
        {
         "type": "null"
@@ -35511,6 +41164,30 @@
       "type": "string",
       "format": "date-time",
       "title": "Created At"
+     },
+     "survey_assignment_summary": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Survey Assignment Summary",
+      "description": "Hanya terisi di respons assign-survey: 'Tim X akan melihat di HP pada tanggal Y'"
+     },
+     "duplicate_title_warning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Duplicate Title Warning",
+      "description": "Hanya terisi di respons pembuatan WO bila klien sama sudah punya WO berjudul sama"
      },
      "survey_points": {
       "items": {

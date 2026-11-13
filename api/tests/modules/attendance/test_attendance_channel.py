@@ -10,7 +10,7 @@ import io
 import pytest
 from PIL import Image
 
-from tests.conftest import WORLD_PASSWORD, World, requires_db, sync_query
+from tests.conftest import WORLD_PASSWORD, World, isolate_site, requires_db, sync_query
 
 pytestmark = requires_db
 
@@ -98,19 +98,28 @@ def test_office_worker_rejected_on_mobile_and_checks_in_out_on_web(client, world
 
 
 def test_web_out_of_radius_needs_an_explanation_then_review(client, world):
-    without = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80, explanation=None)
+    center = isolate_site(world)  # kantor lain (radius besar) tak boleh menampung titik ini
+    near = {"lat": center["lat"] - 0.0018, "lng": center["lng"]}  # ±200 m
+    without = _check_in(client, world, "pm", "WEB", location=near, accuracy_m=80, explanation=None)
     assert without.status_code == 422 and without.json()["error"]["code"] == "EXPLANATION_REQUIRED"
 
-    response = _check_in(client, world, "pm", "WEB", location=NEAR, accuracy_m=80)
+    response = _check_in(client, world, "pm", "WEB", location=near, accuracy_m=80)
     assert response.status_code == 200, response.text
     assert response.json()["status"] == "NEEDS_REVIEW"
     assert response.json()["distance_m"] > 100
 
 
 def test_web_accuracy_limit_is_looser_than_mobile(client, world):
-    """Lokasi browser laptop dari WiFi: batas 300 m (HP tetap 100 m, K-12)."""
-    assert _check_in(client, world, "pm", "WEB", accuracy_m=301).status_code == 422
-    assert _check_in(client, world, "pm", "WEB", accuracy_m=250).status_code == 200
+    """Lokasi browser laptop dari WiFi: batas 300 m untuk diterima otomatis (HP tetap 100 m, K-12).
+    Pekerja kantor di web dengan titik lebih kasar TIDAK ditolak: menunggu verifikasi HR kantor."""
+    assert _check_in(client, world, "member", "MOBILE", accuracy_m=101).status_code == 422
+    coarse = _check_in(client, world, "pm", "WEB", accuracy_m=301)
+    assert coarse.status_code == 200, coarse.text
+    assert coarse.json()["status"] == "NEEDS_REVIEW"
+    assert coarse.json()["location_decision"] == "PENDING_COARSE"
+    assert coarse.json()["location_accuracy_m"] == 301
+    assert "LOKASI_KASAR" in coarse.json()["review_reasons"]
+    assert _check_in(client, world, "hr", "WEB", accuracy_m=250).status_code == 200
 
 
 def test_me_exposes_attendance_mode_from_the_role(client, world):

@@ -129,17 +129,21 @@ class _MessScreenState extends ConsumerState<MessScreen> {
   }
 
   Future<void> _cancel(Map<String, dynamic> stay) async {
+    final approved = stay['status'] == 'APPROVED';
     if (!await confirmAction(
       context,
-      title: 'Batalkan pengajuan?',
-      message: 'Hunian di ${stay['mess_name']} akan dibatalkan.',
-      confirmLabel: 'Batalkan',
+      title: approved ? 'Batalkan hunian?' : 'Batalkan pengajuan?',
+      message: approved
+          ? 'Hunian Anda di ${stay['mess_name']} sudah disetujui. Jika dibatalkan, tempat Anda dilepas dan Anda perlu mengajukan lagi bila masih butuh.'
+          : 'Pengajuan hunian di ${stay['mess_name']} akan dibatalkan.',
+      confirmLabel: approved ? 'Ya, batalkan hunian' : 'Ya, batalkan pengajuan',
+      cancelLabel: 'Tidak jadi',
     )) {
       return;
     }
     try {
       await ref.read(syncEngineProvider).api.cancelMess(stay['mess_stay_id'] as String);
-      _snack('Pengajuan dibatalkan.');
+      _snack(approved ? 'Hunian dibatalkan.' : 'Pengajuan dibatalkan.');
       await _reload();
     } catch (e) {
       _snack(apiErrorMessage(e));

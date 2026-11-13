@@ -85,7 +85,7 @@ describe("Absen kantor lewat web (R-33)", () => {
     renderRoute("/attendance", { me: officeMe() });
     const region = await card();
     fireEvent.click(await within(region).findByRole("button", { name: "Absen masuk" }));
-    expect(await within(region).findByRole("alert")).toHaveTextContent(/dari Kantor Pusat \(radius 150 m\)\. Isi penjelasan/);
+    expect(await within(region).findByText(/dari Kantor Pusat \(radius 150 m\)\. Isi penjelasan/)).toBeInTheDocument();
     expect(within(region).getByLabelText("Penjelasan (wajib)")).toBeInTheDocument();
     expect(calls.some((c) => c.url === "/attendance/check-in")).toBe(false);
   });
@@ -99,7 +99,7 @@ describe("Absen kantor lewat web (R-33)", () => {
     expect(await within(region).findByText(/Absensi ditolak: Foto buram\. Anda dapat mengajukan absen ulang satu/)).toBeInTheDocument();
     const resubmit = within(region).getByRole("button", { name: "Ajukan absen ulang" });
     fireEvent.click(resubmit);
-    expect(await within(region).findByRole("alert")).toHaveTextContent("Isi penjelasan untuk mengajukan ulang");
+    expect(await within(region).findByText(/Isi penjelasan untuk mengajukan ulang/)).toBeInTheDocument();
     fireEvent.change(within(region).getByLabelText("Penjelasan (wajib)"), { target: { value: "Foto ulang lebih jelas" } });
     fireEvent.click(resubmit);
     // Penjelasan lengkap → lanjut ke swafoto wajib (docs/35 §5); kiriman ke server terjadi setelah foto diambil.

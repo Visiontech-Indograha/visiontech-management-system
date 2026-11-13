@@ -22,13 +22,16 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from app.core.config import settings
+from app.core import system_settings
+from app.core.audit_log import record_audit
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
 from app.modules.assets.repositories.asset_repository import AssetRepository
 from app.modules.assets.schemas.asset_schema import (
+    BorrowerCreate,
+    BorrowerUpdate,
     InspectionCreate,
     LoanCreate,
     LoanRequestCreate,
@@ -65,12 +68,30 @@ def _in_use(asset_type: str) -> AppError:
 
 _NIL_UUID = "00000000-0000-0000-0000-000000000000"
 
+# Bidang aset yang dicatat di audit (foto/berkas tidak dicatat).
+_AUDIT_FIELDS = {
+    "TOOL": ("office_id", "division_id", "team_id", "ownership_type", "category", "name", "tool_code", "status"),
+    "VEHICLE": ("office_id", "division_id", "team_id", "vehicle_type", "name", "number_plate", "status"),
+}
+
 
 class AssetService:
     """Use case inventaris & peminjaman aset."""
 
     def __init__(self, repo: AssetRepository) -> None:
         self.repo = repo
+
+    async def _audit(
+        self, user: CurrentUser | None, action: str, asset_type: str, asset_id: UUID, before: Any, after: Any,
+        *, skip_if_empty: bool = False, fields: tuple[str, ...] | None = None,
+    ) -> None:
+        """Catat perubahan aset (alat/kendaraan); pemanggil internal tanpa pengguna tidak dicatat."""
+        if user is None:
+            return
+        await record_audit(
+            self.repo.db, user, action=action, entity_type=asset_type.lower(), entity_id=asset_id,
+            before=before, after=after, fields=fields or _AUDIT_FIELDS[asset_type], skip_if_empty=skip_if_empty,
+        )
 
     def _notify(self) -> NotificationService:
         return NotificationService(self.repo.db)
@@ -81,7 +102,7 @@ class AssetService:
         bila ROLE_ASSIGNMENT_ENABLED; SA dan peran ASSET tidak dibatasi. Flag mati = perilaku lama.
         `read`: pembacaan inventaris; OM (yang sudah melihat semua aset) tetap melihat semua kantor walau juga HR.
         Mutasi memakai izin pengelola aset yang dibawa HR, sehingga OM+HR hanya mengubah aset kantor tugasnya."""
-        if user is None or not settings.ROLE_ASSIGNMENT_ENABLED:
+        if user is None or not system_settings.role_assignment_enabled():
             return None
         restriction = await office_restriction(self.repo.db, user, Permission.MANAGE_ASSETS,
                                                ("SUPER_ADMIN", "OPERATIONAL_MANAGER") if read else ("SUPER_ADMIN",))
@@ -145,7 +166,9 @@ class AssetService:
         fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id) if data.division_id else None,
                       name=data.name.strip(), photo_path=await self._path(data.photo_file_id, "foto"))
-        return await self.repo.get_tool(await self.repo.insert_tool(fields))
+        row = await self.repo.get_tool(await self.repo.insert_tool(fields))
+        await self._audit(user, "TOOL_CREATE", "TOOL", row.tool_id, None, row)
+        return row
 
     async def update_tool(self, tool_id: UUID, data: ToolUpdate, user: CurrentUser | None = None) -> Any:
         tool = await self._tool(tool_id)
@@ -164,7 +187,9 @@ class AssetService:
                       name=data.name.strip() if data.name else None,
                       photo_path=await self._path(data.photo_file_id, "foto"))
         await self.repo.update_tool(tool_id, fields)
-        return await self.repo.get_tool(tool_id)
+        row = await self.repo.get_tool(tool_id)
+        await self._audit(user, "TOOL_UPDATE", "TOOL", tool_id, tool, row, skip_if_empty=True)
+        return row
 
     # ── Kendaraan ──────────────────────────────────────────────────────────────
     async def list_vehicles(
@@ -188,7 +213,9 @@ class AssetService:
         fields["team_id"] = await self._team(data.team_id, data.office_id)
         fields.update(office_id=str(data.office_id), division_id=str(data.division_id), name=data.name.strip(),
                       photo_path=await self._path(data.photo_file_id, "foto"))
-        return await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
+        row = await self.repo.get_vehicle(await self.repo.insert_vehicle(fields))
+        await self._audit(user, "VEHICLE_CREATE", "VEHICLE", row.vehicle_id, None, row)
+        return row
 
     async def update_vehicle(self, vehicle_id: UUID, data: VehicleUpdate, user: CurrentUser | None = None) -> Any:
         vehicle = await self._vehicle(vehicle_id)
@@ -207,7 +234,9 @@ class AssetService:
                       name=data.name.strip() if data.name else None,
                       photo_path=await self._path(data.photo_file_id, "foto"))
         await self.repo.update_vehicle(vehicle_id, fields)
-        return await self.repo.get_vehicle(vehicle_id)
+        row = await self.repo.get_vehicle(vehicle_id)
+        await self._audit(user, "VEHICLE_UPDATE", "VEHICLE", vehicle_id, vehicle, row, skip_if_empty=True)
+        return row
 
     # ── Status & arsip ────────────────────────────────────────────────────────
     async def set_status(self, asset_type: str, asset_id: UUID, status: str, user: CurrentUser | None = None) -> Any:
@@ -219,15 +248,21 @@ class AssetService:
             raise _in_use(asset_type)
         if not await self.repo.set_status(asset_type, asset_id, status, expected=asset.status):
             raise _status_changed(asset_type)
-        return await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
+        row = await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
+        await self._audit(user, f"{asset_type}_STATUS", asset_type, asset_id, asset, row, skip_if_empty=True,
+                          fields=("status",))
+        return row
 
     async def delete(self, asset_type: str, asset_id: UUID, user: CurrentUser | None = None) -> None:
         await self._guard_asset(user, asset_type, asset_id)
-        if await self.repo.lock_asset(asset_type, asset_id) is None:
+        asset = await self.repo.lock_asset(asset_type, asset_id)
+        if asset is None:
             raise NotFoundError(_LABEL[asset_type])
         if await self.repo.has_open_loan(asset_type, asset_id):
             raise _in_use(asset_type)
+        before = await (self.repo.get_tool(asset_id) if asset_type == "TOOL" else self.repo.get_vehicle(asset_id))
         await self.repo.archive(asset_type, asset_id)
+        await self._audit(user, f"{asset_type}_DELETE", asset_type, asset_id, before, None)
 
     # ── Berkas & inspeksi kendaraan ───────────────────────────────────────────
     async def _vehicle_in_scope(self, vehicle_id: UUID, user: CurrentUser | None) -> None:
@@ -302,8 +337,39 @@ class AssetService:
             })
         return out
 
+    # ── Penerima eksternal (ADR 0003) ──────────────────────────────────────────
+    async def borrowers(self, user: CurrentUser, office_id: UUID | None) -> list[Any]:
+        offices = await self._offices(user, read=True)
+        return await self.repo.borrowers(offices=offices, office_id=office_id)
+
+    async def create_borrower(self, data: BorrowerCreate, user: CurrentUser) -> Any:
+        await self._guard_office(user, data.office_id, "Kantor")
+        if not await self.repo.office_exists(data.office_id):
+            raise ValidationError("Kantor tidak ditemukan atau sudah dihapus.")
+        borrower_id = await self.repo.insert_borrower(data.office_id, data.nama, data.instansi, data.kontak)
+        row = await self.repo.get_borrower(borrower_id)
+        await record_audit(self.repo.db, user, action="ASSET_BORROWER_CREATE", entity_type="asset_borrower",
+                           entity_id=borrower_id, before=None, after=row, fields=("office_id", "nama", "instansi"))
+        return row
+
+    async def update_borrower(self, borrower_id: UUID, data: BorrowerUpdate, user: CurrentUser) -> Any:
+        before = await self.repo.get_borrower(borrower_id)
+        if before is None:
+            raise NotFoundError("Penerima eksternal")
+        await self._guard_office(user, before.office_id, "Penerima eksternal")
+        fields = data.model_dump(exclude_unset=True)
+        if "nama" in fields and not fields["nama"]:
+            raise ValidationError("Nama penerima wajib diisi.")
+        await self.repo.update_borrower(borrower_id, fields)
+        row = await self.repo.get_borrower(borrower_id)
+        await record_audit(self.repo.db, user, action="ASSET_BORROWER_UPDATE", entity_type="asset_borrower",
+                           entity_id=borrower_id, before=before, after=row, fields=("nama", "instansi"),
+                           skip_if_empty=True)
+        return row
+
     async def loans(
-        self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None
+        self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None,
+        borrower_id: UUID | None = None,
     ) -> list[Any]:
         """Pengelola aset (MANAGE_ASSETS) melihat semua. Pemegang VIEW_TEAMS hanya melihat pinjaman jadwal yang
         ia kelola (atau tim jadwalnya sendiri) dan pinjaman karyawan di divisi yang ia pimpin; selain itu hanya
@@ -315,7 +381,8 @@ class AssetService:
                 raise NotFoundError("Jadwal harian")
             return await self.repo.loans(open_only=open_only, employee_id=employee_id,
                                          daily_plan_id=daily_plan_id, managed_by=None,
-                                         offices=await self._offices(user, read=True), own=own)
+                                         offices=await self._offices(user, read=True), own=own,
+                                         borrower_id=borrower_id)
         if own is None:
             return []
         if daily_plan_id:
@@ -331,13 +398,15 @@ class AssetService:
                                          daily_plan_id=None, managed_by=own)
         return await self.repo.loans(open_only=open_only, employee_id=UUID(own), daily_plan_id=None, managed_by=None)
 
-    async def _check_vehicle_papers(self, vehicle_id: UUID, vehicle_type: str, employee_id: UUID) -> None:
+    async def _check_vehicle_papers(self, vehicle_id: UUID, vehicle_type: str, employee_id: UUID | None) -> None:
         vehicle = await self._vehicle(vehicle_id)
         today = jakarta_now().date()
         if vehicle.stnk_expired_at is None or vehicle.stnk_expired_at < today:
             raise AppError("VEHICLE_PAPERS_EXPIRED", "STNK kendaraan tidak ada atau sudah kedaluwarsa.", status=422)
         if vehicle_type == "Truck" and (vehicle.kir_expired_at is None or vehicle.kir_expired_at < today):
             raise AppError("VEHICLE_PAPERS_EXPIRED", "KIR truk tidak ada atau sudah kedaluwarsa.", status=422)
+        if employee_id is None:  # penerima eksternal: tidak ada data SIM di sistem; serah terima dicatat di BAST
+            return
         allowed, label = LICENCES[vehicle_type]
         if not allowed & await self.repo.valid_licences(employee_id):
             raise AppError("DRIVER_LICENCE_REQUIRED", f"Pemegang kendaraan wajib punya {label} yang berlaku.",
@@ -350,11 +419,14 @@ class AssetService:
         asset = await self.repo.lock_asset(data.asset_type, asset_id)
         if asset is None:
             raise NotFoundError(_LABEL[data.asset_type])
-        if not await self.repo.employee_active(data.employee_id):
+        asset_office = await self.repo.asset_office(data.asset_type, asset_id)
+        if data.employee_id is not None and not await self.repo.employee_active(data.employee_id):
             raise ValidationError("Karyawan tidak ditemukan, nonaktif, atau sedang proses keluar.")
+        if data.external_borrower_id is not None:
+            await self._check_external(user, data, asset_office)
 
         plan = None
-        if data.daily_plan_id is not None:
+        if data.daily_plan_id is not None and data.employee_id is not None:
             if data.asset_type == "TOOL" and asset.ownership_type == "PERSONAL_LOAN":
                 raise ValidationError("Alat pribadi dipinjamkan ke karyawan, tidak dikaitkan ke jadwal harian.")
             plan = await self.repo.plan_for_loan(data.daily_plan_id, data.employee_id)
@@ -386,10 +458,37 @@ class AssetService:
         assignment_id = await self.repo.insert_loan(
             data.asset_type, asset_id, data.employee_id, data.daily_plan_id, status,
             await self._path(data.handover_file_id, "foto serah terima"),
+            external_borrower_id=data.external_borrower_id, due_date=data.due_date,
+            bast_file_id=data.bast_file_id,
         )
         if not await self.repo.set_status(data.asset_type, asset_id, status, expected=asset.status):
             raise _status_changed(data.asset_type)
-        return await self.repo.get_loan(assignment_id)
+        created = await self.repo.get_loan(assignment_id)
+        if data.external_borrower_id is not None and user is not None:
+            await record_audit(
+                self.repo.db, user, action="ASSET_LOAN_EXTERNAL", entity_type="asset_loan", entity_id=assignment_id,
+                before=None, after=created,
+                fields=("asset_type", "asset_id", "external_borrower_id", "due_date", "bast_file_id"),
+            )
+        return created
+
+    async def _check_external(self, user: CurrentUser | None, data: LoanCreate, asset_office: str | None) -> None:
+        """Penerima eksternal: ada, dalam jangkauan, sekantor dengan aset; BAST sekantor; jatuh tempo wajar."""
+        assert data.external_borrower_id is not None
+        borrower = await self.repo.get_borrower(data.external_borrower_id)
+        if borrower is None:
+            raise NotFoundError("Penerima eksternal")
+        await self._guard_office(user, borrower.office_id, "Penerima eksternal")
+        if asset_office is None or str(borrower.office_id) != str(asset_office):
+            raise ValidationError("Penerima eksternal harus terdaftar di kantor yang sama dengan asetnya.")
+        if data.due_date is not None and data.due_date < jakarta_now().date():
+            raise ValidationError("Tanggal jatuh tempo tidak boleh sebelum hari ini.")
+        if data.bast_file_id is not None:
+            if await self.repo.file_key(data.bast_file_id) is None:
+                raise ValidationError("Dokumen serah terima belum diunggah atau sudah dihapus. Unggah ulang berkasnya.")
+            office = await self.repo.file_office(data.bast_file_id)
+            if office is None or str(office) != str(asset_office):
+                raise ValidationError("Dokumen serah terima harus diunggah di kantor yang sama dengan aset.")
 
     async def return_loan(self, assignment_id: UUID, condition: str, user: CurrentUser | None = None) -> Any:
         if await self._offices(user) is not None:
@@ -403,9 +502,16 @@ class AssetService:
             raise AppError("INVALID_STATE", "Status peminjaman sudah berubah. Muat ulang lalu coba lagi.", status=409)
         await self.repo.set_status(loan.asset_type, loan.asset_id, condition)
         done = await self.repo.get_loan(assignment_id)
-        await self._notify().notify_employees(
-            [done.employee_id], "ASSET_RETURNED", f"Pengembalian {done.asset_name} diterima", "", target="asset"
-        )
+        if done.employee_id is not None:
+            await self._notify().notify_employees(
+                [done.employee_id], "ASSET_RETURNED", f"Pengembalian {done.asset_name} diterima", "", target="asset"
+            )
+        elif user is not None:  # penerima eksternal tanpa akun: cukup dicatat di audit
+            await record_audit(
+                self.repo.db, user, action="ASSET_RETURN_EXTERNAL", entity_type="asset_loan",
+                entity_id=assignment_id, before=None, after=done,
+                fields=("asset_type", "asset_id", "external_borrower_id", "return_condition"),
+            )
         return done
 
     # ── Pengajuan pinjam & pengembalian oleh karyawan ──────────────────────────

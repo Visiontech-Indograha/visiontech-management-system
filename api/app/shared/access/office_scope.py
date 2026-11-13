@@ -22,7 +22,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core import system_settings
 from app.core.errors import NotFoundError
 from app.core.permissions import Permission, permissions_for_roles
 from app.core.repository import BaseRepository
@@ -32,7 +32,7 @@ from app.core.security import CurrentUser
 def attendance_office_scope(viewer_emp: str, emp_office: str) -> str:
     """Ekspresi boolean SQL: peninjau (`viewer_emp` = ekspresi employee_id) boleh melihat absensi karyawan yang
     kantornya `emp_office` (ekspresi office_id). Kedua argumen adalah ekspresi SQL internal, bukan input pengguna."""
-    if not settings.ROLE_ASSIGNMENT_ENABLED:
+    if not system_settings.role_assignment_enabled():
         return f"""(
         EXISTS (SELECT 1 FROM users os WHERE os.employee_id = {viewer_emp} AND os.delete_at IS NULL
                 AND os.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER'))
@@ -58,6 +58,9 @@ def attendance_office_scope(viewer_emp: str, emp_office: str) -> str:
 # ── Izin khusus HR/Finance di luar absensi (ADR 0002 bagian 5; docs/audit-izin-hr-finance-per-kantor.md) ──────
 # Peran yang cakupan datanya dibatasi ke kantor tugasnya. Peran lain (SA, OM, ADMIN lama, ...) tidak dibatasi.
 OFFICE_BOUND_ROLES: frozenset[str] = frozenset({"ADMIN_HR_GA", "FINANCE"})
+# Fase 2 (ADR 0002): PM dan HSE terikat kantor penugasan HANYA sebagai peran tambahan. Sebagai peran utama
+# perilakunya tetap lama (PM per divisi lewat data, HSE tanpa batas kantor).
+EXTRA_ONLY_BOUND_ROLES: frozenset[str] = frozenset({"PROJECT_MANAGER", "HSE"})
 
 
 def carrier_roles(user: CurrentUser, perm: Permission) -> frozenset[str]:
@@ -77,16 +80,23 @@ async def office_restriction(db: AsyncSession, user: CurrentUser, perm: Permissi
     dihitung sebagai pembawa pelebar, jadi HR yang juga PM tetap dibatasi kantor pada alur HR.
     Selain itu: kantor sendiri (`employee.office_id`) + kantor penugasan aktif untuk peran HR/Finance pembawa izin.
     """
-    if not settings.ROLE_ASSIGNMENT_ENABLED or perm.value not in user.permissions or user.has_role(*wide_roles):
+    if (
+        not system_settings.role_assignment_enabled()
+        or perm.value not in user.permissions
+        or user.has_role(*wide_roles)
+    ):
         return None
-    carriers = carrier_roles(user, perm) - frozenset(division_roles)
-    if not carriers or not carriers <= OFFICE_BOUND_ROLES:
+    extra_bound = EXTRA_ONLY_BOUND_ROLES - {user.role}  # peran utama PM/HSE tidak dibatasi
+    # PM tambahan tidak ikut "per divisi": ia tak punya jalur data (pm_id), jadi dibatasi kantor penugasan.
+    carriers = carrier_roles(user, perm) - (frozenset(division_roles) - extra_bound)
+    if not carriers or not carriers <= (OFFICE_BOUND_ROLES | extra_bound):
         return None
+    own_office = "TRUE" if carriers & OFFICE_BOUND_ROLES else "FALSE"  # PM/HSE tambahan: kantor penugasan saja
     rows = await BaseRepository(db).fetchall(
-        """
+        f"""
         SELECT e.office_id::text AS office_id FROM users u
         JOIN employee e ON e.employee_id = u.employee_id AND e.delete_at IS NULL
-        WHERE u.user_id = CAST(:uid AS uuid) AND e.office_id IS NOT NULL
+        WHERE u.user_id = CAST(:uid AS uuid) AND e.office_id IS NOT NULL AND {own_office}
         UNION
         SELECT a.office_id::text FROM user_role_assignment a
         JOIN office o ON o.office_id = a.office_id AND o.delete_at IS NULL

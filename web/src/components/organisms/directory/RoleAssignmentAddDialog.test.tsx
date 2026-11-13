@@ -4,8 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { RoleAssignmentAddDialog } from "./RoleAssignmentAddDialog";
 import { ACTION_LABEL } from "@/lib/auditLabels";
+import { mockMe } from "@/app/mockSession";
+import { useSession } from "@/stores/sessionStore";
 
 function setup(isSelf: boolean) {
+  const me = mockMe("HR")!;
+  useSession.setState({ me: { ...me, permissions: [...me.permissions, "manage:role_assignments"] }, ready: true });
   render(
     <QueryClientProvider client={new QueryClient()}>
       <RoleAssignmentAddDialog userId="u1" primaryRole="EMPLOYEE" held={[]} scopes={[]} extraCount={0} isSelf={isSelf} onClose={vi.fn()} />

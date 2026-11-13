@@ -15,12 +15,14 @@ export const PERMISSIONS = [
   "export:attendance",
   "review:overtime",
   "manage:sites",
+  "manage:system_settings",
   "manage:divisions",
   "manage:assets",
   "manage:mess",
   "view:mess",
   "review:mess",
   "manage:offboarding",
+  "manage:hikvision",
   "view:offboarding",
   "manage:image_requirements",
   "view:timeline",
@@ -32,6 +34,8 @@ export const PERMISSIONS = [
   "manage:hse_campaigns",
   "view:vehicle_inspections",
   "manage:vehicle_inspections",
+  "view:vehicle_documents",
+  "manage:vehicle_documents",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

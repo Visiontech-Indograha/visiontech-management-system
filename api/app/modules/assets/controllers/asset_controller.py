@@ -16,6 +16,9 @@ from app.core.security import CurrentUser
 from app.modules.assets.dependencies import get_asset_service
 from app.modules.assets.schemas.asset_schema import (
     AssetAvailabilityOut,
+    BorrowerCreate,
+    BorrowerOut,
+    BorrowerUpdate,
     InspectionCreate,
     InspectionOut,
     LoanCreate,
@@ -102,11 +105,21 @@ class AssetController:
 
     # Peminjaman
     async def handle_loans(
-        self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None
+        self, user: CurrentUser, *, open_only: bool, employee_id: UUID | None, daily_plan_id: UUID | None,
+        borrower_id: UUID | None = None,
     ) -> list[LoanOut]:
         rows = await self.service.loans(user, open_only=open_only, employee_id=employee_id,
-                                        daily_plan_id=daily_plan_id)
+                                        daily_plan_id=daily_plan_id, borrower_id=borrower_id)
         return [LoanOut(**r._mapping) for r in rows]
+
+    async def handle_borrowers(self, user: CurrentUser, office_id: UUID | None) -> list[BorrowerOut]:
+        return [BorrowerOut(**r._mapping) for r in await self.service.borrowers(user, office_id)]
+
+    async def handle_create_borrower(self, data: BorrowerCreate, user: CurrentUser) -> BorrowerOut:
+        return BorrowerOut(**(await self.service.create_borrower(data, user))._mapping)
+
+    async def handle_update_borrower(self, borrower_id: UUID, data: BorrowerUpdate, user: CurrentUser) -> BorrowerOut:
+        return BorrowerOut(**(await self.service.update_borrower(borrower_id, data, user))._mapping)
 
     async def handle_lend(self, data: LoanCreate, user: CurrentUser | None = None) -> LoanOut:
         return LoanOut(**(await self.service.lend(data, user))._mapping)

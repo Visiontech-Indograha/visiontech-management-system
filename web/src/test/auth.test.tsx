@@ -23,12 +23,14 @@ describe("login dan sesi API", () => {
     mockApi(() => undefined);
     renderRoute("/login");
     fireEvent.click(screen.getByRole("button", { name: "Masuk" }));
-    expect(await screen.findByText("Format email tidak valid.")).toBeInTheDocument();
+    expect(await screen.findByText("Email wajib diisi.")).toBeInTheDocument();
     expect(screen.getByText("Sandi wajib diisi.")).toBeInTheDocument();
   });
 
   it("menampilkan galat login dari API", async () => {
-    mockApi(() => apiError(401, "INVALID_CREDENTIALS", "Email atau sandi salah."));
+    // Hanya /auth/login yang ditolak. Jawaban 401 untuk URL lain memicu refresh sungguhan (axios polos, di luar
+    // adapter palsu) yang selesai belakangan dan menghapus sesi di uji berikutnya.
+    mockApi((request) => (request.url === "/auth/login" ? apiError(401, "INVALID_CREDENTIALS", "Email atau sandi salah.") : undefined));
     renderRoute("/login");
     type("Email", "budi@example.com");
     type("Sandi", "salah");

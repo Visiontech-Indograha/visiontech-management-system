@@ -4,6 +4,7 @@ import { ActionButton } from "@/components/molecules/ActionButton";
 import { FormErrorText } from "@/components/molecules/FormErrorText";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { errorMessage } from "@/lib/errors";
 import { useDeleteClient, type Client } from "@/services/clientService";
 
 export function ClientDeactivateDialog({
@@ -22,8 +23,8 @@ export function ClientDeactivateDialog({
       await remove.mutateAsync(client.client_id);
       toast.success(`Klien ${client.name} berhasil diarsipkan.`);
       onClose();
-    } catch {
-      setFormError("Gagal menghapus/mengarsipkan klien. Klien yang sudah memiliki proyek aktif tidak dapat dihapus.");
+    } catch (err) {
+      setFormError(errorMessage(err, "Klien belum bisa diarsipkan. Klien yang memiliki proyek aktif tidak dapat dihapus."));
     }
   };
 
@@ -40,10 +41,10 @@ export function ClientDeactivateDialog({
           <ActionButton
             type="button"
             variant="destructive"
-            disabled={remove.isPending}
+            pending={remove.isPending} pendingText="Memproses..."
             onClick={handleDeactivate}
           >
-            {remove.isPending ? "Memproses..." : "Ya, Hapus / Arsipkan"}
+            {"Ya, Hapus / Arsipkan"}
           </ActionButton>
         </div>
       }

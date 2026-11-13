@@ -6,7 +6,8 @@ import { TextBlock } from "@/components/molecules/TextBlock";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errors";
 import type { DailyFormOptions } from "@/services/dailyPlanService";
-import { useExportPeriodic, useExportTeamWeek } from "@/services/exportService";
+import { ExportFormatButtons } from "@/components/organisms/ExportFormatButtons";
+import { useExportMonthly, useExportPeriodic, useExportTeamWeek, type ExportFormat } from "@/services/exportService";
 
 /** Navigasi minggu (Senin–Minggu) + filter divisi untuk halaman Jadwal harian. */
 export function DailyWeekToolbar({ options, divisionId, onDivision }: {
@@ -40,14 +41,14 @@ export function ApproveWeekButton({ count, busy, onClick }: { count: number; bus
   );
 }
 
-/** Laporan mingguan tim (.pptx) untuk satu tim pada minggu yang tampil (API /exports/team-week). */
+/** Laporan mingguan tim (PDF, Word, atau PowerPoint) untuk satu tim pada minggu yang tampil (API /exports/team-week). */
 export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["teams"]; start: string }) {
   const exporter = useExportTeamWeek();
   const [picked, setPicked] = useState("");
   const teamId = picked || (teams.length === 1 ? teams[0]!.team_id : "");
-  const run = () =>
+  const run = (export_format: ExportFormat) =>
     exporter.mutate(
-      { team_id: teamId, start_date: start },
+      { team_id: teamId, start_date: start, export_format },
       { onSuccess: () => toast.success("Laporan mingguan tim berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
     );
   return (
@@ -62,9 +63,57 @@ export function TeamWeekButton({ teams, start }: { teams: DailyFormOptions["team
           </SelectField>
         </div>
       )}
-      <ActionButton variant="outline" size="sm" className="h-11" disabled={!teamId || exporter.isPending} onClick={run}>
-        Laporan mingguan tim (.pptx)
-      </ActionButton>
+      <ExportFormatButtons
+        label="Laporan mingguan tim"
+        busy={exporter.isPending}
+        pendingFormat={exporter.variables?.export_format}
+        disabled={!teamId}
+        onPick={run}
+      />
+    </div>
+  );
+}
+
+const MONTH_NAMES = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+/** Laporan bulanan divisi (PDF, Word, atau PowerPoint) untuk bulan dan tahun pilihan (API /exports/monthly). Butuh satu divisi. */
+export function MonthlyReportButtons({ divisionId, start }: { divisionId: string; start: string }) {
+  const exporter = useExportMonthly();
+  const [year, setYear] = useState(() => Number(start.slice(0, 4)));
+  const [month, setMonth] = useState(() => Number(start.slice(5, 7)));
+  const baseYear = Number(start.slice(0, 4));
+  const years = [baseYear - 2, baseYear - 1, baseYear, baseYear + 1];
+  const run = (export_format: ExportFormat) =>
+    exporter.mutate(
+      { division_id: divisionId, year, month, export_format },
+      { onSuccess: () => toast.success("Laporan bulanan berhasil dibuat."), onError: (err) => toast.error(errorMessage(err)) },
+    );
+  return (
+    <div className="flex flex-wrap items-end gap-2">
+      <div className="w-32 [&>div]:mb-0">
+        <SelectField label="Bulan" value={String(month)} onChange={(e) => setMonth(Number(e.target.value))}>
+          {MONTH_NAMES.map((name, i) => (
+            <ControlOption key={name} value={String(i + 1)}>{name}</ControlOption>
+          ))}
+        </SelectField>
+      </div>
+      <div className="w-24 [&>div]:mb-0">
+        <SelectField label="Tahun" value={String(year)} onChange={(e) => setYear(Number(e.target.value))}>
+          {years.map((y) => (
+            <ControlOption key={y} value={String(y)}>{y}</ControlOption>
+          ))}
+        </SelectField>
+      </div>
+      <ExportFormatButtons
+        label="Laporan bulanan"
+        busy={exporter.isPending}
+        pendingFormat={exporter.variables?.export_format}
+        disabled={!divisionId}
+        onPick={run}
+      />
+      {!divisionId && (
+        <TextBlock as="span" className="text-xs text-mist">Pilih satu divisi untuk mengunduh laporan bulanan.</TextBlock>
+      )}
     </div>
   );
 }

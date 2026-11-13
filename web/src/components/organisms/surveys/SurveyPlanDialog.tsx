@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { statusLabel } from "@/lib/labels";
 import { toast } from "sonner";
 import { CheckControl } from "@/components/molecules/CheckControl";
 import { DialogActions } from "@/components/molecules/DialogActions";
@@ -88,9 +89,9 @@ export function SurveyPlanDialog({ survey, onClose }: { survey: Survey; onClose:
         />
         <TextBlock className={`text-xs ${blocked ? "text-danger" : "text-mist"}`}>
           {blocked
-            ? `Jadwal ${team} pada ${formatDate(day)} sudah terbit (${existing.status}). Pilih tanggal lain.`
+            ? `Jadwal ${team} pada ${formatDate(day)} sudah terbit (${statusLabel(existing.status)}). Pilih tanggal lain.`
             : existing
-              ? `Ditambahkan ke jadwal ${existing.status} yang sudah ada (${existing.site_name || "lokasi belum ditentukan"}).`
+              ? `Ditambahkan ke jadwal berstatus ${statusLabel(existing.status).toLowerCase()} yang sudah ada (${existing.site_name || "lokasi belum ditentukan"}).`
               : `Belum ada jadwal ${team} di tanggal ini — jadwal DRAFT baru dibuat otomatis (lokasi dan jam disalin dari hari survei).`}
         </TextBlock>
         <SelectField label="Jenis pekerjaan pemasangan" value={typeId} onChange={(e) => setTypeId(e.target.value)}>

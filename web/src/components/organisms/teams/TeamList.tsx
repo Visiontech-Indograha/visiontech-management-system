@@ -13,7 +13,8 @@ import type { Team } from "@/services/teamService";
 import { TeamAddButton } from "./TeamAddButton";
 
 /** Daftar tim lapangan: divisi, kantor, ketua, jumlah anggota; Detail = anggota + kontak. */
-export function TeamList({ controls, teams, onAdd, onRemove, onSelectTeam }: {
+export function TeamList({ canManage, controls, teams, onAdd, onRemove, onSelectTeam }: {
+  canManage: boolean;
   controls: ListControls;
   teams: UseQueryResult<Paged<Team>>;
   onAdd: () => void;
@@ -28,7 +29,7 @@ export function TeamList({ controls, teams, onAdd, onRemove, onSelectTeam }: {
       {teams.data && teams.data.total === 0 && !view.active && (
         <div className="rounded-panel border border-line bg-surface p-6 text-center shadow-card">
           <TextBlock className="mb-3 text-mist">Belum ada tim lapangan yang terdaftar.</TextBlock>
-          <TeamAddButton onAdd={onAdd} />
+          {canManage && <TeamAddButton onAdd={onAdd} />}
         </div>
       )}
       {teams.data && (teams.data.total > 0 || view.active) && (
@@ -49,9 +50,11 @@ export function TeamList({ controls, teams, onAdd, onRemove, onSelectTeam }: {
                 <ActionButton variant="secondary" size="sm" onClick={() => onSelectTeam(t)}>
                   Anggota dan kontak
                 </ActionButton>
-                <ActionButton variant="ghost" size="sm" onClick={() => onRemove(t)} aria-label={`Hapus ${t.name}`}>
-                  <Trash2 size={16} />
-                </ActionButton>
+                {canManage && (
+                  <ActionButton variant="ghost" size="sm" onClick={() => onRemove(t)} aria-label={`Hapus ${t.name}`}>
+                    <Trash2 size={16} />
+                  </ActionButton>
+                )}
               </div>
             </ListEntry>
           ))}

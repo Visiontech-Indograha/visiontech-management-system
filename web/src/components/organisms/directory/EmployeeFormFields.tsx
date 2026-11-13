@@ -22,8 +22,8 @@ export function EmployeeFormFields({ register, errors, control }: {
 
   return (
     <>
-      <TextField label="No. karyawan" error={errors.employee_no?.message} {...register("employee_no")} />
-      <TextField label="Nama lengkap" error={errors.full_name?.message} {...register("full_name")} />
+      <TextField label="No. karyawan" maxLength={50} error={errors.employee_no?.message} {...register("employee_no")} />
+      <TextField label="Nama lengkap" maxLength={150} error={errors.full_name?.message} {...register("full_name")} />
       <SelectField label="Kantor" error={errors.office_id?.message} {...register("office_id")}>
         <ControlOption value="" disabled>{offices.isPending ? "Memuat kantor..." : "Pilih kantor"}</ControlOption>
         {offices.data?.map((o) => <ControlOption key={o.id} value={o.id}>{o.name}</ControlOption>)}

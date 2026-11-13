@@ -1,7 +1,9 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
 import { formatDateTime } from "@/lib/format";
-import { ACTION_LABEL, AUDIT_ENTITIES, actorLabelAwam } from "@/lib/auditLabels";
+import { actorLabelAwam } from "@/lib/auditLabels";
+import { actionLabel, describeChanges, entityLabel } from "@/lib/auditChanges";
+import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
 import type { AuditEventList } from "@/services/auditService";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -53,15 +55,20 @@ export function AuditLogTable({ logs }: { logs: UseQueryResult<AuditEventList> }
               <Fragment key={l.id}>
                 <TableBlockRow className="h-11 border-b border-line">
                   <TableBlockCell className="whitespace-nowrap px-4 py-2">{formatDateTime(l.occurred_at)}</TableBlockCell>
-                  <TableBlockCell className="px-4 py-2 font-medium">{ACTION_LABEL[l.action] ?? l.action}</TableBlockCell>
+                  <TableBlockCell className="px-4 py-2 font-medium">{actionLabel(l.action)}</TableBlockCell>
                   <TableBlockCell className="px-4 py-2 text-mist">
-                    {AUDIT_ENTITIES[l.entity_type] ?? l.entity_type} {l.entity_id?.slice(0, 8)}
+                    {entityLabel(l.entity_type)}{" "}
+                    {l.entity_id && (
+                      <TextBlock as="span" title={l.entity_id} className="font-mono text-xs">
+                        {l.entity_id.slice(0, 8)}
+                      </TextBlock>
+                    )}
                   </TableBlockCell>
                   <TableBlockCell className="px-4 py-2 text-mist">{actorLabelAwam(l.actor_label)}</TableBlockCell>
                   <TableBlockCell className="px-4 py-2 text-right">
                     <ActionButton
                       variant="ghost"
-                      className="h-8 px-2"
+                      className="h-11 px-2"
                       onClick={() => setOpen(open === l.id ? null : l.id)}
                       aria-expanded={open === l.id}
                     >
@@ -72,10 +79,19 @@ export function AuditLogTable({ logs }: { logs: UseQueryResult<AuditEventList> }
                 {open === l.id && (
                   <TableBlockRow className="border-b border-line bg-paper">
                     <TableBlockCell colSpan={5} className="px-4 py-3">
-                      <TextBlock as="pre" className="overflow-x-auto text-xs">
-                        {l.detail}
-                        {l.changes && "\n" + JSON.stringify(l.changes, null, 2)}
-                      </TextBlock>
+                      {l.entity_id && (
+                        <TextBlock className="mb-2 text-xs text-mist">
+                          ID lengkap: <TextBlock as="span" className="select-all font-mono">{l.entity_id}</TextBlock>
+                        </TextBlock>
+                      )}
+                      {l.detail && <TextBlock className="mb-2 text-sm">{l.detail}</TextBlock>}
+                      <ListBlock className="space-y-1 text-sm">
+                        {describeChanges(l.changes).map((c) => (
+                          <ListEntry key={c.label}>
+                            <TextBlock as="strong" className="font-medium">{c.label}:</TextBlock> {c.text}
+                          </ListEntry>
+                        ))}
+                      </ListBlock>
                     </TableBlockCell>
                   </TableBlockRow>
                 )}

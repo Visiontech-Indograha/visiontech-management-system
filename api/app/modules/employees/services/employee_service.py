@@ -9,25 +9,34 @@ Karyawan V2 (Milestone 10).
 """
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Mapping
 from typing import Any
 from uuid import UUID
 
+from app.core.audit_log import record_audit
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.file_cleanup import employee_keys, release_keys
 from app.core.hard_delete import write_delete_audit
 from app.core.permissions import Permission
+from app.core.retention import PERSONAL_DATA_WINDOW
 from app.core.security import CurrentUser
-from app.core.storage import delete_object
+from app.core.time import utcnow
 from app.modules.employees.repositories.employee_repository import EmployeeRepository
 from app.modules.employees.schemas.employee_schema import AddressIn, EmployeeCreate, EmployeeUpdate
 from app.shared.access.office_scope import ensure_office_in_scope
 from app.shared.access.scope_rules import employee_params_scoped, sees_sensitive_employee_fields
 
+logger = logging.getLogger(__name__)
+
 ARCHIVED = "Karyawan diarsipkan. Data historis tetap tersimpan."
 RESTORED = "Arsip dibatalkan. Karyawan tetap berstatus selesai bekerja."
 
 # Kolom sensitif: hanya HR/OM/SA, PM yang menjangkau karyawan itu, dan pemiliknya.
+_AUDIT_FIELDS = ("employee_no", "office_id", "division_id", "position_id", "join_date")
+# Hanya nama bidang yang dicatat bila berubah (tanpa nilai): nama lengkap, telepon, akhir PKWT, foto.
+_AUDIT_MASKED = ("full_name", "phone_number", "pkwt_end_date", "photo_file_id")
 _SENSITIVE_FIELDS = ("phone_number", "email", "city", "pkwt_end_date", "system_role", "account_active")
 
 
@@ -58,6 +67,18 @@ class EmployeeService:
         rows = await self.repo.page(size, (page - 1) * size, scope=scope, **filters)
         total = await self.repo.count(scope=scope, **filters)
         return [_shape(r._mapping) for r in rows], total
+
+    async def _audit(
+        self, user: CurrentUser | None, action: str, employee_id: Any, before: Any = None, after: Any = None,
+        *, skip_if_empty: bool = False,
+    ) -> None:
+        """Catat perubahan data karyawan; pemanggil internal tanpa pengguna tidak dicatat."""
+        if user is None:
+            return
+        await record_audit(
+            self.repo.db, user, action=action, entity_type="employee", entity_id=employee_id,
+            before=before, after=after, fields=_AUDIT_FIELDS, masked=_AUDIT_MASKED, skip_if_empty=skip_if_empty,
+        )
 
     async def get(self, employee_id: UUID, user: CurrentUser | None = None) -> Any:
         scope = await employee_params_scoped(self.repo.db, user) if user is not None else None
@@ -132,6 +153,7 @@ class EmployeeService:
         employee_id = await self.repo.insert(fields)
         if data.address:
             await self.repo.add_address(employee_id, data.address.model_dump())
+        await self._audit(user, "EMPLOYEE_CREATE", employee_id, None, await self.get(employee_id))
         return await self.detail(employee_id)
 
     async def update(self, employee_id: UUID, data: EmployeeUpdate,
@@ -145,7 +167,12 @@ class EmployeeService:
         for required in ("employee_no", "full_name", "office_id", "join_date"):
             if required in fields and fields[required] is None:
                 raise ValidationError("No. karyawan, nama, kantor, dan tanggal bergabung tidak boleh dikosongkan.")
-        await self.repo.update(employee_id, await self._validate(fields, current))
+        validated = await self._validate(fields, current)
+        old_keys = await self.repo.photo_keys(employee_id) if "photo_path" in validated else []
+        await self.repo.update(employee_id, validated)
+        await release_keys(self.repo.db, old_keys)  # foto lama (semua varian) hilang bila tak dipakai lagi
+        await self._audit(user, "EMPLOYEE_UPDATE", employee_id, current, await self.get(employee_id),
+                          skip_if_empty=True)
         return await self.detail(employee_id)
 
     async def set_own_photo(self, user: CurrentUser, file_id: UUID | None) -> UUID | None:
@@ -158,7 +185,9 @@ class EmployeeService:
             key = await self.repo.uploaded_image_key(file_id, user.user_id)
             if key is None:
                 raise ValidationError("Foto harus berupa gambar yang Anda unggah sendiri.")
+        old_keys = await self.repo.photo_keys(employee_id)
         await self.repo.update(employee_id, {"photo_path": key})
+        await release_keys(self.repo.db, old_keys)
         return await self.repo.profile_photo_file_id(employee_id)
 
     # ── Alamat ────────────────────────────────────────────────────────────────
@@ -177,7 +206,7 @@ class EmployeeService:
             raise NotFoundError("Alamat")
 
     # ── Arsip ─────────────────────────────────────────────────────────────────
-    async def archive(self, employee_id: UUID) -> dict[str, Any]:
+    async def archive(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
@@ -186,6 +215,7 @@ class EmployeeService:
         if employee.offboarding_status != "offboarded":
             raise AppError("INVALID_STATE", "Selesaikan dulu proses keluar karyawan ini.", status=409)
         await self.repo.archive(employee_id)
+        await self._audit(user, "EMPLOYEE_ARCHIVE", employee_id)
         return {"id": str(employee_id), "message": ARCHIVED}
 
     async def delete(self, employee_id: UUID, actor: CurrentUser) -> None:
@@ -195,21 +225,31 @@ class EmployeeService:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
             raise AppError("NOT_ARCHIVED", "Arsipkan karyawan ini dulu sebelum menghapus permanen.", status=409)
-        photo_keys = await self.repo.photo_keys(employee_id)
+        keys = await employee_keys(self.repo.db, employee_id)  # semua berkas pribadi, sebelum barisnya hilang
+        await self.repo.clear_face_embedding(employee_id)
         await self.repo.hard_delete(employee_id)
+        released = await release_keys(self.repo.db, keys)  # objek + varian dihapus SETELAH commit
         await write_delete_audit(
             self.repo.db, actor_user_id=actor.user_id,
             actor_role=actor.role,
             actor_email=actor.email, entity_type="employee", entity_id=employee_id,
         )
-        for key in photo_keys:
-            delete_object(key)
+        logger.info("Hapus permanen karyawan: %d berkas dijadwalkan dihapus", released)
 
-    async def restore(self, employee_id: UUID) -> dict[str, Any]:
+    async def restore(self, employee_id: UUID, user: CurrentUser | None = None) -> dict[str, Any]:
         employee = await self.repo.lock(employee_id)
         if employee is None:
             raise NotFoundError("Karyawan")
         if not employee.deleted:
             raise AppError("INVALID_STATE", "Karyawan tidak diarsipkan.", status=409)
+        separated_at = await self.repo.separated_at(employee_id)
+        if separated_at is not None and utcnow() - separated_at > PERSONAL_DATA_WINDOW:
+            raise AppError(
+                "RESTORE_EXPIRED",
+                "Karyawan ini sudah keluar lebih dari 30 hari, jadi data pribadinya (foto, KTP, telepon, alamat) "
+                "sudah dihapus dan tidak bisa dipulihkan. Daftarkan sebagai karyawan baru bila perlu.",
+                status=409,
+            )
         await self.repo.restore(employee_id)
+        await self._audit(user, "EMPLOYEE_RESTORE", employee_id)
         return {"id": str(employee_id), "message": RESTORED}

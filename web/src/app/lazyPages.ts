@@ -33,3 +33,4 @@ export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then
 export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));
 export const WorkOrdersPage = lazy(() => import("@/pages/work-orders/WorkOrderBoardPage").then((m) => ({ default: m.WorkOrderBoardPage })));
 export const HseCampaignsPage = lazy(() => import("@/pages/hse/HseCampaignsPage").then((m) => ({ default: m.HseCampaignsPage })));
+export const VehicleInspectionsPage = lazy(() => import("@/pages/hse/VehicleInspectionsPage").then((m) => ({ default: m.VehicleInspectionsPage })));

@@ -9,6 +9,7 @@ import '../../core/theme/theme.dart';
 import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_ui.dart';
+import '../attachments/attachments_sheet.dart';
 
 final _date = DateFormat('d MMM yyyy', 'id_ID');
 
@@ -297,6 +298,21 @@ class _StayCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Catatan: $note', style: VmsTextStyles.bodySm),
           ],
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 48,
+            child: TextButton.icon(
+              key: Key('lampiran-mess-${stay['mess_stay_id']}'),
+              onPressed: () => bukaLampiran(
+                context,
+                jenis: LampiranJenis.mess,
+                id: stay['mess_stay_id'] as String,
+                status: status,
+              ),
+              icon: const Icon(Icons.attach_file_rounded),
+              label: const Text('Lampiran'),
+            ),
+          ),
           if (action != null) ...[
             const SizedBox(height: 8),
             OutlinedButton(

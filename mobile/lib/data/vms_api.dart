@@ -207,6 +207,17 @@ class VmsApi {
     idem,
   );
 
+  /// Lampiran pengajuan. [kind]: `overtime` (id lembur) atau `mess` (mess_stay_id). Maks. 5 berkas.
+  Future<List<Map<String, dynamic>>> attachments(String kind, String id) async =>
+      _list((await _dio.get('$_p/$kind/$id/attachments')).data);
+
+  /// Tautkan berkas yang sudah diunggah (`/files/upload`); mengembalikan daftar terbaru.
+  Future<List<Map<String, dynamic>>> addAttachment(String kind, String id, String fileId) async =>
+      _list((await _dio.post('$_p/$kind/$id/attachments', data: {'file_id': fileId})).data);
+
+  Future<List<Map<String, dynamic>>> removeAttachment(String kind, String id, String fileId) async =>
+      _list((await _dio.delete('$_p/$kind/$id/attachments/$fileId')).data);
+
   /// URL sementara (presigned) sebuah berkas gambar, mis. foto contoh template. `variant`: thumb | view | full.
   Future<String> fileUrl(String fileId, {String variant = 'view'}) async {
     final res = await _dio.get(

@@ -12,7 +12,8 @@ import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import 'daily_plan_format.dart' show phaseLabel;
 import 'daily_plan_screen.dart' show DailyPlanScreen;
-import 'survey_screen.dart' show MySurveysSection, openReportFile;
+import 'my_surveys_section.dart' show MySurveysSection;
+import 'survey_screen.dart' show openReportFile;
 import 'wo_team_surveys_section.dart';
 
 String isoDate(DateTime d) => DateFormat('yyyy-MM-dd').format(d);

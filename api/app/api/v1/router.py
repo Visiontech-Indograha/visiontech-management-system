@@ -5,6 +5,7 @@ Urutan include memengaruhi OpenAPI. Alur SK V1 dipensiunkan pada Milestone 5 (da
 from fastapi import APIRouter
 
 from app.modules.accounts.routes import router as accounts_router
+from app.modules.archive.routes import router as archive_router
 from app.modules.assets.routes import assets_router, plan_assets_router
 from app.modules.attendance.routes import attendance_cron_router, attendance_router
 from app.modules.audit.routes import audit_router
@@ -56,6 +57,7 @@ from app.modules.work_types.routes import router as work_types_router
 api_router = APIRouter()
 
 api_router.include_router(clients_router)
+api_router.include_router(archive_router)
 api_router.include_router(vehicle_documents_router)
 api_router.include_router(role_assignments_router)
 api_router.include_router(work_orders_router)

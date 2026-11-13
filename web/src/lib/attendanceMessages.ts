@@ -9,3 +9,9 @@ export function checkInMessage(
   }
   return `Absen masuk tercatat (${distanceText} dari lokasi) dan menunggu ditinjau.`;
 }
+
+/** Catatan menetap di kartu absen saat absen masuk menunggu pemeriksaan (alasan wajah bila ada). */
+export function pendingCheckInNote(a: { face_status?: string | null }): string {
+  const why = a.face_status === "NOT_ENROLLED" ? "Wajah Anda belum terdaftar, hubungi HR untuk mendaftarkan wajah. " : "";
+  return `${why}Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.`;
+}

@@ -164,6 +164,7 @@ async def hikvision_tarik(
     import json
     from datetime import datetime, timedelta
 
+    from app.core.time import utcnow
     from app.modules.hikvision.services import konstanta as hk
     from app.modules.hikvision.services.isapi_client import IsapiError
     from app.modules.hikvision.services.tarik_service import TarikError, tarik_riwayat
@@ -175,7 +176,7 @@ async def hikvision_tarik(
             raise TarikError(f"Tanggal {teks!r} tidak valid; pakai format 2026-01-31.") from None
         return w if w.tzinfo else w.replace(tzinfo=hk.ZONA_PERANGKAT_BAWAAN)
 
-    akhir = waktu(sampai) if sampai else datetime.now(hk.ZONA_PERANGKAT_BAWAAN)
+    akhir = waktu(sampai) if sampai else utcnow().astimezone(hk.ZONA_PERANGKAT_BAWAAN)
     mulai = waktu(dari) if dari else akhir - timedelta(days=366)
     if mulai >= akhir:
         print("Tanggal --dari harus sebelum --sampai.")

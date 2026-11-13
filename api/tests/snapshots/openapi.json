@@ -11318,6 +11318,138 @@
     "title": "OvertimeReview",
     "type": "object"
    },
+   "PemetaanBuat": {
+    "properties": {
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_no_string": {
+      "description": "Nomor karyawan di perangkat",
+      "pattern": "^[A-Za-z0-9._-]{1,50}$",
+      "title": "Employee No String",
+      "type": "string"
+     }
+    },
+    "required": [
+     "employee_no_string",
+     "employee_id"
+    ],
+    "title": "PemetaanBuat",
+    "type": "object"
+   },
+   "PemetaanDiterapkan": {
+    "properties": {
+     "event_diperbarui": {
+      "title": "Event Diperbarui",
+      "type": "integer"
+     },
+     "masih_ada_sisa": {
+      "description": "True bila masih ada event lain; jalankan lagi",
+      "title": "Masih Ada Sisa",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "event_diperbarui",
+     "masih_ada_sisa"
+    ],
+    "title": "PemetaanDiterapkan",
+    "type": "object"
+   },
+   "PemetaanOtomatisOut": {
+    "properties": {
+     "dibuat": {
+      "title": "Dibuat",
+      "type": "integer"
+     },
+     "event_diperbarui": {
+      "title": "Event Diperbarui",
+      "type": "integer"
+     },
+     "masih_ada_sisa": {
+      "title": "Masih Ada Sisa",
+      "type": "boolean"
+     },
+     "tidak_cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanTakCocok"
+      },
+      "title": "Tidak Cocok",
+      "type": "array"
+     }
+    },
+    "required": [
+     "dibuat",
+     "event_diperbarui",
+     "masih_ada_sisa",
+     "tidak_cocok"
+    ],
+    "title": "PemetaanOtomatisOut",
+    "type": "object"
+   },
+   "PemetaanOut": {
+    "properties": {
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_no": {
+      "title": "Employee No",
+      "type": "string"
+     },
+     "employee_no_string": {
+      "title": "Employee No String",
+      "type": "string"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "map_id": {
+      "format": "uuid",
+      "title": "Map Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "map_id",
+     "device_id",
+     "employee_no_string",
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "create_at"
+    ],
+    "title": "PemetaanOut",
+    "type": "object"
+   },
+   "PemetaanUbah": {
+    "properties": {
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "employee_id"
+    ],
+    "title": "PemetaanUbah",
+    "type": "object"
+   },
    "PenerimaOut": {
     "description": "Jawaban singkat ke perangkat. Tanpa data pribadi.",
     "properties": {
@@ -11335,6 +11467,307 @@
      "kode"
     ],
     "title": "PenerimaOut",
+    "type": "object"
+   },
+   "PerangkatBuat": {
+    "properties": {
+     "aktif": {
+      "default": true,
+      "title": "Aktif",
+      "type": "boolean"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "http_port": {
+      "default": 80,
+      "maximum": 65535.0,
+      "minimum": 1.0,
+      "title": "Http Port",
+      "type": "integer"
+     },
+     "ip_address": {
+      "maxLength": 45,
+      "minLength": 3,
+      "title": "Ip Address",
+      "type": "string"
+     },
+     "mode": {
+      "default": "SHADOW",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "maxLength": 64,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "name": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+     },
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
+     },
+     "serial_no": {
+      "maxLength": 64,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "title": "Serial No",
+      "type": "string"
+     }
+    },
+    "required": [
+     "office_id",
+     "name",
+     "ip_address",
+     "serial_no"
+    ],
+    "title": "PerangkatBuat",
+    "type": "object"
+   },
+   "PerangkatDibuat": {
+    "properties": {
+     "penerima": {
+      "$ref": "#/components/schemas/TokenBaru"
+     },
+     "perangkat": {
+      "$ref": "#/components/schemas/PerangkatOut"
+     }
+    },
+    "required": [
+     "perangkat",
+     "penerima"
+    ],
+    "title": "PerangkatDibuat",
+    "type": "object"
+   },
+   "PerangkatOut": {
+    "properties": {
+     "aktif": {
+      "title": "Aktif",
+      "type": "boolean"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "create_at": {
+      "format": "date-time",
+      "title": "Create At",
+      "type": "string"
+     },
+     "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+     },
+     "http_port": {
+      "title": "Http Port",
+      "type": "integer"
+     },
+     "ip_address": {
+      "title": "Ip Address",
+      "type": "string"
+     },
+     "mode": {
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "name": {
+      "title": "Name",
+      "type": "string"
+     },
+     "office_id": {
+      "format": "uuid",
+      "title": "Office Id",
+      "type": "string"
+     },
+     "office_name": {
+      "title": "Office Name",
+      "type": "string"
+     },
+     "serial_no": {
+      "title": "Serial No",
+      "type": "string"
+     },
+     "update_at": {
+      "format": "date-time",
+      "title": "Update At",
+      "type": "string"
+     }
+    },
+    "required": [
+     "device_id",
+     "office_id",
+     "office_name",
+     "name",
+     "ip_address",
+     "http_port",
+     "serial_no",
+     "model",
+     "mode",
+     "aktif",
+     "catatan",
+     "create_at",
+     "update_at"
+    ],
+    "title": "PerangkatOut",
+    "type": "object"
+   },
+   "PerangkatUbah": {
+    "properties": {
+     "aktif": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Aktif"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "maxLength": 500,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "http_port": {
+      "anyOf": [
+       {
+        "maximum": 65535.0,
+        "minimum": 1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Http Port"
+     },
+     "ip_address": {
+      "anyOf": [
+       {
+        "maxLength": 45,
+        "minLength": 3,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ip Address"
+     },
+     "mode": {
+      "anyOf": [
+       {
+        "enum": [
+         "SHADOW",
+         "AKTIF"
+        ],
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Mode"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "maxLength": 64,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "name": {
+      "anyOf": [
+       {
+        "maxLength": 100,
+        "minLength": 1,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Name"
+     },
+     "serial_no": {
+      "anyOf": [
+       {
+        "maxLength": 64,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9._-]+$",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Serial No"
+     }
+    },
+    "title": "PerangkatUbah",
     "type": "object"
    },
    "PeriodicExportRequest": {
@@ -13632,6 +14065,68 @@
     "title": "SlotOut",
     "type": "object"
    },
+   "StatusPerangkat": {
+    "properties": {
+     "aktif": {
+      "title": "Aktif",
+      "type": "boolean"
+     },
+     "belum_terpetakan_7_hari": {
+      "title": "Belum Terpetakan 7 Hari",
+      "type": "integer"
+     },
+     "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+     },
+     "event_24_jam": {
+      "title": "Event 24 Jam",
+      "type": "integer"
+     },
+     "event_7_hari": {
+      "title": "Event 7 Hari",
+      "type": "integer"
+     },
+     "event_terakhir_diterima": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Event Terakhir Diterima"
+     },
+     "kemungkinan_duplikat_7_hari": {
+      "description": "Kelompok event dengan nomor, waktu, dan jenis sama (duplikat murni ditolak penyimpanan)",
+      "title": "Kemungkinan Duplikat 7 Hari",
+      "type": "integer"
+     },
+     "mode": {
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode",
+      "type": "string"
+     }
+    },
+    "required": [
+     "device_id",
+     "mode",
+     "aktif",
+     "event_24_jam",
+     "event_7_hari",
+     "event_terakhir_diterima",
+     "belum_terpetakan_7_hari",
+     "kemungkinan_duplikat_7_hari"
+    ],
+    "title": "StatusPerangkat",
+    "type": "object"
+   },
    "SurveyListItem": {
     "properties": {
      "client_name": {
@@ -15044,6 +15539,36 @@
     "title": "TeamWeekExportRequest",
     "type": "object"
    },
+   "TokenBaru": {
+    "description": "Ditampilkan SATU kali. Simpan sekarang; yang tersimpan di server hanya sidik jarinya.",
+    "properties": {
+     "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+     },
+     "receiver_path": {
+      "title": "Receiver Path",
+      "type": "string"
+     },
+     "receiver_url": {
+      "title": "Receiver Url",
+      "type": "string"
+     },
+     "token": {
+      "title": "Token",
+      "type": "string"
+     }
+    },
+    "required": [
+     "device_id",
+     "token",
+     "receiver_url",
+     "receiver_path"
+    ],
+    "title": "TokenBaru",
+    "type": "object"
+   },
    "ToolCreate": {
     "properties": {
      "category": {
@@ -15417,6 +15942,87 @@
      }
     },
     "title": "ToolUpdate",
+    "type": "object"
+   },
+   "UsulanCocok": {
+    "properties": {
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_no": {
+      "title": "Employee No",
+      "type": "string"
+     },
+     "employee_no_string": {
+      "title": "Employee No String",
+      "type": "string"
+     },
+     "full_name": {
+      "title": "Full Name",
+      "type": "string"
+     },
+     "jumlah_event": {
+      "title": "Jumlah Event",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "employee_no_string",
+     "employee_id",
+     "employee_no",
+     "full_name",
+     "jumlah_event"
+    ],
+    "title": "UsulanCocok",
+    "type": "object"
+   },
+   "UsulanPemetaan": {
+    "properties": {
+     "cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanCocok"
+      },
+      "title": "Cocok",
+      "type": "array"
+     },
+     "tidak_cocok": {
+      "items": {
+       "$ref": "#/components/schemas/UsulanTakCocok"
+      },
+      "title": "Tidak Cocok",
+      "type": "array"
+     }
+    },
+    "required": [
+     "cocok",
+     "tidak_cocok"
+    ],
+    "title": "UsulanPemetaan",
+    "type": "object"
+   },
+   "UsulanTakCocok": {
+    "properties": {
+     "alasan": {
+      "title": "Alasan",
+      "type": "string"
+     },
+     "employee_no_string": {
+      "title": "Employee No String",
+      "type": "string"
+     },
+     "jumlah_event": {
+      "title": "Jumlah Event",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "employee_no_string",
+     "jumlah_event",
+     "alasan"
+    ],
+    "title": "UsulanTakCocok",
     "type": "object"
    },
    "ValidationError": {
@@ -26508,6 +27114,840 @@
     "summary": "Get File Url",
     "tags": [
      "Files"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices": {
+   "get": {
+    "operationId": "daftar_perangkat_api_v1_hikvision_devices_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "office_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PerangkatOut"
+         },
+         "title": "Response Daftar Perangkat Api V1 Hikvision Devices Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daftar Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   },
+   "post": {
+    "description": "Buat perangkat. Token dan alamat penerima ditampilkan SEKALI di jawaban ini.",
+    "operationId": "buat_perangkat_api_v1_hikvision_devices_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PerangkatBuat"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatDibuat"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Buat Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}": {
+   "delete": {
+    "operationId": "hapus_perangkat_api_v1_hikvision_devices__device_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Hapus Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   },
+   "get": {
+    "operationId": "detail_perangkat_api_v1_hikvision_devices__device_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Detail Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   },
+   "patch": {
+    "operationId": "ubah_perangkat_api_v1_hikvision_devices__device_id__patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PerangkatUbah"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PerangkatOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ubah Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings": {
+   "get": {
+    "operationId": "daftar_pemetaan_api_v1_hikvision_devices__device_id__mappings_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/PemetaanOut"
+         },
+         "title": "Response Daftar Pemetaan Api V1 Hikvision Devices  Device Id  Mappings Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Daftar Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   },
+   "post": {
+    "operationId": "buat_pemetaan_api_v1_hikvision_devices__device_id__mappings_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PemetaanBuat"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Buat Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/apply": {
+   "post": {
+    "description": "Terapkan pemetaan ke event yang karyawannya masih kosong (per kelompok).",
+    "operationId": "terapkan_pemetaan_api_v1_hikvision_devices__device_id__mappings_apply_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanDiterapkan"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Terapkan Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/auto": {
+   "post": {
+    "description": "Buat semua pemetaan yang cocok, lalu terapkan ke event lama yang belum terpetakan.",
+    "operationId": "pemetaan_otomatis_api_v1_hikvision_devices__device_id__mappings_auto_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOtomatisOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Pemetaan Otomatis",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/suggestions": {
+   "get": {
+    "description": "Usulan: nomor perangkat yang sama dengan nomor karyawan di kantor perangkat, dan yang tidak cocok.",
+    "operationId": "usulan_pemetaan_api_v1_hikvision_devices__device_id__mappings_suggestions_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UsulanPemetaan"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Usulan Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/mappings/{map_id}": {
+   "delete": {
+    "operationId": "hapus_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "map_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Map Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "204": {
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Hapus Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   },
+   "patch": {
+    "operationId": "ubah_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__patch",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "map_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Map Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PemetaanUbah"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PemetaanOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ubah Pemetaan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/status": {
+   "get": {
+    "operationId": "status_perangkat_api_v1_hikvision_devices__device_id__status_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/StatusPerangkat"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Status Perangkat",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
+  "/api/v1/hikvision/devices/{device_id}/token": {
+   "post": {
+    "description": "Ganti token penerima. Token lama langsung tidak berlaku; yang baru ditampilkan SEKALI.",
+    "operationId": "ganti_token_api_v1_hikvision_devices__device_id__token_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/TokenBaru"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Ganti Token",
+    "tags": [
+     "Hikvision admin"
     ]
    }
   },

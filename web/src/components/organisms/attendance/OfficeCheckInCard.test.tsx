@@ -41,8 +41,46 @@ describe("OfficeCheckInCard: pulang di luar zona", () => {
     renderRoute("/attendance", { me });
     const region = await screen.findByRole("region", { name: "Absen hari ini" });
     fireEvent.click(await within(region).findByRole("button", { name: "Absen pulang" }));
-    expect(await within(region).findByRole("alert")).toHaveTextContent(/Isi penjelasan mengapa pulang di luar zona/);
-    expect(within(region).getByLabelText("Penjelasan (wajib)")).toBeInTheDocument();
+    expect(await within(region).findByText(/Isi penjelasan mengapa pulang di luar zona/)).toBeInTheDocument();
+    const field = within(region).getByLabelText("Penjelasan (wajib)");
+    expect(field).toHaveAttribute("aria-invalid", "true"); // E6-2: galat di kolom
+    expect(field).toHaveFocus();
     expect(calls.some((c) => c.url === "/attendance/check-out")).toBe(false);
+  });
+});
+
+describe("OfficeCheckInCard: absen masuk perlu ditinjau (E6)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("navigator", { ...navigator });
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-02T03:00:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("catatan wajah belum terdaftar tetap tampil di kartu", async () => {
+    const pending = { ...rec, status: "NEEDS_REVIEW", face_status: "NOT_ENROLLED" };
+    mockApi((c) => {
+      if (c.url === "/attendance") return { data: { items: [pending], total: 1, page: 1, size: 50, today: "2026-10-02" } };
+      if (c.url === "/offices") return { data: [site] };
+      if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
+    });
+    renderRoute("/attendance", { me });
+    const region = await screen.findByRole("region", { name: "Absen hari ini" });
+    expect(await within(region).findByText(/Wajah Anda belum terdaftar/)).toBeInTheDocument();
+  });
+});
+
+describe("Daftar absensi: filter Perlu ditinjau kosong (E6-3)", () => {
+  it("menjelaskan bahwa absen sendiri ditinjau atasan", async () => {
+    const reviewer = { ...me, permissions: [...me.permissions, "review:attendance", "view:all_attendance"] } as Me;
+    mockApi((c) => {
+      if (c.url === "/attendance") return { data: { items: [], total: 0, page: 1, size: 50, today: "2026-10-02" } };
+      if (c.url === "/offices") return { data: [site] };
+      if (c.url === "/employees") return { data: { items: [], total: 0, page: 1, size: 100 } };
+    });
+    renderRoute("/attendance", { me: reviewer });
+    expect(await screen.findByText(/Absen Anda sendiri ditinjau oleh atasan/)).toBeInTheDocument();
   });
 });

@@ -15,11 +15,6 @@
       "count": 1
     }
   },
-  "src/components/molecules/Modal.tsx": {
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
   "src/components/molecules/SignaturePad.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -299,21 +294,10 @@
   "src/components/organisms/media/ImageLightboxModal.tsx": {
     "max-lines-per-function": {
       "count": 1
-    },
-    "no-restricted-imports": {
-      "count": 1
-    }
-  },
-  "src/components/organisms/media/PdfViewerModal.tsx": {
-    "no-restricted-imports": {
-      "count": 1
     }
   },
   "src/components/organisms/media/UniversalMediaModal.tsx": {
     "max-lines-per-function": {
-      "count": 1
-    },
-    "no-restricted-imports": {
       "count": 1
     }
   },

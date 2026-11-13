@@ -52,22 +52,6 @@ export interface CampaignReader {
   device_info?: string | null;
 }
 
-export interface VehicleInspection {
-  id: string;
-  asset_id: string;
-  asset_name: string;
-  plate_number?: string | null;
-  inspector_name: string;
-  inspection_type: string;
-  inspection_date: string;
-  odometer_km?: number | null;
-  status: string;
-  notes?: string | null;
-  is_verified_by_hse: boolean;
-  verified_at?: string | null;
-  verified_by_name?: string | null;
-}
-
 function mapCampaign(campaign: CampaignDto | ActiveCampaignDto): HseCampaign {
   return {
     id: campaign.campaign_id,
@@ -84,26 +68,6 @@ function mapCampaign(campaign: CampaignDto | ActiveCampaignDto): HseCampaign {
     cooldown_seconds: campaign.cooldown_seconds,
     is_active: "is_active" in campaign ? Boolean(campaign.is_active) : true,
     created_at: campaign.create_at,
-  };
-}
-
-function mapVehicleInspection(
-  inspection: Schemas["VehicleInspectionResponse"],
-): VehicleInspection {
-  return {
-    id: inspection.inspection_id,
-    asset_id: inspection.vehicle_id,
-    asset_name: inspection.vehicle_name ?? "-",
-    plate_number: inspection.number_plate,
-    inspector_name: inspection.inspector_name ?? "-",
-    inspection_type: inspection.period_type,
-    inspection_date: inspection.inspection_date,
-    odometer_km: inspection.odometer_km,
-    status: inspection.status,
-    notes: inspection.notes,
-    is_verified_by_hse: Boolean(inspection.verified_at || inspection.verified_by_id),
-    verified_at: inspection.verified_at,
-    verified_by_name: inspection.verifier_name,
   };
 }
 
@@ -188,17 +152,4 @@ export async function fetchCampaignReaders(campaignId: string): Promise<Campaign
     read_duration_seconds: reader.read_duration_seconds,
     device_info: reader.device_info,
   }));
-}
-
-export async function fetchVehicleInspections(): Promise<VehicleInspection[]> {
-  const res = await api.get<Schemas["VehicleInspectionResponse"][]>("/hse/inspections");
-  return res.data.map(mapVehicleInspection);
-}
-
-export async function verifyVehicleInspection(
-  inspectionId: string,
-  notes?: string,
-): Promise<void> {
-  const payload: Schemas["VehicleInspectionVerify"] = { status: "VERIFIED", notes };
-  await api.patch(`/hse/inspections/${inspectionId}/verify`, payload);
 }

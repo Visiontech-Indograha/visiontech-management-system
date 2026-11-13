@@ -13,6 +13,7 @@ import '../features/auth/change_password_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/dokumen/dokumen_kendaraan.dart';
 import '../features/gallery/photo_gallery_screen.dart';
+import '../features/hse/inspeksi_kendaraan_screen.dart';
 import '../features/leaves/leaves_screen.dart';
 import '../features/mess/mess_screen.dart';
 import '../features/overtime/overtime_screen.dart';
@@ -112,6 +113,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/assets',
         builder: (context, state) => const AssetsScreen(),
       ),
+      GoRoute(path: '/inspeksi-kendaraan', builder: (context, state) => const InspeksiKendaraanScreen()),
       GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
       GoRoute(path: '/overtime', builder: (context, state) => const OvertimeScreen()),
       GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),

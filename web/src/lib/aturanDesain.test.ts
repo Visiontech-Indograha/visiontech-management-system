@@ -103,7 +103,6 @@ const ATURAN: Aturan[] = [
     "components/organisms/directory/EmployeeCreateDialog.tsx": 1,
     "components/organisms/directory/EmployeeProfileDialog.tsx": 1,
     "components/organisms/hse/HseCampaignPhotosField.tsx": 1,
-    "components/organisms/vehicle-docs/VehicleDocumentDialog.tsx": 1,
     "components/organisms/leaves/LeaveApplyDialog.tsx": 1,
     "components/organisms/offboarding/OffboardingDetailDialog.tsx": 1,
     "components/organisms/surveys/SurveyLogoPanel.tsx": 1,

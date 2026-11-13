@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { UploadField } from "@/components/molecules/UploadField";
 import { SelectField, TextAreaField, TextField } from "@/components/molecules/Field";
 import { ControlOption } from "@/components/molecules/FormBlock";
 import { DocFormDialog } from "./DocFormDialog";
@@ -65,7 +66,7 @@ export function VehicleDocumentDialog({ vehicleId, plate, docTypeCode, onClose }
       <TextField label="Nomor dokumen (boleh kosong)" maxLength={100} error={errors.doc_no?.message} {...register("doc_no")} />
       <TextField label="Berlaku mulai (boleh kosong)" type="date" error={errors.issued_on?.message} {...register("issued_on")} />
       <TextField label="Jatuh tempo" type="date" error={errors.expired_on?.message} {...register("expired_on")} />
-      <TextField label="Berkas baru (jpg, png, pdf)" type="file" accept=".jpg,.jpeg,.png,.pdf" hint="Dokumen lama otomatis diganti." onChange={(e) => setFile(e.target.files?.[0])} />
+      <UploadField label="Berkas baru (jpg, png, pdf)" accept=".jpg,.jpeg,.png,.pdf" hint="Dokumen lama otomatis diganti." onChange={(e) => setFile(e.target.files?.[0])} />
       <TextAreaField label="Catatan (boleh kosong)" maxLength={500} error={errors.catatan?.message} {...register("catatan")} />
     </DocFormDialog>
   );

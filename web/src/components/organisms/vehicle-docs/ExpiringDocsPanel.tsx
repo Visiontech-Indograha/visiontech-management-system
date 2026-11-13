@@ -10,9 +10,14 @@ import { DOC_KEY, EXPIRING_DAYS, type VehicleDocument } from "@/services/vehicle
 import { DocumentRow } from "./DocumentRow";
 
 /** Dokumen kendaraan yang akan atau sudah jatuh tempo (urut jatuh tempo dari API) untuk HSE/OM/SA. */
-export function ExpiringDocsPanel({ canManage, onRenew }: { canManage: boolean; onRenew: (doc: VehicleDocument) => void }) {
+export function ExpiringDocsPanel({ canManage, onRenew, filter }: {
+  canManage: boolean;
+  onRenew: (doc: VehicleDocument) => void;
+  /** Filter tambahan ke API (mis. jenis/kantor) setelah parameternya ada di openapi; belum dipakai. */
+  filter?: Record<string, string | undefined>;
+}) {
   const controls = useListControls();
-  const query = usePagedList<VehicleDocument>(DOC_KEY, "/vehicle-documents/expiring", controls, { days: EXPIRING_DAYS });
+  const query = usePagedList<VehicleDocument>(DOC_KEY, "/vehicle-documents/expiring", controls, { days: EXPIRING_DAYS, ...filter });
   const view = pagedView(query, controls);
   return (
     <QueryState query={query} errorText="Daftar dokumen tidak dapat dimuat." empty={query.data?.total === 0 && !view.active} emptyText={`Tidak ada dokumen yang jatuh tempo dalam ${EXPIRING_DAYS} hari ke depan.`}>

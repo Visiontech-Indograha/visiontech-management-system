@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 
+/// Pesan bila lokasi terdeteksi palsu (dipakai Absensi dan titik survei).
+const mockLocationMessage = 'Lokasi palsu terdeteksi. Matikan aplikasi pemalsu lokasi.';
+
 /// Hasil pengambilan lokasi -- [position] null berarti gagal, cek [errorMessage]
 /// untuk pesan yang sudah siap ditampilkan ke user (Bahasa Indonesia).
 class LocationResult {

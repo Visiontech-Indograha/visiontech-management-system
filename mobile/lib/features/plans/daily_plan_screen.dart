@@ -337,6 +337,15 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     }
   }
 
+  /// Pesan galat isian lembur (null = sah); sama dengan aturan API.
+  static String? _overtimeInputError(String hoursText, String reasonText) {
+    final h = num.tryParse(hoursText.replaceAll(',', '.'));
+    if (h == null) return 'Isi jam lembur dengan angka.';
+    if (h <= 0 || h > 12) return 'Jam lembur harus lebih dari 0 dan paling banyak 12 jam.';
+    if (reasonText.trim().length < 3) return 'Alasan lembur minimal 3 karakter.';
+    return null;
+  }
+
   Future<void> _overtime() async {
     final suggested = _plan == null
         ? null
@@ -348,9 +357,10 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
     final initialHours = suggested == null ? '' : '$suggested';
     final hours = TextEditingController(text: initialHours);
     final reason = TextEditingController();
+    String? overtimeError;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => PopScope(
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDlg) => PopScope(
         canPop: false,
         onPopInvokedWithResult: (didPop, _) async {
           if (didPop) return;
@@ -382,20 +392,32 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                 controller: reason,
                 decoration: const InputDecoration(labelText: 'Alasan'),
               ),
+              if (overtimeError != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(overtimeError!, key: const Key('lembur-galat'), style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+                ),
             ],
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Kirim')),
+            FilledButton(
+              onPressed: () {
+                final err = _overtimeInputError(hours.text, reason.text);
+                if (err != null) {
+                  setDlg(() => overtimeError = err);
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Kirim'),
+            ),
           ],
         ),
-      ),
+      )),
     );
     if (ok != true) return;
-    final h = num.tryParse(hours.text.replaceAll(',', '.'));
-    if (h == null) return _snack('Isi jam lembur dengan angka.');
-    if (h <= 0 || h > 12) return _snack('Jam lembur harus lebih dari 0 dan paling banyak 12 jam.');
-    if (reason.text.trim().length < 3) return _snack('Alasan lembur minimal 3 karakter.');
+    final h = num.parse(hours.text.replaceAll(',', '.'));
     // Lewat antrean sinkronisasi: tanpa sinyal, pengajuan tersimpan dan dikirim otomatis saat online.
     setState(() => _busy = true);
     try {

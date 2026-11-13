@@ -309,6 +309,19 @@ void main() {
       },
     );
 
+    testWidgets('E5-5: absen masuk sukses memberi tahu layar Jadwal harian agar menyegarkan diri', (tester) async {
+      online();
+      GeolocatorPlatform.instance = _FakeGps(_at(1.6650, 101.4478, accuracy: 8));
+      await show(tester, const AttendanceScreen());
+      final before = SyncEngine.appliedRevision.value;
+
+      await tapCheckInSampaiSwafoto(tester);
+      await lanjutSwafoto(tester);
+
+      expect(find.text('Absen masuk tercatat.'), findsOneWidget);
+      expect(SyncEngine.appliedRevision.value, greaterThan(before));
+    });
+
     testWidgets('lokasi tugas hari ini (jadwal disetujui) didahulukan dan dikirim sebagai daily_plan_id', (tester) async {
       online();
       backend.routes['/work-plans/daily'] = (_) => [_day('d1', 'APPROVED')];
@@ -549,6 +562,24 @@ void main() {
       await tester.tap(find.text('Kirim'));
       await settle(tester);
       expect(find.text('Jam lembur harus lebih dari 0 dan paling banyak 12 jam.'), findsOneWidget);
+    });
+
+    testWidgets('E5-6: jam lembur kosong: galat di dalam dialog, dialog tetap terbuka, bukan toast sukses', (tester) async {
+      backend.routes['/work-plans/daily/a'] = (_) => planDetail('ONGOING');
+      backend.routes['/report'] = (o) => throw httpError(o, 404, {'error': {'code': 'NOT_FOUND', 'message': 'x'}});
+      backend.routes['/attendance'] = (_) => {'items': <Object>[], 'total': 0};
+      await show(tester, const DailyPlanScreen(dailyPlanId: 'a'));
+      await tester.scrollUntilVisible(find.text('Ajukan lembur'), 300, scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Ajukan lembur'));
+      await settle(tester);
+      await tester.enterText(find.widgetWithText(TextField, 'Jam lembur (maks. 12)'), '');
+      await tester.enterText(find.widgetWithText(TextField, 'Alasan'), 'Alasan lembur');
+      await tester.tap(find.text('Kirim'));
+      await settle(tester);
+      expect(find.byKey(const Key('lembur-galat')), findsOneWidget);
+      expect(find.text('Isi jam lembur dengan angka.'), findsOneWidget);
+      expect(find.text('Ajukan lembur'), findsWidgets);
+      expect(find.widgetWithText(TextField, 'Alasan'), findsOneWidget);
     });
 
     void routeReport({bool exists = true}) {

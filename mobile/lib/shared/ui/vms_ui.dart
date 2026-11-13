@@ -399,7 +399,7 @@ class SectionTitle extends StatelessWidget {
   'APPROVED' => (label: 'Disetujui', accent: Accent.emerald),
   'CHANGES_REQUESTED' => (label: 'Perlu perbaikan', accent: Accent.rose),
   'AUTO_VALID' => (label: 'Valid', accent: Accent.emerald),
-  'NEEDS_REVIEW' => (label: 'Perlu review', accent: Accent.amber),
+  'NEEDS_REVIEW' => (label: 'Perlu ditinjau', accent: Accent.amber),
   'REJECTED' => (label: 'Ditolak', accent: Accent.rose),
   // Jadwal harian & item per titik (V2, daily-first).
   'ONGOING' => (label: 'Berjalan', accent: Accent.blue),

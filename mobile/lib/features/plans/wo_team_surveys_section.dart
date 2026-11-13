@@ -65,20 +65,41 @@ class WoSurveyCard extends StatelessWidget {
 
 /// Bagian "Survei dari work order": dibaca lewat cache sehingga tetap tampil tanpa sinyal.
 class WoTeamSurveysSection extends ConsumerStatefulWidget {
-  const WoTeamSurveysSection({super.key});
+  const WoTeamSurveysSection({super.key, this.reloadToken = 0});
+
+  /// Naik tiap kali layar induk ditarik-segarkan: daftar dimuat ulang.
+  final int reloadToken;
 
   @override
   ConsumerState<WoTeamSurveysSection> createState() => _WoTeamSurveysSectionState();
 }
 
-class _WoTeamSurveysSectionState extends ConsumerState<WoTeamSurveysSection> {
+class _WoTeamSurveysSectionState extends ConsumerState<WoTeamSurveysSection> with WidgetsBindingObserver {
   List<Map<String, dynamic>>? _items;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
+
+  @override
+  void didUpdateWidget(WoTeamSurveysSection old) {
+    super.didUpdateWidget(old);
+    if (old.reloadToken != widget.reloadToken) _load();
   }
 
   Future<void> _load() async {
@@ -132,6 +153,9 @@ class _WoTeamSurveysSectionState extends ConsumerState<WoTeamSurveysSection> {
 
   @override
   Widget build(BuildContext context) {
+    // Sinyal sinkron dan kejadian langsung dari server: survei baru dari PM tampil tanpa mulai ulang.
+    ref.listen(syncTickProvider, (_, _) => _load());
+    ref.listen(liveEventTickProvider, (_, _) => _load());
     final items = _items;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

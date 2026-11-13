@@ -10,7 +10,8 @@ import '../../core/team_logo.dart';
 import '../../data/sync_engine.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
-import 'daily_plan_screen.dart' show DailyPlanScreen, phaseLabel;
+import 'daily_plan_format.dart' show phaseLabel;
+import 'daily_plan_screen.dart' show DailyPlanScreen;
 import 'survey_screen.dart' show MySurveysSection, openReportFile;
 import 'wo_team_surveys_section.dart';
 

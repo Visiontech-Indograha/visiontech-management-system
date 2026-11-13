@@ -2,6 +2,7 @@ import L from "leaflet";
 import { statusLabel } from "@/lib/labels";
 import { errorMessage } from "@/lib/errors";
 import { SurveyApproveButton } from "./SurveyApproveButton";
+import { BastDownloadButtons } from "./BastDownloadButtons";
 import { useEffect, useMemo, useState } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { toast } from "sonner";
@@ -533,30 +534,7 @@ export function WorkOrderSurveyReviewModal({
                     <TextBlock className="text-xs text-muted-foreground font-normal">KOP Logo Visiontech</TextBlock>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5">
-                    {detail.status === "BAST_SIGNED" && (
-                      <>
-                    <ActionButton
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "pdf", `Berita_Acara_Serah_Terima_${detail.wo_number}.pdf`)}
-                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
-                    >
-                      <Download className="h-3 w-3 mr-1.5 text-primary shrink-0" />
-                      <TextBlock as="span" className="truncate">Surat serah terima (.pdf)</TextBlock>
-                    </ActionButton>
-                    <ActionButton
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => downloadWorkOrderExport(detail.work_order_id, "docx", `Berita_Acara_Serah_Terima_${detail.wo_number}.docx`)}
-                      className="text-xs justify-start h-11 px-2 bg-card hover:bg-surface-elevated"
-                    >
-                      <Download className="h-3 w-3 mr-1.5 text-blue-500 shrink-0" />
-                      <TextBlock as="span" className="truncate">Surat serah terima (.docx)</TextBlock>
-                    </ActionButton>
-                      </>
-                    )}
+                    {detail.status === "BAST_SIGNED" && <BastDownloadButtons id={detail.work_order_id} number={detail.wo_number} />}
                     <ActionButton
                       type="button"
                       variant="outline"

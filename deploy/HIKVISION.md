@@ -59,7 +59,7 @@ Pasang dengan `crontab -e`. Sesuaikan `<SERIAL>`. Log ke `~/deploy/vms-mvp/logs/
 - `hikvision-proses`: ubah event mentah menjadi absen (aman diulang).
 - `hikvision-tarik` harian dini hari: rekonsiliasi jendela 2 hari, idempoten; `--jeda 1` agar perangkat tidak terbebani. Ulangi baris untuk perangkat ke-2.
 - `pengingat-dokumen`: lihat `deploy/PENGINGAT-DOKUMEN.md`.
-Catatan: `hikvision-proses` belum ada di `app/cli.py` cabang `development` saat dokumen ini ditulis (PR terpisah); pasang baris cron-nya setelah PR itu masuk dan `--help` menampilkannya.
+Opsi `hikvision-proses`: `--dry-run` (kerjakan lalu batalkan), `--bayangan` (simulasi yang ikut menghitung perangkat SHADOW, tanpa simpan), `--banding` (bandingkan tap SHADOW dengan absen aplikasi, baca saja; `--dari`/`--sampai`). Cron memakai tanpa opsi. Uji dulu: `docker exec vms_api python -m app.cli hikvision-proses --dry-run`.
 Mundur: hapus barisnya di `crontab -e`.
 
 ## Langkah 6: impor riwayat SATU KALI (jangan masuk cron)

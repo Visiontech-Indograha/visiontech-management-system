@@ -15,6 +15,9 @@ export type ToolCreate = S["ToolCreate"];
 export type VehicleCreate = S["VehicleCreate"];
 export type LoanCreate = S["LoanCreate"];
 export type VehicleFileCreate = S["VehicleFileCreate"];
+export type Borrower = S["BorrowerOut"];
+export type BorrowerCreate = S["BorrowerCreate"];
+export type BorrowerUpdate = S["BorrowerUpdate"];
 export type AssetKind = "TOOL" | "VEHICLE";
 export type ManualStatus = S["AssetStatusUpdate"]["status"];
 export type ReturnCondition = NonNullable<S["LoanReturn"]["condition"]>;
@@ -99,3 +102,22 @@ export const useLoanRequests = (status?: string) =>
 export const useReviewLoanRequest = () =>
   useAssetMutation(async ({ id, decision, note }: { id: string; decision: "APPROVED" | "REJECTED"; note?: string }) =>
     (await api.post<LoanRequest>(`/assets/loan-requests/${id}/review`, { decision, note })).data);
+
+/** Kunci daftar penerima eksternal (awalan "assets" agar ikut disegarkan). Daftar dimuat lewat usePagedList. */
+export const BORROWERS_KEY = [...KEY, "borrowers"] as const;
+
+/** Pilihan penerima eksternal untuk form pinjam (satu halaman, cari awalan nama). */
+export const useBorrowerOptions = (q: string, enabled: boolean) =>
+  useQuery({
+    queryKey: [...BORROWERS_KEY, "options", q],
+    enabled,
+    queryFn: async () =>
+      (await api.get<Borrower[]>("/assets/external-borrowers", { params: { q: q || undefined, page: 1, size: 50 } })).data,
+  });
+
+export const useCreateBorrower = () =>
+  useAssetMutation(async (body: BorrowerCreate) => (await api.post<Borrower>("/assets/external-borrowers", body)).data);
+
+export const useUpdateBorrower = () =>
+  useAssetMutation(async ({ id, body }: { id: string; body: BorrowerUpdate }) =>
+    (await api.put<Borrower>(`/assets/external-borrowers/${id}`, body)).data);

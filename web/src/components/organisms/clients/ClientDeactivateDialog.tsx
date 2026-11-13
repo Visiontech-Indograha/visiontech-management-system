@@ -41,10 +41,10 @@ export function ClientDeactivateDialog({
           <ActionButton
             type="button"
             variant="destructive"
-            disabled={remove.isPending}
+            pending={remove.isPending} pendingText="Memproses..."
             onClick={handleDeactivate}
           >
-            {remove.isPending ? "Memproses..." : "Ya, Hapus / Arsipkan"}
+            {"Ya, Hapus / Arsipkan"}
           </ActionButton>
         </div>
       }

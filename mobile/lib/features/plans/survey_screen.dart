@@ -2,17 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/error_message.dart';
 import '../../core/providers.dart';
-import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_text_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import 'survey_map_screen.dart';
 import 'survey_point_screen.dart' show SurveyPointScreen, pickSurveyMaterial;
+import 'survey_widgets.dart';
 
 const surveyStateLabel = {'DRAFT': 'Sedang diisi', 'SUBMITTED': 'Menunggu PM', 'APPROVED': 'Disetujui PM'};
 
@@ -260,7 +259,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
                       ),
                     ),
                   for (final p in _points)
-                    _PointCard(
+                    SurveyPointCard(
                       point: p,
                       editable: _editable,
                       busy: _busy,
@@ -393,7 +392,7 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
         const SizedBox(height: 4),
         InfoRow(icon: Icons.category_outlined, text: '${s['work_type_name']} · ${s['division_name']}'),
         const SizedBox(height: 4),
-        InfoRow(icon: Icons.groups_2_outlined, text: '${s['team_name'] ?? '-'} · ${_tgl(s['work_date'])}'),
+        InfoRow(icon: Icons.groups_2_outlined, text: '${s['team_name'] ?? '-'} · ${surveyTgl(s['work_date'])}'),
       ],
     ),
   );
@@ -440,10 +439,10 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
           ],
           Text('Langkah mengisi survei', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 6),
-          _Step(done: points.isNotEmpty, text: 'Tambah titik (${points.length} titik)'),
-          _Step(done: photosOk, text: 'Setiap titik berfoto sesuai format'),
-          _Step(done: infoOk, text: 'Isi lokasi dan uraian (layout dibuat otomatis)'),
-          const _Step(done: false, text: 'Pratinjau laporan, lalu kirim ke PM'),
+          SurveyStep(done: points.isNotEmpty, text: 'Tambah titik (${points.length} titik)'),
+          SurveyStep(done: photosOk, text: 'Setiap titik berfoto sesuai format'),
+          SurveyStep(done: infoOk, text: 'Isi lokasi dan uraian (layout dibuat otomatis)'),
+          const SurveyStep(done: false, text: 'Pratinjau laporan, lalu kirim ke PM'),
         ],
       ),
     );
@@ -554,253 +553,3 @@ class _SurveyScreenState extends ConsumerState<SurveyScreen> {
   }
 }
 
-class _Step extends StatelessWidget {
-  const _Step({required this.done, required this.text});
-  final bool done;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
-      children: [
-        Icon(
-          done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-          size: 18,
-          color: done ? Colors.green : Colors.grey,
-        ),
-        const SizedBox(width: 8),
-        Expanded(child: Text(text)),
-      ],
-    ),
-  );
-}
-
-class _PointCard extends StatelessWidget {
-  const _PointCard({
-    required this.point,
-    required this.editable,
-    required this.busy,
-    required this.onOpen,
-    required this.onDelete,
-  });
-
-  final Map<String, dynamic> point;
-  final bool editable;
-  final bool busy;
-  final VoidCallback onOpen;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final photos = (point['photos'] as List? ?? const []).cast<Map>();
-    final lines = (point['lines'] as List? ?? const []).cast<Map>();
-    final materials = lines.where((l) => l['category'] == 'MATERIAL').length;
-    final needs = lines.where((l) => l['category'] == 'KEBUTUHAN').map((l) => '${l['name']}').toList();
-    final remarks = (point['remarks'] as List? ?? const []).cast<Object>();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SurfaceCard(
-        onTap: onOpen,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.place_rounded, size: 20),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${point['name']}', style: Theme.of(context).textTheme.titleSmall),
-                      Text(
-                        '${point['point_type_name'] ?? ''} · '
-                        '${point['point_status'] == 'EXISTING' ? 'Sudah terpasang' : 'Usulan baru'}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                if (editable)
-                  IconButton(
-                    tooltip: 'Hapus titik',
-                    onPressed: busy ? null : onDelete,
-                    icon: const Icon(Icons.delete_outline),
-                  )
-                else
-                  const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-            const SizedBox(height: 6),
-            if (photos.isEmpty)
-              Text('Tidak ada foto', style: Theme.of(context).textTheme.bodySmall)
-            else
-              SizedBox(
-              height: 64,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final ph in photos)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: _Thumb(fileId: '${ph['file_id']}', label: ph['slot'] as String?, size: 64),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                _Chip(icon: Icons.photo_outlined, text: '${photos.length} foto'),
-                _Chip(icon: Icons.inventory_2_outlined, text: '$materials material'),
-                for (final n in needs) _Chip(icon: Icons.construction_rounded, text: n),
-              ],
-            ),
-            if (remarks.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              for (final r in remarks.take(3)) Text('• $r', style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(20)),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 14),
-        const SizedBox(width: 4),
-        Text(text, style: const TextStyle(fontSize: 12)),
-      ],
-    ),
-  );
-}
-
-/// Tanggal API (yyyy-MM-dd) → "21 Oktober 2026".
-String _tgl(Object? v) {
-  final d = DateTime.tryParse('${v ?? ''}');
-  return d == null ? '-' : DateFormat('d MMMM yyyy', 'id_ID').format(d);
-}
-
-/// Pratinjau kecil foto berkas server (`fileId`, varian thumb).
-class _Thumb extends ConsumerWidget {
-  const _Thumb({required this.fileId, this.label, this.size = 72});
-  final String fileId;
-  final String? label;
-  final double size;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final Widget image = VmsNetworkImage(fileId: fileId);
-    return Stack(
-      children: [
-        Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), color: Colors.black12),
-          clipBehavior: Clip.antiAlias,
-          child: image,
-        ),
-        if (label != null)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              color: Colors.black54,
-              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-              child: Text(
-                label!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 9),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class MySurveysSection extends ConsumerStatefulWidget {
-  const MySurveysSection({super.key});
-
-  @override
-  ConsumerState<MySurveysSection> createState() => _MySurveysSectionState();
-}
-
-class _MySurveysSectionState extends ConsumerState<MySurveysSection> {
-  List<Map<String, dynamic>>? _items;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final engine = ref.read(syncEngineProvider);
-      final items = (await engine.fetchList('surveys_mine', () => engine.api.surveys())).items;
-      if (mounted) setState(() => _items = items);
-    } catch (_) {
-      if (mounted) setState(() => _items = const []);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final items = _items;
-    if (items == null || items.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionTitle('Survei saya'),
-        for (final s in items.take(6))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: SurfaceCard(
-              onTap: () async {
-                await Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => SurveyScreen(taskId: '${s['task_id']}')));
-                await _load();
-              },
-              child: Row(
-                children: [
-                  Icon(s['format'] == 'ACS' ? Icons.door_front_door_outlined : Icons.videocam_outlined),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${s['title']}', style: Theme.of(context).textTheme.titleSmall),
-                        Text(
-                          '${s['client_name']} · ${s['point_count']} titik · ${_tgl(s['work_date'])}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  StatusPill('${s['state']}', label: surveyStateLabel[s['state']]),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}

@@ -44,10 +44,10 @@ export function ProjectDeleteDialog({
             <ActionButton
               type="button"
               variant="destructive"
-              disabled={remove.isPending}
+              pending={remove.isPending} pendingText="Memproses..."
               onClick={handleArchive}
             >
-              {remove.isPending ? "Memproses..." : "Ya, arsipkan"}
+              {"Ya, arsipkan"}
             </ActionButton>
           )}
         </div>

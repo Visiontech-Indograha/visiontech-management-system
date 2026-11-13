@@ -34,6 +34,8 @@ export const PERMISSIONS = [
   "manage:hse_campaigns",
   "view:vehicle_inspections",
   "manage:vehicle_inspections",
+  "view:vehicle_documents",
+  "manage:vehicle_documents",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

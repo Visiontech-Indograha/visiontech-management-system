@@ -59,6 +59,16 @@ def _device_in_other(c: Ctx) -> str:
         (c.other_office, c.serial(9), hashlib.sha256(uuid.uuid4().bytes).hexdigest()))[0][0])
 
 
+def _mk(client, h, ctx: Ctx, office: str) -> str:
+    r = client.post("/hikvision/devices", json=_body(ctx, office=office), headers=h)
+    return str(r.json()["perangkat"]["device_id"])
+
+
+def _map(client, h, dev: str, no: str, emp: str):
+    return client.post(
+        f"/hikvision/devices/{dev}/mappings", json={"employee_no_string": no, "employee_id": emp}, headers=h)
+
+
 def _event(device_id: str, no: str | None, n: int, minutes_ago: int = 5) -> None:
     from datetime import timedelta
 
@@ -126,7 +136,8 @@ def test_hr_hanya_kantor_sendiri_dan_om_semua(client, make_user, ctx) -> None:
     mine = client.post("/hikvision/devices", json=_body(ctx), headers=hr).json()["perangkat"]["device_id"]
     ids = [d["device_id"] for d in client.get("/hikvision/devices", headers=hr).json()]
     assert mine in ids and lain not in ids
-    assert client.post("/hikvision/devices", json=_body(ctx, office=ctx.other_office, n=3), headers=hr).status_code == 404
+    luar = client.post("/hikvision/devices", json=_body(ctx, office=ctx.other_office, n=3), headers=hr)
+    assert luar.status_code == 404
     for metode, jalur, kw in [
         ("get", f"/hikvision/devices/{lain}", {}), ("patch", f"/hikvision/devices/{lain}", {"json": {"aktif": False}}),
         ("delete", f"/hikvision/devices/{lain}", {}), ("post", f"/hikvision/devices/{lain}/token", {}),
@@ -152,19 +163,21 @@ def test_daftar_paginasi_dan_cari(client, make_user, ctx) -> None:
 def test_pemetaan_crud_dan_batas_kantor(client, make_user, ctx) -> None:
     hr_user = make_user("HR")
     h = login_headers(client, hr_user)
-    dev = client.post("/hikvision/devices", json=_body(ctx, office=hr_user.org_id), headers=h).json()["perangkat"]["device_id"]
+    dev = _mk(client, h, ctx, hr_user.org_id)
     emp = str(sync_query("SELECT employee_id FROM users WHERE user_id = %s", (hr_user.user_id,))[0][0])
-    r = client.post(f"/hikvision/devices/{dev}/mappings", json={"employee_no_string": "77", "employee_id": emp}, headers=h)
+    r = _map(client, h, dev, "77", emp)
     assert r.status_code == 201 and r.json()["employee_id"] == emp
     mid = r.json()["map_id"]
-    dup = client.post(f"/hikvision/devices/{dev}/mappings", json={"employee_no_string": "77", "employee_id": emp}, headers=h)
+    dup = _map(client, h, dev, "77", emp)
     assert dup.status_code == 409
     asing = str(sync_query(
-        "INSERT INTO employee (office_id, full_name, employee_no, join_date) VALUES (%s, 'Orang lain', %s, '2026-01-05') "
+        "INSERT INTO employee (office_id, full_name, employee_no, join_date) "
+        "VALUES (%s, 'Orang lain', %s, '2026-01-05') "
         "RETURNING employee_id", (ctx.other_office, f"ZZ{ctx.tag}"))[0][0])
     try:
-        assert client.patch(f"/hikvision/devices/{dev}/mappings/{mid}", json={"employee_id": asing}, headers=h).status_code == 404
-        assert client.post(f"/hikvision/devices/{dev}/mappings", json={"employee_no_string": "78", "employee_id": asing}, headers=h).status_code == 404
+        ubah = client.patch(f"/hikvision/devices/{dev}/mappings/{mid}", json={"employee_id": asing}, headers=h)
+        assert ubah.status_code == 404
+        assert _map(client, h, dev, "78", asing).status_code == 404
         assert [m["map_id"] for m in client.get(f"/hikvision/devices/{dev}/mappings", headers=h).json()] == [mid]
         assert client.delete(f"/hikvision/devices/{dev}/mappings/{mid}", headers=h).status_code == 204
         assert client.delete(f"/hikvision/devices/{dev}/mappings/{mid}", headers=h).status_code == 404
@@ -176,7 +189,7 @@ def test_pemetaan_crud_dan_batas_kantor(client, make_user, ctx) -> None:
 def test_usulan_otomatis_dan_terapkan_ke_event_lama(client, make_user, ctx) -> None:
     hr_user = make_user("HR")
     h = login_headers(client, hr_user)
-    dev = client.post("/hikvision/devices", json=_body(ctx, office=hr_user.org_id), headers=h).json()["perangkat"]["device_id"]
+    dev = _mk(client, h, ctx, hr_user.org_id)
     emp_id, emp_no = sync_query(
         "SELECT e.employee_id, e.employee_no FROM employee e JOIN users u ON u.employee_id = e.employee_id "
         "WHERE u.user_id = %s", (hr_user.user_id,))[0]
@@ -189,7 +202,9 @@ def test_usulan_otomatis_dan_terapkan_ke_event_lama(client, make_user, ctx) -> N
     r = client.post(f"/hikvision/devices/{dev}/mappings/auto", headers=h).json()
     assert r["dibuat"] == 1 and r["event_diperbarui"] == 2 and r["masih_ada_sisa"] is False
     assert [t["employee_no_string"] for t in r["tidak_cocok"]] == ["TAKDIKENAL"]
-    assert sync_query("SELECT count(*) FROM hikvision_event WHERE device_id = %s AND employee_id = %s", (dev, emp_id))[0][0] == 2
+    terisi = sync_query(
+        "SELECT count(*) FROM hikvision_event WHERE device_id = %s AND employee_id = %s", (dev, emp_id))[0][0]
+    assert terisi == 2
     ulang = client.post(f"/hikvision/devices/{dev}/mappings/auto", headers=h).json()
     assert ulang["dibuat"] == 0 and ulang["event_diperbarui"] == 0
 
@@ -197,7 +212,7 @@ def test_usulan_otomatis_dan_terapkan_ke_event_lama(client, make_user, ctx) -> N
 def test_terapkan_pemetaan_manual_ke_event_kosong(client, make_user, ctx) -> None:
     hr_user = make_user("HR")
     h = login_headers(client, hr_user)
-    dev = client.post("/hikvision/devices", json=_body(ctx, office=hr_user.org_id), headers=h).json()["perangkat"]["device_id"]
+    dev = _mk(client, h, ctx, hr_user.org_id)
     emp = str(sync_query("SELECT employee_id FROM users WHERE user_id = %s", (hr_user.user_id,))[0][0])
     _event(dev, "55", 1)
     client.post(f"/hikvision/devices/{dev}/mappings", json={"employee_no_string": "55", "employee_id": emp}, headers=h)

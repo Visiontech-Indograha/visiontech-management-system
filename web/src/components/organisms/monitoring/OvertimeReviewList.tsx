@@ -113,8 +113,8 @@ export function OvertimeReviewList({ query, more }: { query: UseQueryResult<Over
               <ActionButton variant="outline" onClick={closeReject} disabled={review.isPending}>
                 Batal
               </ActionButton>
-              <ActionButton variant="destructive" onClick={reject} disabled={review.isPending}>
-                {review.isPending ? "Memproses…" : "Tolak lembur"}
+              <ActionButton variant="destructive" onClick={reject} pending={review.isPending} pendingText="Memproses…">
+                {"Tolak lembur"}
               </ActionButton>
             </div>
           }

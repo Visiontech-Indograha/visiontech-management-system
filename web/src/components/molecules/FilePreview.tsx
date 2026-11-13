@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/apiClient";
 import { Skeleton } from "@/components/atoms/Skeleton";
 import { Button } from "@/components/atoms/Button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/atoms/Dialog";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { Loader2 } from "@/components/atoms/Icon";
 import { Image } from "@/components/atoms/Image";
 import { PlainButton } from "@/components/atoms/PlainButton";
@@ -12,6 +12,7 @@ import { fetchFileUrl } from "@/services/fileService";
 
 export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; fileName?: string }) {
   const [retryCount, setRetryCount] = useState(0);
+  const [open, setOpen] = useState(false);
   const downloadWindow = useRef<Window | null>(null);
 
   const fetchUrlData = (variant: string) => fetchFileUrl(fileId, variant);
@@ -86,9 +87,9 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
   }
 
   return (
-    <Dialog onOpenChange={(open) => { if (open) viewQuery.refetch(); }}>
-      <DialogTrigger asChild>
+    <>
         <PlainButton
+          onClick={() => { setOpen(true); viewQuery.refetch(); }}
           className="overflow-hidden rounded-md border border-line bg-surface hover:ring-2 hover:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <Image
@@ -100,8 +101,7 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
             }}
           />
         </PlainButton>
-      </DialogTrigger>
-      <DialogContent className="w-[94vw] sm:max-w-5xl border-none bg-transparent p-0 shadow-none">
+      <VmsDialog open={open} onClose={() => setOpen(false)} title={fileName} size="lg">
         {viewQuery.isLoading || viewQuery.isFetching ? (
           <Skeleton className="h-[60vh] w-full rounded-md bg-surface/20" />
         ) : viewQuery.isError ? (
@@ -119,7 +119,7 @@ export function FilePreview({ fileId, fileName = "Berkas" }: { fileId: string; f
             }}
           />
         ) : null}
-      </DialogContent>
-    </Dialog>
+      </VmsDialog>
+    </>
   );
 }

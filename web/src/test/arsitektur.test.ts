@@ -13,7 +13,6 @@ const sumber = () => FILES.filter((f) => /\.tsx?$/.test(f) && !isTest(f) && !f.s
 
 /** Berkas *Modal*.tsx lama. Nama baru memakai *Dialog (G2 butir 9 mengganti nama bertahap). */
 const BASELINE_MODAL_NAMES = [
-  "components/molecules/Modal.tsx",
   "components/organisms/clients/ClientSitesModal.tsx",
   "components/organisms/media/ImageLightboxModal.tsx",
   "components/organisms/media/PdfViewerModal.tsx",

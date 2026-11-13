@@ -10,6 +10,7 @@ import '../../core/providers.dart';
 import '../../core/theme/theme.dart';
 import '../../data/vms_api.dart' show isCursorRejected, kPesanKursorBerubah;
 import '../../shared/ui/vms_ui.dart';
+import '../attachments/attachments_sheet.dart';
 
 final _tanggal = DateFormat('d MMM yyyy', 'id_ID');
 
@@ -259,6 +260,16 @@ class _OvertimeScreenState extends ConsumerState<OvertimeScreen> {
               padding: const EdgeInsets.only(top: 8),
               child: Text('Catatan: $catatanTinjau', style: VmsTextStyles.bodySm),
             ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 48,
+            child: TextButton.icon(
+              key: Key('lampiran-lembur-$id'),
+              onPressed: () => bukaLampiran(context, jenis: LampiranJenis.lembur, id: id, status: status),
+              icon: const Icon(Icons.attach_file_rounded),
+              label: const Text('Lampiran'),
+            ),
+          ),
           if (bisaPutus) ...[
             const SizedBox(height: 12),
             Row(

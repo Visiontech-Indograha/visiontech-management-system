@@ -46,8 +46,8 @@ export function CancelLeaveDialog({
           <ActionButton variant="outline" onClick={onClose} disabled={cancel.isPending}>
             Tutup
           </ActionButton>
-          <ActionButton type="button" variant="destructive" disabled={cancel.isPending} onClick={handleCancel}>
-            {cancel.isPending ? "Memproses..." : "Batalkan Cuti"}
+          <ActionButton type="button" variant="destructive" pending={cancel.isPending} pendingText="Memproses..." onClick={handleCancel}>
+            {"Batalkan Cuti"}
           </ActionButton>
         </div>
       }

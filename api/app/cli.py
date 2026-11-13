@@ -221,6 +221,53 @@ async def hikvision_tarik(
     return 0
 
 
+async def hikvision_proses(
+    dry_run: bool, bayangan: bool, banding: bool, dari: str | None, sampai: str | None, jarak_menit: int,
+    batas_jam: str,
+) -> int:
+    """Bentuk absen dari event Hikvision (idempoten). --bayangan = simulasi (selalu tanpa simpan) yang ikut menghitung
+    perangkat SHADOW; --banding = bandingkan tap mesin SHADOW dengan absen aplikasi (baca saja)."""
+    import json
+    from datetime import date, time, timedelta
+
+    from app.core.time import jakarta_now
+    from app.modules.hikvision.repositories.hikvision_proses_repository import HikvisionProsesRepository
+    from app.modules.hikvision.services import konstanta as hk
+    from app.modules.hikvision.services.proses_service import proses_event
+
+    try:
+        jam, menit = (int(x) for x in batas_jam.split(":"))
+        batas = time(jam, menit)
+        akhir = date.fromisoformat(sampai) if sampai else jakarta_now().date()
+        mulai = date.fromisoformat(dari) if dari else akhir - timedelta(days=14)
+    except ValueError:
+        print("Format --batas-jam harus JJ:MM; tanggal harus YYYY-MM-DD.")
+        return 1
+    if mulai > akhir or jarak_menit < 0:
+        print("Rentang tanggal terbalik atau jarak negatif.")
+        return 1
+    engine = make_engine(_operator_url())
+    try:
+        async with AsyncSession(engine) as db:
+            if banding:
+                rows = await HikvisionProsesRepository(db).banding_bayangan(
+                    mulai, akhir, 500, hk.MAJOR_AKSES, sorted(hk.MINOR_VERIFIKASI_LOLOS))
+                for r in rows:
+                    print(json.dumps({k: str(v) for k, v in r._mapping.items()}, ensure_ascii=False))
+                print(f"{len(rows)} baris pembanding (maks 500).")
+                return 0
+            ringkas = await proses_event(
+                db, dry_run=dry_run or bayangan, sertakan_bayangan=bayangan,
+                jarak_min=timedelta(minutes=jarak_menit), batas_jam=batas,
+            )
+    finally:
+        await engine.dispose()
+    if bayangan:
+        print(f"Bayangan: akan menghasilkan {ringkas.absen_dihasilkan} absen masuk.")
+    print(json.dumps(ringkas.as_dict(), indent=2))
+    return 0
+
+
 async def buat_partisi(bulan_ke_depan: int) -> int:
     """Buat partisi bulanan app_activity_logs + DEFAULT sebagai peran pemilik (cron host bulanan)."""
     from app.database.migration_v3 import ensure_activity_log_partitions
@@ -280,6 +327,17 @@ def main() -> None:
     hik_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung dan cari event tertua, tanpa simpan")
     hik_parser.add_argument("--jeda", type=float, default=1.0, help="Jeda antar permintaan ke perangkat (detik)")
     hik_parser.add_argument("--lanjutkan", action="store_true", help="Lanjut dari jendela terakhir yang tersimpan")
+    prs_parser = subparsers.add_parser(
+        "hikvision-proses", help="Bentuk absen dari event Hikvision (jalankan terjadwal, mis. tiap 5 menit)")
+    prs_parser.add_argument("--dry-run", action="store_true", help="Kerjakan lalu batalkan; tidak ada yang disimpan")
+    prs_parser.add_argument("--bayangan", action="store_true",
+                            help="Simulasi tanpa simpan yang ikut menghitung perangkat SHADOW")
+    prs_parser.add_argument("--banding", action="store_true",
+                            help="Bandingkan tap mesin SHADOW dengan absen aplikasi (baca saja)")
+    prs_parser.add_argument("--dari", help="Awal rentang --banding (YYYY-MM-DD), bawaan 14 hari lalu")
+    prs_parser.add_argument("--sampai", help="Akhir rentang --banding (YYYY-MM-DD), bawaan hari ini")
+    prs_parser.add_argument("--jarak-menit", type=int, default=30, help="Jarak minimum masuk ke pulang (menit)")
+    prs_parser.add_argument("--batas-jam", default="19:00", help="Batas jam WIB; tap lewat batas tanpa sesi = lembur")
     doc_parser = subparsers.add_parser(
         "pengingat-dokumen", help="Kirim pengingat dokumen kendaraan/SIM yang akan jatuh tempo (jalankan 1x/hari)")
     doc_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung, tidak menulis apa pun")
@@ -315,6 +373,9 @@ def main() -> None:
     elif args.command == "hikvision-tarik":
         sys.exit(asyncio.run(hikvision_tarik(args.perangkat, args.dari, args.sampai, args.dry_run, args.jeda,
                                              args.lanjutkan)))
+    elif args.command == "hikvision-proses":
+        sys.exit(asyncio.run(hikvision_proses(args.dry_run, args.bayangan, args.banding, args.dari, args.sampai,
+                                              args.jarak_menit, args.batas_jam)))
     elif args.command == "buat-partisi":
         print(f"Partisi diperiksa/dibuat: {asyncio.run(buat_partisi(args.bulan))} pernyataan.")
     elif args.command == "backup-db":

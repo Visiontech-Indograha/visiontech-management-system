@@ -122,10 +122,11 @@ class ExportRepository(BaseRepository):
             f"""
             SELECT CASE WHEN aa.vehicle_id IS NOT NULL THEN 'Kendaraan' ELSE 'Alat' END AS kind,
                    COALESCE(t.name, v.name) AS name, COALESCE(t.tool_code, v.number_plate) AS code,
-                   e.full_name AS holder, wpd.work_date, aa.assignment_status::text AS status
+                   COALESCE(e.full_name, eb.nama) AS holder, wpd.work_date, aa.assignment_status::text AS status
             FROM asset_assignment aa
             JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id AND wpd.delete_at IS NULL
-            JOIN employee e ON e.employee_id = aa.employee_id
+            LEFT JOIN employee e ON e.employee_id = aa.employee_id
+            LEFT JOIN asset_external_borrowers eb ON eb.borrower_id = aa.external_borrower_id
             LEFT JOIN tool t ON t.tool_id = aa.tool_id
             LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
             WHERE {where} AND aa.delete_at IS NULL

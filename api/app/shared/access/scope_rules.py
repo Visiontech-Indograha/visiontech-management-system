@@ -245,6 +245,15 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
         veh_ok = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_ok})"
         tool_by_holder = f"(t.office_id = ANY(CAST(:offices AS uuid[])) OR {tool_by_holder})"
         veh_by_holder = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_by_holder})"
+    # Dokumen serah terima (BAST) penerima eksternal: hanya pengelola aset, dibatasi kantor aset (ADR 0003).
+    bast = ""
+    if sees_all_assets(user):
+        bast = (
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN tool t ON t.tool_id = aa.tool_id WHERE bf.storage_key = :key AND {tool_ok}) "
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN vehicle v ON v.vehicle_id = aa.vehicle_id WHERE bf.storage_key = :key AND {veh_ok})"
+        )
     row = await BaseRepository(db).scalar(
         f"""
         SELECT (
@@ -260,6 +269,7 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
                        WHERE aa.handover_photo_path = :key AND {tool_by_holder})
             OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
                        WHERE aa.handover_photo_path = :key AND {veh_by_holder})
+            {bast}
         )
         """,
         {**viewer_params(user), "key": storage_key, **({} if offices is None else {"offices": offices})},

@@ -26,8 +26,12 @@ def _wib_date(col: str) -> str:
 # Peminjaman berjalan per aset: satu baris (aset tidak bisa dipinjam dua kali bersamaan).
 _OPEN_LOAN = """
     LEFT JOIN LATERAL (
-        SELECT aa.assignment_id, aa.employee_id AS holder_employee_id, he.full_name AS holder_name, aa.daily_plan_id
-        FROM asset_assignment aa JOIN employee he ON he.employee_id = aa.employee_id
+        SELECT aa.assignment_id, aa.employee_id AS holder_employee_id,
+               aa.external_borrower_id AS holder_external_borrower_id,
+               COALESCE(he.full_name, eb.nama) AS holder_name, aa.daily_plan_id
+        FROM asset_assignment aa
+        LEFT JOIN employee he ON he.employee_id = aa.employee_id
+        LEFT JOIN asset_external_borrowers eb ON eb.borrower_id = aa.external_borrower_id
         WHERE aa.{col} = {alias}.{col} AND aa.returned_at IS NULL AND aa.delete_at IS NULL
         ORDER BY aa.loaned_at DESC LIMIT 1
     ) loan ON TRUE
@@ -37,7 +41,8 @@ _TOOL_SELECT = f"""
     SELECT t.tool_id, t.office_id, o.name AS office_name, t.division_id, d.name AS division_name,
            t.ownership_type::text AS ownership_type, t.category::text AS category, t.name, t.tool_code,
            t.status::text AS status, fo.id AS photo_file_id, t.team_id, tm.name AS team_name,
-           loan.assignment_id, loan.holder_employee_id, loan.holder_name, loan.daily_plan_id
+           loan.assignment_id, loan.holder_employee_id, loan.holder_external_borrower_id, loan.holder_name,
+           loan.daily_plan_id
     FROM tool t
     JOIN office o ON o.office_id = t.office_id
     LEFT JOIN division d ON d.division_id = t.division_id
@@ -56,7 +61,8 @@ _VEHICLE_SELECT = f"""
            (SELECT max({_wib_date("vf.expired_at")}) FROM vehicle_file vf
              WHERE vf.vehicle_id = v.vehicle_id AND vf.type = 'KIR' AND vf.status = 'active'
                AND vf.delete_at IS NULL) AS kir_expired_at,
-           loan.assignment_id, loan.holder_employee_id, loan.holder_name, loan.daily_plan_id
+           loan.assignment_id, loan.holder_employee_id, loan.holder_external_borrower_id, loan.holder_name,
+           loan.daily_plan_id
     FROM vehicle v
     JOIN office o ON o.office_id = v.office_id
     JOIN division d ON d.division_id = v.division_id
@@ -68,14 +74,17 @@ _VEHICLE_SELECT = f"""
 _LOAN_SELECT = """
     SELECT aa.assignment_id, aa.asset_type, COALESCE(aa.tool_id, aa.vehicle_id) AS asset_id,
            COALESCE(t.name, v.name) AS asset_name, COALESCE(t.tool_code, v.number_plate) AS asset_code,
-           aa.employee_id, e.full_name AS employee_name,
+           aa.employee_id, COALESCE(e.full_name, eb.nama) AS employee_name,
+           aa.external_borrower_id, eb.nama AS borrower_name, eb.instansi AS borrower_instansi,
+           aa.due_date, aa.handover_file_id AS bast_file_id,
            (SELECT f.id FROM file_object f WHERE f.storage_key = e.profile_photo_path LIMIT 1)
                AS employee_photo_file_id, aa.daily_plan_id, wpd.work_date,
            aa.assignment_status::text AS assignment_status, aa.loaned_at, aa.returned_at,
            fo.id AS handover_file_id, aa.return_requested_at, aa.return_condition, aa.return_note,
            rfo.id AS return_file_id
     FROM asset_assignment aa
-    JOIN employee e ON e.employee_id = aa.employee_id
+    LEFT JOIN employee e ON e.employee_id = aa.employee_id
+    LEFT JOIN asset_external_borrowers eb ON eb.borrower_id = aa.external_borrower_id
     LEFT JOIN tool t ON t.tool_id = aa.tool_id
     LEFT JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
     LEFT JOIN work_plan_daily wpd ON wpd.daily_plan_id = aa.daily_plan_id
@@ -94,6 +103,16 @@ _REQUEST_SELECT = """
     JOIN employee e ON e.employee_id = r.employee_id
     LEFT JOIN tool t ON t.tool_id = r.tool_id
     LEFT JOIN vehicle v ON v.vehicle_id = r.vehicle_id
+"""
+
+
+_BORROWER_SELECT = """
+    SELECT b.borrower_id, b.office_id, o.name AS office_name, b.nama, b.instansi, b.kontak,
+           EXISTS (SELECT 1 FROM asset_assignment aa WHERE aa.external_borrower_id = b.borrower_id
+                   AND aa.returned_at IS NULL AND aa.delete_at IS NULL) AS has_open_loan,
+           b.create_at
+    FROM asset_external_borrowers b
+    JOIN office o ON o.office_id = b.office_id
 """
 
 
@@ -505,6 +524,7 @@ class AssetRepository(BaseRepository):
     async def loans(
         self, *, open_only: bool, employee_id: UUID | str | None, daily_plan_id: UUID | str | None,
         managed_by: UUID | str | None, offices: list[str] | None = None, own: UUID | str | None = None,
+        borrower_id: UUID | str | None = None,
     ) -> list[Any]:
         """`managed_by` (PM/OM): batasi ke pinjaman karyawan di divisi yang ia pimpin/kelola, atau miliknya sendiri."""
         return list(await self.fetchall(
@@ -512,6 +532,7 @@ class AssetRepository(BaseRepository):
             WHERE aa.delete_at IS NULL
               AND (NOT CAST(:open AS boolean) OR aa.returned_at IS NULL)
               AND (CAST(:emp AS uuid) IS NULL OR aa.employee_id = CAST(:emp AS uuid))
+              AND (CAST(:brw AS uuid) IS NULL OR aa.external_borrower_id = CAST(:brw AS uuid))
               AND (CAST(:plan AS uuid) IS NULL OR aa.daily_plan_id = CAST(:plan AS uuid))
               AND (CAST(:mgr AS uuid) IS NULL OR aa.employee_id = CAST(:mgr AS uuid)
                    OR aa.employee_id IN (
@@ -525,7 +546,7 @@ class AssetRepository(BaseRepository):
             {"open": open_only, "emp": str(employee_id) if employee_id else None,
              "plan": str(daily_plan_id) if daily_plan_id else None,
              "mgr": str(managed_by) if managed_by else None, "offices": offices,
-             "own": str(own) if own else None},
+             "own": str(own) if own else None, "brw": str(borrower_id) if borrower_id else None},
         ))
 
     async def get_loan(self, assignment_id: UUID | str) -> Any:
@@ -545,21 +566,27 @@ class AssetRepository(BaseRepository):
         self,
         asset_type: str,
         asset_id: UUID | str,
-        employee_id: UUID | str,
+        employee_id: UUID | str | None,
         daily_plan_id: UUID | str | None,
         status: str,
         handover_path: str | None,
+        *,
+        external_borrower_id: UUID | str | None = None,
+        due_date: date | None = None,
+        bast_file_id: UUID | str | None = None,
     ) -> UUID:
         col = "tool_id" if asset_type == "TOOL" else "vehicle_id"
         assignment_id: UUID = await self.scalar(
             f"""
-            INSERT INTO asset_assignment (asset_type, {col}, employee_id, daily_plan_id, assignment_status,
-                                          handover_photo_path)
-            VALUES (:type, CAST(:asset AS uuid), CAST(:emp AS uuid), CAST(:plan AS uuid),
-                    CAST(:status AS asset_status_enum), :photo)
+            INSERT INTO asset_assignment (asset_type, {col}, employee_id, external_borrower_id, due_date,
+                                          handover_file_id, daily_plan_id, assignment_status, handover_photo_path)
+            VALUES (:type, CAST(:asset AS uuid), CAST(:emp AS uuid), CAST(:ext AS uuid), :due,
+                    CAST(:bast AS uuid), CAST(:plan AS uuid), CAST(:status AS asset_status_enum), :photo)
             RETURNING assignment_id
             """,
-            {"type": asset_type, "asset": str(asset_id), "emp": str(employee_id),
+            {"type": asset_type, "asset": str(asset_id), "emp": str(employee_id) if employee_id else None,
+             "ext": str(external_borrower_id) if external_borrower_id else None, "due": due_date,
+             "bast": str(bast_file_id) if bast_file_id else None,
              "plan": str(daily_plan_id) if daily_plan_id else None, "status": status.lower(), "photo": handover_path},
         )
         return assignment_id
@@ -648,3 +675,51 @@ class AssetRepository(BaseRepository):
             "return_photo_path = :p, update_at = now() WHERE assignment_id = CAST(:id AS uuid)",
             {"id": str(assignment_id), "c": condition, "n": note, "p": photo_path},
         )
+
+    # ── Penerima eksternal (ADR 0003) ─────────────────────────────────────────
+    async def borrowers(self, *, offices: list[str] | None, office_id: UUID | str | None) -> list[Any]:
+        """Penerima eksternal aktif; `offices` None = semua kantor. Pencarian `q` oleh apply_list (awalan)."""
+        return list(await self.fetchall(
+            _BORROWER_SELECT + """
+            WHERE b.delete_at IS NULL
+              AND (CAST(:offices AS uuid[]) IS NULL OR b.office_id = ANY(CAST(:offices AS uuid[])))
+              AND (CAST(:office AS uuid) IS NULL OR b.office_id = CAST(:office AS uuid))
+            ORDER BY lower(b.nama), b.borrower_id
+            LIMIT 5000
+            """,
+            {"offices": offices, "office": str(office_id) if office_id else None},
+        ))
+
+    async def get_borrower(self, borrower_id: UUID | str) -> Any:
+        return await self.fetchone(
+            _BORROWER_SELECT + " WHERE b.borrower_id = CAST(:id AS uuid) AND b.delete_at IS NULL",
+            {"id": str(borrower_id)},
+        )
+
+    async def insert_borrower(
+        self, office_id: UUID | str, nama: str, instansi: str | None, kontak: str | None
+    ) -> UUID:
+        borrower_id: UUID = await self.scalar(
+            "INSERT INTO asset_external_borrowers (office_id, nama, instansi, kontak) "
+            "VALUES (CAST(:office AS uuid), :nama, :instansi, :kontak) RETURNING borrower_id",
+            {"office": str(office_id), "nama": nama, "instansi": instansi, "kontak": kontak},
+        )
+        return borrower_id
+
+    async def update_borrower(self, borrower_id: UUID | str, fields: dict[str, Any]) -> None:
+        allowed = [k for k in ("nama", "instansi", "kontak") if k in fields]
+        if not allowed:
+            return
+        sets = ", ".join(f"{k} = :{k}" for k in allowed)
+        await self.execute(
+            f"UPDATE asset_external_borrowers SET {sets}, update_at = now() "
+            "WHERE borrower_id = CAST(:id AS uuid) AND delete_at IS NULL",
+            {**{k: fields[k] for k in allowed}, "id": str(borrower_id)},
+        )
+
+    async def file_office(self, file_id: UUID | str) -> str | None:
+        """Kantor pemilik berkas (None bila berkas tidak ada atau tanpa kantor)."""
+        row: str | None = await self.scalar(
+            "SELECT office_id::text FROM file_object WHERE id = CAST(:id AS uuid)", {"id": str(file_id)}
+        )
+        return row

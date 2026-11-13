@@ -19183,7 +19183,7 @@
      "Assets"
     ],
     "summary": "List Loans",
-    "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.",
+    "description": "Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya;\npeminjaman ke penerima eksternal hanya terlihat oleh pengelola aset.",
     "operationId": "list_loans_api_v1_assets_loans_get",
     "security": [
      {
@@ -19233,6 +19233,23 @@
         }
        ],
        "title": "Daily Plan Id"
+      }
+     },
+     {
+      "name": "borrower_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Borrower Id"
       }
      },
      {
@@ -19327,7 +19344,7 @@
      "Assets"
     ],
     "summary": "Lend Asset",
-    "description": "Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).\nMendukung Idempotency-Key (opsional).",
+    "description": "Serah terima aset ke karyawan (`employee_id`, opsional dikaitkan ke jadwal harian tim) ATAU ke\npenerima eksternal (`external_borrower_id`, dengan `due_date` dan dokumen `bast_file_id`); isi tepat satu.\nMendukung Idempotency-Key (opsional).",
     "operationId": "lend_asset_api_v1_assets_loans_post",
     "security": [
      {
@@ -19430,6 +19447,229 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/LoanOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/external-borrowers": {
+   "get": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "List Borrowers",
+    "description": "Daftar penerima eksternal (klien sewa, subkontraktor) di kantor jangkauan pengelola aset.",
+    "operationId": "list_borrowers_api_v1_assets_external_borrowers_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "office_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Office Id"
+      }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/BorrowerOut"
+         },
+         "title": "Response List Borrowers Api V1 Assets External Borrowers Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Create Borrower",
+    "description": "Mendaftarkan penerima eksternal baru (nama, instansi, kontak) untuk peminjaman aset.",
+    "operationId": "create_borrower_api_v1_assets_external_borrowers_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BorrowerCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BorrowerOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/assets/external-borrowers/{borrower_id}": {
+   "put": {
+    "tags": [
+     "Assets"
+    ],
+    "summary": "Update Borrower",
+    "description": "Mengubah data penerima eksternal (sebagian).",
+    "operationId": "update_borrower_api_v1_assets_external_borrowers__borrower_id__put",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "borrower_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Borrower Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BorrowerUpdate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BorrowerOut"
         }
        }
       }
@@ -23313,6 +23553,158 @@
      "unit"
     ],
     "title": "BomRow"
+   },
+   "BorrowerCreate": {
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "nama": {
+      "type": "string",
+      "maxLength": 150,
+      "minLength": 1,
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     }
+    },
+    "type": "object",
+    "required": [
+     "office_id",
+     "nama"
+    ],
+    "title": "BorrowerCreate",
+    "description": "Penerima eksternal (klien sewa, subkontraktor). Data seminimal mungkin: tanpa NIK/alamat."
+   },
+   "BorrowerOut": {
+    "properties": {
+     "borrower_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Borrower Id"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "office_name": {
+      "type": "string",
+      "title": "Office Name"
+     },
+     "nama": {
+      "type": "string",
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     },
+     "has_open_loan": {
+      "type": "boolean",
+      "title": "Has Open Loan",
+      "default": false
+     },
+     "create_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Create At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "borrower_id",
+     "office_id",
+     "office_name",
+     "nama",
+     "create_at"
+    ],
+    "title": "BorrowerOut"
+   },
+   "BorrowerUpdate": {
+    "properties": {
+     "nama": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150,
+        "minLength": 1
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Nama"
+     },
+     "instansi": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 150
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Instansi"
+     },
+     "kontak": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Kontak"
+     }
+    },
+    "type": "object",
+    "title": "BorrowerUpdate"
    },
    "BulkApproveIn": {
     "properties": {
@@ -29656,9 +30048,52 @@
       "title": "Vehicle Id"
      },
      "employee_id": {
-      "type": "string",
-      "format": "uuid",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Employee Id"
+     },
+     "external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Borrower Id"
+     },
+     "due_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Date"
+     },
+     "bast_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast File Id"
      },
      "daily_plan_id": {
       "anyOf": [
@@ -29687,8 +30122,7 @@
     },
     "type": "object",
     "required": [
-     "asset_type",
-     "employee_id"
+     "asset_type"
     ],
     "title": "LoanCreate",
     "description": "Serah terima aset ke karyawan; `daily_plan_id` mengaitkannya ke jadwal harian tim (opsional)."
@@ -29722,8 +30156,15 @@
       "title": "Asset Code"
      },
      "employee_id": {
-      "type": "string",
-      "format": "uuid",
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
       "title": "Employee Id"
      },
      "employee_name": {
@@ -29741,6 +30182,64 @@
        }
       ],
       "title": "Employee Photo File Id"
+     },
+     "external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "External Borrower Id"
+     },
+     "borrower_name": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Borrower Name"
+     },
+     "borrower_instansi": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Borrower Instansi"
+     },
+     "due_date": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Due Date"
+     },
+     "bast_file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Bast File Id"
      },
      "daily_plan_id": {
       "anyOf": [
@@ -29866,7 +30365,6 @@
      "asset_id",
      "asset_name",
      "asset_code",
-     "employee_id",
      "employee_name",
      "assignment_status",
      "loaned_at"
@@ -37116,6 +37614,18 @@
       ],
       "title": "Holder Employee Id"
      },
+     "holder_external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder External Borrower Id"
+     },
      "holder_name": {
       "anyOf": [
        {
@@ -38228,6 +38738,18 @@
        }
       ],
       "title": "Holder Employee Id"
+     },
+     "holder_external_borrower_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Holder External Borrower Id"
      },
      "holder_name": {
       "anyOf": [

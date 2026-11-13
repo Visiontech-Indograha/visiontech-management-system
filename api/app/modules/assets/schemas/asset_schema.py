@@ -70,6 +70,7 @@ class AssetHolder(BaseModel):
 
     assignment_id: UUID | None = None
     holder_employee_id: UUID | None = None
+    holder_external_borrower_id: UUID | None = None
     holder_name: str | None = None
     daily_plan_id: UUID | None = None
 
@@ -189,9 +190,20 @@ class LoanCreate(BaseModel):
     asset_type: AssetType
     tool_id: UUID | None = None
     vehicle_id: UUID | None = None
-    employee_id: UUID
+    employee_id: UUID | None = None
+    external_borrower_id: UUID | None = None
+    due_date: date | None = None
+    bast_file_id: UUID | None = None
     daily_plan_id: UUID | None = None
     handover_file_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _one_borrower(self) -> LoanCreate:
+        if (self.employee_id is None) == (self.external_borrower_id is None):
+            raise ValueError("Pilih satu penerima saja: karyawan atau penerima eksternal.")
+        if self.external_borrower_id is not None and self.daily_plan_id is not None:
+            raise ValueError("Peminjaman ke penerima eksternal tidak dikaitkan ke jadwal harian.")
+        return self
 
     @model_validator(mode="after")
     def _one_asset(self) -> LoanCreate:
@@ -213,9 +225,14 @@ class LoanOut(BaseModel):
     asset_id: UUID
     asset_name: str
     asset_code: str
-    employee_id: UUID
+    employee_id: UUID | None = None
     employee_name: str
     employee_photo_file_id: UUID | None = None
+    external_borrower_id: UUID | None = None
+    borrower_name: str | None = None
+    borrower_instansi: str | None = None
+    due_date: date | None = None
+    bast_file_id: UUID | None = None
     daily_plan_id: UUID | None = None
     work_date: date | None = None
     assignment_status: AssetStatus
@@ -291,3 +308,48 @@ class AssetAvailabilityOut(BaseModel):
     used_by_team_id: UUID | None = None  # Tim pemakai pada tanggal itu (None = tidak dipakai)
     used_by_team_name: str | None = None
     used_by_requested_team: bool = False  # Dipakai oleh tim yang diminta (query team_id)
+
+
+# ── Penerima eksternal (ADR 0003) ─────────────────────────────────────────────
+class BorrowerCreate(BaseModel):
+    """Penerima eksternal (klien sewa, subkontraktor). Data seminimal mungkin: tanpa NIK/alamat."""
+
+    office_id: UUID
+    nama: str = Field(min_length=1, max_length=150)
+    instansi: str | None = Field(None, max_length=150)
+    kontak: str | None = Field(None, max_length=100)
+
+    @field_validator("nama", "instansi", "kontak")
+    @classmethod
+    def _trim(cls, value: str | None) -> str | None:
+        text = " ".join(value.split()) if value else None
+        return text or None
+
+    @field_validator("nama")
+    @classmethod
+    def _nama_required(cls, value: str | None) -> str | None:
+        if not value:
+            raise ValueError("Nama penerima wajib diisi.")
+        return value
+
+
+class BorrowerUpdate(BaseModel):
+    nama: str | None = Field(None, min_length=1, max_length=150)
+    instansi: str | None = Field(None, max_length=150)
+    kontak: str | None = Field(None, max_length=100)
+
+    @field_validator("nama", "instansi", "kontak")
+    @classmethod
+    def _trim(cls, value: str | None) -> str | None:
+        return " ".join(value.split()) if value else value
+
+
+class BorrowerOut(BaseModel):
+    borrower_id: UUID
+    office_id: UUID
+    office_name: str
+    nama: str
+    instansi: str | None = None
+    kontak: str | None = None
+    has_open_loan: bool = False
+    create_at: datetime

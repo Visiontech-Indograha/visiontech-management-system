@@ -23,6 +23,7 @@ import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { OfficeCheckOutDialogs } from "./OfficeCheckOutDialogs";
 import { ListBlock } from "@/components/molecules/ListBlock";
 import { ControlLabel, ControlOption, ControlSelect } from "@/components/molecules/FormBlock";
 import { checkIn as submitCheckIn, checkOut as submitCheckOut, listEmployeeAttendance } from "@/services/attendanceService";
@@ -270,10 +271,26 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   // minta penjelasan lalu swafoto dan kirim ulang dengan lokasi yang sama.
   const [outPos, setOutPos] = useState<BrowserPosition | null>(null);
   const [selfieOut, setSelfieOut] = useState(false);
+  /** Pulang di luar zona: bila penjelasan kosong, galat awam; bila ada, buka foto bukti. true = kirim ditunda. */
+  const askProofIfOutside = (pos: BrowserPosition): boolean => {
+    const site = sites.data?.find((s) => s.id === rec?.site_id);
+    const away = site ? Math.round(distanceM(pos, site.location)) : 0;
+    if (!site || away <= site.radius_m) return false;
+    setAskExplanation(true);
+    if (!explanation.trim()) {
+      throw new UserFacingError(
+        `Anda ${away} m dari ${site.name} (radius ${site.radius_m} m). Isi penjelasan mengapa pulang di luar zona, lalu ambil foto bukti.`,
+      );
+    }
+    setSelfieOut(true);
+    return true;
+  };
   const checkOut = useMutation({
     mutationFn: async (vars?: { selfieFileId: string }) => {
       const pos = outPos && vars ? outPos : await currentPosition();
       setOutPos(pos);
+      // Samakan dengan HP: di luar zona, penjelasan lalu foto bukti diminta SEBELUM kirim (server tetap menghitung ulang).
+      if (!vars?.selfieFileId && askProofIfOutside(pos)) return null;
       return submitCheckOut({
           channel: "WEB",
           location: { lat: pos.lat, lng: pos.lng },
@@ -284,6 +301,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
         });
     },
     onSuccess: async (a) => {
+      if (a === null) return; // menunggu foto bukti
       setOutPos(null);
       setError(null);
       setExplanation("");
@@ -414,7 +432,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
             <div className="space-y-3">
               <TextAreaField
                 label="Penjelasan (wajib)"
-                hint="Wajib karena Anda pulang di luar zona lokasi. Setelah itu ambil swafoto."
+                hint="Wajib karena Anda pulang di luar zona lokasi. Setelah itu ambil foto bukti."
                 value={explanation}
                 maxLength={1000}
                 onChange={(e) => setExplanation(e.target.value)}
@@ -498,55 +516,16 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           </TextBlock>
         </VmsDialog>
       )}
-      {confirmEarlyLeave && (
-        <VmsDialog
-          open={!!confirmEarlyLeave}
-          title="Waktu Kerja Belum Mencapai 8 Jam"
-          onClose={() => setConfirmEarlyLeave(null)}
-          footer={
-            <div className="flex w-full justify-end gap-2">
-              <ActionButton variant="outline" className="h-11" onClick={() => setConfirmEarlyLeave(null)}>
-                Batal
-              </ActionButton>
-              <ActionButton
-                className="h-11"
-                onClick={() => {
-                  setConfirmEarlyLeave(null);
-                  proceedCheckOut();
-                }}
-              >
-                Lanjutkan Pulang Cepat
-              </ActionButton>
-            </div>
-          }
-        >
-          <TextBlock className="text-sm leading-relaxed text-ink">
-            {`Waktu kerja kamu saat ini baru ${confirmEarlyLeave.effH} jam ${confirmEarlyLeave.effM} menit (belum mencapai 8 jam kerja efektif, karena 1 jam istirahat tidak termasuk jam kerja).`}
-          </TextBlock>
-          <TextBlock className="mt-2 text-sm text-mist">
-            Jika tetap melanjutkan pulang sekarang, absensi hari ini akan dicatat dengan keterangan Pulang Cepat. Yakin ingin tetap absen pulang?
-          </TextBlock>
-        </VmsDialog>
-      )}
-      {encouragementModal && (
-        <VmsDialog
-          open={!!encouragementModal}
-          title="Terima Kasih Atas Kerja Kerasmu! 🌟"
-          onClose={() => setEncouragementModal(null)}
-          footer={
-            <ActionButton className="h-11 w-full" onClick={() => setEncouragementModal(null)}>
-              Tutup & Selamat Beristirahat
-            </ActionButton>
-          }
-        >
-          <div className="space-y-3 py-2 text-center">
-            <TextBlock className="text-4xl">🌟💪</TextBlock>
-            <TextBlock className="text-base font-medium leading-relaxed text-ink">
-              {encouragementModal}
-            </TextBlock>
-          </div>
-        </VmsDialog>
-      )}
+      <OfficeCheckOutDialogs
+        earlyLeave={confirmEarlyLeave}
+        onCancelEarlyLeave={() => setConfirmEarlyLeave(null)}
+        onConfirmEarlyLeave={() => {
+          setConfirmEarlyLeave(null);
+          proceedCheckOut();
+        }}
+        encouragement={encouragementModal}
+        onCloseEncouragement={() => setEncouragementModal(null)}
+      />
     </section>
   );
 }

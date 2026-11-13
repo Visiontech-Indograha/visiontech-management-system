@@ -357,6 +357,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ('/overtime', Icons.more_time_rounded, 'Riwayat lembur', Accent.indigo),
     ('/mess', Icons.home_work_rounded, 'Mess karyawan', Accent.violet),
     ('/documents', Icons.badge_rounded, 'Dokumen saya', Accent.emerald),
+    ('/dokumen-kendaraan', Icons.fact_check_rounded, 'Dokumen kendaraan saya', Accent.teal),
   ];
 
   @override
@@ -410,7 +411,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisSpacing: 8,
                   childAspectRatio: 1.55,
                   children: [
-                    for (final (route, icon, label, accent) in _services)
+                    for (final (route, icon, label, accent) in [
+                      ..._services,
+                      if (user?.bisaLihatDokumenKantor == true)
+                        ('/dokumen-kantor', Icons.event_busy_rounded, 'Dokumen akan habis', Accent.rose),
+                    ])
                       SurfaceCard(
                         onTap: () => context.push(route),
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

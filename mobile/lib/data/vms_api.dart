@@ -281,6 +281,14 @@ class VmsApi {
   Future<void> readAllNotifications() async =>
       _dio.post('$_p/notifications/read-all');
 
+  /// Dokumen kendaraan yang dikemudikan akun ini (STNK, SIM, dll).
+  Future<List<Map<String, dynamic>>> vehicleDocumentsMine() async =>
+      _list((await _dio.get('$_p/vehicle-documents/mine')).data);
+
+  /// HSE/OM: dokumen kantor yang jatuh tempo dalam [days] hari (yang lewat ikut).
+  Future<List<Map<String, dynamic>>> vehicleDocumentsExpiring({int days = 30}) async =>
+      _list((await _dio.get('$_p/vehicle-documents/expiring', queryParameters: {'days': days})).data);
+
   // --- Lokasi & absensi ---------------------------------------------------
   Future<List<Map<String, dynamic>>> sites() async => _list(
     (await _dio.get(

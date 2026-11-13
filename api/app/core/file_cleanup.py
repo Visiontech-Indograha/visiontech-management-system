@@ -133,7 +133,7 @@ async def employee_keys(db: AsyncSession, employee_id: UUID | str) -> list[str]:
     )
     keys: list[str] = []
     for sql in queries:
-        keys.extend(str(r[0]) for r in (await db.execute(text(sql), p)).all() if r[0])
+        keys.extend(str(r[0]) for r in (await db.execute(text(sql), p)).all() if r[0] and r[0] != "HIKVISION")
     return list(dict.fromkeys(keys))
 
 

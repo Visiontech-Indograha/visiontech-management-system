@@ -1062,6 +1062,28 @@
       ],
       "title": "Is Within Attendance Radius"
      },
+     "location_accuracy_m": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Accuracy M"
+     },
+     "location_decision": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Location Decision"
+     },
      "meal_allowance_amount": {
       "anyOf": [
        {
@@ -1099,6 +1121,13 @@
        }
       ],
       "title": "Review Note"
+     },
+     "review_reasons": {
+      "items": {
+       "type": "string"
+      },
+      "title": "Review Reasons",
+      "type": "array"
      },
      "reviewed_at": {
       "anyOf": [

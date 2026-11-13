@@ -5782,6 +5782,12 @@ export interface components {
             check_out_outside: boolean;
             /** Check Out Selfie File Id */
             check_out_selfie_file_id?: string | null;
+            /** Review Reasons */
+            review_reasons?: string[];
+            /** Location Accuracy M */
+            location_accuracy_m?: number | null;
+            /** Location Decision */
+            location_decision?: string | null;
             /** Check Out Explanation */
             check_out_explanation?: string | null;
             /** City Category */

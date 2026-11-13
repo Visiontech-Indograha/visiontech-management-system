@@ -301,5 +301,6 @@ String? notificationRoute(String? target) => switch (target) {
       'asset' => '/assets',
       'overtime' => '/overtime',
       'mess' => '/mess',
+      'document_expiry' => '/dokumen-kendaraan',
       _ => null,
     };

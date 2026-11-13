@@ -11,6 +11,7 @@ import '../features/auth/auth_state.dart';
 import '../features/auth/biometric_lock_screen.dart';
 import '../features/auth/change_password_screen.dart';
 import '../features/auth/login_screen.dart';
+import '../features/dokumen/dokumen_kendaraan.dart';
 import '../features/gallery/photo_gallery_screen.dart';
 import '../features/leaves/leaves_screen.dart';
 import '../features/mess/mess_screen.dart';
@@ -114,6 +115,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/recap', builder: (context, state) => const RecapScreen()),
       GoRoute(path: '/overtime', builder: (context, state) => const OvertimeScreen()),
       GoRoute(path: '/mess', builder: (context, state) => const MessScreen()),
+      GoRoute(path: '/dokumen-kendaraan', builder: (context, state) => const DokumenSayaScreen()),
+      GoRoute(path: '/dokumen-kantor', builder: (context, state) => const DokumenKantorScreen()),
       GoRoute(path: '/documents', builder: (context, state) => const DocumentsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

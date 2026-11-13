@@ -142,7 +142,7 @@ def test_hse_campaign_lifecycle_and_popup_gate(client, hse_world: World):
 
 
 def test_vehicle_safety_inspection_flow(client, hse_world: World, test_vehicle: str):
-    # 1. Teknisi/Ketua tim lapangan mengirimkan form inspeksi kendaraan harian
+    # 1. HSE (pemegang manage:vehicle_inspections) mengirimkan form inspeksi kendaraan harian
     inspection_payload = {
         "vehicle_id": test_vehicle,
         "inspector_id": hse_world.employees["leader"],
@@ -161,7 +161,7 @@ def test_vehicle_safety_inspection_flow(client, hse_world: World, test_vehicle: 
     }
     create_resp = client.post(
         "/hse/inspections",
-        headers=hse_world.headers(client, "leader"),
+        headers=hse_world.headers(client, "hse"),
         json=inspection_payload,
     )
     assert create_resp.status_code == 201, create_resp.text
@@ -194,3 +194,59 @@ def test_vehicle_safety_inspection_flow(client, hse_world: World, test_vehicle: 
     assert verified_data["status"] == "VERIFIED"
     assert verified_data["verified_by_id"] is not None
 
+
+
+def _payload(vehicle: str, **extra) -> dict:
+    return {"vehicle_id": vehicle, "period_type": "DAILY", "checklist_json": {"rem": "BAIK"}, **extra}
+
+
+def test_inspection_create_requires_manage_permission(client, hse_world: World, test_vehicle: str):
+    for who in ("member", "leader"):
+        resp = client.post("/hse/inspections", headers=hse_world.headers(client, who), json=_payload(test_vehicle))
+        assert resp.status_code == 403, (who, resp.text)
+    ok = client.post("/hse/inspections", headers=hse_world.headers(client, "hse"), json=_payload(test_vehicle))
+    assert ok.status_code == 201, ok.text
+    missing = client.post(
+        "/hse/inspections", headers=hse_world.headers(client, "hse"),
+        json=_payload("00000000-0000-0000-0000-000000000001"),
+    )
+    assert missing.status_code == 404
+
+
+def test_inspection_list_view_permission_and_validation(client, hse_world: World, test_vehicle: str):
+    assert client.get("/hse/inspections", headers=hse_world.headers(client, "member")).status_code == 403
+    member = hse_world.headers(client, "member")
+    assert client.get("/hse/inspections/checklist-template", headers=member).status_code == 403
+    hse = hse_world.headers(client, "hse")
+    tpl = client.get("/hse/inspections/checklist-template", headers=hse)
+    assert tpl.status_code == 200 and tpl.json()["items"]
+    bad_period = client.post("/hse/inspections", headers=hse, json={**_payload(test_vehicle), "period_type": "HARIAN"})
+    assert bad_period.status_code == 422
+    too_many = client.post("/hse/inspections", headers=hse, json=_payload(test_vehicle, photos_json=["a"] * 11))
+    assert too_many.status_code == 422
+    assert client.get("/hse/inspections", headers=hse, params={"from_date": "2026-02-02", "to_date": "2026-01-01"}
+                      ).status_code == 422
+    assert client.get("/hse/inspections", headers=hse, params={"status": "APA_SAJA"}).status_code == 422
+
+
+def test_inspection_list_paging_total_and_prefix_search(client, hse_world: World, test_vehicle: str):
+    hse = hse_world.headers(client, "hse")
+    for i in range(3):
+        r = client.post("/hse/inspections", headers=hse, json=_payload(test_vehicle, odometer_km=100 + i))
+        assert r.status_code == 201, r.text
+    page = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "page": 1, "size": 2})
+    assert page.status_code == 200 and len(page.json()) == 2
+    assert page.headers["X-Total-Count"] == "3"
+    last = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "page": 2, "size": 2})
+    assert len(last.json()) == 1 and last.headers["X-Total-Count"] == "3"
+    beyond = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "page": 9, "size": 2})
+    assert beyond.json() == [] and beyond.headers["X-Total-Count"] == "3"
+    plate = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle}).json()[0]["number_plate"]
+    hit = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "q": plate[:3]})
+    assert hit.headers["X-Total-Count"] == "3"
+    mid = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "q": plate[2:5]})
+    assert mid.json() == []  # bukan "mengandung": hanya awalan
+    wild = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle, "q": "%"})
+    assert wild.json() == []
+    legacy = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle})
+    assert len(legacy.json()) == 3

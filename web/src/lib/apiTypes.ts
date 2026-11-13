@@ -2874,11 +2874,35 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Daftar riwayat inspeksi keselamatan kendaraan */
+        /**
+         * Daftar riwayat inspeksi keselamatan kendaraan
+         * @description `q` = awalan plat/nama kendaraan/nama pemeriksa. `page`/`size` (bila ada) menggantikan `limit`/`offset`;
+         *     total baris di header `X-Total-Count`. Tanpa parameter = perilaku lama (50 terbaru).
+         */
         get: operations["list_inspections_api_v1_hse_inspections_get"];
         put?: never;
-        /** Kirim formulir inspeksi kendaraan (checklist & foto) */
+        /**
+         * Kirim formulir inspeksi kendaraan (checklist & foto)
+         * @description Butuh manage:vehicle_inspections dan kendaraan di cakupan kantor pengguna (di luar cakupan = 404).
+         */
         post: operations["create_inspection_api_v1_hse_inspections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/checklist-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Butir daftar periksa baku untuk layar Buat inspeksi */
+        get: operations["inspection_checklist_template_api_v1_hse_inspections_checklist_template_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8274,6 +8298,22 @@ export interface components {
              */
             acknowledged_at: string;
         };
+        /** InspectionChecklistItem */
+        InspectionChecklistItem: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+        };
+        /** InspectionChecklistTemplate */
+        InspectionChecklistTemplate: {
+            /** Period Types */
+            period_types: string[];
+            /** Items */
+            items: components["schemas"]["InspectionChecklistItem"][];
+        };
         /** InspectionCreate */
         InspectionCreate: {
             /**
@@ -11811,14 +11851,14 @@ export interface components {
             odometer_km?: number | null;
             /**
              * Checklist Json
-             * @description Status checklist per item (rem, ban, oli, lampu, dll)
+             * @description Status per butir; butir baku: GET /hse/inspections/checklist-template
              */
             checklist_json?: {
                 [key: string]: unknown;
             };
             /**
              * Photos Json
-             * @description Array URL/Path foto bukti inspeksi kendaraan
+             * @description ID berkas foto bukti (hasil POST /files/upload), maks 10
              */
             photos_json?: string[];
             /** Notes */
@@ -19050,6 +19090,12 @@ export interface operations {
                 to_date?: string | null;
                 limit?: number;
                 offset?: number;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path?: never;
@@ -19106,6 +19152,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    inspection_checklist_template_api_v1_hse_inspections_checklist_template_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InspectionChecklistTemplate"];
                 };
             };
         };

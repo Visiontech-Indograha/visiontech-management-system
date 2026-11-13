@@ -34,11 +34,20 @@ from app.modules.hse.schemas.hse_schema import (
     HseCampaignResponse,
     HseCampaignUpdate,
     HseReaderItem,
+    InspectionChecklistItem,
+    InspectionChecklistTemplate,
     VehicleInspectionCreate,
     VehicleInspectionResponse,
     VehicleInspectionVerify,
 )
 from app.shared.access.office_scope import office_restriction, offices_param
+
+_INSPECTION_ITEMS: tuple[tuple[str, str], ...] = (
+    ("rem", "Rem"), ("ban", "Ban dan tekanan angin"), ("oli_mesin", "Oli mesin"),
+    ("lampu", "Lampu depan, belakang, dan sein"), ("klakson", "Klakson"), ("spion", "Spion"),
+    ("wiper", "Wiper dan air kaca"), ("sabuk_pengaman", "Sabuk pengaman"), ("apar", "Alat pemadam api (APAR)"),
+    ("p3k", "Kotak P3K"), ("air_radiator", "Air radiator"), ("bbm", "Bahan bakar"),
+)
 
 
 class HseService:
@@ -292,6 +301,10 @@ class HseService:
                 status=400,
             )
 
+        exists, office = await self.inspection_repo.vehicle_office(data.vehicle_id)
+        offices = await self._offices(current_user, Permission.MANAGE_VEHICLE_INSPECTIONS)
+        if not exists or (offices is not None and office not in offices):
+            raise AppError("NOT_FOUND", "Kendaraan tidak ditemukan.", status=404)
         created = await self.inspection_repo.create(data, inspector_id)
         full_data = await self.inspection_repo.get_by_id(UUID(str(created["inspection_id"])))
         if not full_data:
@@ -308,8 +321,9 @@ class HseService:
         limit: int = 50,
         offset: int = 0,
         user: CurrentUser | None = None,
-    ) -> list[VehicleInspectionResponse]:
-        items = await self.inspection_repo.list_inspections(
+        q: str | None = None,
+    ) -> tuple[list[VehicleInspectionResponse], int]:
+        items, total = await self.inspection_repo.list_inspections(
             vehicle_id=vehicle_id,
             period_type=period_type,
             status=status,
@@ -318,8 +332,17 @@ class HseService:
             limit=limit,
             offset=offset,
             offices=await self._offices(user, Permission.VIEW_VEHICLE_INSPECTIONS),
+            q=q,
         )
-        return [VehicleInspectionResponse.model_validate(item) for item in items]
+        return [VehicleInspectionResponse.model_validate(item) for item in items], total
+
+    def inspection_checklist_template(self) -> InspectionChecklistTemplate:
+        """Butir daftar periksa baku untuk layar Buat inspeksi (web dan HP memakai daftar yang sama)."""
+        ok = ["BAIK", "PERLU_PERBAIKAN", "RUSAK"]
+        return InspectionChecklistTemplate(
+            period_types=["DAILY", "WEEKLY", "MONTHLY"],
+            items=[InspectionChecklistItem(key=k, label=label, options=ok) for k, label in _INSPECTION_ITEMS],
+        )
 
     async def _inspection_visible(self, item: dict[str, Any] | None, user: CurrentUser | None,
                                   perm: Permission) -> bool:

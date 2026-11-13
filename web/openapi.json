@@ -11211,6 +11211,7 @@
      "HSE & Keselamatan Kerja"
     ],
     "summary": "Daftar riwayat inspeksi keselamatan kendaraan",
+    "description": "`q` = awalan plat/nama kendaraan/nama pemeriksa. `page`/`size` (bila ada) menggantikan `limit`/`offset`;\ntotal baris di header `X-Total-Count`. Tanpa parameter = perilaku lama (50 terbaru).",
     "operationId": "list_inspections_api_v1_hse_inspections_get",
     "security": [
      {
@@ -11242,7 +11243,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(DAILY|WEEKLY|MONTHLY)$"
         },
         {
          "type": "null"
@@ -11258,7 +11260,8 @@
       "schema": {
        "anyOf": [
         {
-         "type": "string"
+         "type": "string",
+         "pattern": "^(SUBMITTED|VERIFIED|REJECTED)$"
         },
         {
          "type": "null"
@@ -11319,10 +11322,70 @@
       "required": false,
       "schema": {
        "type": "integer",
+       "maximum": 100000,
        "minimum": 0,
        "default": 0,
        "title": "Offset"
       }
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -11357,6 +11420,7 @@
      "HSE & Keselamatan Kerja"
     ],
     "summary": "Kirim formulir inspeksi kendaraan (checklist & foto)",
+    "description": "Butuh manage:vehicle_inspections dan kendaraan di cakupan kantor pengguna (di luar cakupan = 404).",
     "operationId": "create_inspection_api_v1_hse_inspections_post",
     "security": [
      {
@@ -11395,6 +11459,32 @@
       }
      }
     }
+   }
+  },
+  "/api/v1/hse/inspections/checklist-template": {
+   "get": {
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ],
+    "summary": "Butir daftar periksa baku untuk layar Buat inspeksi",
+    "operationId": "inspection_checklist_template_api_v1_hse_inspections_checklist_template_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/InspectionChecklistTemplate"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
    }
   },
   "/api/v1/hse/inspections/{inspection_id}": {
@@ -27465,6 +27555,56 @@
     ],
     "title": "HseReaderItem"
    },
+   "InspectionChecklistItem": {
+    "properties": {
+     "key": {
+      "type": "string",
+      "title": "Key"
+     },
+     "label": {
+      "type": "string",
+      "title": "Label"
+     },
+     "options": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Options"
+     }
+    },
+    "type": "object",
+    "required": [
+     "key",
+     "label",
+     "options"
+    ],
+    "title": "InspectionChecklistItem"
+   },
+   "InspectionChecklistTemplate": {
+    "properties": {
+     "period_types": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Period Types"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/InspectionChecklistItem"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "period_types",
+     "items"
+    ],
+    "title": "InspectionChecklistTemplate"
+   },
    "InspectionCreate": {
     "properties": {
      "type": {
@@ -36725,6 +36865,7 @@
      },
      "period_type": {
       "type": "string",
+      "pattern": "^(DAILY|WEEKLY|MONTHLY)$",
       "title": "Period Type",
       "description": "DAILY, WEEKLY, MONTHLY",
       "default": "DAILY"
@@ -36745,6 +36886,7 @@
       "anyOf": [
        {
         "type": "integer",
+        "maximum": 10000000.0,
         "minimum": 0.0
        },
        {
@@ -36756,21 +36898,25 @@
      "checklist_json": {
       "additionalProperties": true,
       "type": "object",
+      "maxProperties": 60,
       "title": "Checklist Json",
-      "description": "Status checklist per item (rem, ban, oli, lampu, dll)"
+      "description": "Status per butir; butir baku: GET /hse/inspections/checklist-template"
      },
      "photos_json": {
       "items": {
-       "type": "string"
+       "type": "string",
+       "maxLength": 255
       },
       "type": "array",
+      "maxItems": 10,
       "title": "Photos Json",
-      "description": "Array URL/Path foto bukti inspeksi kendaraan"
+      "description": "ID berkas foto bukti (hasil POST /files/upload), maks 10"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 1000
        },
        {
         "type": "null"
@@ -36941,13 +37087,15 @@
     "properties": {
      "status": {
       "type": "string",
+      "pattern": "^(VERIFIED|REJECTED)$",
       "title": "Status",
       "description": "VERIFIED atau REJECTED"
      },
      "notes": {
       "anyOf": [
        {
-        "type": "string"
+        "type": "string",
+        "maxLength": 1000
        },
        {
         "type": "null"

@@ -101,6 +101,9 @@ class Permission(StrEnum):
     VIEW_HSE_CAMPAIGNS = "view:hse_campaigns"
     MANAGE_VEHICLE_INSPECTIONS = "manage:vehicle_inspections"
     VIEW_VEHICLE_INSPECTIONS = "view:vehicle_inspections"
+    # Dokumen kendaraan (STNK, KIR, pajak, asuransi) dan pengemudinya
+    MANAGE_VEHICLE_DOCUMENTS = "manage:vehicle_documents"
+    VIEW_VEHICLE_DOCUMENTS = "view:vehicle_documents"
 
     # Linimasa
     VIEW_TIMELINE = "view:timeline"
@@ -151,6 +154,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
         P.MANAGE_FIELD_ROLE_ASSIGNMENTS,
         P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
     SystemRole.PROJECT_MANAGER: frozenset({
@@ -173,6 +177,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     SystemRole.HSE: frozenset({
         P.MANAGE_HSE_CAMPAIGNS, P.VIEW_HSE_CAMPAIGNS,
         P.MANAGE_VEHICLE_INSPECTIONS, P.VIEW_VEHICLE_INSPECTIONS,
+        P.MANAGE_VEHICLE_DOCUMENTS, P.VIEW_VEHICLE_DOCUMENTS,
         P.MANAGE_EMPLOYEE_DOCUMENTS, P.VERIFY_DOCUMENTS,
     }),
     SystemRole.TEAM_LEADER: frozenset(),

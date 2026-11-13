@@ -38,6 +38,7 @@ class FileAccessRepository(BaseRepository):
                     OR EXISTS (SELECT 1 FROM vehicle_file vf WHERE vf.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM vehicle_inspection vi WHERE vi.path_file = f.storage_key)
                     OR EXISTS (SELECT 1 FROM asset_assignment aa WHERE aa.handover_photo_path = f.storage_key)
+                    OR EXISTS (SELECT 1 FROM asset_assignment aa WHERE aa.handover_file_id = f.id)
                    ) AS asset_file,
                    -- foto bukti inspeksi kendaraan (photos_json berisi ID berkas)
                    EXISTS (SELECT 1 FROM vehicle_safety_inspections vsi

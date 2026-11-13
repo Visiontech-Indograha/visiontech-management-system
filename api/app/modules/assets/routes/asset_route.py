@@ -19,6 +19,9 @@ from app.modules.assets.schemas.asset_schema import (
     AssetAvailabilityOut,
     AssetStatus,
     AssetStatusUpdate,
+    BorrowerCreate,
+    BorrowerOut,
+    BorrowerUpdate,
     InspectionCreate,
     InspectionOut,
     LoanCreate,
@@ -194,12 +197,15 @@ async def list_loans(
     open_only: bool = Query(True, alias="open"),
     employee_id: UUID | None = None,
     daily_plan_id: UUID | None = None,
+    borrower_id: UUID | None = None,
     current_user: CurrentUser = _LOGIN,
     controller: AssetController = Depends(),
 ) -> list[LoanOut]:
-    """Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya."""
+    """Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya;
+    peminjaman ke penerima eksternal hanya terlihat oleh pengelola aset."""
     rows = await controller.handle_loans(
-        current_user, open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id
+        current_user, open_only=open_only, employee_id=employee_id, daily_plan_id=daily_plan_id,
+        borrower_id=borrower_id,
     )
     return list(apply_list(rows, params, response, lambda r: (r.asset_name, r.asset_code, r.employee_name)))
 
@@ -211,7 +217,8 @@ async def lend_asset(
     controller: AssetController = Depends(),
     idem: IdempotencyGuard = Depends(idempotency_guard),
 ) -> LoanOut | Response:
-    """Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+    """Serah terima aset ke karyawan (`employee_id`, opsional dikaitkan ke jadwal harian tim) ATAU ke
+    penerima eksternal (`external_borrower_id`, dengan `due_date` dan dokumen `bast_file_id`); isi tepat satu.
     Mendukung Idempotency-Key (opsional)."""
     tersimpan = idem.tersimpan()
     if tersimpan is not None:
@@ -227,6 +234,37 @@ async def return_asset(
 ) -> LoanOut:
     """Pengembalian aset dengan kondisinya (ready/damaged/lost)."""
     return await controller.handle_return(assignment_id, data.condition, current_user)
+
+
+# ── Penerima eksternal ────────────────────────────────────────────────────────
+@router.get("/external-borrowers", response_model=list[BorrowerOut])
+async def list_borrowers(
+    response: Response,
+    params: ListParams = Depends(),
+    office_id: UUID | None = None,
+    current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+) -> list[BorrowerOut]:
+    """Daftar penerima eksternal (klien sewa, subkontraktor) di kantor jangkauan pengelola aset."""
+    rows = await controller.handle_borrowers(current_user, office_id)
+    return list(apply_list(rows, params, response, lambda r: (r.nama, r.instansi), prefix=True))
+
+
+@router.post("/external-borrowers", response_model=BorrowerOut, status_code=status.HTTP_201_CREATED)
+async def create_borrower(
+    data: BorrowerCreate, current_user: CurrentUser = _MANAGE, controller: AssetController = Depends()
+) -> BorrowerOut:
+    """Mendaftarkan penerima eksternal baru (nama, instansi, kontak) untuk peminjaman aset."""
+    return await controller.handle_create_borrower(data, current_user)
+
+
+@router.put("/external-borrowers/{borrower_id}", response_model=BorrowerOut)
+async def update_borrower(
+    borrower_id: UUID, data: BorrowerUpdate, current_user: CurrentUser = _MANAGE,
+    controller: AssetController = Depends(),
+) -> BorrowerOut:
+    """Mengubah data penerima eksternal (sebagian)."""
+    return await controller.handle_update_borrower(borrower_id, data, current_user)
 
 
 # ── Pengajuan pinjam & pengembalian oleh karyawan ─────────────────────────────

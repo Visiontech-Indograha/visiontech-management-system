@@ -4910,13 +4910,15 @@ export interface paths {
         };
         /**
          * List Loans
-         * @description Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya.
+         * @description Peminjaman aset (default: yang belum dikembalikan). Pekerja lapangan hanya melihat miliknya;
+         *     peminjaman ke penerima eksternal hanya terlihat oleh pengelola aset.
          */
         get: operations["list_loans_api_v1_assets_loans_get"];
         put?: never;
         /**
          * Lend Asset
-         * @description Serah terima aset ke karyawan (opsional dikaitkan ke jadwal harian tim).
+         * @description Serah terima aset ke karyawan (`employee_id`, opsional dikaitkan ke jadwal harian tim) ATAU ke
+         *     penerima eksternal (`external_borrower_id`, dengan `due_date` dan dokumen `bast_file_id`); isi tepat satu.
          *     Mendukung Idempotency-Key (opsional).
          */
         post: operations["lend_asset_api_v1_assets_loans_post"];
@@ -4940,6 +4942,50 @@ export interface paths {
          * @description Pengembalian aset dengan kondisinya (ready/damaged/lost).
          */
         post: operations["return_asset_api_v1_assets_loans__assignment_id__return_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/external-borrowers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Borrowers
+         * @description Daftar penerima eksternal (klien sewa, subkontraktor) di kantor jangkauan pengelola aset.
+         */
+        get: operations["list_borrowers_api_v1_assets_external_borrowers_get"];
+        put?: never;
+        /**
+         * Create Borrower
+         * @description Mendaftarkan penerima eksternal baru (nama, instansi, kontak) untuk peminjaman aset.
+         */
+        post: operations["create_borrower_api_v1_assets_external_borrowers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assets/external-borrowers/{borrower_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Borrower
+         * @description Mengubah data penerima eksternal (sebagian).
+         */
+        put: operations["update_borrower_api_v1_assets_external_borrowers__borrower_id__put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6239,6 +6285,63 @@ export interface components {
              * @default false
              */
             custom: boolean;
+        };
+        /**
+         * BorrowerCreate
+         * @description Penerima eksternal (klien sewa, subkontraktor). Data seminimal mungkin: tanpa NIK/alamat.
+         */
+        BorrowerCreate: {
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Nama */
+            nama: string;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
+        };
+        /** BorrowerOut */
+        BorrowerOut: {
+            /**
+             * Borrower Id
+             * Format: uuid
+             */
+            borrower_id: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Office Name */
+            office_name: string;
+            /** Nama */
+            nama: string;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
+            /**
+             * Has Open Loan
+             * @default false
+             */
+            has_open_loan: boolean;
+            /**
+             * Create At
+             * Format: date-time
+             */
+            create_at: string;
+        };
+        /** BorrowerUpdate */
+        BorrowerUpdate: {
+            /** Nama */
+            nama?: string | null;
+            /** Instansi */
+            instansi?: string | null;
+            /** Kontak */
+            kontak?: string | null;
         };
         /** BulkApproveIn */
         BulkApproveIn: {
@@ -8698,11 +8801,14 @@ export interface components {
             tool_id?: string | null;
             /** Vehicle Id */
             vehicle_id?: string | null;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
+            /** Employee Id */
+            employee_id?: string | null;
+            /** External Borrower Id */
+            external_borrower_id?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Bast File Id */
+            bast_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Handover File Id */
@@ -8729,15 +8835,22 @@ export interface components {
             asset_name: string;
             /** Asset Code */
             asset_code: string;
-            /**
-             * Employee Id
-             * Format: uuid
-             */
-            employee_id: string;
+            /** Employee Id */
+            employee_id?: string | null;
             /** Employee Name */
             employee_name: string;
             /** Employee Photo File Id */
             employee_photo_file_id?: string | null;
+            /** External Borrower Id */
+            external_borrower_id?: string | null;
+            /** Borrower Name */
+            borrower_name?: string | null;
+            /** Borrower Instansi */
+            borrower_instansi?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Bast File Id */
+            bast_file_id?: string | null;
             /** Daily Plan Id */
             daily_plan_id?: string | null;
             /** Work Date */
@@ -11548,6 +11661,8 @@ export interface components {
             assignment_id?: string | null;
             /** Holder Employee Id */
             holder_employee_id?: string | null;
+            /** Holder External Borrower Id */
+            holder_external_borrower_id?: string | null;
             /** Holder Name */
             holder_name?: string | null;
             /** Daily Plan Id */
@@ -11955,6 +12070,8 @@ export interface components {
             assignment_id?: string | null;
             /** Holder Employee Id */
             holder_employee_id?: string | null;
+            /** Holder External Borrower Id */
+            holder_external_borrower_id?: string | null;
             /** Holder Name */
             holder_name?: string | null;
             /** Daily Plan Id */
@@ -22964,6 +23081,7 @@ export interface operations {
                 open?: boolean;
                 employee_id?: string | null;
                 daily_plan_id?: string | null;
+                borrower_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -23055,6 +23173,111 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_borrowers_api_v1_assets_external_borrowers_get: {
+        parameters: {
+            query?: {
+                office_id?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_borrower_api_v1_assets_external_borrowers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_borrower_api_v1_assets_external_borrowers__borrower_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                borrower_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BorrowerUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BorrowerOut"];
                 };
             };
             /** @description Validation Error */

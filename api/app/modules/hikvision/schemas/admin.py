@@ -3,7 +3,7 @@ Token penerima TIDAK pernah ada di skema baca; hanya `TokenBaru` yang memuatnya,
 from __future__ import annotations
 
 import ipaddress
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -141,3 +141,29 @@ class StatusPerangkat(BaseModel):
     kemungkinan_duplikat_7_hari: int = Field(
         description="Kelompok event dengan nomor, waktu, dan jenis sama (duplikat murni ditolak penyimpanan)"
     )
+
+
+class BandingBaris(BaseModel):
+    employee_id: UUID
+    employee_name: str
+    tgl: date
+    pertama: datetime
+    terakhir: datetime
+    jumlah: int
+    clock_in_at: datetime | None
+    clock_out_at: datetime | None
+    selisih_masuk_menit: int | None
+    selisih_pulang_menit: int | None
+
+
+class BandingBayangan(BaseModel):
+    """Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari."""
+    device_id: UUID
+    mode: Mode
+    dari: date
+    sampai: date
+    akan_menghasilkan_absen: int
+    total_karyawan_hari: int
+    tak_terpetakan: int
+    terpotong: bool
+    items: list[BandingBaris]

@@ -6,7 +6,7 @@ tarik TIDAK disimpan di sini (tetap dari lingkungan/berkas rahasia). Token hanya
 from __future__ import annotations
 
 import secrets
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,9 @@ from app.core.permissions import Permission, RoleCode, SystemRole
 from app.core.security import CurrentUser
 from app.core.time import utcnow
 from app.modules.hikvision.repositories.hikvision_admin_repository import HikvisionAdminRepository
+from app.modules.hikvision.repositories.hikvision_proses_repository import HikvisionProsesRepository
 from app.modules.hikvision.schemas import admin as s
+from app.modules.hikvision.services import konstanta as hk
 from app.modules.hikvision.services.penerima_service import hash_token
 from app.shared.access.office_scope import office_restriction
 
@@ -26,6 +28,7 @@ _BATCH = 5000
 _MAX_BATCH_PER_PANGGILAN = 20
 _JENDELA_USULAN_HARI = 90
 _MAKS_USULAN = 500
+_MAKS_BANDING = 500
 _ALASAN = "Tidak ada karyawan dengan nomor ini di kantor perangkat."
 
 
@@ -204,4 +207,16 @@ class HikvisionAdminService:
             event_terakhir_diterima=await self.repo.last_received(str(device_id)),
             belum_terpetakan_7_hari=int(cnt.belum or 0),
             kemungkinan_duplikat_7_hari=await self.repo.duplicate_groups(str(device_id), t7),
+        )
+
+    async def banding_bayangan(self, device_id: UUID, dari: date, sampai: date, user: CurrentUser) -> s.BandingBayangan:
+        row, _ = await self._perangkat(device_id, user)
+        repo = HikvisionProsesRepository(self.db)
+        rows, r = await repo.banding_perangkat(
+            str(device_id), dari, sampai, _MAKS_BANDING, hk.MAJOR_AKSES, sorted(hk.MINOR_VERIFIKASI_LOLOS))
+        return s.BandingBayangan(
+            device_id=device_id, mode=row.mode, dari=dari, sampai=sampai,
+            akan_menghasilkan_absen=int(r.akan_dihasilkan), total_karyawan_hari=int(r.total),
+            tak_terpetakan=int(r.tak_terpetakan), terpotong=int(r.total) > len(rows),
+            items=[s.BandingBaris.model_validate(x, from_attributes=True) for x in rows],
         )

@@ -15703,6 +15703,89 @@
     }
    }
   },
+  "/api/v1/hikvision/devices/{device_id}/bayangan": {
+   "get": {
+    "tags": [
+     "Hikvision admin"
+    ],
+    "summary": "Banding Bayangan",
+    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.",
+    "operationId": "banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "device_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Device Id"
+      }
+     },
+     {
+      "name": "dari",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dari"
+      }
+     },
+     {
+      "name": "sampai",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "date"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Sampai"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BandingBayangan"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/recaps/attendance": {
    "get": {
     "tags": [
@@ -21704,6 +21787,162 @@
      "created_at"
     ],
     "title": "BackupOut"
+   },
+   "BandingBaris": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "tgl": {
+      "type": "string",
+      "format": "date",
+      "title": "Tgl"
+     },
+     "pertama": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Pertama"
+     },
+     "terakhir": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Terakhir"
+     },
+     "jumlah": {
+      "type": "integer",
+      "title": "Jumlah"
+     },
+     "clock_in_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock In At"
+     },
+     "clock_out_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Out At"
+     },
+     "selisih_masuk_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Masuk Menit"
+     },
+     "selisih_pulang_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Pulang Menit"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id",
+     "employee_name",
+     "tgl",
+     "pertama",
+     "terakhir",
+     "jumlah",
+     "clock_in_at",
+     "clock_out_at",
+     "selisih_masuk_menit",
+     "selisih_pulang_menit"
+    ],
+    "title": "BandingBaris"
+   },
+   "BandingBayangan": {
+    "properties": {
+     "device_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Device Id"
+     },
+     "mode": {
+      "type": "string",
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode"
+     },
+     "dari": {
+      "type": "string",
+      "format": "date",
+      "title": "Dari"
+     },
+     "sampai": {
+      "type": "string",
+      "format": "date",
+      "title": "Sampai"
+     },
+     "akan_menghasilkan_absen": {
+      "type": "integer",
+      "title": "Akan Menghasilkan Absen"
+     },
+     "total_karyawan_hari": {
+      "type": "integer",
+      "title": "Total Karyawan Hari"
+     },
+     "tak_terpetakan": {
+      "type": "integer",
+      "title": "Tak Terpetakan"
+     },
+     "terpotong": {
+      "type": "boolean",
+      "title": "Terpotong"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/BandingBaris"
+      },
+      "type": "array",
+      "title": "Items"
+     }
+    },
+    "type": "object",
+    "required": [
+     "device_id",
+     "mode",
+     "dari",
+     "sampai",
+     "akan_menghasilkan_absen",
+     "total_karyawan_hari",
+     "tak_terpetakan",
+     "terpotong",
+     "items"
+    ],
+    "title": "BandingBayangan",
+    "description": "Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari."
    },
    "BiometricLoginRequestSchema": {
     "properties": {

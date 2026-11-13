@@ -163,3 +163,49 @@ class HikvisionProsesRepository(BaseRepository):
             "ORDER BY t.tgl DESC, t.employee_id LIMIT :n",
             {"a": dari, "b": sampai, "n": batas, "major": major, "minor": list(minor)},
         )
+
+    async def banding_perangkat(
+        self, device_id: str, dari: date, sampai: date, batas: int, major: int, minor: Sequence[int]
+    ) -> tuple[Sequence[Any], Any]:
+        """Pembanding baca-saja satu perangkat: baris per karyawan-hari (maks `batas`) + ringkasan jumlah.
+        Dua kueri tetap (tidak tumbuh dengan jumlah karyawan)."""
+        param = {"d": device_id, "a": dari, "b": sampai, "major": major, "minor": list(minor)}
+        rows = await self.fetchall(
+            "WITH t AS (SELECT e.employee_id, (e.event_time AT TIME ZONE 'Asia/Jakarta')::date AS tgl, "
+            "min(e.event_time) AS pertama, max(e.event_time) AS terakhir, count(*) AS jumlah "
+            "FROM hikvision_event e JOIN hikvision_device d ON d.device_id = e.device_id "
+            "WHERE d.device_id = CAST(:d AS uuid) AND d.mode = 'SHADOW' AND d.delete_at IS NULL "
+            "AND e.employee_id IS NOT NULL AND e.major_event_type = :major AND e.minor_event_type = ANY(:minor) "
+            "AND e.event_time >= CAST(:a AS timestamp) AT TIME ZONE 'Asia/Jakarta' "
+            "AND e.event_time < (CAST(:b AS timestamp) + interval '1 day') AT TIME ZONE 'Asia/Jakarta' "
+            "GROUP BY 1, 2) "
+            "SELECT t.employee_id, em.full_name AS employee_name, t.tgl, t.pertama, t.terakhir, t.jumlah, "
+            "a.clock_in_at, a.clock_out_at, "
+            "ROUND(EXTRACT(EPOCH FROM (t.pertama - a.clock_in_at)) / 60)::int AS selisih_masuk_menit, "
+            "ROUND(EXTRACT(EPOCH FROM (t.terakhir - a.clock_out_at)) / 60)::int AS selisih_pulang_menit "
+            "FROM t JOIN employee em ON em.employee_id = t.employee_id "
+            "LEFT JOIN LATERAL (SELECT clock_in_at, clock_out_at FROM attendance x "
+            "WHERE x.employee_id = t.employee_id AND x.attendance_date = t.tgl AND x.delete_at IS NULL "
+            "AND x.source IS DISTINCT FROM 'HIKVISION' ORDER BY x.clock_in_at LIMIT 1) a ON TRUE "
+            "ORDER BY t.tgl DESC, t.employee_id LIMIT :n",
+            {**param, "n": batas},
+        )
+        ringkas = await self.fetchone(
+            "WITH t AS (SELECT e.employee_id, (e.event_time AT TIME ZONE 'Asia/Jakarta')::date AS tgl "
+            "FROM hikvision_event e JOIN hikvision_device d ON d.device_id = e.device_id "
+            "WHERE d.device_id = CAST(:d AS uuid) AND d.mode = 'SHADOW' AND d.delete_at IS NULL "
+            "AND e.employee_id IS NOT NULL AND e.major_event_type = :major AND e.minor_event_type = ANY(:minor) "
+            "AND e.event_time >= CAST(:a AS timestamp) AT TIME ZONE 'Asia/Jakarta' "
+            "AND e.event_time < (CAST(:b AS timestamp) + interval '1 day') AT TIME ZONE 'Asia/Jakarta' "
+            "GROUP BY 1, 2) "
+            "SELECT count(*) AS total, count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM attendance x "
+            "WHERE x.employee_id = t.employee_id AND x.attendance_date = t.tgl AND x.delete_at IS NULL "
+            "AND x.source IS DISTINCT FROM 'HIKVISION')) AS akan_dihasilkan, "
+            "(SELECT count(*) FROM hikvision_event e WHERE e.device_id = CAST(:d AS uuid) "
+            "AND e.employee_id IS NULL AND e.major_event_type = :major AND e.minor_event_type = ANY(:minor) "
+            "AND e.event_time >= CAST(:a AS timestamp) AT TIME ZONE 'Asia/Jakarta' "
+            "AND e.event_time < (CAST(:b AS timestamp) + interval '1 day') AT TIME ZONE 'Asia/Jakarta') "
+            "AS tak_terpetakan FROM t",
+            param,
+        )
+        return rows, ringkas

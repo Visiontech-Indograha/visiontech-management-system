@@ -3,9 +3,7 @@ import { Input } from "../atoms/Input";
 import { Label } from "../atoms/Label";
 import { Text } from "../atoms/Text";
 
-const FILE_INPUT = "file";
-
-/** Kolom unggah berkas dengan label, bantuan, dan galat; satu-satunya tempat input berkas baru (aturan R5). */
+/** Kolom unggah berkas dengan label, bantuan, dan galat; satu-satunya tempat input berkas baru (aturan R5, diizinkan di lib/aturanDesain.test.ts). */
 export const UploadField = forwardRef<
   HTMLInputElement,
   Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label: string; error?: string; hint?: string }
@@ -16,7 +14,7 @@ export const UploadField = forwardRef<
   return (
     <div className="mb-4 space-y-1.5">
       <Label htmlFor={id} className="text-sm font-medium text-ink">{label}</Label>
-      <Input id={id} ref={ref} aria-invalid={!!error} aria-describedby={note ? msgId : undefined} {...props} type={FILE_INPUT} />
+      <Input id={id} ref={ref} aria-invalid={!!error} aria-describedby={note ? msgId : undefined} {...props} type="file" />
       {note && <Text id={msgId} role={error ? "alert" : undefined} className={error ? "text-sm font-medium text-destructive" : "text-xs text-muted-foreground"}>{note}</Text>}
     </div>
   );

@@ -31,6 +31,7 @@ import 'session_labels.dart';
 part 'attendance_actions.dart';
 part 'attendance_helpers.dart';
 part 'attendance_loader.dart';
+part 'attendance_state.dart';
 
 /// Absensi (M5, dok 05 §3.5). Wajib online: waktu & geofence ditentukan server.
 /// Di luar radius lokasi, server mewajibkan swafoto — aplikasi memintanya lebih dulu.
@@ -41,50 +42,12 @@ class AttendanceScreen extends ConsumerStatefulWidget {
   ConsumerState<AttendanceScreen> createState() => _AttendanceScreenState();
 }
 
-class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
-  List<Map<String, dynamic>> _records = [];
-  // R-34: absen offline yang belum terkirim (antrean bertanda tangan di HP).
-  List<Map<String, dynamic>> _offline = [];
-  String? _serverToday;
-  // Jam wajib pulang & jumlah tugas belum dilapor hari ini (dari server): dasar pengingat dan peringatan laporan.
-  DateTime? _requiredOutAt;
-  int _reportPending = 0;
-  String? _reportPlanId;
-  List<Map<String, dynamic>> _sites = [];
-  String? _siteId;
-  // Lokasi SK yang sedang berjalan untuk akun ini (dasar peringatan bila memilih lokasi lain).
-  List<String> _runningSites = [];
-  DateTime? _cachedAt;
-  bool _loading = true;
-  bool _busy = false;
-  String? _error;
-  bool _faceEnrolled = false;
-  // Paginasi keyset riwayat: kursor halaman berikut (null = sudah habis atau data dari cache).
-  String? _nextCursor;
-  bool _memuatLagi = false;
-
-  static final _day = DateFormat('EEE, d MMM yyyy', 'id_ID');
-  static final _time = DateFormat('HH:mm');
-
+class _AttendanceScreenState extends _AttendanceBase with _AttendanceLoader, _AttendanceActions {
   @override
   void initState() {
     super.initState();
     _load();
   }
-
-  String _siteName(String id) => (_sites.where((s) => s['id'] == id).firstOrNull?['name'] as String?) ?? 'penugasan';
-
-  String get _employeeId {
-    final auth = ref.read(authControllerProvider);
-    return auth is AuthAuthenticated ? auth.user.employeeId : '';
-  }
-
-  /// Keputusan pemilik 2026-10-02: ditolak → boleh mengajukan ulang sekali; ditolak lagi →
-  /// hari itu terkunci dan tercatat ditolak (server menolak dengan ATTENDANCE_DAY_LOCKED).
-  static const _maxAttemptsPerDay = 2;
-
-  Map<String, int> _summary = const {};
-  bool _siteManual = false; // pengguna memilih lokasi sendiri → jangan diganti otomatis
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +77,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             HeroHeader(
               eyebrow: 'Absensi',
               title: name.isEmpty ? greet : '$greet, $name',
-              subtitle: _day.format(attendanceClock()),
+              subtitle: _AttendanceBase._day.format(attendanceClock()),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -186,7 +149,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   'terlihat di sini.',
                             )
                           else if (today == null ||
-                              (today['status'] == 'REJECTED' && _rejectedToday < _maxAttemptsPerDay)) ...[
+                              (today['status'] == 'REJECTED' && _rejectedToday < _AttendanceBase._maxAttemptsPerDay)) ...[
                             if (today != null) ...[
                               NoticeBanner(
                                 key: const Key('absen-ditolak-bisa-ulang'),
@@ -355,7 +318,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      _day.format(DateTime.parse(r['work_date'] as String)),
+                                      _AttendanceBase._day.format(DateTime.parse(r['work_date'] as String)),
                                       style: VmsTextStyles.bodySm.copyWith(
                                         fontWeight: FontWeight.w700,
                                         color: VmsColors.neutral900,

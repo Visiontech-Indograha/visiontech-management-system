@@ -1,8 +1,7 @@
-// ignore_for_file: invalid_use_of_protected_member
 part of 'attendance_screen.dart';
 
 /// Aksi absen masuk, keluar, bukti, dan penjelasan (dipisah dari berkas utama, perilaku sama).
-extension _AttendanceActions on _AttendanceScreenState {
+mixin _AttendanceActions on _AttendanceBase, _AttendanceLoader {
   Future<void> _checkIn() async {
     final now = attendanceClock();
     if (!attendanceHoursSkipped() && _wibMinutes(now) < 6 * 60 + 45) {
@@ -394,7 +393,7 @@ extension _AttendanceActions on _AttendanceScreenState {
     }
   }
 
-  String _hhmm(dynamic iso) => iso == null ? '--:--' : _AttendanceScreenState._time.format(DateTime.parse(iso as String).toLocal());
+  String _hhmm(dynamic iso) => iso == null ? '--:--' : _AttendanceBase._time.format(DateTime.parse(iso as String).toLocal());
 
   Widget _timeTile(String label, String value, IconData icon, Accent accent) => Expanded(
     child: Container(

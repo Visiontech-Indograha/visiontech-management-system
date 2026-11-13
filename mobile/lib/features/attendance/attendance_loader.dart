@@ -1,8 +1,7 @@
-// ignore_for_file: invalid_use_of_protected_member
 part of 'attendance_screen.dart';
 
 /// Pemuatan data, lokasi, dan pengingat layar absensi (dipisah dari berkas utama, perilaku sama).
-extension _AttendanceLoader on _AttendanceScreenState {
+mixin _AttendanceLoader on _AttendanceBase {
   /// Tanpa tugas berjalan: setelah titik GPS pertama tiba, pindah ke lokasi terdekat (bila pengguna belum memilih).
   Future<void> _autoPickNearest() async {
     if (_siteManual || _runningSites.isNotEmpty || _sites.length < 2) return;

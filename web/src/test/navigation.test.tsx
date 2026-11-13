@@ -12,10 +12,10 @@ describe("menu berdasarkan izin API", () => {
     expect(labels([])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya"]);
     expect(labels(["view:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Direktori"]);
     // manage:users (jabatan) dan manage:divisions membuka menu "Divisi dan jabatan".
-    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Divisi dan jabatan"]);
+    expect(labels(["manage:users"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Divisi dan jabatan", "Arsip"]);
     expect(labels(["view:documents"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Berkas saya", "Dokumen saya"]);
     expect(labels(["view:audit"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Audit log"]);
-    expect(labels(["create:plan"])).toEqual(["Beranda", "Tugas Klien (WO)", "Jadwal harian", "Alokasi mingguan", "Klien", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Jenis pekerjaan"]);
+    expect(labels(["create:plan"])).toEqual(["Beranda", "Tugas Klien (WO)", "Jadwal harian", "Alokasi mingguan", "Klien", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Jenis pekerjaan", "Arsip"]);
     // R-33: lokasi kerja dikelola PM (proyek) & Finance (kantor) lewat manage:sites.
     expect(labels(["manage:sites"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya", "Lokasi kerja"]);
     expect(labels(["review:overtime"])).toEqual(["Beranda", "Jadwal harian", "Absensi", "Cuti dan Izin", "Rekap bulanan", "Lembur", "Rekap lembur", "Kendaraan dan alat", "Inspeksi kendaraan", "Dokumen saya"]);

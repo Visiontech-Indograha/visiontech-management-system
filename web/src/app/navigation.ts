@@ -1,4 +1,5 @@
 import {
+  ArchiveRestore,
   Bed,
   Network,
   Settings,
@@ -69,6 +70,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"], group: "Master dan Sistem" },
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
   { path: "/divisions", label: "Divisi dan jabatan", icon: Network, anyOf: ["manage:divisions", "manage:users"], group: "Master dan Sistem" },
+  { path: "/archive", label: "Arsip", icon: ArchiveRestore, anyOf: ["manage:assets", "create:plan", "manage:divisions", "manage:users", "manage:mess"], group: "Master dan Sistem" },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
   { path: "/system-settings", label: "Setelan sistem", icon: Settings, requires: ["manage:system_settings"], group: "Master dan Sistem" },
 ];

@@ -12,6 +12,7 @@ import { RetryNotice } from "@/components/molecules/RetryNotice";
 import { TextAreaField } from "@/components/molecules/Field";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
+import { AttachmentButton } from "@/components/organisms/AttachmentButton";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
@@ -111,6 +112,7 @@ export function MessRequestList({
                 </TextBlock>
               )}
               <div className="flex gap-2 pt-1">
+                <AttachmentButton kind="mess" parentId={r.mess_stay_id} locked={r.status !== "REQUESTED"} />
                 <ActionButton
                   size="sm"
                   onClick={() => setApproving(r)}

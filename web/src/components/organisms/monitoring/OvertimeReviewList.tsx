@@ -12,6 +12,7 @@ import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { overtimeActions } from "@/lib/aksiPeran";
 import { errorMessage } from "@/lib/errors";
 import { formatDate } from "@/lib/format";
+import { AttachmentButton } from "@/components/organisms/AttachmentButton";
 import { type Overtime, useReviewOvertime } from "@/services/overtimeService";
 
 /** Antrean lembur yang menunggu keputusan. Tombol hanya bila API menandai `can_review` (PM/OM divisi jadwal atau admin).
@@ -75,6 +76,7 @@ export function OvertimeReviewList({ query, more }: { query: UseQueryResult<Over
                   {formatDate(r.work_date)} · {r.hours} jam
                 </TextBlock>
                 <TextBlock className="rounded-control bg-hover p-2 text-xs">Alasan: {r.reason}</TextBlock>
+                <AttachmentButton kind="overtime" parentId={r.id} locked={r.status !== "PENDING_PM"} />
                 {actions.length > 0 && (
                   <div className="flex gap-2 pt-1">
                     <ActionButton

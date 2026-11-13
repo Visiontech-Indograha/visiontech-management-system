@@ -40,6 +40,7 @@ import {
   VehicleDocsPage,
   MyVehicleDocsPage,
   HseCampaignsPage,
+  VehicleInspectionsPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
@@ -71,6 +72,7 @@ const PAGES: Record<string, ReactNode> = {
   "/overtime": <OvertimePage />,
   "/overtime-recap": <OvertimeRecapPage />,
   "/safety-campaigns": <HseCampaignsPage />,
+  "/vehicle-inspections": <VehicleInspectionsPage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */

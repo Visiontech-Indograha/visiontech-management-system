@@ -12,7 +12,7 @@ type Count = "days_present" | "auto_valid" | "needs_review" | "approved" | "reje
 const COLS: [string, Count][] = [
   ["Hadir", "days_present"],
   ["Valid otomatis", "auto_valid"],
-  ["Perlu review", "needs_review"],
+  ["Perlu ditinjau", "needs_review"],
   ["Disetujui", "approved"],
   ["Ditolak", "rejected"],
 ];

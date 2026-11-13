@@ -4487,6 +4487,8 @@ export interface paths {
         /**
          * Banding Bayangan
          * @description Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.
+         *     Tanpa `status`/`q`/`page`/`size` = perilaku lama. Dengan salah satunya: ikut baris 'hanya_aplikasi', `q` = awalan
+         *     nama, `X-Total-Count` = jumlah baris setelah filter.
          */
         get: operations["banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get"];
         put?: never;
@@ -6505,15 +6507,18 @@ export interface components {
             tgl: string;
             /**
              * Pertama
-             * Format: date-time
+             * @description Tap pertama mesin; kosong pada baris 'hanya_aplikasi'
              */
-            pertama: string;
+            pertama?: string | null;
             /**
              * Terakhir
-             * Format: date-time
+             * @description Tap terakhir mesin; kosong pada baris 'hanya_aplikasi'
              */
-            terakhir: string;
-            /** Jumlah */
+            terakhir?: string | null;
+            /**
+             * Jumlah
+             * @description Jumlah tap mesin (0 pada baris 'hanya_aplikasi')
+             */
             jumlah: number;
             /** Clock In At */
             clock_in_at: string | null;
@@ -6523,6 +6528,12 @@ export interface components {
             selisih_masuk_menit: number | null;
             /** Selisih Pulang Menit */
             selisih_pulang_menit: number | null;
+            /**
+             * Status
+             * @description cocok | waktu_berbeda (selisih > 5 menit) | hanya_mesin | hanya_aplikasi
+             * @enum {string}
+             */
+            status: "cocok" | "waktu_berbeda" | "hanya_mesin" | "hanya_aplikasi";
         };
         /**
          * BandingBayangan
@@ -6557,6 +6568,11 @@ export interface components {
             tak_terpetakan: number;
             /** Terpotong */
             terpotong: boolean;
+            /**
+             * Total Baris
+             * @description Jumlah baris setelah filter (sama dengan X-Total-Count); hanya pada mode filter/paginasi
+             */
+            total_baris?: number | null;
             /** Items */
             items: components["schemas"]["BandingBaris"][];
         };
@@ -22671,6 +22687,14 @@ export interface operations {
             query?: {
                 dari?: string | null;
                 sampai?: string | null;
+                /** @description Saring satu status (mode baru) */
+                status?: ("cocok" | "waktu_berbeda" | "hanya_mesin" | "hanya_aplikasi") | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
             };
             header?: never;
             path: {

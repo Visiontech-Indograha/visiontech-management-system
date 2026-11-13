@@ -4,11 +4,11 @@ from __future__ import annotations
 from datetime import date, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 
 from app.api.deps import require_permission
 from app.core.errors import ValidationError
-from app.core.list_params import ListParams, apply_list, check_date_range
+from app.core.list_params import TOTAL_HEADER, ListParams, apply_list, check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.core.time import jakarta_now
@@ -144,13 +144,25 @@ async def hapus_pemetaan(
 
 @router.get("/devices/{device_id}/bayangan", response_model=s.BandingBayangan)
 async def banding_bayangan(
-    device_id: UUID, dari: date | None = None, sampai: date | None = None, user: CurrentUser = _IZIN,
+    device_id: UUID, response: Response, dari: date | None = None, sampai: date | None = None,
+    status: s.StatusBanding | None = Query(None, description="Saring satu status (mode baru)"),
+    params: ListParams = Depends(), user: CurrentUser = _IZIN,
     svc: HikvisionAdminService = Depends(get_admin_service),
 ) -> s.BandingBayangan:
-    """Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari."""
+    """Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.
+    Tanpa `status`/`q`/`page`/`size` = perilaku lama. Dengan salah satunya: ikut baris 'hanya_aplikasi', `q` = awalan
+    nama, `X-Total-Count` = jumlah baris setelah filter."""
     akhir = sampai or jakarta_now().date()
     mulai = dari or akhir - timedelta(days=14)
     check_date_range(mulai, akhir, start_name="dari", end_name="sampai")
     if (akhir - mulai).days > 30:
         raise ValidationError("Rentang paling lama 31 hari.")
-    return await svc.banding_bayangan(device_id, mulai, akhir, user)
+    awalan = None
+    if params.q:
+        awalan = params.q.lower().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
+    hasil = await svc.banding_bayangan(
+        device_id, mulai, akhir, user, status=status, awalan=awalan,
+        page=params.page if params.paged else None, size=params.size if params.paged else None)
+    if hasil.total_baris is not None:
+        response.headers[TOTAL_HEADER] = str(hasil.total_baris)
+    return hasil

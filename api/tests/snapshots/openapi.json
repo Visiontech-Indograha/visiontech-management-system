@@ -1938,13 +1938,22 @@
       "type": "string"
      },
      "jumlah": {
+      "description": "Jumlah tap mesin (0 pada baris 'hanya_aplikasi')",
       "title": "Jumlah",
       "type": "integer"
      },
      "pertama": {
-      "format": "date-time",
-      "title": "Pertama",
-      "type": "string"
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Tap pertama mesin; kosong pada baris 'hanya_aplikasi'",
+      "title": "Pertama"
      },
      "selisih_masuk_menit": {
       "anyOf": [
@@ -1968,10 +1977,29 @@
       ],
       "title": "Selisih Pulang Menit"
      },
-     "terakhir": {
-      "format": "date-time",
-      "title": "Terakhir",
+     "status": {
+      "description": "cocok | waktu_berbeda (selisih > 5 menit) | hanya_mesin | hanya_aplikasi",
+      "enum": [
+       "cocok",
+       "waktu_berbeda",
+       "hanya_mesin",
+       "hanya_aplikasi"
+      ],
+      "title": "Status",
       "type": "string"
+     },
+     "terakhir": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Tap terakhir mesin; kosong pada baris 'hanya_aplikasi'",
+      "title": "Terakhir"
      },
      "tgl": {
       "format": "date",
@@ -1983,13 +2011,12 @@
      "employee_id",
      "employee_name",
      "tgl",
-     "pertama",
-     "terakhir",
      "jumlah",
      "clock_in_at",
      "clock_out_at",
      "selisih_masuk_menit",
-     "selisih_pulang_menit"
+     "selisih_pulang_menit",
+     "status"
     ],
     "title": "BandingBaris",
     "type": "object"
@@ -2038,6 +2065,18 @@
      "terpotong": {
       "title": "Terpotong",
       "type": "boolean"
+     },
+     "total_baris": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Jumlah baris setelah filter (sama dengan X-Total-Count); hanya pada mode filter/paginasi",
+      "title": "Total Baris"
      },
      "total_karyawan_hari": {
       "title": "Total Karyawan Hari",
@@ -29186,7 +29225,7 @@
   },
   "/api/v1/hikvision/devices/{device_id}/bayangan": {
    "get": {
-    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.",
+    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.\nTanpa `status`/`q`/`page`/`size` = perilaku lama. Dengan salah satunya: ikut baris 'hanya_aplikasi', `q` = awalan\nnama, `X-Total-Count` = jumlah baris setelah filter.",
     "operationId": "banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get",
     "parameters": [
      {
@@ -29231,6 +29270,89 @@
         }
        ],
        "title": "Sampai"
+      }
+     },
+     {
+      "description": "Saring satu status (mode baru)",
+      "in": "query",
+      "name": "status",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "cocok",
+          "waktu_berbeda",
+          "hanya_mesin",
+          "hanya_aplikasi"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Saring satu status (mode baru)",
+       "title": "Status"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
       }
      }
     ],

@@ -88,6 +88,9 @@ class Permission(StrEnum):
 
     # Offboarding & clearance aset (Master V2)
     MANAGE_OFFBOARDING = "manage:offboarding"
+    # Perangkat absensi Hikvision: kelola perangkat, token penerima, pemetaan ID perangkat ke karyawan, pantau status.
+    # HR hanya kantornya sendiri; OM dan Super Admin semua kantor (dicek di service).
+    MANAGE_HIKVISION = "manage:hikvision"
     VIEW_OFFBOARDING = "view:offboarding"
 
     # Syarat foto pekerjaan (Master V2)
@@ -149,7 +152,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.CREATE_PLAN, P.PUBLISH_PLAN, P.REVIEW_OVERTIME, P.VIEW_ALL_ATTENDANCE,
         P.REVIEW_ATTENDANCE, P.VIEW_TIMELINE, P.VIEW_AUDIT, P.VIEW_TEAMS,
         P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_SITES, P.MANAGE_DIVISIONS,
-        P.MANAGE_FIELD_ROLE_ASSIGNMENTS,
+        P.MANAGE_FIELD_ROLE_ASSIGNMENTS, P.MANAGE_HIKVISION,
         P.EXPORT_ATTENDANCE,  # keputusan pemilik: OM mengekspor CSV absensi; cakupan kantor OM = semua kantor
     }),
     # Lokasi proyek PM ada di work_plan_daily (bukan master kantor) — tanpa MANAGE_SITES di V2.
@@ -163,7 +166,7 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
-        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE, P.MANAGE_HIKVISION,
     }),
     # Finance melihat & mengekspor absensi seluruh karyawan dan meninjau lembur (sama seperti FINANCE V1).
     SystemRole.FINANCE: frozenset({

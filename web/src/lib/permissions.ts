@@ -22,6 +22,7 @@ export const PERMISSIONS = [
   "view:mess",
   "review:mess",
   "manage:offboarding",
+  "manage:hikvision",
   "view:offboarding",
   "manage:image_requirements",
   "view:timeline",

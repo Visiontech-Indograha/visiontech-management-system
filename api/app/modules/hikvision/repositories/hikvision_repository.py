@@ -24,10 +24,28 @@ class HikvisionRepository(BaseRepository):
             {"s": serial},
         )
 
+    async def device_by_id(self, device_id: str) -> Any:
+        return await self.fetchone(
+            "SELECT device_id, serial_no, ip_address, http_port, mode FROM hikvision_device "
+            "WHERE device_id = CAST(:i AS uuid) AND delete_at IS NULL",
+            {"i": device_id},
+        )
+
+    async def employee_no_terpetakan(self, device_id: Any, nomor: Sequence[str]) -> set[str]:
+        """Subset `nomor` yang sudah punya pemetaan karyawan aktif di perangkat itu."""
+        baris = await self.fetchall(
+            "SELECT employee_no_string FROM hikvision_employee_map "
+            "WHERE device_id = CAST(:d AS uuid) AND delete_at IS NULL "
+            "AND employee_no_string = ANY(CAST(:n AS text[]))",
+            {"d": str(device_id), "n": list(nomor)},
+        )
+        return {r.employee_no_string for r in baris}
+
     async def latest_pull_time(self, device_id: Any, mulai: Any, akhir: Any) -> Any:
         return await self.scalar(
             "SELECT max(event_time) FROM hikvision_event "
-            "WHERE device_id = :d AND sumber = 'PULL' AND event_time >= :a AND event_time <= :b",
+            "WHERE device_id = :d AND sumber = 'PULL' AND (payload->>'impor') IS NULL "
+            "AND event_time >= :a AND event_time <= :b",
             {"d": device_id, "a": mulai, "b": akhir},
         )
 

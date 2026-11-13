@@ -6,6 +6,7 @@ import { pagedView, type ListControls } from "@/hooks/usePagedList";
 import type { Paged } from "@/lib/paged";
 import type { MessStay } from "@/services/messService";
 import { MessAddButton } from "./MessAddButton";
+import { AttachmentButton } from "@/components/organisms/AttachmentButton";
 import { ConfirmDialog } from "@/components/organisms/ConfirmDialog";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
@@ -100,6 +101,7 @@ export function MessList({
                       : " · Sedang menginap"}
                 </TextBlock>
               </div>
+              <AttachmentButton kind="mess" parentId={s.mess_stay_id} locked={s.status !== "REQUESTED"} />
               {canAdd && s.stay_start_date <= today && s.stay_end_date >= today && (
                 <ActionButton
                   variant="outline"

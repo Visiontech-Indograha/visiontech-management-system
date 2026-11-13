@@ -1,5 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ListBlock, ListEntry } from "@/components/molecules/ListBlock";
+import { AttachmentButton } from "@/components/organisms/AttachmentButton";
 import { LoadMoreBar } from "@/components/organisms/LoadMoreBar";
 import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
@@ -31,6 +32,7 @@ export function OvertimeList({ query, more, titled = false }: { query: UseQueryR
             </TextBlock>
             <TextBlock className="rounded-control bg-hover p-2 text-xs">Alasan: {r.reason}</TextBlock>
             {r.review_note && <TextBlock className="text-xs text-mist">Catatan: {r.review_note}</TextBlock>}
+            <AttachmentButton kind="overtime" parentId={r.id} locked={r.status !== "PENDING_PM"} />
           </ListEntry>
         ))}
       </ListBlock>

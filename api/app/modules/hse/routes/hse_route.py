@@ -206,12 +206,40 @@ async def list_inspections(
 
 
 @router.get(
+    "/inspections/mine",
+    response_model=list[VehicleInspectionResponse],
+    summary="Inspeksi yang saya kirim atau untuk kendaraan yang saya kemudikan",
+)
+async def my_inspections(
+    response: Response,
+    params: ListParams = Depends(),
+    vehicle_id: UUID | None = Query(None),
+    from_date: date | None = Query(None),
+    to_date: date | None = Query(None),
+    current_user: CurrentUser = Depends(get_current_user),
+    controller: HseController = Depends(get_controller),
+) -> list[VehicleInspectionResponse]:
+    """Milik sendiri: pemeriksa = saya, atau pengemudi aktif kendaraannya. Tanpa page/size: 50 terbaru."""
+    check_date_range(from_date, to_date, start_name="from_date", end_name="to_date")
+    if not current_user.employee_id:
+        response.headers[TOTAL_HEADER] = "0"
+        return []
+    limit, offset = (params.size, (params.page - 1) * params.size) if params.paged else (50, 0)
+    items, total = await controller.list_vehicle_inspections(
+        vehicle_id=vehicle_id, from_date=from_date, to_date=to_date, limit=limit, offset=offset,
+        user=current_user, q=params.q, mine=str(current_user.employee_id),
+    )
+    response.headers[TOTAL_HEADER] = str(total)
+    return items
+
+
+@router.get(
     "/inspections/checklist-template",
     response_model=InspectionChecklistTemplate,
     summary="Butir daftar periksa baku untuk layar Buat inspeksi",
 )
 async def inspection_checklist_template(
-    current_user: CurrentUser = Depends(require_permission(Permission.VIEW_VEHICLE_INSPECTIONS)),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: HseController = Depends(get_controller),
 ) -> InspectionChecklistTemplate:
     return controller.inspection_checklist_template()
@@ -225,10 +253,11 @@ async def inspection_checklist_template(
 )
 async def create_inspection(
     data: VehicleInspectionCreate,
-    current_user: CurrentUser = Depends(require_permission(Permission.MANAGE_VEHICLE_INSPECTIONS)),
+    current_user: CurrentUser = Depends(get_current_user),
     controller: HseController = Depends(get_controller),
 ) -> VehicleInspectionResponse:
-    """Butuh manage:vehicle_inspections dan kendaraan di cakupan kantor pengguna (di luar cakupan = 404)."""
+    """HSE (manage:vehicle_inspections, kendaraan di kantornya), pengemudi aktif kendaraan itu, atau ketua tim
+    (kendaraan di kantornya). Peran lain 403; kendaraan di luar hak/kantor 404."""
     return await controller.create_vehicle_inspection(data, current_user)
 
 

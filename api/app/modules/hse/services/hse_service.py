@@ -291,9 +291,17 @@ class HseService:
         data: VehicleInspectionCreate,
         current_user: CurrentUser,
     ) -> VehicleInspectionResponse:
-        inspector_id = data.inspector_id or (
-            UUID(str(current_user.employee_id)) if current_user.employee_id else None
-        )
+        me = str(current_user.employee_id) if current_user.employee_id else None
+        manager = Permission.MANAGE_VEHICLE_INSPECTIONS.value in current_user.permissions
+        leader = current_user.has_role("TEAM_LEADER")
+        inspector_id: UUID | None
+        if manager:
+            inspector_id = data.inspector_id or (UUID(me) if me else None)
+        else:
+            # Pengemudi terdaftar aktif atau ketua tim: hanya atas nama sendiri.
+            inspector_id = UUID(me) if me else None
+            if not me or not (leader or await self.inspection_repo.has_active_driver_row(me)):
+                raise AppError("FORBIDDEN", "Anda tidak berhak mengirim inspeksi kendaraan.", status=403)
         if not inspector_id:
             raise AppError(
                 "MISSING_INSPECTOR",
@@ -302,8 +310,16 @@ class HseService:
             )
 
         exists, office = await self.inspection_repo.vehicle_office(data.vehicle_id)
-        offices = await self._offices(current_user, Permission.MANAGE_VEHICLE_INSPECTIONS)
-        if not exists or (offices is not None and office not in offices):
+        if manager:
+            offices = await self._offices(current_user, Permission.MANAGE_VEHICLE_INSPECTIONS)
+            allowed = exists and (offices is None or office in offices)
+        else:
+            assert me is not None
+            allowed = exists and (
+                await self.inspection_repo.is_active_driver(data.vehicle_id, me)
+                or (leader and office is not None and office == await self.inspection_repo.employee_office(me))
+            )
+        if not allowed:
             raise AppError("NOT_FOUND", "Kendaraan tidak ditemukan.", status=404)
         created = await self.inspection_repo.create(data, inspector_id)
         full_data = await self.inspection_repo.get_by_id(UUID(str(created["inspection_id"])))
@@ -322,6 +338,7 @@ class HseService:
         offset: int = 0,
         user: CurrentUser | None = None,
         q: str | None = None,
+        mine: str | None = None,
     ) -> tuple[list[VehicleInspectionResponse], int]:
         items, total = await self.inspection_repo.list_inspections(
             vehicle_id=vehicle_id,
@@ -331,8 +348,9 @@ class HseService:
             to_date=to_date,
             limit=limit,
             offset=offset,
-            offices=await self._offices(user, Permission.VIEW_VEHICLE_INSPECTIONS),
+            offices=None if mine else await self._offices(user, Permission.VIEW_VEHICLE_INSPECTIONS),
             q=q,
+            mine=mine,
         )
         return [VehicleInspectionResponse.model_validate(item) for item in items], total
 

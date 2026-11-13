@@ -200,23 +200,55 @@ def _payload(vehicle: str, **extra) -> dict:
     return {"vehicle_id": vehicle, "period_type": "DAILY", "checklist_json": {"rem": "BAIK"}, **extra}
 
 
-def test_inspection_create_requires_manage_permission(client, hse_world: World, test_vehicle: str):
-    for who in ("member", "leader"):
-        resp = client.post("/hse/inspections", headers=hse_world.headers(client, who), json=_payload(test_vehicle))
-        assert resp.status_code == 403, (who, resp.text)
-    ok = client.post("/hse/inspections", headers=hse_world.headers(client, "hse"), json=_payload(test_vehicle))
-    assert ok.status_code == 201, ok.text
-    missing = client.post(
-        "/hse/inspections", headers=hse_world.headers(client, "hse"),
-        json=_payload("00000000-0000-0000-0000-000000000001"),
-    )
-    assert missing.status_code == 404
+def test_inspection_create_role_matrix(client, hse_world: World, test_vehicle: str):
+    world = hse_world
+    world.add_person("sopir", "EMPLOYEE")
+    other = str(sync_query(
+        "INSERT INTO vehicle (office_id, division_id, vehicle_type, name, number_plate, status) "
+        "VALUES (%s, %s, 'Car', 'Mobil lain', %s, 'ready') RETURNING vehicle_id;",
+        (world.org_id, world.unit_id, f"B {world.tag[:4]} LAIN"),
+    )[0][0])
+    sync_query("INSERT INTO vehicle_driver (office_id, vehicle_id, employee_id) VALUES (%s, %s, %s)",
+               (world.org_id, test_vehicle, world.employees["sopir"]))
+    try:
+        # member (bukan pengemudi, bukan ketua tim, bukan HSE): 403
+        resp = client.post("/hse/inspections", headers=world.headers(client, "member"), json=_payload(test_vehicle))
+        assert resp.status_code == 403, resp.text
+        # pengemudi terdaftar: 201, atas nama sendiri walau inspector_id orang lain
+        mine = client.post("/hse/inspections", headers=world.headers(client, "sopir"),
+                           json=_payload(test_vehicle, inspector_id=world.employees["hse"]))
+        assert mine.status_code == 201, mine.text
+        assert mine.json()["inspector_id"] == world.employees["sopir"]
+        # pengemudi untuk kendaraan lain: 404
+        assert client.post("/hse/inspections", headers=world.headers(client, "sopir"),
+                           json=_payload(other)).status_code == 404
+        # ketua tim: kendaraan di kantornya 201
+        assert client.post("/hse/inspections", headers=world.headers(client, "leader"),
+                           json=_payload(other)).status_code == 201
+        # HSE: 201; kendaraan tak ada: 404
+        hse = world.headers(client, "hse")
+        assert client.post("/hse/inspections", headers=hse, json=_payload(test_vehicle)).status_code == 201
+        assert client.post("/hse/inspections", headers=hse,
+                           json=_payload("00000000-0000-0000-0000-000000000001")).status_code == 404
+        # /mine: pengemudi melihat inspeksi kendaraannya (termasuk yang dikirim HSE), bukan kendaraan lain
+        lst = client.get("/hse/inspections/mine", headers=world.headers(client, "sopir"))
+        assert lst.status_code == 200 and lst.headers["X-Total-Count"] == "2", lst.text
+        assert {i["vehicle_id"] for i in lst.json()} == {test_vehicle}
+        # ketua tim hanya melihat kiriman sendiri; member kosong
+        lead = client.get("/hse/inspections/mine", headers=world.headers(client, "leader"))
+        assert {i["vehicle_id"] for i in lead.json()} == {other}
+        assert client.get("/hse/inspections/mine", headers=world.headers(client, "member")).json() == []
+        # template terbuka untuk pengemudi (butuh untuk layar Buat)
+        tpl = client.get("/hse/inspections/checklist-template", headers=world.headers(client, "sopir"))
+        assert tpl.status_code == 200
+    finally:
+        sync_query("DELETE FROM vehicle_safety_inspections WHERE vehicle_id = %s;", (other,))
+        sync_query("DELETE FROM vehicle_driver WHERE vehicle_id IN (%s, %s);", (test_vehicle, other))
+        sync_query("DELETE FROM vehicle WHERE vehicle_id = %s;", (other,))
 
 
 def test_inspection_list_view_permission_and_validation(client, hse_world: World, test_vehicle: str):
     assert client.get("/hse/inspections", headers=hse_world.headers(client, "member")).status_code == 403
-    member = hse_world.headers(client, "member")
-    assert client.get("/hse/inspections/checklist-template", headers=member).status_code == 403
     hse = hse_world.headers(client, "hse")
     tpl = client.get("/hse/inspections/checklist-template", headers=hse)
     assert tpl.status_code == 200 and tpl.json()["items"]

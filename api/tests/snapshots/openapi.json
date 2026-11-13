@@ -28990,7 +28990,7 @@
     ]
    },
    "post": {
-    "description": "Butuh manage:vehicle_inspections dan kendaraan di cakupan kantor pengguna (di luar cakupan = 404).",
+    "description": "HSE (manage:vehicle_inspections, kendaraan di kantornya), pengemudi aktif kendaraan itu, atau ketua tim\n(kendaraan di kantornya). Peran lain 403; kendaraan di luar hak/kantor 404.",
     "operationId": "create_inspection_api_v1_hse_inspections_post",
     "requestBody": {
      "content": {
@@ -29056,6 +29056,159 @@
      }
     ],
     "summary": "Butir daftar periksa baku untuk layar Buat inspeksi",
+    "tags": [
+     "HSE & Keselamatan Kerja"
+    ]
+   }
+  },
+  "/api/v1/hse/inspections/mine": {
+   "get": {
+    "description": "Milik sendiri: pemeriksa = saya, atau pengemudi aktif kendaraannya. Tanpa page/size: 50 terbaru.",
+    "operationId": "my_inspections_api_v1_hse_inspections_mine_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "vehicle_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "in": "query",
+      "name": "from_date",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "From Date"
+      }
+     },
+     {
+      "in": "query",
+      "name": "to_date",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "To Date"
+      }
+     },
+     {
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+      "in": "query",
+      "name": "q",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 100,
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      }
+     },
+     {
+      "description": "Nomor halaman, mulai dari 1",
+      "in": "query",
+      "name": "page",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100000,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      }
+     },
+     {
+      "description": "Jumlah baris per halaman (maks 100)",
+      "in": "query",
+      "name": "size",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maximum": 100,
+         "minimum": 1,
+         "type": "integer"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/VehicleInspectionResponse"
+         },
+         "title": "Response My Inspections Api V1 Hse Inspections Mine Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Inspeksi yang saya kirim atau untuk kendaraan yang saya kemudikan",
     "tags": [
      "HSE & Keselamatan Kerja"
     ]

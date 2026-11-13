@@ -2883,9 +2883,30 @@ export interface paths {
         put?: never;
         /**
          * Kirim formulir inspeksi kendaraan (checklist & foto)
-         * @description Butuh manage:vehicle_inspections dan kendaraan di cakupan kantor pengguna (di luar cakupan = 404).
+         * @description HSE (manage:vehicle_inspections, kendaraan di kantornya), pengemudi aktif kendaraan itu, atau ketua tim
+         *     (kendaraan di kantornya). Peran lain 403; kendaraan di luar hak/kantor 404.
          */
         post: operations["create_inspection_api_v1_hse_inspections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hse/inspections/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Inspeksi yang saya kirim atau untuk kendaraan yang saya kemudikan
+         * @description Milik sendiri: pemeriksa = saya, atau pengemudi aktif kendaraannya. Tanpa page/size: 50 terbaru.
+         */
+        get: operations["my_inspections_api_v1_hse_inspections_mine_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19143,6 +19164,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VehicleInspectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_inspections_api_v1_hse_inspections_mine_get: {
+        parameters: {
+            query?: {
+                vehicle_id?: string | null;
+                from_date?: string | null;
+                to_date?: string | null;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleInspectionResponse"][];
                 };
             };
             /** @description Validation Error */

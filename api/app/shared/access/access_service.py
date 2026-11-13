@@ -147,9 +147,9 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
         return row
     if row.asset_file and await asset_file_visible(db, row.storage_key, user):
         return row
-    if getattr(row, "inspection_photo", False) and Permission.VIEW_VEHICLE_INSPECTIONS.value in perms:
-        if await inspection_photo_visible(db, user, row.id):
-            return row
+    if (getattr(row, "inspection_photo", False) and Permission.VIEW_VEHICLE_INSPECTIONS.value in perms
+            and await inspection_photo_visible(db, user, row.id)):
+        return row
     if row.personal_document and (row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in perms):
         return row
     # Swafoto: pemilik; pemegang VIEW_ALL (OM, Finance, OPS); atau PM yang memimpin divisi karyawan itu.

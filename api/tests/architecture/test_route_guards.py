@@ -105,6 +105,9 @@ GUARDED_IN_HANDLER = {
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
     ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",
     # M4: inspeksi oleh pengelola aset ATAU pemegang kendaraan saat itu (ditentukan peminjaman berjalan).
+    ("POST", "/hse/inspections"): "HseService: manage:vehicle_inspections, pengemudi aktif, atau ketua tim (diuji)",
+    ("GET", "/hse/inspections/mine"): "milik sendiri (pemeriksa atau pengemudi aktif), difilter di SQL",
+    ("GET", "/hse/inspections/checklist-template"): "daftar butir baku statis, tanpa data pribadi",
     ("POST", "/assets/vehicles/{vehicle_id}/inspections"): "AssetService: manage:assets atau pemegang (diuji)",
     ("POST", "/work-plans/daily/{daily_plan_id}/corrections"): "DailyCorrectionService: hanya ketua tim jadwal (diuji)",
     ("POST", "/work-plans/corrections/{correction_id}/decision"): "DailyCorrectionService: hanya PM/OM divisi (diuji)",

@@ -78,6 +78,7 @@ class VehicleInspectionRepository(BaseRepository):
         offset: int = 0,
         offices: list[str] | None = None,
         q: str | None = None,
+        mine: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         """Satu kueri: baris halaman + total (COUNT OVER). Nomor baris dihitung di SQL, tanpa memuat sisanya."""
         conditions = ["i.delete_at IS NULL"]
@@ -105,6 +106,13 @@ class VehicleInspectionRepository(BaseRepository):
             )
             params["q_prefix"] = escape_like(q)
 
+        if mine:  # inspeksi yang saya kirim atau untuk kendaraan yang sedang saya kemudikan
+            conditions.append(
+                "(i.inspector_id = CAST(:mine AS uuid) OR EXISTS (SELECT 1 FROM vehicle_driver d"
+                " WHERE d.vehicle_id = i.vehicle_id AND d.employee_id = CAST(:mine AS uuid)"
+                " AND d.delete_at IS NULL AND d.selesai_on IS NULL))"
+            )
+            params["mine"] = mine
         if offices is not None:  # peran HSE tambahan: hanya kendaraan di kantor penugasan (ADR 0002 fase 2)
             conditions.append("v.office_id = ANY(CAST(:offices AS uuid[]))")
             params["offices"] = offices
@@ -167,6 +175,27 @@ class VehicleInspectionRepository(BaseRepository):
         if row is None:
             return False, None
         return True, (str(row.office_id) if row.office_id else None)
+
+    async def is_active_driver(self, vehicle_id: UUID, employee_id: str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vehicle_driver WHERE vehicle_id = :v AND employee_id = CAST(:e AS uuid)"
+            " AND delete_at IS NULL AND selesai_on IS NULL)",
+            {"v": vehicle_id, "e": employee_id},
+        ))
+
+    async def has_active_driver_row(self, employee_id: str) -> bool:
+        return bool(await self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM vehicle_driver WHERE employee_id = CAST(:e AS uuid)"
+            " AND delete_at IS NULL AND selesai_on IS NULL)",
+            {"e": employee_id},
+        ))
+
+    async def employee_office(self, employee_id: str) -> str | None:
+        value = await self.scalar(
+            "SELECT CAST(office_id AS text) FROM employee WHERE employee_id = CAST(:e AS uuid) AND delete_at IS NULL",
+            {"e": employee_id},
+        )
+        return str(value) if value else None
 
     async def verify(
         self,

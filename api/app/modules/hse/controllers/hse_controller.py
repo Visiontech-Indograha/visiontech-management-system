@@ -101,6 +101,7 @@ class HseController:
         offset: int = 0,
         user: CurrentUser | None = None,
         q: str | None = None,
+        mine: str | None = None,
     ) -> tuple[list[VehicleInspectionResponse], int]:
         return await self.service.list_vehicle_inspections(
             vehicle_id=vehicle_id,
@@ -112,6 +113,7 @@ class HseController:
             offset=offset,
             user=user,
             q=q,
+            mine=mine,
         )
 
     def inspection_checklist_template(self) -> InspectionChecklistTemplate:

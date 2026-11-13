@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db_with_user
 from app.modules.overtime.services.overtime_service import OvertimeService
+from app.shared.attachments.service import OVERTIME, AttachmentService
 
 
 def get_overtime_service(db: AsyncSession = Depends(get_db_with_user)) -> OvertimeService:
     return OvertimeService(db)
+
+
+def get_overtime_attachments(db: AsyncSession = Depends(get_db_with_user)) -> AttachmentService:
+    return AttachmentService(db, OVERTIME)

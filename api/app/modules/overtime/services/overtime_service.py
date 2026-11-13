@@ -15,6 +15,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, ForbiddenError, NotFoundError, ValidationError
+from app.core.file_cleanup import release_keys
 from app.core.hard_delete import purge_row, write_delete_audit
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
@@ -41,7 +42,11 @@ class OvertimeService:
                                           {"id": str(overtime_id)})
         if exists is None:
             raise NotFoundError("Lembur")
+        keys = [str(r[0]) for r in (await self.repo.fetchall(
+            "SELECT f.storage_key FROM overtime_attachment a JOIN file_object f ON f.id = a.file_object_id "
+            "WHERE a.overtime_id = CAST(:id AS uuid)", {"id": str(overtime_id)}))]
         await purge_row(self.db, "overtime", "overtime_id", overtime_id)
+        await release_keys(self.db, keys)  # lampirannya ikut terhapus (objek dibuang setelah commit)
         await write_delete_audit(
             self.db, actor_user_id=actor.user_id,
             actor_role=actor.role,

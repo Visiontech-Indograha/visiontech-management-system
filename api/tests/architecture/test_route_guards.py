@@ -117,6 +117,12 @@ GUARDED_IN_HANDLER = {
     ("POST", "/assets/loans/{assignment_id}/return-request"): "AssetService: hanya pemegang aset (diuji)",
     ("POST", "/overtime"): "OvertimeService: ketua/anggota tim jadwal ONGOING (diuji)",
     ("GET", "/overtime"): "OvertimeService: check_daily_access(VIEW) untuk daily_plan_id (diuji)",
+    ("GET", "/overtime/{ot_id}/attachments"): "AttachmentService: pemohon atau peninjau lembur itu; sesama kantor lain 403, kantor lain 404 (diuji)",
+    ("POST", "/overtime/{ot_id}/attachments"): "AttachmentService: pemohon/peninjau, selagi menunggu, berkas unggahan sendiri (diuji)",
+    ("DELETE", "/overtime/{ot_id}/attachments/{file_id}"): "AttachmentService: pemohon/pengunggah, selagi menunggu (diuji)",
+    ("GET", "/mess/{mess_stay_id}/attachments"): "AttachmentService: pemohon atau peninjau mess itu; kantor lain 404 (diuji)",
+    ("POST", "/mess/{mess_stay_id}/attachments"): "AttachmentService: pemohon/peninjau, selagi menunggu, berkas unggahan sendiri (diuji)",
+    ("DELETE", "/mess/{mess_stay_id}/attachments/{file_id}"): "AttachmentService: pemohon/pengunggah, selagi menunggu (diuji)",
     ("POST", "/overtime/{ot_id}/review"): "OvertimeService: PM/OM divisi jadwal, bukan pengaju (diuji)",
     ("GET", "/recaps/overtime"): "OvertimeService: izin review:overtime (Finance/OPS/Admin) (diuji)",
     # Survei ACS/CCTV (docs/37): SurveyService._task → DailyAccess (ketua tim jadwalnya / PM-OM divisi).

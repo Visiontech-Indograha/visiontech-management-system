@@ -10,6 +10,7 @@ import '../../data/pengajuan_idempotency.dart';
 import '../../shared/ui/vms_list_filter.dart';
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
+import 'asset_holder.dart';
 
 /// Label status pengajuan pinjam aset (alur: karyawan mengajukan, HR/GA memutuskan).
 String loanRequestStatusLabel(String status) => switch (status) {
@@ -181,6 +182,13 @@ class _AssetsScreenState extends ConsumerState<AssetsScreen> {
               l['asset_type'] == 'VEHICLE' ? 'Kendaraan' : 'Alat',
               style: VmsTextStyles.bodySm,
             ),
+            if (isExternalHolder(l)) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Dipegang ${assetHolderLabel(l)}',
+                style: VmsTextStyles.bodySm,
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [

@@ -157,6 +157,33 @@ async def hapus_terjadwal(terapkan: bool, paksa: bool = False) -> int:
     return 1 if summary.bermasalah else 0
 
 
+async def pengingat_dokumen(dry_run: bool, tanggal: str | None = None) -> int:
+    """Kirim pengingat dokumen kendaraan/SIM yang akan jatuh tempo (T30/T21/T14, lalu harian). Aman diulang:
+    pengingat yang sudah terkirim hari itu tidak dikirim lagi. Satu transaksi; gagal = tidak ada yang terkirim."""
+    import json
+    from datetime import date
+
+    from app.modules.vehicle_documents.services import reminder_service
+
+    hari = date.fromisoformat(tanggal) if tanggal else None
+    engine = make_engine(_operator_url())
+    try:
+        async with engine.connect() as conn:
+            session = AsyncSession(bind=conn)
+            try:
+                ring = await reminder_service.jalankan(session, today=hari, dry_run=dry_run)
+                if dry_run:
+                    await conn.rollback()
+                else:
+                    await conn.commit()
+            finally:
+                await session.close()
+    finally:
+        await engine.dispose()
+    print(("[dry-run] " if dry_run else "") + json.dumps(ring.as_dict()))
+    return 0
+
+
 async def hikvision_tarik(
     perangkat: str, dari: str | None, sampai: str | None, dry_run: bool, jeda: float, lanjutkan: bool,
 ) -> int:
@@ -253,6 +280,10 @@ def main() -> None:
     hik_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung dan cari event tertua, tanpa simpan")
     hik_parser.add_argument("--jeda", type=float, default=1.0, help="Jeda antar permintaan ke perangkat (detik)")
     hik_parser.add_argument("--lanjutkan", action="store_true", help="Lanjut dari jendela terakhir yang tersimpan")
+    doc_parser = subparsers.add_parser(
+        "pengingat-dokumen", help="Kirim pengingat dokumen kendaraan/SIM yang akan jatuh tempo (jalankan 1x/hari)")
+    doc_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung, tidak menulis apa pun")
+    doc_parser.add_argument("--tanggal", help="Tanggal bisnis pengganti (YYYY-MM-DD), untuk uji")
     backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
     backup_parser.add_argument(
         "--cycle", default="WEEKLY", choices=["DAILY", "WEEKLY", "MONTHLY"], help="Siklus backup"
@@ -279,6 +310,8 @@ def main() -> None:
         asyncio.run(cleanup_idempotency(args.hari))
     elif args.command == "hapus-terjadwal":
         sys.exit(asyncio.run(hapus_terjadwal(terapkan=args.terapkan, paksa=args.paksa)))
+    elif args.command == "pengingat-dokumen":
+        sys.exit(asyncio.run(pengingat_dokumen(args.dry_run, args.tanggal)))
     elif args.command == "hikvision-tarik":
         sys.exit(asyncio.run(hikvision_tarik(args.perangkat, args.dari, args.sampai, args.dry_run, args.jeda,
                                              args.lanjutkan)))

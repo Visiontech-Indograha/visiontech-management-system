@@ -40,6 +40,7 @@ from app.modules.system.routes import (
 from app.modules.system_backup.routes import router as backup_router
 from app.modules.system_settings.routes import router as system_settings_router
 from app.modules.teams.routes import router as teams_router
+from app.modules.vehicle_documents.routes import router as vehicle_documents_router
 from app.modules.work_completion.routes import router as work_completion_router
 from app.modules.work_completion.routes import verify_router
 from app.modules.work_orders.routes import router as work_orders_router
@@ -55,6 +56,7 @@ from app.modules.work_types.routes import router as work_types_router
 api_router = APIRouter()
 
 api_router.include_router(clients_router)
+api_router.include_router(vehicle_documents_router)
 api_router.include_router(role_assignments_router)
 api_router.include_router(work_orders_router)
 api_router.include_router(projects_router)

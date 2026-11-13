@@ -532,6 +532,672 @@
     }
    }
   },
+  "/api/v1/vehicle-documents/types": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Types",
+    "description": "Jenis dokumen yang aktif (STNK, KIR, pajak, SIM, asuransi).",
+    "operationId": "list_types_api_v1_vehicle_documents_types_get",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/DocumentTypeOut"
+         },
+         "type": "array",
+         "title": "Response List Types Api V1 Vehicle Documents Types Get"
+        }
+       }
+      }
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ]
+   }
+  },
+  "/api/v1/vehicle-documents": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Documents",
+    "description": "Dokumen kendaraan di kantor yang boleh dilihat. Cari `q` = awalan nomor polisi/nama/jenis/nomor dokumen.",
+    "operationId": "list_documents_api_v1_vehicle_documents_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "format": "uuid"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "history",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Sertakan dokumen yang sudah diganti",
+       "default": false,
+       "title": "History"
+      },
+      "description": "Sertakan dokumen yang sudah diganti"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Documents Api V1 Vehicle Documents Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/expiring": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Expiring",
+    "description": "Dokumen berlaku yang akan atau sudah jatuh tempo, terdekat dulu.",
+    "operationId": "list_expiring_api_v1_vehicle_documents_expiring_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "days",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 90,
+       "minimum": 1,
+       "description": "Jatuh tempo dalam N hari (yang sudah lewat ikut)",
+       "default": 30,
+       "title": "Days"
+      },
+      "description": "Jatuh tempo dalam N hari (yang sudah lewat ikut)"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Expiring Api V1 Vehicle Documents Expiring Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/mine": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Mine",
+    "description": "Dokumen berlaku kendaraan yang sedang dikemudikan akun ini.",
+    "operationId": "list_mine_api_v1_vehicle_documents_mine_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDocumentOut"
+         },
+         "title": "Response List Mine Api V1 Vehicle Documents Mine Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/documents": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Create Document",
+    "description": "Catat dokumen baru; dokumen berlaku sejenis menjadi `replaced` dan berhenti diingatkan.",
+    "operationId": "create_document_api_v1_vehicles__vehicle_id__documents_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleDocumentCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VehicleDocumentOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/drivers": {
+   "get": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "List Drivers",
+    "operationId": "list_drivers_api_v1_vehicles__vehicle_id__drivers_get",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response List Drivers Api V1 Vehicles  Vehicle Id  Drivers Get"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Add Driver",
+    "description": "Tambah pengemudi (karyawan kantor yang sama). Sudah aktif = 409.",
+    "operationId": "add_driver_api_v1_vehicles__vehicle_id__drivers_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VehicleDriverCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response Add Driver Api V1 Vehicles  Vehicle Id  Drivers Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicles/{vehicle_id}/drivers/{driver_id}/end": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "End Driver",
+    "description": "Akhiri penugasan pengemudi (hari ini).",
+    "operationId": "end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "vehicle_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Vehicle Id"
+      }
+     },
+     {
+      "name": "driver_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid",
+       "title": "Driver Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "array",
+         "items": {
+          "$ref": "#/components/schemas/VehicleDriverOut"
+         },
+         "title": "Response End Driver Api V1 Vehicles  Vehicle Id  Drivers  Driver Id  End Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/vehicle-documents/cron/remind": {
+   "post": {
+    "tags": [
+     "Dokumen kendaraan"
+    ],
+    "summary": "Cron Remind",
+    "description": "Pemicu manual pengingat dokumen (sama dengan `python -m app.cli pengingat-dokumen`); aman diulang.",
+    "operationId": "cron_remind_api_v1_vehicle_documents_cron_remind_post",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "dry_run",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "default": false,
+       "title": "Dry Run"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "additionalProperties": true,
+         "title": "Response Cron Remind Api V1 Vehicle Documents Cron Remind Post"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/users/{user_id}/role-assignments": {
    "get": {
     "tags": [
@@ -23471,6 +24137,46 @@
     ],
     "title": "DocumentListResponse"
    },
+   "DocumentTypeOut": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "nama": {
+      "type": "string",
+      "title": "Nama"
+     },
+     "berlaku_untuk": {
+      "type": "string",
+      "enum": [
+       "KENDARAAN",
+       "KARYAWAN"
+      ],
+      "title": "Berlaku Untuk"
+     },
+     "ambang_hari": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Ambang Hari"
+     },
+     "harian_mulai_hari": {
+      "type": "integer",
+      "title": "Harian Mulai Hari"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "nama",
+     "berlaku_untuk",
+     "ambang_hari",
+     "harian_mulai_hari"
+    ],
+    "title": "DocumentTypeOut"
+   },
    "EmployeeCreate": {
     "properties": {
      "employee_no": {
@@ -33840,6 +34546,263 @@
      "number_plate"
     ],
     "title": "VehicleCreate"
+   },
+   "VehicleDocumentCreate": {
+    "properties": {
+     "doc_type_code": {
+      "type": "string",
+      "maxLength": 30,
+      "minLength": 2,
+      "pattern": "^[A-Z0-9_]+$",
+      "title": "Doc Type Code"
+     },
+     "doc_no": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Doc No"
+     },
+     "issued_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued On"
+     },
+     "expired_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired On"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 500
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     }
+    },
+    "type": "object",
+    "required": [
+     "doc_type_code",
+     "expired_on"
+    ],
+    "title": "VehicleDocumentCreate",
+    "description": "Dokumen baru menggantikan dokumen berlaku sejenis pada kendaraan itu (yang lama menjadi `replaced`)."
+   },
+   "VehicleDocumentOut": {
+    "properties": {
+     "vehicle_document_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Document Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "vehicle_name": {
+      "type": "string",
+      "title": "Vehicle Name"
+     },
+     "number_plate": {
+      "type": "string",
+      "title": "Number Plate"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Office Id"
+     },
+     "doc_type_code": {
+      "type": "string",
+      "title": "Doc Type Code"
+     },
+     "doc_type_name": {
+      "type": "string",
+      "title": "Doc Type Name"
+     },
+     "doc_no": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Doc No"
+     },
+     "issued_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Issued On"
+     },
+     "expired_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Expired On"
+     },
+     "file_id": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "uuid"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "File Id"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "active",
+       "replaced"
+      ],
+      "title": "Status"
+     },
+     "catatan": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Catatan"
+     },
+     "days_left": {
+      "type": "integer",
+      "title": "Days Left"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_document_id",
+     "vehicle_id",
+     "vehicle_name",
+     "number_plate",
+     "office_id",
+     "doc_type_code",
+     "doc_type_name",
+     "doc_no",
+     "issued_on",
+     "expired_on",
+     "file_id",
+     "status",
+     "catatan",
+     "days_left",
+     "created_at"
+    ],
+    "title": "VehicleDocumentOut"
+   },
+   "VehicleDriverCreate": {
+    "properties": {
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     }
+    },
+    "type": "object",
+    "required": [
+     "employee_id"
+    ],
+    "title": "VehicleDriverCreate"
+   },
+   "VehicleDriverOut": {
+    "properties": {
+     "vehicle_driver_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Driver Id"
+     },
+     "vehicle_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Vehicle Id"
+     },
+     "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "title": "Employee Id"
+     },
+     "employee_name": {
+      "type": "string",
+      "title": "Employee Name"
+     },
+     "mulai_on": {
+      "type": "string",
+      "format": "date",
+      "title": "Mulai On"
+     },
+     "selesai_on": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selesai On"
+     }
+    },
+    "type": "object",
+    "required": [
+     "vehicle_driver_id",
+     "vehicle_id",
+     "employee_id",
+     "employee_name",
+     "mulai_on",
+     "selesai_on"
+    ],
+    "title": "VehicleDriverOut"
    },
    "VehicleFileCreate": {
     "properties": {

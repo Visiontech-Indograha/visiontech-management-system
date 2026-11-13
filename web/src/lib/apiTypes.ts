@@ -161,6 +161,167 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vehicle-documents/types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Types
+         * @description Jenis dokumen yang aktif (STNK, KIR, pajak, SIM, asuransi).
+         */
+        get: operations["list_types_api_v1_vehicle_documents_types_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Documents
+         * @description Dokumen kendaraan di kantor yang boleh dilihat. Cari `q` = awalan nomor polisi/nama/jenis/nomor dokumen.
+         */
+        get: operations["list_documents_api_v1_vehicle_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/expiring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Expiring
+         * @description Dokumen berlaku yang akan atau sudah jatuh tempo, terdekat dulu.
+         */
+        get: operations["list_expiring_api_v1_vehicle_documents_expiring_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Mine
+         * @description Dokumen berlaku kendaraan yang sedang dikemudikan akun ini.
+         */
+        get: operations["list_mine_api_v1_vehicle_documents_mine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Document
+         * @description Catat dokumen baru; dokumen berlaku sejenis menjadi `replaced` dan berhenti diingatkan.
+         */
+        post: operations["create_document_api_v1_vehicles__vehicle_id__documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/drivers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Drivers */
+        get: operations["list_drivers_api_v1_vehicles__vehicle_id__drivers_get"];
+        put?: never;
+        /**
+         * Add Driver
+         * @description Tambah pengemudi (karyawan kantor yang sama). Sudah aktif = 409.
+         */
+        post: operations["add_driver_api_v1_vehicles__vehicle_id__drivers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicles/{vehicle_id}/drivers/{driver_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End Driver
+         * @description Akhiri penugasan pengemudi (hari ini).
+         */
+        post: operations["end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vehicle-documents/cron/remind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cron Remind
+         * @description Pemicu manual pengingat dokumen (sama dengan `python -m app.cli pengingat-dokumen`); aman diulang.
+         */
+        post: operations["cron_remind_api_v1_vehicle_documents_cron_remind_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{user_id}/role-assignments": {
         parameters: {
             query?: never;
@@ -6941,6 +7102,22 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** DocumentTypeOut */
+        DocumentTypeOut: {
+            /** Code */
+            code: string;
+            /** Nama */
+            nama: string;
+            /**
+             * Berlaku Untuk
+             * @enum {string}
+             */
+            berlaku_untuk: "KENDARAAN" | "KARYAWAN";
+            /** Ambang Hari */
+            ambang_hari: number[];
+            /** Harian Mulai Hari */
+            harian_mulai_hari: number;
+        };
         /** EmployeeCreate */
         EmployeeCreate: {
             /** Employee No */
@@ -10926,6 +11103,113 @@ export interface components {
             /** Photo File Id */
             photo_file_id?: string | null;
         };
+        /**
+         * VehicleDocumentCreate
+         * @description Dokumen baru menggantikan dokumen berlaku sejenis pada kendaraan itu (yang lama menjadi `replaced`).
+         */
+        VehicleDocumentCreate: {
+            /** Doc Type Code */
+            doc_type_code: string;
+            /** Doc No */
+            doc_no?: string | null;
+            /** Issued On */
+            issued_on?: string | null;
+            /**
+             * Expired On
+             * Format: date
+             */
+            expired_on: string;
+            /** File Id */
+            file_id?: string | null;
+            /** Catatan */
+            catatan?: string | null;
+        };
+        /** VehicleDocumentOut */
+        VehicleDocumentOut: {
+            /**
+             * Vehicle Document Id
+             * Format: uuid
+             */
+            vehicle_document_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /** Vehicle Name */
+            vehicle_name: string;
+            /** Number Plate */
+            number_plate: string;
+            /**
+             * Office Id
+             * Format: uuid
+             */
+            office_id: string;
+            /** Doc Type Code */
+            doc_type_code: string;
+            /** Doc Type Name */
+            doc_type_name: string;
+            /** Doc No */
+            doc_no: string | null;
+            /** Issued On */
+            issued_on: string | null;
+            /**
+             * Expired On
+             * Format: date
+             */
+            expired_on: string;
+            /** File Id */
+            file_id: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "replaced";
+            /** Catatan */
+            catatan: string | null;
+            /** Days Left */
+            days_left: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** VehicleDriverCreate */
+        VehicleDriverCreate: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+        };
+        /** VehicleDriverOut */
+        VehicleDriverOut: {
+            /**
+             * Vehicle Driver Id
+             * Format: uuid
+             */
+            vehicle_driver_id: string;
+            /**
+             * Vehicle Id
+             * Format: uuid
+             */
+            vehicle_id: string;
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Mulai On
+             * Format: date
+             */
+            mulai_on: string;
+            /** Selesai On */
+            selesai_on: string | null;
+        };
         /** VehicleFileCreate */
         VehicleFileCreate: {
             /**
@@ -12508,6 +12792,305 @@ export interface operations {
                 content: {
                     "application/json": {
                         [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_types_api_v1_vehicle_documents_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTypeOut"][];
+                };
+            };
+        };
+    };
+    list_documents_api_v1_vehicle_documents_get: {
+        parameters: {
+            query?: {
+                vehicle_id?: string | null;
+                /** @description Sertakan dokumen yang sudah diganti */
+                history?: boolean;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_expiring_api_v1_vehicle_documents_expiring_get: {
+        parameters: {
+            query?: {
+                /** @description Jatuh tempo dalam N hari (yang sudah lewat ikut) */
+                days?: number;
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_mine_api_v1_vehicle_documents_mine_get: {
+        parameters: {
+            query?: {
+                /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
+                q?: string | null;
+                /** @description Nomor halaman, mulai dari 1 */
+                page?: number | null;
+                /** @description Jumlah baris per halaman (maks 100) */
+                size?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_document_api_v1_vehicles__vehicle_id__documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleDocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_drivers_api_v1_vehicles__vehicle_id__drivers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_driver_api_v1_vehicles__vehicle_id__drivers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VehicleDriverCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_driver_api_v1_vehicles__vehicle_id__drivers__driver_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicle_id: string;
+                driver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VehicleDriverOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cron_remind_api_v1_vehicle_documents_cron_remind_post: {
+        parameters: {
+            query?: {
+                dry_run?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
                     };
                 };
             };

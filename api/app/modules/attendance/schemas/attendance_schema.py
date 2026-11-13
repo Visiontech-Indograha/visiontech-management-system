@@ -133,6 +133,12 @@ class AttendanceResponse(BaseModel):
     check_out_distance_m: float | None = None
     check_out_outside: bool = False
     check_out_selfie_file_id: UUID | None = None
+    # Absen WEB (opsional; klien lama mengabaikan): kode alasan terpisah mengapa absen menunggu pemeriksaan
+    # (FACE_NOT_ENROLLED, FACE_MISMATCH, FACE_UNAVAILABLE, LOKASI_DI_LUAR_ZONA, LOKASI_KASAR), akurasi lokasi
+    # yang diterima, dan keputusan lokasi (ACCEPTED | OUTSIDE_ZONE | PENDING_COARSE).
+    review_reasons: list[str] = Field(default_factory=list)
+    location_accuracy_m: float | None = None
+    location_decision: str | None = None
     check_out_explanation: str | None = None
     city_category: str | None = None
     meal_allowance_amount: float | None = None

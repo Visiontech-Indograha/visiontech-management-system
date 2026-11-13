@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { Modal as Dialog, ModalContent as DialogContent, ModalHeader as DialogHeader, ModalTitle as DialogTitle } from "@/components/molecules/Modal";
+import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { ActionButton as Button } from "@/components/molecules/ActionButton";
 import { ExternalLink as LinkTo } from "@/components/molecules/Links";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -92,7 +92,7 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
       case "powerpoint":
         return <Presentation className="w-16 h-16 text-orange-500" />;
       default:
-        return <FileCheck className="w-16 h-16 text-slate-400" />;
+        return <FileCheck className="w-16 h-16 text-muted-foreground" />;
     }
   };
 
@@ -110,64 +110,40 @@ export const UniversalMediaModal: React.FC<UniversalMediaModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[92vw] sm:max-w-xl p-6 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-xl">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-base font-semibold text-white">
-            {title || "Unduh Dokumen"}
-          </DialogTitle>
-          <TextBlock as="p" className="text-xs text-slate-400">{getCategoryLabel()}</TextBlock>
-        </DialogHeader>
+    <VmsDialog open={isOpen} onClose={onClose} title={title || "Unduh Dokumen"} size="md">
+      <TextBlock as="p" className="text-xs text-muted-foreground">{getCategoryLabel()}</TextBlock>
 
-        <div className="py-6 flex flex-col items-center justify-center text-center space-y-3">
-          <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/60 shadow-inner">
-            {getDocIcon()}
-          </div>
-          <div className="max-w-xs">
-            <TextBlock as="p" className="text-sm font-medium text-slate-200 truncate" title={fileName}>
-              {fileName}
-            </TextBlock>
-            <TextBlock as="p" className="text-xs text-slate-400 mt-1">
-              Dokumen perkantoran memerlukan aplikasi lokal (Office/WPS/LibreOffice) untuk membuka format berkas ini secara utuh.
-            </TextBlock>
-          </div>
+      <div className="flex flex-col items-center justify-center space-y-3 py-6 text-center">
+        <div className="rounded-2xl border border-line bg-muted p-4">{getDocIcon()}</div>
+        <div className="max-w-xs">
+          <TextBlock as="p" className="truncate text-sm font-medium text-foreground" title={fileName}>
+            {fileName}
+          </TextBlock>
+          <TextBlock as="p" className="mt-1 text-xs text-muted-foreground">
+            Dokumen perkantoran memerlukan aplikasi lokal (Office/WPS/LibreOffice) untuk membuka format berkas ini secara utuh.
+          </TextBlock>
         </div>
+      </div>
 
-        <div className="flex flex-col gap-2 pt-2 border-t border-slate-800">
-          <LinkTo href={downloadUrl} download className="w-full">
-            <Button
-              className="w-full bg-sky-600 hover:bg-sky-500 text-white font-medium h-10 gap-2 text-sm shadow-md"
-            >
-              <Download className="w-4 h-4" />
-              Unduh Berkas Sekarang
+      <div className="flex flex-col gap-2 border-t border-line pt-2">
+        <LinkTo href={downloadUrl} download className="w-full">
+          <Button className="h-11 w-full gap-2 text-sm font-medium">
+            <Download className="h-4 w-4" />
+            Unduh Berkas Sekarang
+          </Button>
+        </LinkTo>
+        <div className="flex items-center gap-2">
+          <LinkTo href={previewUrl} target="_blank" rel="noopener noreferrer" className="flex-1">
+            <Button variant="outline" className="h-11 w-full gap-1.5 text-xs">
+              <ExternalLinkIcon className="h-3.5 w-3.5" />
+              Buka di Tab Baru
             </Button>
           </LinkTo>
-
-          <div className="flex items-center gap-2">
-            <LinkTo
-              href={previewUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1"
-            >
-              <Button
-                variant="outline"
-                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 h-11 gap-1.5 text-xs"
-              >
-                <ExternalLinkIcon className="w-3.5 h-3.5" />
-                Buka di Tab Baru
-              </Button>
-            </LinkTo>
-            <Button
-              variant="ghost"
-              onClick={onClose}
-              className="flex-1 text-slate-400 hover:text-white hover:bg-slate-800 h-11 text-xs"
-            >
-              Tutup
-            </Button>
-          </div>
+          <Button variant="ghost" onClick={onClose} className="h-11 flex-1 text-xs">
+            Tutup
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </VmsDialog>
   );
 };

@@ -13,26 +13,13 @@ import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
 import 'bast_sign_screen.dart';
+import 'daily_plan_widgets.dart';
 import 'day_resources_card.dart';
 import 'item_progress_screen.dart';
 import 'item_state.dart';
 import 'overtime_hours.dart';
 import 'survey_screen.dart';
 
-const phaseLabel = {
-  'SURVEY': 'Survei',
-  'PREPARATION': 'Persiapan',
-  'INSTALLATION': 'Instalasi',
-  'REPLACEMENT': 'Replacement',
-  'MAINTENANCE': 'Maintenance',
-};
-
-String qtyText(Object? v) {
-  final n = num.tryParse('$v') ?? 0;
-  return n == n.roundToDouble() ? n.toStringAsFixed(0) : n.toString();
-}
-
-/// Detail satu jadwal harian: lokasi & jam, item per titik, aksi ketua (mulai/selesaikan hari, BAST), lembur.
 class DailyPlanScreen extends ConsumerStatefulWidget {
   const DailyPlanScreen({super.key, required this.dailyPlanId});
 
@@ -580,7 +567,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ],
                   if (_isLeader && (plan['status'] == 'COMPLETED' || plan['status'] == 'DONE') && _openCorrection == null) ...[
                     const SizedBox(height: 12),
-                    _Tile(
+                    DailyPlanTile(
                       icon: Icons.edit_note_rounded,
                       title: 'Ajukan koreksi laporan',
                       subtitle: 'Perbaikan laporan harus disetujui atasan',
@@ -589,7 +576,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ],
                   if (_isLeader && _openCorrection != null) ...[
                     const SizedBox(height: 12),
-                    _Tile(
+                    DailyPlanTile(
                       icon: Icons.rule_rounded,
                       title: correctionStateTitle(_openCorrection!['status'] as String),
                       subtitle: correctionStateSubtitle(_openCorrection!),
@@ -624,7 +611,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ],
                   if (_isLeader && plan['status'] == 'ONGOING') ...[
                     const SizedBox(height: 12),
-                    _Tile(
+                    DailyPlanTile(
                       icon: _dailyReport == null ? Icons.assignment_outlined : Icons.assignment_turned_in_outlined,
                       title: _dailyReport == null ? 'Kirim laporan harian' : 'Perbarui laporan harian',
                       subtitle: _reportPending
@@ -687,7 +674,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ))
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ItemCard(
+                      child: DailyPlanItemCard(
                         item: Map<String, dynamic>.from(item),
                         dayStatus: '${plan['status']}',
                         onTap: () => _openItem(Map<String, dynamic>.from(item)),
@@ -698,7 +685,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   ..._orders(plan),
                   if (plan['status'] == 'ONGOING') ...[
                     const SectionTitle('Lembur'),
-                    _Tile(
+                    DailyPlanTile(
                       icon: Icons.more_time_rounded,
                       title: 'Ajukan lembur',
                       subtitle: 'Diputuskan atasan (PM/OM divisi)',
@@ -744,7 +731,7 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
                   : o['leader_signed_at'] != null
                   ? ('Menunggu persetujuan atasan', '$proyek · bisa tanda tangan ulang')
                   : ('Tanda tangan serah terima', '$proyek · ringkasan, foto hasil kerja, tanda tangan');
-              return _Tile(
+              return DailyPlanTile(
                 icon: o?['pm_signed_at'] != null ? Icons.verified_rounded : Icons.draw_rounded,
                 title: title,
                 subtitle: subtitle,
@@ -758,116 +745,4 @@ class _DailyPlanScreenState extends ConsumerState<DailyPlanScreen> {
         ),
     ];
   }
-}
-
-class _ItemCard extends StatelessWidget {
-  const _ItemCard({required this.item, required this.dayStatus, required this.onTap});
-
-  final Map<String, dynamic> item;
-  final String dayStatus;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final phase = phaseAccent['${item['task_phase']}'] ?? Accent.slate;
-    final done = num.tryParse('${item['completed_qty'] ?? 0}') ?? 0;
-    final target = num.tryParse('${item['target_qty'] ?? 0}') ?? 0;
-    final pct = target <= 0 ? 0.0 : (done / target).clamp(0, 1).toDouble();
-    final state = itemDisplayState(
-      raw: '${item['status']}',
-      done: done,
-      target: target,
-      photoCount: photoRefsOf(item['realization_photos_json']).length,
-      dayStatus: dayStatus,
-    );
-    final accent = statusStyle(state).accent;
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      elevation: 0.5,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: phase.strong, width: 5)),
-          ),
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: phase.soft, borderRadius: BorderRadius.circular(99)),
-                    child: Text(
-                      phaseLabel['${item['task_phase']}'] ?? '${item['task_phase']}',
-                      style: text.labelSmall?.copyWith(color: phase.strong, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  const Spacer(),
-                  StatusPill(state),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text('${item['title']}', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              if (item['location_name'] != null) ...[
-                const SizedBox(height: 4),
-                InfoRow(icon: Icons.place_outlined, text: '${item['location_name']}'),
-              ],
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(99),
-                child: LinearProgressIndicator(
-                  value: pct,
-                  minHeight: 6,
-                  color: accent.strong,
-                  backgroundColor: accent.soft,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${qtyText(item['completed_qty'])} dari ${qtyText(item['target_qty'])} selesai',
-                      style: text.bodySmall?.copyWith(color: accent.strong, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: accent.strong),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) => SurfaceCard(
-    padding: EdgeInsets.zero,
-    // ListTile butuh Material sendiri: tanpanya latar kartu (DecoratedBox) menutupi efek tekan.
-    child: Material(
-      color: Colors.transparent,
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(title),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: onTap,
-      ),
-    ),
-  );
 }

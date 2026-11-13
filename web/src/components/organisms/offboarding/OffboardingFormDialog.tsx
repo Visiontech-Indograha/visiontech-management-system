@@ -57,8 +57,8 @@ export function OffboardingFormDialog({ employee, onClose }: {
       footer={
         <>
           <DialogCancelButton onCancel={onClose} disabled={create.isPending} />
-          <ActionButton type="submit" form="offboarding-form" variant="destructive" disabled={create.isPending}>
-            {create.isPending ? "Memproses..." : "Mulai offboarding"}
+          <ActionButton type="submit" form="offboarding-form" variant="destructive" pending={create.isPending} pendingText="Memproses...">
+            {"Mulai offboarding"}
           </ActionButton>
         </>
       }

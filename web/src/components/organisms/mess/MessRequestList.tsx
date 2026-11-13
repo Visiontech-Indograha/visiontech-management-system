@@ -164,9 +164,9 @@ export function MessRequestList({
               <ActionButton
                 variant="destructive"
                 onClick={reject}
-                disabled={decide.isPending}
+                pending={decide.isPending} pendingText="Memproses…"
               >
-                {decide.isPending ? "Memproses…" : "Tolak pengajuan"}
+                {"Tolak pengajuan"}
               </ActionButton>
             </div>
           }

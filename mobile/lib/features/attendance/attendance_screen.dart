@@ -21,6 +21,7 @@ import '../../shared/ui/vms_select_field.dart';
 import '../../shared/ui/vms_ui.dart';
 import '../auth/auth_controller.dart';
 import '../auth/auth_state.dart';
+import '../dokumen/dokumen_kendaraan.dart';
 import '../face/face_enroll_gate.dart';
 import '../notifications/notifications_screen.dart' show NotificationBell;
 import '../plans/daily_plan_screen.dart';
@@ -809,6 +810,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       icon: Icons.cloud_off_rounded,
                       text: 'Offline — data terakhir ${DateFormat('d MMM HH:mm', 'id_ID').format(_cachedAt!)}',
                     ),
+                  const DokumenPengingatBanner(),
                   if (_error != null)
                     NoticeBanner(icon: Icons.error_outline_rounded, text: _error!, accent: Accent.rose),
                   FadeSlideIn(

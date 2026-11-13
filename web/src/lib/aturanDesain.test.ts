@@ -12,13 +12,13 @@ for (const [k, v] of Object.entries(RAW)) {
 }
 
 type Jenis = "ts" | "tsx" | "fmt";
-interface Aturan { id: string; aturan: string; re: RegExp; jenis: Jenis; baseline: Record<string, number> }
+interface Aturan { id: string; aturan: string; re: RegExp; jenis: Jenis; baseline: Record<string, number>; izin?: string[] }
 
 const cocok = (f: string, j: Jenis) => (j === "tsx" ? f.endsWith(".tsx") : j === "fmt" ? f !== "lib/format.ts" : true);
-export function hitung(a: Pick<Aturan, "re" | "jenis">, sumber: Record<string, string>): Record<string, number> {
+export function hitung(a: Pick<Aturan, "re" | "jenis" | "izin">, sumber: Record<string, string>): Record<string, number> {
   const out: Record<string, number> = {};
   for (const [f, teks] of Object.entries(sumber)) {
-    if (!cocok(f, a.jenis)) continue;
+    if (!cocok(f, a.jenis) || a.izin?.includes(f)) continue;
     const n = (teks.match(a.re) ?? []).length;
     if (n) out[f] = n;
   }
@@ -38,7 +38,7 @@ const ATURAN: Aturan[] = [
     "components/organisms/account/AccountSummaryCard.tsx": 2,
     "components/organisms/assets/AssetStatusDialog.tsx": 1,
     "components/organisms/assets/LoanRequestsPanel.tsx": 2,
-    "components/organisms/clients/ClientDeactivateDialog.tsx": 2,
+    "components/organisms/clients/ClientDeactivateDialog.tsx": 1,
     "components/organisms/clients/ClientSitesModal.tsx": 2,
     "components/organisms/directory/AccountCard.tsx": 5,
     "components/organisms/directory/AccountDevicesAdmin.tsx": 3,
@@ -47,13 +47,13 @@ const ATURAN: Aturan[] = [
     "components/organisms/directory/EmployeeAddressesPanel.tsx": 2,
     "components/organisms/directory/EmployeeFaceCard.tsx": 3,
     "components/organisms/hse/HseCampaignsPanel.tsx": 3,
-    "components/organisms/leaves/CancelLeaveDialog.tsx": 2,
+    "components/organisms/leaves/CancelLeaveDialog.tsx": 1,
     "components/organisms/leaves/LeaveReviewDialog.tsx": 3,
-    "components/organisms/mess/MessRequestList.tsx": 2,
-    "components/organisms/monitoring/OvertimeReviewList.tsx": 4,
+    "components/organisms/mess/MessRequestList.tsx": 1,
+    "components/organisms/monitoring/OvertimeReviewList.tsx": 3,
     "components/organisms/offboarding/OffboardingDetailDialog.tsx": 4,
-    "components/organisms/offboarding/OffboardingFormDialog.tsx": 2,
-    "components/organisms/projects/ProjectDeleteDialog.tsx": 2,
+    "components/organisms/offboarding/OffboardingFormDialog.tsx": 1,
+    "components/organisms/projects/ProjectDeleteDialog.tsx": 1,
     "components/organisms/surveys/SurveyBomPanel.tsx": 1,
     "components/organisms/surveys/SurveyLogoPanel.tsx": 2,
     "components/organisms/surveys/SurveyReviewBar.tsx": 2,
@@ -95,7 +95,9 @@ const ATURAN: Aturan[] = [
     "components/organisms/work-plans/DailyWeekMatrix.tsx": 1,
     "components/organisms/work-types/WorkTypeCopyDialog.tsx": 1,
   } },
-  { id: "R5", aturan: "Unggahan lewat UploadField: type=\"file\" langsung", re: /type="file"/g, jenis: "tsx", baseline: {
+  { id: "R5", aturan: "Unggahan lewat UploadField: type=\"file\" langsung", re: /type="file"/g, jenis: "tsx",
+    // R5 menyebut UploadField sebagai satu-satunya jalur unggahan, jadi berkas ini tempat sah input berkas.
+    izin: ["components/molecules/UploadField.tsx"], baseline: {
     "components/organisms/account/AccountSummaryCard.tsx": 1,
     "components/organisms/assets/AssetLendDialog.tsx": 1,
     "components/organisms/assets/VehicleFilesDialog.tsx": 1,
@@ -199,6 +201,13 @@ describe("aturan desain web (penegak statis dengan baseline)", () => {
       }
       expect(hapusTanpaKonfirmasi(s)).toEqual(["components/organisms/x/Contoh.tsx"]);
       expect(hapusTanpaKonfirmasi({ "components/a/B.tsx": 'import {ConfirmDialog} from "x"; deleteThing(1)' })).toEqual([]);
+    });
+    it("R5: UploadField sah, pemakai lain yang memakai type=\"file\" langsung tetap ditandai", () => {
+      const s = {
+        "components/molecules/UploadField.tsx": '<Input type="file" />',
+        "components/organisms/x/Lain.tsx": '<input type="file" />',
+      };
+      expect(Object.keys(hitung(contoh("R5"), s))).toEqual(["components/organisms/x/Lain.tsx"]);
     });
     it("bukan pelanggaran: teks biasa dan toLocale di lib/format.ts", () => {
       const s = { "lib/format.ts": "d.toLocaleDateString()", "components/a/B.tsx": '<Field label="Nama lengkap" />' };

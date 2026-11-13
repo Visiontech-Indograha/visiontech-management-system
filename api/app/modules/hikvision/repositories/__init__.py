@@ -1,0 +1,1 @@
+"""Repositori modul hikvision."""

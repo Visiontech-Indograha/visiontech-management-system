@@ -4,6 +4,7 @@ import { useFaceStatus } from "@/services/accountService";
 import { Pill } from "@/components/molecules/Pill";
 import { LoadingBar } from "@/components/molecules/LoadingBar";
 import { TextBlock } from "@/components/molecules/TextBlock";
+import { FACE_CONSENT_TEXT } from "@/lib/faceConsent";
 import { formatDateTime } from "@/lib/format";
 
 /**
@@ -29,7 +30,7 @@ export function FaceBiometricSection() {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
           <TextBlock as="h2" className="text-base font-semibold">Pengenalan Wajah</TextBlock>
-          <TextBlock className="text-xs text-mist">Wajah Anda dipakai untuk memastikan yang absen lewat aplikasi HP adalah Anda.</TextBlock>
+          <TextBlock className="text-xs text-mist">Wajah Anda dipakai untuk memastikan yang absen adalah Anda, lewat aplikasi HP maupun web.</TextBlock>
         </div>
         {data.enrolled ? (
           <Pill tone="success">Wajah terdaftar</Pill>
@@ -45,8 +46,9 @@ export function FaceBiometricSection() {
           {data.enrolled_at && <TextBlock>{`Didaftarkan pada ${formatDateTime(data.enrolled_at)}`}</TextBlock>}
           <TextBlock>Ingin mendaftar ulang (misalnya ganti HP)? Minta HR mengatur ulang pendaftaran wajah Anda.</TextBlock>
         </div>
-      ) : data.required ? (
+      ) : (
         <div className="rounded-lg border border-line bg-surface p-3.5">
+          <TextBlock className="mb-3 text-sm text-mist">{FACE_CONSENT_TEXT}</TextBlock>
           <FaceEnrollCapture
             onEnrolled={() => {
               void faceStatus.refetch();
@@ -54,8 +56,6 @@ export function FaceBiometricSection() {
             }}
           />
         </div>
-      ) : (
-        <TextBlock className="text-sm text-mist">Pengenalan wajah hanya diwajibkan untuk karyawan lapangan yang absen lewat aplikasi HP.</TextBlock>
       )}
     </section>
   );

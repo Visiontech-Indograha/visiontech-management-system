@@ -182,6 +182,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_FILE_URL_PER_MIN: int = 120
     RATE_LIMIT_UPLOAD_PER_MIN: int = 60
     RATE_LIMIT_FACE_PER_MIN: int = 60
+    # Penerima push perangkat absensi Hikvision (per IP perangkat; selalu ditegakkan, burst saat jam masuk).
+    RATE_LIMIT_HIKVISION_PER_MIN: int = 600
     # Penyiapan awal (POST /setup/admin): selalu ditegakkan (tidak ikut RATE_LIMIT_ENFORCE).
     RATE_LIMIT_SETUP_PER_MIN: int = 10
     # Kode penyiapan sekali pakai untuk membuat admin pertama lewat web. Kosong (atau < 24 karakter) = endpoint

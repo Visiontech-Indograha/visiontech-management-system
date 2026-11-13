@@ -1,0 +1,20 @@
+# Proxy penerima event Hikvision (LAN). Dipasang pemilik di ~/deploy/hikvision (lihat deploy/HIKVISION.md).
+# Host network: mengikat HANYA ke IP LAN server (HIK_BIND_IP), meneruskan ke API di 127.0.0.1:8000.
+name: vms-hik
+services:
+  hik_proxy:
+    image: nginx:1.27-alpine
+    container_name: vms_hik_proxy
+    network_mode: host
+    env_file: ./.env.proxy                 # HIK_BIND_IP, HIK_PORT, HIK_IP_1, HIK_IP_2 (bukan rahasia)
+    environment:
+      NGINX_ENVSUBST_FILTER: "^HIK_"       # hanya variabel HIK_* yang diganti (jangan menyentuh $uri dst.)
+      NGINX_ENVSUBST_TEMPLATE_SUFFIX: ".template"
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+    volumes:
+      - ./nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+    mem_limit: 32m
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}

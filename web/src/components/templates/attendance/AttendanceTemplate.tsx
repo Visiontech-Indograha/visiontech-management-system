@@ -39,7 +39,13 @@ export function AttendanceTemplate({ list, more, filters: f, onFilterChange: set
       )}
       <AttendanceFilter filters={f} onChange={set} />
       {canExport && <AttendanceExportPanel />}
-      <AttendanceList list={list} more={more} meEmployeeId={meEmployeeId} onOpen={onOpen} />
+      <AttendanceList
+        list={list}
+        more={more}
+        meEmployeeId={meEmployeeId}
+        onOpen={onOpen}
+        emptyText={f.scope === "team" && f.status === "NEEDS_REVIEW" ? "Tidak ada absen yang perlu Anda tinjau. Absen Anda sendiri ditinjau oleh atasan." : undefined}
+      />
 
       {open?.kind === "review" && <AttendanceReviewDialog item={open.item} onClose={onClose} />}
       {open?.kind === "explain" && <AttendanceExplainDialog item={open.item} onClose={onClose} />}

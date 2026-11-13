@@ -88,6 +88,12 @@ class NotificationService:
         users = await self.repo.user_ids_for_employees(str(e) for e in employee_ids if e)
         await self.repo.insert_for_users(users, kind, title, body, plan_id, target)
 
+    async def notify_users(
+        self, user_ids: Iterable[str], kind: str, title: str, body: str = "", *, target: str | None = None,
+    ) -> None:
+        """Notifikasi ke akun tertentu (user_id), mis. dari pekerjaan terjadwal."""
+        await self.repo.insert_for_users(user_ids, kind, title, body, None, target)
+
     async def notify_roles(
         self, roles: Iterable[str], kind: str, title: str, body: str = "",
         *, office_id: UUID | str | None = None, division_id: UUID | str | None = None,

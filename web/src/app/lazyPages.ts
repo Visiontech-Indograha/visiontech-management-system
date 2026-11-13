@@ -1,6 +1,8 @@
 import { lazy } from "react";
 
 /** Halaman dimuat saat dibuka (code-splitting) — muatan awal kecil (R-12, performa). */
+export const VehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/VehicleDocsPage").then((m) => ({ default: m.VehicleDocsPage })));
+export const MyVehicleDocsPage = lazy(() => import("@/pages/vehicle-docs/MyVehicleDocsPage").then((m) => ({ default: m.MyVehicleDocsPage })));
 export const AssetsPage = lazy(() => import("@/pages/assets/AssetsPage").then((m) => ({ default: m.AssetsPage })));
 export const AttendancePage = lazy(() => import("@/pages/attendance/AttendancePage").then((m) => ({ default: m.AttendancePage })));
 export const AuditLogPage = lazy(() => import("@/pages/audit/AuditLogPage").then((m) => ({ default: m.AuditLogPage })));
@@ -10,6 +12,7 @@ export const MyDocumentsPage = lazy(() => import("@/pages/directory/MyDocumentsP
 export const WorkTypesPage = lazy(() => import("@/pages/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
 export const DivisionsPage = lazy(() => import("@/pages/divisions/DivisionsPage").then((m) => ({ default: m.DivisionsPage })));
 export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
+export const HikvisionDevicesPage = lazy(() => import("@/pages/hikvision/HikvisionDevicesPage").then((m) => ({ default: m.HikvisionDevicesPage })));
 export const SystemSettingsPage = lazy(() => import("@/pages/system/SystemSettingsPage").then((m) => ({ default: m.SystemSettingsPage })));
 export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
 export const AllocationPage = lazy(() => import("@/pages/alokasi/AllocationPage").then((m) => ({ default: m.AllocationPage })));

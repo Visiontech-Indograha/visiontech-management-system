@@ -79,7 +79,7 @@ async def test_enroll_stores_normalised_mean():
 
 
 async def test_enroll_rules():
-    svc, _ = _service(role="PROJECT_MANAGER")
+    svc, _ = _service(role="TAMU")
     with pytest.raises(ForbiddenError):
         await svc.enroll("u", [_jpeg()] * 3)
     svc, _ = _service()
@@ -160,3 +160,20 @@ async def test_attendance_match_is_not_flagged():
     outcome = await svc.verify_face(EMP, uuid4(), online=True)
     assert await svc.record_face(row, "CHECK_IN", outcome, online=True) is row
     repo.flag_missing_face.assert_not_awaited()
+
+
+async def test_enroll_allowed_for_field_and_office_roles():
+    """Pekerja kantor (absen web) boleh mendaftarkan wajah dirinya; lapangan tetap boleh."""
+    for peran in ("TEAM_LEADER", "EMPLOYEE", "SUPER_ADMIN", "OPERATIONAL_MANAGER", "PROJECT_MANAGER",
+                  "ADMIN_HR_GA", "FINANCE", "HSE"):
+        svc, repo = _service(role=peran, results=[_result([1.0, 0.1]), _result([1.0, 0.0]), _result([0.9, 0.1])])
+        assert (await svc.enroll("u", [_jpeg()] * 3)).enrolled, peran
+        repo.set_embedding.assert_awaited_once()
+
+
+async def test_enroll_other_roles_forbidden():
+    for peran in ("TAMU", "", "LEGACY_ADMIN"):
+        svc, repo = _service(role=peran)
+        with pytest.raises(ForbiddenError):
+            await svc.enroll("u", [_jpeg()] * 3)
+        repo.set_embedding.assert_not_awaited()

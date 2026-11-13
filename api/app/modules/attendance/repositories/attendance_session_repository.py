@@ -673,8 +673,11 @@ class AttendanceSessionRepository(BaseRepository):
              "evid": str(evidence_file_id) if evidence_file_id else None},
         )
 
-    async def reviewer_employee_ids(self, org_id: UUID | str, employee_id: UUID | str) -> list[str]:
-        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu."""
+    async def reviewer_employee_ids(
+        self, org_id: UUID | str, employee_id: UUID | str, *, office_hr: bool = False
+    ) -> list[str]:
+        """Karyawan yang berwenang meninjau absensi: OM, Superadmin, Finance, dan PM atas karyawan itu.
+        `office_hr` (pekerja kantor): ditambah HR (ADMIN_HR_GA) di kantor tugas karyawan yang sama."""
         rows = await self.fetchall(
             f"""
             SELECT DISTINCT CAST(u.employee_id AS text) AS employee_id
@@ -684,9 +687,12 @@ class AttendanceSessionRepository(BaseRepository):
               AND u.delete_at IS NULL
               AND (u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                    OR (u.system_role = 'PROJECT_MANAGER'
-                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')}))
+                       AND {pm_reaches_employee('u.employee_id', 'CAST(:emp AS uuid)')})
+                   OR (CAST(:hr AS boolean) AND u.system_role = 'ADMIN_HR_GA'
+                       AND (SELECT ee.office_id FROM employee ee WHERE ee.employee_id = CAST(:emp AS uuid)) =
+                           (SELECT hh.office_id FROM employee hh WHERE hh.employee_id = u.employee_id)))
             """,
-            {"emp": str(employee_id)},
+            {"emp": str(employee_id), "hr": office_hr},
         )
         return [r.employee_id for r in rows]
 

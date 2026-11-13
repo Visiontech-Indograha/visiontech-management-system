@@ -6,6 +6,7 @@ import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
+import { useRequiredExplanation } from "@/hooks/useRequiredExplanation";
 import { checkInMessage } from "@/lib/attendanceMessages";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
@@ -20,6 +21,7 @@ const wibMinutes = (d = new Date()) =>
 const OPEN_MINUTES = 6 * 60 + 45;
 import { useAttendanceSites } from "@/services/siteService";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
+import { ReviewReasonsNote } from "./ReviewReasonsNote";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -133,6 +135,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
   // R-33: penjelasan wajib bila di luar radius atau mengajukan ulang absensi yang ditolak (juga dicek server).
   const [explanation, setExplanation] = useState("");
   const [askExplanation, setAskExplanation] = useState(false);
+  const { ref: explRef, error: explError } = useRequiredExplanation(askExplanation, !!error, explanation);
   const [selfieFor, setSelfieFor] = useState<{ pos: BrowserPosition; siteName: string; info: string } | null>(null);
   // Bawaan: lokasi yang namanya memuat "kantor", selain itu lokasi pertama; pilihan pengguna didahulukan.
   const siteId = picked || (sites.data?.find((s) => /kantor/i.test(s.name)) ?? sites.data?.[0])?.id || "";
@@ -217,8 +220,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     proceedCheckOut();
   };
 
-  // Alur (docs/35 §5): cek lokasi & jam → di luar zona/ajukan ulang: alasan wajib → swafoto (selalu wajib; server
-  // mencocokkannya dengan wajah terdaftar bila ada) → kirim. Server menghitung ulang jarak & status.
+  // Alur (docs/35 §5): cek lokasi → di luar zona/ajukan ulang: alasan wajib → swafoto wajib → kirim. Server menghitung ulang.
   const checkIn = useMutation({
     mutationFn: async (vars?: { pos: BrowserPosition; selfieFileId: string }): Promise<Attendance | null> => {
       const pos = vars?.pos ?? (await currentPosition());
@@ -258,7 +260,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       setError(null);
       setExplanation("");
       setAskExplanation(false);
-      toast.success(checkInMessage(a, formatDistance(a.distance_m)));
+      if (a.status !== "NEEDS_REVIEW") toast.success(checkInMessage(a, formatDistance(a.distance_m))); // yang perlu ditinjau tampil menetap di kartu
       await refresh();
     },
     onError: (err) => {
@@ -267,8 +269,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
     },
   });
 
-  // T7: di luar radius, server mewajibkan swafoto + penjelasan saat pulang. Dicoba dulu tanpa; bila ditolak karena itu,
-  // minta penjelasan lalu swafoto dan kirim ulang dengan lokasi yang sama.
+  // T7: pulang di luar radius: penjelasan lalu swafoto wajib, kirim ulang dengan lokasi yang sama.
   const [outPos, setOutPos] = useState<BrowserPosition | null>(null);
   const [selfieOut, setSelfieOut] = useState(false);
   /** Pulang di luar zona: bila penjelasan kosong, galat awam; bila ada, buka foto bukti. true = kirim ditunda. */
@@ -369,7 +370,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
           {(askExplanation || resubmit) && (
             <div className="mt-3">
               <TextAreaField
-                label="Penjelasan (wajib)"
+                label="Penjelasan (wajib)" ref={explRef} error={explError}
                 hint={
                   resubmit
                     ? "Wajib saat mengajukan ulang absensi yang ditolak."
@@ -424,14 +425,11 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               </TextBlock>
             </div>
           </ListBlock>
-          {!rec.check_out_at && rec.status === "NEEDS_REVIEW" ? (
-            <TextBlock role="status" className="rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
-              Absen masuk menunggu pemeriksaan. Absen pulang bisa dilakukan setelah absen masuk disetujui.
-            </TextBlock>
-          ) : !rec.check_out_at && askExplanation && outPos ? (
+          <ReviewReasonsNote rec={rec} onEnroll={() => navigate("/account")} />
+          {!rec.check_out_at && rec.status === "NEEDS_REVIEW" ? null : !rec.check_out_at && askExplanation && outPos ? (
             <div className="space-y-3">
               <TextAreaField
-                label="Penjelasan (wajib)"
+                label="Penjelasan (wajib)" ref={explRef} error={explError}
                 hint="Wajib karena Anda pulang di luar zona lokasi. Setelah itu ambil foto bukti."
                 value={explanation}
                 maxLength={1000}

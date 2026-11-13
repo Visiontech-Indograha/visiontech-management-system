@@ -15,6 +15,7 @@ from app.modules.documents.routes import documents_router, expiry_router
 from app.modules.employees.routes import router as employees_router
 from app.modules.exports.routes import router as exports_router
 from app.modules.face.routes import router as face_router
+from app.modules.hikvision.routes import router as hikvision_router
 from app.modules.home.routes import home_router
 from app.modules.hse.routes import router as hse_router
 from app.modules.job_positions.routes import router as job_positions_router
@@ -39,6 +40,7 @@ from app.modules.system.routes import (
 from app.modules.system_backup.routes import router as backup_router
 from app.modules.system_settings.routes import router as system_settings_router
 from app.modules.teams.routes import router as teams_router
+from app.modules.vehicle_documents.routes import router as vehicle_documents_router
 from app.modules.work_completion.routes import router as work_completion_router
 from app.modules.work_completion.routes import verify_router
 from app.modules.work_orders.routes import router as work_orders_router
@@ -54,6 +56,7 @@ from app.modules.work_types.routes import router as work_types_router
 api_router = APIRouter()
 
 api_router.include_router(clients_router)
+api_router.include_router(vehicle_documents_router)
 api_router.include_router(role_assignments_router)
 api_router.include_router(work_orders_router)
 api_router.include_router(projects_router)
@@ -87,6 +90,7 @@ api_router.include_router(accounts_router)
 api_router.include_router(sync_router)
 api_router.include_router(system_settings_router)
 api_router.include_router(setup_router)
+api_router.include_router(hikvision_router)
 api_router.include_router(dev_clock_router)
 api_router.include_router(monitoring_router)
 api_router.include_router(attendance_router)

@@ -12,6 +12,9 @@ from collections.abc import Callable, Iterable
 from datetime import UTC, datetime, timezone
 from typing import Any
 
+from defusedxml import ElementTree as SafeET
+from defusedxml.common import DefusedXmlException
+
 from app.core.time import utcnow
 
 from ..schemas.event import ParsedEvent, ParseOutcome, ParseStatus
@@ -140,8 +143,8 @@ def _xml_ke_dict(teks: bytes) -> dict[str, Any]:
     if b"<!doctype" in teks.lower() or b"<!entity" in teks.lower():
         raise _Tolak("FORMAT_RUSAK", "Kiriman XML ditolak karena memuat deklarasi yang tidak diizinkan.")
     try:
-        akar = ET.fromstring(teks)  # DOCTYPE/ENTITY sudah ditolak di atas
-    except ET.ParseError:
+        akar = SafeET.fromstring(teks)  # defusedxml; DOCTYPE/ENTITY juga sudah ditolak di atas
+    except (ET.ParseError, DefusedXmlException):
         raise _Tolak("FORMAT_RUSAK", "Kiriman XML rusak.") from None
 
     def bersih(tag: str) -> str:

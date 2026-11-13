@@ -3828,6 +3828,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hikvision/events/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Terima Event
+         * @description Terima satu kiriman event dari perangkat. 404 bila token/perangkat/IP tidak dikenal, 413 bila terlalu besar,
+         *     422 bila rusak. Event bukan verifikasi lolos (mis. sinyal hidup) dijawab 200 `diabaikan`.
+         */
+        post: operations["terima_event_api_v1_hikvision_events__token__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recaps/attendance": {
         parameters: {
             query?: never;
@@ -9357,6 +9378,16 @@ export interface components {
             decision: string;
             /** Note */
             note?: string | null;
+        };
+        /**
+         * PenerimaOut
+         * @description Jawaban singkat ke perangkat. Tanpa data pribadi.
+         */
+        PenerimaOut: {
+            /** Status */
+            status: string;
+            /** Kode */
+            kode: string;
         };
         /** PeriodicExportRequest */
         PeriodicExportRequest: {
@@ -19938,6 +19969,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SetupAdminOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terima_event_api_v1_hikvision_events__token__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PenerimaOut"];
                 };
             };
             /** @description Validation Error */

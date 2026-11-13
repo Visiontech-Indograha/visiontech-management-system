@@ -24,6 +24,7 @@ python-multipart==0.0.33
 tzdata==2026.6
 qrcode[pil]==8.2
 rfc8785==0.1.4
+defusedxml==0.7.1  # uraian XML push Hikvision (tahan entity/DTD)
 # Ekspor dokumen resmi (Milestone 8, docs/35 §8)
 python-docx==1.2.0
 python-pptx==1.0.2

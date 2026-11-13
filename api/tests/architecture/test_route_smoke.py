@@ -22,6 +22,8 @@ PUBLIC_ROUTES = {
     # Penyiapan awal: publik, dijaga SETUP_TOKEN (env), hanya bila belum ada SUPER_ADMIN aktif, rate limit selalu aktif.
     ("GET", "/setup/status"),
     ("POST", "/setup/admin"),
+    # Penerima push Hikvision: token di path (hash), IP = alamat perangkat, rate limit selalu aktif, 404 seragam.
+    ("POST", "/hikvision/events/{token}"),
     ("POST", "/auth/login"),
     ("POST", "/auth/refresh"),
     ("POST", "/auth/logout"),

@@ -5,6 +5,7 @@ Rute API HTTP mess karyawan: master mess (company_mess) dan hunian (company_mess
 from __future__ import annotations
 
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -14,6 +15,7 @@ from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.mess.controllers.mess_controller import MessController
+from app.modules.mess.dependencies import get_mess_attachments
 from app.modules.mess.schemas.mess_schema import (
     MessDecision,
     MessPlaceIn,
@@ -24,6 +26,8 @@ from app.modules.mess.schemas.mess_schema import (
     MessStayRequest,
     MessStayUpdate,
 )
+from app.shared.attachments.schema import AttachmentAdd, AttachmentOut
+from app.shared.attachments.service import AttachmentService
 
 router = APIRouter(prefix="/mess", tags=["Mess"])
 _VIEW = Depends(require_permission(Permission.VIEW_MESS))
@@ -196,3 +200,36 @@ async def delete_stay(
 ) -> dict[str, str]:
     """Menghapus data hunian mess karyawan."""
     return await controller.handle_delete_stay(current_user, mess_stay_id)
+
+
+@router.get("/{mess_stay_id}/attachments", response_model=list[AttachmentOut])
+async def list_mess_attachments(
+    mess_stay_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_mess_attachments),
+) -> list[dict[str, Any]]:
+    """Lampiran hunian mess (maksimal 5): pemohon dan peninjaunya; orang lain 403, kantor lain 404."""
+    return await service.items(current_user, mess_stay_id)
+
+
+@router.post("/{mess_stay_id}/attachments", response_model=list[AttachmentOut], status_code=201)
+async def add_mess_attachment(
+    mess_stay_id: UUID,
+    data: AttachmentAdd,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_mess_attachments),
+) -> list[dict[str, Any]]:
+    """Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409
+    LAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman."""
+    return await service.add(current_user, mess_stay_id, data.file_id)
+
+
+@router.delete("/{mess_stay_id}/attachments/{file_id}", response_model=list[AttachmentOut])
+async def remove_mess_attachment(
+    mess_stay_id: UUID,
+    file_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_mess_attachments),
+) -> list[dict[str, Any]]:
+    """Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan."""
+    return await service.remove(current_user, mess_stay_id, file_id)

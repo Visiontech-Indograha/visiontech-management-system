@@ -84,7 +84,12 @@ class FileAccessRepository(BaseRepository):
                        SELECT i.daily_plan_id::text FROM work_completion wc
                        JOIN work_plan_item i ON i.completion_id = wc.completion_id AND i.delete_at IS NULL
                        WHERE wc.realization_photos_json @> jsonb_build_array(jsonb_build_object('file_id', f.id::text))
-                   ) AS daily_plan_ids
+                   ) AS daily_plan_ids,
+                   -- lampiran pengajuan lembur / mess: pemohon dan peninjaunya (attachment_access)
+                   ARRAY(SELECT oa.overtime_id::text FROM overtime_attachment oa
+                         WHERE oa.file_object_id = f.id) AS overtime_ids,
+                   ARRAY(SELECT ma.mess_stay_id::text FROM mess_stay_attachment ma
+                         WHERE ma.file_object_id = f.id) AS mess_stay_ids
             FROM file_object f
             WHERE f.id = CAST(:fid AS uuid)
             """,

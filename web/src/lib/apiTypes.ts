@@ -2666,6 +2666,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mess/{mess_stay_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Mess Attachments
+         * @description Lampiran hunian mess (maksimal 5): pemohon dan peninjaunya; orang lain 403, kantor lain 404.
+         */
+        get: operations["list_mess_attachments_api_v1_mess__mess_stay_id__attachments_get"];
+        put?: never;
+        /**
+         * Add Mess Attachment
+         * @description Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409
+         *     LAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman.
+         */
+        post: operations["add_mess_attachment_api_v1_mess__mess_stay_id__attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mess/{mess_stay_id}/attachments/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Mess Attachment
+         * @description Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan.
+         */
+        delete: operations["remove_mess_attachment_api_v1_mess__mess_stay_id__attachments__file_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/leaves": {
         parameters: {
             query?: never;
@@ -5367,6 +5412,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/overtime/{ot_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Overtime Attachments
+         * @description Lampiran lembur (maksimal 5): pemohon dan peninjaunya. Orang lain di kantor yang sama 403; kantor lain 404.
+         */
+        get: operations["list_overtime_attachments_api_v1_overtime__ot_id__attachments_get"];
+        put?: never;
+        /**
+         * Add Overtime Attachment
+         * @description Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409
+         *     LAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman.
+         */
+        post: operations["add_overtime_attachment_api_v1_overtime__ot_id__attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/overtime/{ot_id}/attachments/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Overtime Attachment
+         * @description Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan.
+         */
+        delete: operations["remove_overtime_attachment_api_v1_overtime__ot_id__attachments__file_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recaps/overtime": {
         parameters: {
             query?: never;
@@ -5905,6 +5995,39 @@ export interface components {
              * @enum {string}
              */
             status: "ready" | "damaged" | "lost" | "pension";
+        };
+        /** AttachmentAdd */
+        AttachmentAdd: {
+            /**
+             * File Id
+             * Format: uuid
+             * @description ID berkas hasil POST /files/upload (unggahan sendiri)
+             */
+            file_id: string;
+        };
+        /** AttachmentOut */
+        AttachmentOut: {
+            /**
+             * File Id
+             * Format: uuid
+             */
+            file_id: string;
+            /** File Name */
+            file_name: string;
+            /** Mime Type */
+            mime_type: string;
+            /** Byte Size */
+            byte_size: number;
+            /**
+             * Mine
+             * @description true bila diunggah oleh pemanggil (boleh dihapus selama pengajuan menunggu)
+             */
+            mine: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** AttachmentsIn */
         AttachmentsIn: {
@@ -18988,6 +19111,104 @@ export interface operations {
             };
         };
     };
+    list_mess_attachments_api_v1_mess__mess_stay_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_mess_attachment_api_v1_mess__mess_stay_id__attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_mess_attachment_api_v1_mess__mess_stay_id__attachments__file_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mess_stay_id: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_leaves_api_v1_leaves_get: {
         parameters: {
             query?: {
@@ -24246,6 +24467,104 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_overtime_attachments_api_v1_overtime__ot_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_overtime_attachment_api_v1_overtime__ot_id__attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentAdd"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_overtime_attachment_api_v1_overtime__ot_id__attachments__file_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ot_id: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentOut"][];
                 };
             };
             /** @description Validation Error */

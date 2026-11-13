@@ -551,6 +551,62 @@
     "title": "AssetStatusUpdate",
     "type": "object"
    },
+   "AttachmentAdd": {
+    "properties": {
+     "file_id": {
+      "description": "ID berkas hasil POST /files/upload (unggahan sendiri)",
+      "format": "uuid",
+      "title": "File Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "file_id"
+    ],
+    "title": "AttachmentAdd",
+    "type": "object"
+   },
+   "AttachmentOut": {
+    "properties": {
+     "byte_size": {
+      "title": "Byte Size",
+      "type": "integer"
+     },
+     "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+     },
+     "file_id": {
+      "format": "uuid",
+      "title": "File Id",
+      "type": "string"
+     },
+     "file_name": {
+      "title": "File Name",
+      "type": "string"
+     },
+     "mime_type": {
+      "title": "Mime Type",
+      "type": "string"
+     },
+     "mine": {
+      "description": "true bila diunggah oleh pemanggil (boleh dihapus selama pengajuan menunggu)",
+      "title": "Mine",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "file_id",
+     "file_name",
+     "mime_type",
+     "byte_size",
+     "mine",
+     "created_at"
+    ],
+    "title": "AttachmentOut",
+    "type": "object"
+   },
    "AttachmentsIn": {
     "properties": {
      "file_ids": {
@@ -32475,6 +32531,183 @@
     ]
    }
   },
+  "/api/v1/mess/{mess_stay_id}/attachments": {
+   "get": {
+    "description": "Lampiran hunian mess (maksimal 5): pemohon dan peninjaunya; orang lain 403, kantor lain 404.",
+    "operationId": "list_mess_attachments_api_v1_mess__mess_stay_id__attachments_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response List Mess Attachments Api V1 Mess  Mess Stay Id  Attachments Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Mess Attachments",
+    "tags": [
+     "Mess"
+    ]
+   },
+   "post": {
+    "description": "Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409\nLAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman.",
+    "operationId": "add_mess_attachment_api_v1_mess__mess_stay_id__attachments_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttachmentAdd"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response Add Mess Attachment Api V1 Mess  Mess Stay Id  Attachments Post",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Add Mess Attachment",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
+  "/api/v1/mess/{mess_stay_id}/attachments/{file_id}": {
+   "delete": {
+    "description": "Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan.",
+    "operationId": "remove_mess_attachment_api_v1_mess__mess_stay_id__attachments__file_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "mess_stay_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Mess Stay Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "file_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "File Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response Remove Mess Attachment Api V1 Mess  Mess Stay Id  Attachments  File Id  Delete",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Remove Mess Attachment",
+    "tags": [
+     "Mess"
+    ]
+   }
+  },
   "/api/v1/mess/{mess_stay_id}/cancel": {
    "post": {
     "description": "Pemohon (atau HR/GA) membatalkan pengajuan / hunian yang belum dimulai.",
@@ -33820,6 +34053,183 @@
      }
     ],
     "summary": "Delete Overtime",
+    "tags": [
+     "Overtime"
+    ]
+   }
+  },
+  "/api/v1/overtime/{ot_id}/attachments": {
+   "get": {
+    "description": "Lampiran lembur (maksimal 5): pemohon dan peninjaunya. Orang lain di kantor yang sama 403; kantor lain 404.",
+    "operationId": "list_overtime_attachments_api_v1_overtime__ot_id__attachments_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "ot_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Ot Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response List Overtime Attachments Api V1 Overtime  Ot Id  Attachments Get",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "List Overtime Attachments",
+    "tags": [
+     "Overtime"
+    ]
+   },
+   "post": {
+    "description": "Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409\nLAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman.",
+    "operationId": "add_overtime_attachment_api_v1_overtime__ot_id__attachments_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "ot_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Ot Id",
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/AttachmentAdd"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response Add Overtime Attachment Api V1 Overtime  Ot Id  Attachments Post",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Add Overtime Attachment",
+    "tags": [
+     "Overtime"
+    ]
+   }
+  },
+  "/api/v1/overtime/{ot_id}/attachments/{file_id}": {
+   "delete": {
+    "description": "Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan.",
+    "operationId": "remove_overtime_attachment_api_v1_overtime__ot_id__attachments__file_id__delete",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "ot_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Ot Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "path",
+      "name": "file_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "File Id",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "items": {
+          "$ref": "#/components/schemas/AttachmentOut"
+         },
+         "title": "Response Remove Overtime Attachment Api V1 Overtime  Ot Id  Attachments  File Id  Delete",
+         "type": "array"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Remove Overtime Attachment",
     "tags": [
      "Overtime"
     ]

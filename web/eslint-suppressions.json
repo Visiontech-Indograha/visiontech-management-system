@@ -100,9 +100,6 @@
     },
     "max-lines-per-function": {
       "count": 1
-    },
-    "vms/max-lines-hard": {
-      "count": 1
     }
   },
   "src/components/organisms/attendance/SelfieCaptureDialog.tsx": {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../shared/ui/vms_ui.dart';
+import '../assets/asset_holder.dart';
 
 /// Mess yang berlaku pada tanggal kerja jadwal: hunian APPROVED yang rentang inapnya memuat [workDate].
 /// Tanggal dibandingkan sebagai tanggal kalender (tanpa jam); null bila tidak ada hunian yang cocok.
@@ -60,7 +61,7 @@ class DayAssetsCard extends StatelessWidget {
 
   static String _line(Map<String, dynamic> a) {
     final returned = a['returned_at'] != null;
-    final holder = a['employee_name'] ?? '-';
+    final holder = assetHolderLabel(a);
     final state = returned ? 'sudah dikembalikan' : 'dipegang $holder';
     return '${a['asset_name']} (${a['asset_code']}) · $state';
   }

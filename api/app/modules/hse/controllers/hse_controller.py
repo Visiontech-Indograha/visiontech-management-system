@@ -19,6 +19,7 @@ from app.modules.hse.schemas.hse_schema import (
     HseCampaignCreate,
     HseCampaignResponse,
     HseCampaignUpdate,
+    InspectionChecklistTemplate,
     VehicleInspectionCreate,
     VehicleInspectionResponse,
     VehicleInspectionVerify,
@@ -99,7 +100,9 @@ class HseController:
         limit: int = 50,
         offset: int = 0,
         user: CurrentUser | None = None,
-    ) -> list[VehicleInspectionResponse]:
+        q: str | None = None,
+        mine: str | None = None,
+    ) -> tuple[list[VehicleInspectionResponse], int]:
         return await self.service.list_vehicle_inspections(
             vehicle_id=vehicle_id,
             period_type=period_type,
@@ -109,7 +112,12 @@ class HseController:
             limit=limit,
             offset=offset,
             user=user,
+            q=q,
+            mine=mine,
         )
+
+    def inspection_checklist_template(self) -> InspectionChecklistTemplate:
+        return self.service.inspection_checklist_template()
 
     async def create_vehicle_inspection(
         self,

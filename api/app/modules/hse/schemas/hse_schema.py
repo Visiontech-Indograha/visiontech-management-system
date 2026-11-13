@@ -9,10 +9,10 @@ Skema Pydantic untuk modul HSE (Health, Safety & Environment / HES):
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 # Aturan carousel kampanye K3 (foto + durasi baca). Ukuran per foto mengikuti batas unggah berkas (10 MB).
 HSE_MAX_MEDIA = 8
@@ -123,22 +123,48 @@ class HseCampaignAuditStats(BaseModel):
     readers: list[HseReaderItem]
 
 
+# Batas input inspeksi kendaraan (web dan HP wajib sama).
+INSPECTION_PERIOD_PATTERN = "^(DAILY|WEEKLY|MONTHLY)$"
+INSPECTION_VERIFY_PATTERN = "^(VERIFIED|REJECTED)$"
+INSPECTION_STATUS_PATTERN = "^(SUBMITTED|VERIFIED|REJECTED)$"
+INSPECTION_MAX_CHECKLIST = 60
+INSPECTION_MAX_PHOTOS = 10
+INSPECTION_MAX_NOTES = 1000
+INSPECTION_MAX_ODOMETER = 10_000_000
+
+
 class VehicleInspectionCreate(BaseModel):
     vehicle_id: UUID
     inspector_id: UUID | None = None
-    period_type: str = Field(default="DAILY", description="DAILY, WEEKLY, MONTHLY")
+    period_type: str = Field(default="DAILY", pattern=INSPECTION_PERIOD_PATTERN,
+                             description="DAILY, WEEKLY, MONTHLY")
     inspection_date: date | None = None
-    odometer_km: int | None = Field(None, ge=0)
+    odometer_km: int | None = Field(None, ge=0, le=INSPECTION_MAX_ODOMETER)
     checklist_json: dict[str, Any] = Field(
-        default_factory=dict, description="Status checklist per item (rem, ban, oli, lampu, dll)"
+        default_factory=dict, max_length=INSPECTION_MAX_CHECKLIST,
+        description="Status per butir; butir baku: GET /hse/inspections/checklist-template",
     )
-    photos_json: list[str] = Field(default_factory=list, description="Array URL/Path foto bukti inspeksi kendaraan")
-    notes: str | None = None
+    photos_json: list[Annotated[str, StringConstraints(max_length=255)]] = Field(
+        default_factory=list, max_length=INSPECTION_MAX_PHOTOS,
+        description="ID berkas foto bukti (hasil POST /files/upload), maks 10",
+    )
+    notes: str | None = Field(None, max_length=INSPECTION_MAX_NOTES)
 
 
 class VehicleInspectionVerify(BaseModel):
-    status: str = Field(..., description="VERIFIED atau REJECTED")
-    notes: str | None = None
+    status: str = Field(..., pattern=INSPECTION_VERIFY_PATTERN, description="VERIFIED atau REJECTED")
+    notes: str | None = Field(None, max_length=INSPECTION_MAX_NOTES)
+
+
+class InspectionChecklistItem(BaseModel):
+    key: str
+    label: str
+    options: list[str]
+
+
+class InspectionChecklistTemplate(BaseModel):
+    period_types: list[str]
+    items: list[InspectionChecklistItem]
 
 
 class VehicleInspectionResponse(BaseModel):

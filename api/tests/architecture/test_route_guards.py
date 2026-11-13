@@ -26,7 +26,6 @@ from tests.conftest import World, requires_db, sync_query
 SELF_SERVICE = {
     ("GET", "/hse/campaigns/active-popup"): "popup K3 wajib baca untuk pengguna yang login; hanya kampanye aktif yang menyasar akun itu",
     ("POST", "/hse/campaigns/{campaign_id}/acknowledge"): "konfirmasi baca atas nama akun sendiri (user_id dari token)",
-    ("POST", "/hse/inspections"): "pengemudi/karyawan lapangan mengirim formulir inspeksi kendaraan (pelapor dari token)",
     ("GET", "/vehicle-documents/mine"): "hanya dokumen kendaraan yang sedang dikemudikan akun itu (employee_id dari token, diuji)",
     ("GET", "/auth/me"): "profil sendiri",
     ("GET", "/auth/sessions"): "perangkat milik sendiri (P1-7, diuji)",
@@ -106,6 +105,9 @@ GUARDED_IN_HANDLER = {
     ("GET", "/files/{file_id}/url"): "check_file_access (V-17): pemilik/HR/peninjau/penglihat SK, selain itu 404",
     ("GET", "/files/{file_id}"): "check_file_access (V-17): isi berkas disajikan setelah otorisasi; tidak berhak → 404",
     # M4: inspeksi oleh pengelola aset ATAU pemegang kendaraan saat itu (ditentukan peminjaman berjalan).
+    ("POST", "/hse/inspections"): "HseService: manage:vehicle_inspections, pengemudi aktif, atau ketua tim (diuji)",
+    ("GET", "/hse/inspections/mine"): "milik sendiri (pemeriksa atau pengemudi aktif), difilter di SQL",
+    ("GET", "/hse/inspections/checklist-template"): "daftar butir baku statis, tanpa data pribadi",
     ("POST", "/assets/vehicles/{vehicle_id}/inspections"): "AssetService: manage:assets atau pemegang (diuji)",
     ("POST", "/work-plans/daily/{daily_plan_id}/corrections"): "DailyCorrectionService: hanya ketua tim jadwal (diuji)",
     ("POST", "/work-plans/corrections/{correction_id}/decision"): "DailyCorrectionService: hanya PM/OM divisi (diuji)",

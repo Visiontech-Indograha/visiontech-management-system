@@ -10,7 +10,7 @@ import '../../core/providers.dart';
 import '../../data/sync_engine.dart' show OfflineOp, SyncEngine, SyncRejectedException;
 import '../../shared/ui/vms_network_image.dart';
 import '../../shared/ui/vms_ui.dart';
-import 'daily_plan_screen.dart' show phaseLabel, qtyText;
+import 'daily_plan_format.dart' show phaseLabel, qtyText;
 import 'item_state.dart';
 import 'photo_slots.dart' show ExampleThumb, PhotoOrigin, pickReportPhoto;
 

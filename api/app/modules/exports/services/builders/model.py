@@ -117,6 +117,19 @@ class CompletionReport:
         return [p for p in self.points if p.phase == "SURVEY"]
 
     @property
+    def survey_dates(self) -> list[date]:
+        """Tanggal survei: tanggal kerja titik survei; bila tak ada titik, tanggal pengesahan PM/ketua, lalu hari
+        laporan dibuat. Tidak pernah kosong supaya kolom Tanggal tidak tampil '-'."""
+        dates = sorted({p.work_date for p in self.survey_points if p.work_date})
+        if dates:
+            return dates
+        for key in ("pm_signed_at", "leader_signed_at"):
+            value = self.order.get(key)
+            if isinstance(value, datetime):
+                return [value.date()]
+        return [self.generated_at.date()]
+
+    @property
     def all_photos(self) -> list[tuple[str, bytes]]:
         """Foto per titik lalu foto realisasi order, berketerangan."""
         return [(f"{p.title} — {ph.label}", ph.image) for p in self.points for ph in p.photos] + [

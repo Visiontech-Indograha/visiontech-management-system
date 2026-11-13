@@ -37,7 +37,7 @@ def _face_visible(att_emp: str) -> str:
         CAST(:view_all AS boolean)
         OR {att_emp} IS NOT DISTINCT FROM (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid))
         OR EXISTS (SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE'))
+                   AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE'))
         OR EXISTS (SELECT 1 FROM employee x JOIN division dv ON dv.division_id = x.division_id AND dv.delete_at IS NULL
                    WHERE x.employee_id = {att_emp}
                      AND dv.pm_id = (SELECT u.employee_id FROM users u WHERE u.user_id = CAST(:viewer AS uuid)))
@@ -48,6 +48,16 @@ def _pm_reach(emp_expr: str) -> str:
     """PM peninjau (:viewer) berwenang atas karyawan `emp_expr`: divisinya, atau tim pada jadwal/proyek yang
     dikelolanya (lihat `app/shared/access/pm_reach.py`). Dipakai bersama `reviewer_employee_ids`."""
     return pm_reaches_employee(VIEWER_EMPLOYEE_BY_USER, emp_expr)
+
+
+def _hr_office_reach(emp_expr: str) -> str:
+    """HR (ADMIN_HR_GA) peninjau (:viewer) hanya meninjau karyawan di kantornya sendiri (putusan pemilik)."""
+    return f"""(
+        EXISTS (SELECT 1 FROM users hr WHERE hr.user_id = CAST(:viewer AS uuid) AND hr.system_role = 'ADMIN_HR_GA')
+        AND (SELECT ee.office_id FROM employee ee WHERE ee.employee_id = {emp_expr}) IS NOT DISTINCT FROM
+            (SELECT ev.office_id FROM employee ev JOIN users hu ON hu.employee_id = ev.employee_id
+             WHERE hu.user_id = CAST(:viewer AS uuid))
+    )"""
 
 
 class AttendanceSessionRepository(BaseRepository):
@@ -797,8 +807,9 @@ class AttendanceSessionRepository(BaseRepository):
                        EXISTS (
                            SELECT 1 FROM users
                            WHERE user_id = CAST(:viewer AS uuid)
-                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                             AND system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                        )
+                       OR {_hr_office_reach('CAST(:emp AS uuid)')}
                        OR (
                            EXISTS (
                                SELECT 1 FROM users
@@ -858,7 +869,7 @@ class AttendanceSessionRepository(BaseRepository):
                         CAST(:view_all AS boolean)
                         OR EXISTS (
                             SELECT 1 FROM users v WHERE v.user_id = CAST(:viewer AS uuid)
-                              AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                              AND v.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                         )
                     )
                     AND {attendance_office_scope(VIEWER_EMPLOYEE_BY_USER, 'e.office_id')}
@@ -972,8 +983,9 @@ class AttendanceSessionRepository(BaseRepository):
                            EXISTS (
                                SELECT 1 FROM users u
                                WHERE u.user_id = CAST(:viewer AS uuid)
-                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'ADMIN_HR_GA', 'FINANCE')
+                                 AND u.system_role IN ('SUPER_ADMIN', 'OPERATIONAL_MANAGER', 'FINANCE')
                            )
+                           OR {_hr_office_reach('a.employee_id')}
                            OR (
                                EXISTS (
                                    SELECT 1 FROM users u

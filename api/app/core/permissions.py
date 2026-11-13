@@ -158,11 +158,12 @@ _SYSTEM_ROLE_EXTRA: dict[SystemRole, frozenset[Permission]] = {
         P.MANAGE_TEAMS, P.VIEW_TEAMS, P.VIEW_MESS, P.REVIEW_MESS, P.VIEW_OFFBOARDING, P.MANAGE_IMAGE_REQUIREMENTS,
     }),
     # HR melihat absensi karyawan KANTORNYA SENDIRI saja (keputusan pemilik 2026-11-05; cakupan di SQL lewat
-    # shared/access/office_scope.py), tanpa wewenang mengekspor/meninjau. SA dan OM melihat semua kantor.
+    # shared/access/office_scope.py), tanpa wewenang mengekspor. Meninjau hanya karyawan kantornya (can_review).
+    # SA dan OM melihat semua kantor.
     SystemRole.ADMIN_HR_GA: frozenset({
         P.MANAGE_USERS, P.VERIFY_DOCUMENTS, P.MANAGE_EMPLOYEE_DOCUMENTS, P.MANAGE_ASSETS,
         P.MANAGE_MESS, P.VIEW_MESS, P.REVIEW_MESS, P.MANAGE_OFFBOARDING, P.VIEW_OFFBOARDING, P.VIEW_TEAMS,
-        P.VIEW_ALL_ATTENDANCE,
+        P.VIEW_ALL_ATTENDANCE, P.REVIEW_ATTENDANCE,
     }),
     # Finance melihat & mengekspor absensi seluruh karyawan dan meninjau lembur (sama seperti FINANCE V1).
     SystemRole.FINANCE: frozenset({

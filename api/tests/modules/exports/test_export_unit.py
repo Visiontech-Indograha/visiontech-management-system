@@ -181,3 +181,21 @@ def test_periodic_schedule_sheet_prints_plan_status_in_indonesian():
     ws = load_workbook(io.BytesIO(periodic_xlsx(per)))["Jadwal"]
     values = [c.value for row in ws.iter_rows() for c in row]
     assert "Disetujui" in values and "APPROVED" not in values
+
+
+def _info_date(content: bytes) -> str:
+    d = docx.Document(io.BytesIO(content))
+    return next(r.cells[1].text for t in d.tables for r in t.rows if r.cells[0].text == "Tanggal")
+
+
+def test_survey_report_date_uses_survey_point_date_in_indonesian_format():
+    assert _info_date(survey_report_docx(_report())) == "14 September 2026"
+
+
+def test_survey_report_date_never_blank_without_survey_points():
+    report = _report()
+    report.points = []
+    assert _info_date(survey_report_docx(report)) == "16 September 2026"  # tanggal pengesahan PM
+    report.order.pop("pm_signed_at")
+    report.order.pop("leader_signed_at")
+    assert _info_date(survey_report_docx(report)) == "17 September 2026"  # hari laporan dibuat

@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/molecules/StatusBadge";
 import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
 import { useRequiredExplanation } from "@/hooks/useRequiredExplanation";
-import { checkInMessage, pendingCheckInNote } from "@/lib/attendanceMessages";
+import { checkInMessage } from "@/lib/attendanceMessages";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, formatDistance } from "@/lib/format";
@@ -21,6 +21,7 @@ const wibMinutes = (d = new Date()) =>
 const OPEN_MINUTES = 6 * 60 + 45;
 import { useAttendanceSites } from "@/services/siteService";
 import { SelfieCaptureDialog } from "./SelfieCaptureDialog";
+import { ReviewReasonsNote } from "./ReviewReasonsNote";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { VmsDialog } from "@/components/molecules/VmsDialog";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -424,11 +425,8 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
               </TextBlock>
             </div>
           </ListBlock>
-          {!rec.check_out_at && rec.status === "NEEDS_REVIEW" ? (
-            <TextBlock role="status" className="rounded-control border border-warning-border bg-warning-bg px-3 py-2 text-sm text-warning">
-              {pendingCheckInNote(rec)}
-            </TextBlock>
-          ) : !rec.check_out_at && askExplanation && outPos ? (
+          <ReviewReasonsNote rec={rec} onEnroll={() => navigate("/account")} />
+          {!rec.check_out_at && rec.status === "NEEDS_REVIEW" ? null : !rec.check_out_at && askExplanation && outPos ? (
             <div className="space-y-3">
               <TextAreaField
                 label="Penjelasan (wajib)" ref={explRef} error={explError}

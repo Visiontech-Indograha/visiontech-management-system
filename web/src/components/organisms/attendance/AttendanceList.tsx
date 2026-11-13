@@ -5,6 +5,7 @@ import type { KeysetMore } from "@/hooks/useKeysetList";
 import { QueryState } from "@/components/molecules/QueryState";
 import { UserAvatar } from "@/components/organisms/UserAvatar";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
+import { accuracyText, reviewReasonTexts } from "@/lib/reviewReasons";
 import { faceResultLabel, formatDate, formatDateTime, formatDistance } from "@/lib/format";
 import { deleteAttendance, type Attendance, type AttendanceList as AttendanceListData } from "@/services/attendanceService";
 import { DeleteConfirmButton } from "@/components/organisms/DeleteConfirmButton";
@@ -84,6 +85,17 @@ export function AttendanceList({ list, more, meEmployeeId, onOpen, emptyText = "
                         ? `Pulang: ${faceResultLabel(a.check_out_face_result)}${a.check_out_face_result !== "SKIPPED" && a.check_out_face_similarity !== null && a.check_out_face_similarity !== undefined ? ` (${Math.round(a.check_out_face_similarity * 100)}%)` : ""}`
                         : ""}
                     </TextBlock>
+                  </div>
+                )}
+                {a.review_reasons && a.review_reasons.length > 0 && (
+                  <div>
+                    <TextBlock as="dt" className="inline text-mist">Alasan perlu ditinjau: </TextBlock>
+                    <TextBlock as="dd" className="inline">{reviewReasonTexts(a.review_reasons).join(" ")}</TextBlock>
+                  </div>
+                )}
+                {accuracyText(a.location_accuracy_m) && (
+                  <div>
+                    <TextBlock as="dd" className="inline text-mist">{accuracyText(a.location_accuracy_m)}</TextBlock>
                   </div>
                 )}
                 {a.explanation && (

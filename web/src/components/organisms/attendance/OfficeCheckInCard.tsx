@@ -6,6 +6,7 @@ import { useSession } from "@/stores/sessionStore";
 import { StatusBadge } from "@/components/molecules/StatusBadge";
 import type { components } from "@/lib/apiTypes";
 import { ApiError } from "@/lib/apiClient";
+import { checkInMessage } from "@/lib/attendanceMessages";
 import { TextAreaField } from "@/components/molecules/Field";
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, formatDistance } from "@/lib/format";
@@ -256,11 +257,7 @@ function OfficeCheckInForm({ employeeId }: { employeeId: string }) {
       setError(null);
       setExplanation("");
       setAskExplanation(false);
-      toast.success(
-        a.status === "NEEDS_REVIEW"
-          ? `Absen masuk tercatat, tetapi ${formatDistance(a.distance_m)} dari lokasi — menunggu pemeriksaan.`
-          : "Absen masuk tercatat.",
-      );
+      toast.success(checkInMessage(a, formatDistance(a.distance_m)));
       await refresh();
     },
     onError: (err) => {

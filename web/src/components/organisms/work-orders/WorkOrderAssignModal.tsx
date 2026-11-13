@@ -82,7 +82,7 @@ export function WorkOrderAssignModal({
           </TextBlock>
           <div className="flex justify-end">
             <ActionButton type="button" variant="default" onClick={onClose}>
-              <TextBlock as="span">Tutup</TextBlock>
+              <TextBlock as="span">Selesai</TextBlock>
             </ActionButton>
           </div>
         </div>

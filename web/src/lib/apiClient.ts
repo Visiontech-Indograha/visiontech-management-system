@@ -25,17 +25,8 @@ export const api = axios.create({ baseURL, withCredentials: true });
 let accessToken: string | null = null;
 let onSessionExpired: (() => void) | null = null;
 
-// Penanda (bukan rahasia) bahwa peramban ini pernah masuk: tanpa penanda, halaman masuk tidak perlu memanggil refresh (401).
-const SESSION_HINT_KEY = "vms_session_hint";
-const writeHint = (on: boolean) => {
-  if (on) localStorage.setItem(SESSION_HINT_KEY, "1");
-  else localStorage.removeItem(SESSION_HINT_KEY);
-};
-export const mayHaveSession = () => localStorage.getItem(SESSION_HINT_KEY) === "1";
-
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
-  writeHint(token !== null);
 };
 export const getAccessToken = () => accessToken;
 export const setSessionExpiredHandler = (fn: (() => void) | null) => {
@@ -158,7 +149,6 @@ export async function refreshAccessToken(): Promise<string> {
   )
     .then((token) => {
       accessToken = token;
-      writeHint(true);
       return token;
     })
     .finally(() => {

@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import {
   getAccessToken,
-  mayHaveSession,
   refreshAccessToken,
   setAccessToken,
   setLogoutBroadcastReceiver,
@@ -135,7 +134,6 @@ export const useSession = create<SessionState>((set, get) => {
       initSessionPromise = (async () => {
         try {
           if (getAccessToken() || get().me) return;
-          if (!mayHaveSession()) return; // belum pernah masuk di peramban ini: tidak perlu refresh
           // Lewat refresh tunggal: efek ganda (StrictMode) atau request paralel tidak boleh merotasi
           // cookie dua kali — refresh kedua memakai token lama dan sesi ikut dicabut.
           const token = await refreshAccessToken();

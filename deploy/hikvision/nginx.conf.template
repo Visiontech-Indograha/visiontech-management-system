@@ -1,0 +1,44 @@
+# Penerima event Hikvision (LAN saja). Variabel diisi envsubst dari .env.proxy (lihat deploy/HIKVISION.md).
+# HTTP polos TANPA redirect ke HTTPS (firmware lama tidak mengikuti redirect). Jangan lewat Cloudflare/Tailscale publik.
+worker_processes 1;
+error_log /dev/stderr crit;          # galat nginx bisa memuat baris permintaan (berisi token): hanya level crit
+pid /tmp/nginx.pid;
+events { worker_connections 128; }
+http {
+    access_log off;                  # diganti log tersensor di bawah
+    server_tokens off;
+    # Token di path disensor di log: /hikvision/events/<token> -> /hikvision/events/***
+    map $uri $uri_aman {
+        ~^(/hikvision/events/)[^/]+ "$1***";
+        default $uri;
+    }
+    log_format hik '$time_iso8601 $remote_addr "$request_method $uri_aman" $status $body_bytes_sent $request_time';
+    access_log /dev/stdout hik;
+    limit_req_zone $binary_remote_addr zone=hik:1m rate=5r/s;
+    limit_req_status 429;
+    limit_req_log_level warn;
+    client_body_buffer_size 64k;
+    client_body_timeout 10s;
+
+    server {
+        listen ${HIK_BIND_IP}:${HIK_PORT};
+        client_max_body_size 2m;     # sama dengan batas API (2 MiB)
+
+        # Hanya perangkat terdaftar.
+        allow ${HIK_IP_1};
+        allow ${HIK_IP_2};
+        deny all;
+
+        location ^~ /hikvision/events/ {
+            limit_except POST { deny all; }
+            limit_req zone=hik burst=20 nodelay;
+            proxy_pass http://127.0.0.1:8000/api/v1/hikvision/events/;   # API prod (loopback host)
+            proxy_set_header X-Forwarded-For $remote_addr;               # ditimpa, bukan ditambah
+            proxy_set_header Host $host;
+            proxy_http_version 1.1;
+            proxy_connect_timeout 3s;
+            proxy_read_timeout 15s;
+        }
+        location / { return 404; }
+    }
+}

@@ -37,6 +37,7 @@ jobs:
         run: |
           bash -n deploy/autodeploy.sh
           bash -n deploy/backup.sh
+          bash -n deploy/hikvision/uji-konfigurasi.sh
           grep -F 'BRANCH="${VMS_DEPLOY_BRANCH:-prod}"' deploy/autodeploy.sh
 
       - name: Catat mekanisme deploy nyata

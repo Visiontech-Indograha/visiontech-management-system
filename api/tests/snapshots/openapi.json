@@ -11278,6 +11278,25 @@
     "title": "OvertimeReview",
     "type": "object"
    },
+   "PenerimaOut": {
+    "description": "Jawaban singkat ke perangkat. Tanpa data pribadi.",
+    "properties": {
+     "kode": {
+      "title": "Kode",
+      "type": "string"
+     },
+     "status": {
+      "title": "Status",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status",
+     "kode"
+    ],
+    "title": "PenerimaOut",
+    "type": "object"
+   },
    "PeriodicExportRequest": {
     "properties": {
      "division_id": {
@@ -26192,6 +26211,49 @@
     "summary": "Get File Url",
     "tags": [
      "Files"
+    ]
+   }
+  },
+  "/api/v1/hikvision/events/{token}": {
+   "post": {
+    "description": "Terima satu kiriman event dari perangkat. 404 bila token/perangkat/IP tidak dikenal, 413 bila terlalu besar,\n422 bila rusak. Event bukan verifikasi lolos (mis. sinyal hidup) dijawab 200 `diabaikan`.",
+    "operationId": "terima_event_api_v1_hikvision_events__token__post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "token",
+      "required": true,
+      "schema": {
+       "title": "Token",
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PenerimaOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Terima Event",
+    "tags": [
+     "Hikvision"
     ]
    }
   },

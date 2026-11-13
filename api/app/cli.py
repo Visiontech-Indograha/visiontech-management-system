@@ -157,6 +157,43 @@ async def hapus_terjadwal(terapkan: bool, paksa: bool = False) -> int:
     return 1 if summary.bermasalah else 0
 
 
+async def hikvision_tarik(
+    perangkat: str, dari: str | None, sampai: str | None, dry_run: bool, jeda: float, lanjutkan: bool,
+) -> int:
+    """Tarik riwayat event perangkat Hikvision ke hikvision_event (idempoten, aman diulang). Kode keluar 0/1."""
+    import json
+    from datetime import datetime, timedelta
+
+    from app.core.time import utcnow
+    from app.modules.hikvision.services import konstanta as hk
+    from app.modules.hikvision.services.isapi_client import IsapiError
+    from app.modules.hikvision.services.tarik_service import TarikError, tarik_riwayat
+
+    def waktu(teks: str) -> datetime:
+        try:
+            w = datetime.fromisoformat(teks)
+        except ValueError:
+            raise TarikError(f"Tanggal {teks!r} tidak valid; pakai format 2026-01-31.") from None
+        return w if w.tzinfo else w.replace(tzinfo=hk.ZONA_PERANGKAT_BAWAAN)
+
+    akhir = waktu(sampai) if sampai else utcnow().astimezone(hk.ZONA_PERANGKAT_BAWAAN)
+    mulai = waktu(dari) if dari else akhir - timedelta(days=366)
+    if mulai >= akhir:
+        print("Tanggal --dari harus sebelum --sampai.")
+        return 1
+    engine = make_engine(_operator_url())
+    try:
+        ringkas = await tarik_riwayat(engine, serial=perangkat, mulai=mulai, akhir=akhir, dry_run=dry_run,
+                                      jeda=jeda, lanjutkan=lanjutkan)
+    except (TarikError, IsapiError) as exc:
+        print(f"Gagal: {exc}")
+        return 1
+    finally:
+        await engine.dispose()
+    print(json.dumps(ringkas.as_dict(), indent=2))
+    return 0
+
+
 async def buat_partisi(bulan_ke_depan: int) -> int:
     """Buat partisi bulanan app_activity_logs + DEFAULT sebagai peran pemilik (cron host bulanan)."""
     from app.database.migration_v3 import ensure_activity_log_partitions
@@ -208,6 +245,14 @@ def main() -> None:
     mode.add_argument("--terapkan", action="store_true", help="Jalankan (hanya jenis kebijakan aktif)")
     hapus_parser.add_argument("--paksa", action="store_true", help="Lewati pemutus otomatis (ambang jumlah)")
 
+    hik_parser = subparsers.add_parser(
+        "hikvision-tarik", help="Tarik riwayat event perangkat Hikvision (kredensial dari HIKVISION_<SERIAL>_USER/_PASS)")
+    hik_parser.add_argument("--perangkat", required=True, help="Nomor seri perangkat yang terdaftar")
+    hik_parser.add_argument("--dari", help="Tanggal mulai (YYYY-MM-DD, WIB); bawaan 366 hari sebelum --sampai")
+    hik_parser.add_argument("--sampai", help="Tanggal akhir (YYYY-MM-DD, WIB); bawaan sekarang")
+    hik_parser.add_argument("--dry-run", action="store_true", help="Hanya hitung dan cari event tertua, tanpa simpan")
+    hik_parser.add_argument("--jeda", type=float, default=1.0, help="Jeda antar permintaan ke perangkat (detik)")
+    hik_parser.add_argument("--lanjutkan", action="store_true", help="Lanjut dari jendela terakhir yang tersimpan")
     backup_parser = subparsers.add_parser("backup-db", help="Jalankan backup database sistem")
     backup_parser.add_argument(
         "--cycle", default="WEEKLY", choices=["DAILY", "WEEKLY", "MONTHLY"], help="Siklus backup"
@@ -234,6 +279,9 @@ def main() -> None:
         asyncio.run(cleanup_idempotency(args.hari))
     elif args.command == "hapus-terjadwal":
         sys.exit(asyncio.run(hapus_terjadwal(terapkan=args.terapkan, paksa=args.paksa)))
+    elif args.command == "hikvision-tarik":
+        sys.exit(asyncio.run(hikvision_tarik(args.perangkat, args.dari, args.sampai, args.dry_run, args.jeda,
+                                             args.lanjutkan)))
     elif args.command == "buat-partisi":
         print(f"Partisi diperiksa/dibuat: {asyncio.run(buat_partisi(args.bulan))} pernyataan.")
     elif args.command == "backup-db":

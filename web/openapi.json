@@ -14080,6 +14080,49 @@
     }
    }
   },
+  "/api/v1/hikvision/events/{token}": {
+   "post": {
+    "tags": [
+     "Hikvision"
+    ],
+    "summary": "Terima Event",
+    "description": "Terima satu kiriman event dari perangkat. 404 bila token/perangkat/IP tidak dikenal, 413 bila terlalu besar,\n422 bila rusak. Event bukan verifikasi lolos (mis. sinyal hidup) dijawab 200 `diabaikan`.",
+    "operationId": "terima_event_api_v1_hikvision_events__token__post",
+    "parameters": [
+     {
+      "name": "token",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/PenerimaOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/api/v1/recaps/attendance": {
    "get": {
     "tags": [
@@ -29588,6 +29631,25 @@
     ],
     "title": "OvertimeReview",
     "description": "Schema for reviewing an overtime request (domain.js REVIEW_OVERTIME).\n\nStatus keputusan (decision) berupa APPROVED atau REJECTED, dan akan\ndiperiksa serta diproses di dalam service."
+   },
+   "PenerimaOut": {
+    "properties": {
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "kode": {
+      "type": "string",
+      "title": "Kode"
+     }
+    },
+    "type": "object",
+    "required": [
+     "status",
+     "kode"
+    ],
+    "title": "PenerimaOut",
+    "description": "Jawaban singkat ke perangkat. Tanpa data pribadi."
    },
    "PeriodicExportRequest": {
     "properties": {

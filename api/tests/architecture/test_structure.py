@@ -144,7 +144,7 @@ def test_known_violations_only_shrink() -> None:
 
 # ── Struktur tes mengikuti struktur aplikasi ────────────────────────────────────────────────────
 TESTS_DIR = APP_DIR.parent / "tests"
-TEST_GROUPS = {"architecture", "core", "shared", "integration", "modules"}
+TEST_GROUPS = {"architecture", "core", "shared", "integration", "modules", "fixtures"}
 
 
 def test_tests_live_in_groups_not_at_root() -> None:

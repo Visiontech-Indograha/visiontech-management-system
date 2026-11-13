@@ -47,24 +47,32 @@ async def list_documents(
     response: Response,
     vehicle_id: UUID | None = None,
     history: bool = Query(False, description="Sertakan dokumen yang sudah diganti"),
+    doc_type_code: str | None = Query(None, min_length=2, max_length=30, pattern=r"^[A-Z0-9_]+$",
+                                      description="Kode jenis dokumen (terdaftar di document_type)"),
+    office_id: UUID | None = Query(None, description="Batasi ke satu kantor (di luar cakupan = 404)"),
     params: ListParams = Depends(),
     user: CurrentUser = _VIEW,
     service: VehicleDocumentService = Depends(get_vehicle_document_service),
 ) -> list[VehicleDocumentOut]:
     """Dokumen kendaraan di kantor yang boleh dilihat. Cari `q` = awalan nomor polisi/nama/jenis/nomor dokumen."""
-    return _docs(await service.list_documents(user, vehicle_id, history, None), params, response)
+    rows = await service.list_documents(user, vehicle_id, history, None, doc_type_code, office_id)
+    return _docs(rows, params, response)
 
 
 @router.get("/vehicle-documents/expiring", response_model=list[VehicleDocumentOut])
 async def list_expiring(
     response: Response,
     days: int = Query(30, ge=1, le=90, description="Jatuh tempo dalam N hari (yang sudah lewat ikut)"),
+    doc_type_code: str | None = Query(None, min_length=2, max_length=30, pattern=r"^[A-Z0-9_]+$",
+                                      description="Kode jenis dokumen (terdaftar di document_type)"),
+    office_id: UUID | None = Query(None, description="Batasi ke satu kantor (di luar cakupan = 404)"),
     params: ListParams = Depends(),
     user: CurrentUser = _VIEW,
     service: VehicleDocumentService = Depends(get_vehicle_document_service),
 ) -> list[VehicleDocumentOut]:
     """Dokumen berlaku yang akan atau sudah jatuh tempo, terdekat dulu."""
-    return _docs(await service.list_documents(user, None, False, days), params, response)
+    rows = await service.list_documents(user, None, False, days, doc_type_code, office_id)
+    return _docs(rows, params, response)
 
 
 @router.get("/vehicle-documents/mine", response_model=list[VehicleDocumentOut])

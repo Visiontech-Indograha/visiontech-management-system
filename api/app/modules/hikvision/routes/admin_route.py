@@ -1,14 +1,17 @@
 """Admin perangkat Hikvision (login; izin manage:hikvision; HR dibatasi kantornya, OM/SA semua)."""
 from __future__ import annotations
 
+from datetime import date, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import require_permission
-from app.core.list_params import ListParams, apply_list
+from app.core.errors import ValidationError
+from app.core.list_params import ListParams, apply_list, check_date_range
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
+from app.core.time import jakarta_now
 from app.modules.hikvision.dependencies import get_admin_service
 from app.modules.hikvision.schemas import admin as s
 from app.modules.hikvision.services.hikvision_admin_service import HikvisionAdminService
@@ -137,3 +140,17 @@ async def hapus_pemetaan(
 ) -> Response:
     await svc.hapus_pemetaan(device_id, map_id, user)
     return Response(status_code=204)
+
+
+@router.get("/devices/{device_id}/bayangan", response_model=s.BandingBayangan)
+async def banding_bayangan(
+    device_id: UUID, dari: date | None = None, sampai: date | None = None, user: CurrentUser = _IZIN,
+    svc: HikvisionAdminService = Depends(get_admin_service),
+) -> s.BandingBayangan:
+    """Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari."""
+    akhir = sampai or jakarta_now().date()
+    mulai = dari or akhir - timedelta(days=14)
+    check_date_range(mulai, akhir, start_name="dari", end_name="sampai")
+    if (akhir - mulai).days > 30:
+        raise ValidationError("Rentang paling lama 31 hari.")
+    return await svc.banding_bayangan(device_id, mulai, akhir, user)

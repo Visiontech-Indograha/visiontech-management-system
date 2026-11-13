@@ -92,3 +92,25 @@ def test_pengemudi_dan_mine(client: Any, siap: tuple[World, str]) -> None:
     assert client.post(f"/vehicles/{vid}/drivers/{did}/end", headers=h).status_code == 200
     assert client.get("/vehicle-documents/mine", headers=m).json() == []
     assert client.post(f"/vehicles/{vid}/drivers/{did}/end", headers=h).status_code == 404
+
+
+@pytest.mark.parametrize("path", ["/vehicle-documents", "/vehicle-documents/expiring"])
+def test_filter_jenis_dan_kantor_per_peran(client: Any, siap: tuple[World, str], other_world: World, path: str) -> None:
+    w, vid = siap
+    h = w.headers(client, "hse")
+    client.post(f"/vehicles/{vid}/documents", json=_body("STNK", 5), headers=h)
+    client.post(f"/vehicles/{vid}/documents", json=_body("KIR", 6), headers=h)
+    kode = lambda r: sorted(d["doc_type_code"] for d in r.json() if d["vehicle_id"] == vid)  # noqa: E731
+    # HSE: filter jenis; kantor sendiri boleh; kantor lain 404
+    assert kode(client.get(path, params={"doc_type_code": "KIR"}, headers=h)) == ["KIR"]
+    assert kode(client.get(path, params={"office_id": w.org_id}, headers=h)) == ["KIR", "STNK"]
+    assert client.get(path, params={"office_id": other_world.org_id}, headers=h).status_code == 404
+    # OM dan SA: semua kantor, boleh memilih kantor mana pun
+    for who in ("ops", "admin"):
+        hh = w.headers(client, who)
+        assert kode(client.get(path, params={"office_id": w.org_id, "doc_type_code": "STNK"}, headers=hh)) == ["STNK"]
+        assert kode(client.get(path, params={"office_id": other_world.org_id}, headers=hh)) == []
+    # validasi
+    assert client.get(path, params={"doc_type_code": "TIDAK_ADA"}, headers=h).status_code == 422
+    assert client.get(path, params={"doc_type_code": "x%"}, headers=h).status_code == 422
+    assert client.get(path, params={"office_id": "bukan-uuid"}, headers=h).status_code == 422

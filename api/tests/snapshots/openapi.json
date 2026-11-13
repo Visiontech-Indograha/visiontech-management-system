@@ -1800,6 +1800,162 @@
     "title": "BackupOut",
     "type": "object"
    },
+   "BandingBaris": {
+    "properties": {
+     "clock_in_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock In At"
+     },
+     "clock_out_at": {
+      "anyOf": [
+       {
+        "format": "date-time",
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Clock Out At"
+     },
+     "employee_id": {
+      "format": "uuid",
+      "title": "Employee Id",
+      "type": "string"
+     },
+     "employee_name": {
+      "title": "Employee Name",
+      "type": "string"
+     },
+     "jumlah": {
+      "title": "Jumlah",
+      "type": "integer"
+     },
+     "pertama": {
+      "format": "date-time",
+      "title": "Pertama",
+      "type": "string"
+     },
+     "selisih_masuk_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Masuk Menit"
+     },
+     "selisih_pulang_menit": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Selisih Pulang Menit"
+     },
+     "terakhir": {
+      "format": "date-time",
+      "title": "Terakhir",
+      "type": "string"
+     },
+     "tgl": {
+      "format": "date",
+      "title": "Tgl",
+      "type": "string"
+     }
+    },
+    "required": [
+     "employee_id",
+     "employee_name",
+     "tgl",
+     "pertama",
+     "terakhir",
+     "jumlah",
+     "clock_in_at",
+     "clock_out_at",
+     "selisih_masuk_menit",
+     "selisih_pulang_menit"
+    ],
+    "title": "BandingBaris",
+    "type": "object"
+   },
+   "BandingBayangan": {
+    "description": "Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari.",
+    "properties": {
+     "akan_menghasilkan_absen": {
+      "title": "Akan Menghasilkan Absen",
+      "type": "integer"
+     },
+     "dari": {
+      "format": "date",
+      "title": "Dari",
+      "type": "string"
+     },
+     "device_id": {
+      "format": "uuid",
+      "title": "Device Id",
+      "type": "string"
+     },
+     "items": {
+      "items": {
+       "$ref": "#/components/schemas/BandingBaris"
+      },
+      "title": "Items",
+      "type": "array"
+     },
+     "mode": {
+      "enum": [
+       "SHADOW",
+       "AKTIF"
+      ],
+      "title": "Mode",
+      "type": "string"
+     },
+     "sampai": {
+      "format": "date",
+      "title": "Sampai",
+      "type": "string"
+     },
+     "tak_terpetakan": {
+      "title": "Tak Terpetakan",
+      "type": "integer"
+     },
+     "terpotong": {
+      "title": "Terpotong",
+      "type": "boolean"
+     },
+     "total_karyawan_hari": {
+      "title": "Total Karyawan Hari",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "device_id",
+     "mode",
+     "dari",
+     "sampai",
+     "akan_menghasilkan_absen",
+     "total_karyawan_hari",
+     "tak_terpetakan",
+     "terpotong",
+     "items"
+    ],
+    "title": "BandingBayangan",
+    "type": "object"
+   },
    "BiometricLoginRequestSchema": {
     "properties": {
      "device_token": {
@@ -27452,6 +27608,89 @@
     ]
    }
   },
+  "/api/v1/hikvision/devices/{device_id}/bayangan": {
+   "get": {
+    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.",
+    "operationId": "banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "device_id",
+      "required": true,
+      "schema": {
+       "format": "uuid",
+       "title": "Device Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "dari",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Dari"
+      }
+     },
+     {
+      "in": "query",
+      "name": "sampai",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "date",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Sampai"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BandingBayangan"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "summary": "Banding Bayangan",
+    "tags": [
+     "Hikvision admin"
+    ]
+   }
+  },
   "/api/v1/hikvision/devices/{device_id}/mappings": {
    "get": {
     "operationId": "daftar_pemetaan_api_v1_hikvision_devices__device_id__mappings_get",
@@ -33531,6 +33770,46 @@
       }
      },
      {
+      "description": "Kode jenis dokumen (terdaftar di document_type)",
+      "in": "query",
+      "name": "doc_type_code",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 30,
+         "minLength": 2,
+         "pattern": "^[A-Z0-9_]+$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      }
+     },
+     {
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+      "in": "query",
+      "name": "office_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
+      }
+     },
+     {
       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
       "in": "query",
       "name": "q",
@@ -33695,6 +33974,46 @@
        "minimum": 1,
        "title": "Days",
        "type": "integer"
+      }
+     },
+     {
+      "description": "Kode jenis dokumen (terdaftar di document_type)",
+      "in": "query",
+      "name": "doc_type_code",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "maxLength": 30,
+         "minLength": 2,
+         "pattern": "^[A-Z0-9_]+$",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kode jenis dokumen (terdaftar di document_type)",
+       "title": "Doc Type Code"
+      }
+     },
+     {
+      "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+      "in": "query",
+      "name": "office_id",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "format": "uuid",
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Batasi ke satu kantor (di luar cakupan = 404)",
+       "title": "Office Id"
       }
      },
      {

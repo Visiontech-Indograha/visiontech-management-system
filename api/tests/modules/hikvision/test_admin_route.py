@@ -230,3 +230,34 @@ def test_status_perangkat(client, make_user, ctx) -> None:
     s = client.get(f"/hikvision/devices/{dev}/status", headers=h).json()
     assert s["event_24_jam"] == 1 and s["event_7_hari"] == 2 and s["belum_terpetakan_7_hari"] == 2
     assert s["event_terakhir_diterima"] is not None and s["kemungkinan_duplikat_7_hari"] == 0
+
+
+@pytest.mark.parametrize("role,kode", [(None, 403), ("PM", 403), ("HR", 200), ("OPS", 200), ("ADMIN", 200)])
+def test_bayangan_matriks_peran(client, make_user, ctx, role, kode) -> None:
+    dev = _mk(client, _hdr(client, make_user, "HR"), ctx, ctx.office)
+    r = client.get(f"/hikvision/devices/{dev}/bayangan", headers=_hdr(client, make_user, role))
+    assert r.status_code == kode, r.text
+
+
+def test_bayangan_hitung_cakupan_dan_rentang(client, make_user, ctx) -> None:
+    hr = make_user("HR")
+    h = login_headers(client, hr)
+    dev = _mk(client, h, ctx, ctx.office)
+    emp = str(sync_query("SELECT employee_id FROM users WHERE user_id = %s", (hr.user_id,))[0][0])
+    assert _map(client, h, dev, "77", emp).status_code == 201
+    _event(dev, "77", 1)   # tap terpetakan
+    _event(dev, "99", 2)   # nomor tak dikenal
+    sync_query("UPDATE hikvision_event SET employee_id = %s WHERE device_id = %s AND employee_no_string = '77'",
+               (emp, dev))
+    r = client.get(f"/hikvision/devices/{dev}/bayangan", headers=h)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["mode"] == "SHADOW" and j["akan_menghasilkan_absen"] == 1 and j["total_karyawan_hari"] == 1
+    assert j["tak_terpetakan"] == 1 and j["terpotong"] is False
+    assert j["items"][0]["clock_in_at"] is None and j["items"][0]["selisih_masuk_menit"] is None
+    # di luar cakupan HR = 404; rentang > 31 hari atau terbalik = 422
+    assert client.get(f"/hikvision/devices/{_device_in_other(ctx)}/bayangan", headers=h).status_code == 404
+    assert client.get(f"/hikvision/devices/{dev}/bayangan", params={"dari": "2026-01-01", "sampai": "2026-03-01"},
+                      headers=h).status_code == 422
+    assert client.get(f"/hikvision/devices/{dev}/bayangan", params={"dari": "2026-02-02", "sampai": "2026-02-01"},
+                      headers=h).status_code == 422

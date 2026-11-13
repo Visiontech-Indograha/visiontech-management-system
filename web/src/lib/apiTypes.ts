@@ -4183,6 +4183,26 @@ export interface paths {
         patch: operations["ubah_pemetaan_api_v1_hikvision_devices__device_id__mappings__map_id__patch"];
         trace?: never;
     };
+    "/api/v1/hikvision/devices/{device_id}/bayangan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Banding Bayangan
+         * @description Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.
+         */
+        get: operations["banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recaps/attendance": {
         parameters: {
             query?: never;
@@ -6037,6 +6057,77 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** BandingBaris */
+        BandingBaris: {
+            /**
+             * Employee Id
+             * Format: uuid
+             */
+            employee_id: string;
+            /** Employee Name */
+            employee_name: string;
+            /**
+             * Tgl
+             * Format: date
+             */
+            tgl: string;
+            /**
+             * Pertama
+             * Format: date-time
+             */
+            pertama: string;
+            /**
+             * Terakhir
+             * Format: date-time
+             */
+            terakhir: string;
+            /** Jumlah */
+            jumlah: number;
+            /** Clock In At */
+            clock_in_at: string | null;
+            /** Clock Out At */
+            clock_out_at: string | null;
+            /** Selisih Masuk Menit */
+            selisih_masuk_menit: number | null;
+            /** Selisih Pulang Menit */
+            selisih_pulang_menit: number | null;
+        };
+        /**
+         * BandingBayangan
+         * @description Pembanding mode bayangan (baca saja): tap mesin vs absen aplikasi per karyawan-hari.
+         */
+        BandingBayangan: {
+            /**
+             * Device Id
+             * Format: uuid
+             */
+            device_id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "SHADOW" | "AKTIF";
+            /**
+             * Dari
+             * Format: date
+             */
+            dari: string;
+            /**
+             * Sampai
+             * Format: date
+             */
+            sampai: string;
+            /** Akan Menghasilkan Absen */
+            akan_menghasilkan_absen: number;
+            /** Total Karyawan Hari */
+            total_karyawan_hari: number;
+            /** Tak Terpetakan */
+            tak_terpetakan: number;
+            /** Terpotong */
+            terpotong: boolean;
+            /** Items */
+            items: components["schemas"]["BandingBaris"][];
         };
         /** BiometricLoginRequestSchema */
         BiometricLoginRequestSchema: {
@@ -13261,6 +13352,10 @@ export interface operations {
                 vehicle_id?: string | null;
                 /** @description Sertakan dokumen yang sudah diganti */
                 history?: boolean;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -13299,6 +13394,10 @@ export interface operations {
             query?: {
                 /** @description Jatuh tempo dalam N hari (yang sudah lewat ikut) */
                 days?: number;
+                /** @description Kode jenis dokumen (terdaftar di document_type) */
+                doc_type_code?: string | null;
+                /** @description Batasi ke satu kantor (di luar cakupan = 404) */
+                office_id?: string | null;
                 /** @description Kata kunci pencarian (tanpa beda huruf besar/kecil) */
                 q?: string | null;
                 /** @description Nomor halaman, mulai dari 1 */
@@ -21471,6 +21570,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PemetaanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get: {
+        parameters: {
+            query?: {
+                dari?: string | null;
+                sampai?: string | null;
+            };
+            header?: never;
+            path: {
+                device_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BandingBayangan"];
                 };
             };
             /** @description Validation Error */

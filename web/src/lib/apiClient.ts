@@ -95,6 +95,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/** Unduhan (responseType blob) yang gagal membawa galat JSON sebagai Blob: baca jadi objek agar pesan awam API tampil. */
+async function unwrapBlobError(error: AxiosError): Promise<void> {
+  const data = error.response?.data;
+  if (typeof Blob === "undefined" || !(data instanceof Blob)) return;
+  try {
+    const raw = typeof data.text === "function" ? await data.text() : await new Response(data).text();
+    error.response!.data = JSON.parse(raw);
+  } catch (err) {
+    void err; // bukan JSON: biarkan pesan umum
+  }
+}
+
 function toApiError(error: AxiosError): ApiError {
   const body = error.response?.data as
     | { error?: { code?: string; message?: string; details?: Record<string, unknown> } }
@@ -164,6 +176,7 @@ api.interceptors.response.use(
         onSessionExpired?.();
       }
     }
+    await unwrapBlobError(error);
     const apiError = toApiError(error);
     if (apiError.status === 403 && apiError.code === "MUST_CHANGE_PASSWORD") onMustChangePassword?.();
     return Promise.reject(apiError);

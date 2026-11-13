@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ActionButton } from "@/components/molecules/ActionButton";
 import { Download } from "@/components/molecules/Glyphs";
 import { TextBlock } from "@/components/molecules/TextBlock";
@@ -14,6 +15,20 @@ export function ExportFormatButtons({ label, busy, pendingFormat, disabled, onPi
   disabled?: boolean;
   onPick: (format: ExportFormat) => void;
 }) {
+  // Status "Menyiapkan…" langsung saat klik, tanpa menunggu mutasi induk menyala.
+  const [clicked, setClicked] = useState<ExportFormat | null>(null);
+  const [prevBusy, setPrevBusy] = useState(busy);
+  if (prevBusy !== busy) {
+    setPrevBusy(busy);
+    if (!busy) setClicked(null);
+  }
+  useEffect(() => {
+    if (!clicked) return;
+    const t = setTimeout(() => setClicked(null), 3000);
+    return () => clearTimeout(t);
+  }, [clicked]);
+  const isBusy = busy || clicked !== null;
+  const shown = clicked ?? pendingFormat;
   return (
     <div role="group" aria-label={`Unduh ${label}`} className="flex flex-wrap items-center gap-2">
       <TextBlock as="span" className="text-sm text-ink">{label}</TextBlock>
@@ -24,11 +39,14 @@ export function ExportFormatButtons({ label, busy, pendingFormat, disabled, onPi
           variant="outline"
           className="h-11"
           aria-label={`${label} sebagai ${f.label}`}
-          disabled={busy || disabled}
-          onClick={() => onPick(f.value)}
+          disabled={isBusy || disabled}
+          onClick={() => {
+            setClicked(f.value);
+            onPick(f.value);
+          }}
         >
           <Download className="mr-1.5 h-3.5 w-3.5" />
-          {busy && pendingFormat === f.value ? "Menyiapkan…" : f.label}
+          {isBusy && shown === f.value ? "Menyiapkan…" : f.label}
         </ActionButton>
       ))}
     </div>

@@ -36,6 +36,8 @@ import {
   SurveyDetailPage,
   SystemSettingsPage,
   WorkOrdersPage,
+  VehicleDocsPage,
+  MyVehicleDocsPage,
   HseCampaignsPage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
@@ -45,6 +47,8 @@ import { RouteErrorPage } from "@/pages/system/RouteErrorPage";
 /** Halaman yang sudah dibangun; sisanya tampil "dibangun pada fase berikutnya". */
 const PAGES: Record<string, ReactNode> = {
   "/audit-logs": <AuditLogPage />,
+  "/vehicle-documents": <VehicleDocsPage />,
+  "/dokumen-saya": <MyVehicleDocsPage />,
   "/system-settings": <SystemSettingsPage />,
   "/directory": <DirectoryPage />,
   "/my-documents": <MyDocumentsPage />,

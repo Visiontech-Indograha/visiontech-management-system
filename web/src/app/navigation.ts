@@ -10,7 +10,9 @@ import {
   Clock,
   ChartColumn,
   ClipboardList,
+  FileClock,
   FolderOpen,
+  IdCard,
   Hourglass,
   Timer,
   House,
@@ -52,9 +54,11 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/overtime-recap", label: "Rekap lembur", icon: Timer, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
   // 3. Aset & Fasilitas
   { path: "/assets", label: "Kendaraan dan alat", icon: Truck, group: "Aset dan Fasilitas" },
+  { path: "/vehicle-documents", label: "Dokumen kendaraan", icon: FileClock, anyOf: ["view:vehicle_documents", "manage:vehicle_documents"], group: "Aset dan Fasilitas" },
   { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset dan Fasilitas" },
   // 4. SDM & Direktori
   { path: "/my-documents", label: "Berkas saya", icon: FolderOpen, requires: ["view:documents"], group: "Karyawan dan Berkas" },
+  { path: "/dokumen-saya", label: "Dokumen saya", icon: IdCard, group: "Karyawan dan Berkas" },
   { path: "/directory", label: "Direktori", icon: BookUser, requires: ["view:users"], group: "Karyawan dan Berkas" },
   { path: "/offboarding", label: "Offboarding", icon: UserMinus, requires: ["view:offboarding"], group: "Karyawan dan Berkas" },
   // 5. Master & Sistem

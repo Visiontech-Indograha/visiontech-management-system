@@ -190,7 +190,13 @@ class HikvisionProsesRepository(BaseRepository):
             "ORDER BY t.tgl DESC, t.employee_id LIMIT :n",
             {**param, "n": batas},
         )
-        ringkas = await self.fetchone(
+        return rows, await self.banding_ringkasan(device_id, dari, sampai, major, minor)
+
+    async def banding_ringkasan(
+        self, device_id: str, dari: date, sampai: date, major: int, minor: Sequence[int]
+    ) -> Any:
+        param = {"d": device_id, "a": dari, "b": sampai, "major": major, "minor": list(minor)}
+        return await self.fetchone(
             "WITH t AS (SELECT e.employee_id, (e.event_time AT TIME ZONE 'Asia/Jakarta')::date AS tgl "
             "FROM hikvision_event e JOIN hikvision_device d ON d.device_id = e.device_id "
             "WHERE d.device_id = CAST(:d AS uuid) AND d.mode = 'SHADOW' AND d.delete_at IS NULL "
@@ -208,4 +214,69 @@ class HikvisionProsesRepository(BaseRepository):
             "AS tak_terpetakan FROM t",
             param,
         )
-        return rows, ringkas
+
+    async def banding_halaman(
+        self, device_id: str, office_id: str, dari: date, sampai: date, *, major: int, minor: Sequence[int],
+        toleransi: int, status: str | None, awalan: str | None, awal: int, akhir: int,
+    ) -> tuple[Sequence[Any], int]:
+        """Mode baru: baris mesin + "hanya di aplikasi" (karyawan kantor perangkat dengan absen aplikasi tetapi tanpa
+        tap pada perangkat ini di hari itu). Status, awalan nama, dan potong halaman di SQL (nomor baris, tanpa OFFSET).
+        `awal` < nomor <= `akhir`. Satu kueri, tidak tumbuh dengan jumlah karyawan. Mengembalikan (baris, total)."""
+        param = {
+            "d": device_id, "o": office_id, "a": dari, "b": sampai, "major": major, "minor": list(minor),
+            "tol": toleransi, "st": status, "q": awalan, "lo": awal, "hi": akhir,
+        }
+        rows = await self.fetchall(
+            "WITH t AS (SELECT e.employee_id, (e.event_time AT TIME ZONE 'Asia/Jakarta')::date AS tgl, "
+            "min(e.event_time) AS pertama, max(e.event_time) AS terakhir, count(*) AS jumlah "
+            "FROM hikvision_event e JOIN hikvision_device d ON d.device_id = e.device_id "
+            "WHERE d.device_id = CAST(:d AS uuid) AND d.mode = 'SHADOW' AND d.delete_at IS NULL "
+            "AND e.employee_id IS NOT NULL AND e.major_event_type = :major AND e.minor_event_type = ANY(:minor) "
+            "AND e.event_time >= CAST(:a AS timestamp) AT TIME ZONE 'Asia/Jakarta' "
+            "AND e.event_time < (CAST(:b AS timestamp) + interval '1 day') AT TIME ZONE 'Asia/Jakarta' "
+            "GROUP BY 1, 2), "
+            "ap AS (SELECT DISTINCT ON (x.employee_id, x.attendance_date) x.employee_id, x.attendance_date AS tgl, "
+            "x.clock_in_at, x.clock_out_at FROM attendance x JOIN employee ae ON ae.employee_id = x.employee_id "
+            "WHERE ae.office_id = CAST(:o AS uuid) AND ae.delete_at IS NULL "
+            "AND x.attendance_date >= :a AND x.attendance_date <= :b AND x.delete_at IS NULL "
+            "AND x.source IS DISTINCT FROM 'HIKVISION' "
+            "AND NOT EXISTS (SELECT 1 FROM t WHERE t.employee_id = x.employee_id AND t.tgl = x.attendance_date) "
+            "ORDER BY x.employee_id, x.attendance_date, x.clock_in_at), "
+            "semua AS (SELECT t.employee_id, em.full_name AS employee_name, t.tgl, t.pertama, t.terakhir, t.jumlah, "
+            "a.clock_in_at, a.clock_out_at, "
+            "ROUND(EXTRACT(EPOCH FROM (t.pertama - a.clock_in_at)) / 60)::int AS selisih_masuk_menit, "
+            "ROUND(EXTRACT(EPOCH FROM (t.terakhir - a.clock_out_at)) / 60)::int AS selisih_pulang_menit "
+            "FROM t JOIN employee em ON em.employee_id = t.employee_id "
+            "LEFT JOIN LATERAL (SELECT clock_in_at, clock_out_at FROM attendance y "
+            "WHERE y.employee_id = t.employee_id AND y.attendance_date = t.tgl AND y.delete_at IS NULL "
+            "AND y.source IS DISTINCT FROM 'HIKVISION' ORDER BY y.clock_in_at LIMIT 1) a ON TRUE "
+            "UNION ALL "
+            "SELECT ap.employee_id, pe.full_name, ap.tgl, NULL::timestamptz, NULL::timestamptz, 0, "
+            "ap.clock_in_at, ap.clock_out_at, NULL::int, NULL::int "
+            "FROM ap JOIN employee pe ON pe.employee_id = ap.employee_id), "
+            "s AS (SELECT employee_id, employee_name, tgl, pertama, terakhir, jumlah, clock_in_at, clock_out_at, "
+            "selisih_masuk_menit, selisih_pulang_menit, "
+            "CASE WHEN pertama IS NULL THEN 'hanya_aplikasi' "
+            "WHEN clock_in_at IS NULL AND clock_out_at IS NULL THEN 'hanya_mesin' "
+            "WHEN abs(coalesce(selisih_masuk_menit, 0)) > :tol OR abs(coalesce(selisih_pulang_menit, 0)) > :tol "
+            "THEN 'waktu_berbeda' ELSE 'cocok' END AS status FROM semua), "
+            "f AS (SELECT employee_id, employee_name, tgl, pertama, terakhir, jumlah, clock_in_at, clock_out_at, "
+            "selisih_masuk_menit, selisih_pulang_menit, status, "
+            "row_number() OVER (ORDER BY tgl DESC, employee_id) AS nomor, count(*) OVER () AS total "
+            "FROM s WHERE (CAST(:st AS text) IS NULL OR status = CAST(:st AS text)) "
+            "AND (CAST(:q AS text) IS NULL OR lower(employee_name) LIKE CAST(:q AS text) || '%' ESCAPE '\\')) "
+            "SELECT employee_id, employee_name, tgl, pertama, terakhir, jumlah, clock_in_at, clock_out_at, "
+            "selisih_masuk_menit, selisih_pulang_menit, status, total FROM f "
+            "WHERE nomor > :lo AND nomor <= :hi ORDER BY nomor",
+            param,
+        )
+        if rows:
+            return rows, int(rows[0].total)
+        if awal == 0:
+            return rows, 0
+        # Halaman di luar jangkauan: total tetap dihitung (kasus langka, satu kueri tambahan).
+        _, total = await self.banding_halaman(
+            device_id, office_id, dari, sampai, major=major, minor=minor, toleransi=toleransi, status=status,
+            awalan=awalan, awal=0, akhir=1,
+        )
+        return rows, total

@@ -143,17 +143,23 @@ class StatusPerangkat(BaseModel):
     )
 
 
+StatusBanding = Literal["cocok", "waktu_berbeda", "hanya_mesin", "hanya_aplikasi"]
+
+
 class BandingBaris(BaseModel):
     employee_id: UUID
     employee_name: str
     tgl: date
-    pertama: datetime
-    terakhir: datetime
-    jumlah: int
+    pertama: datetime | None = Field(None, description="Tap pertama mesin; kosong pada baris 'hanya_aplikasi'")
+    terakhir: datetime | None = Field(None, description="Tap terakhir mesin; kosong pada baris 'hanya_aplikasi'")
+    jumlah: int = Field(description="Jumlah tap mesin (0 pada baris 'hanya_aplikasi')")
     clock_in_at: datetime | None
     clock_out_at: datetime | None
     selisih_masuk_menit: int | None
     selisih_pulang_menit: int | None
+    status: StatusBanding = Field(
+        description="cocok | waktu_berbeda (selisih > 5 menit) | hanya_mesin | hanya_aplikasi"
+    )
 
 
 class BandingBayangan(BaseModel):
@@ -166,4 +172,7 @@ class BandingBayangan(BaseModel):
     total_karyawan_hari: int
     tak_terpetakan: int
     terpotong: bool
+    total_baris: int | None = Field(
+        None, description="Jumlah baris setelah filter (sama dengan X-Total-Count); hanya pada mode filter/paginasi"
+    )
     items: list[BandingBaris]

@@ -17023,7 +17023,7 @@
      "Hikvision admin"
     ],
     "summary": "Banding Bayangan",
-    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.",
+    "description": "Baca saja: tap mesin mode bayangan vs absen aplikasi per karyawan-hari. Bawaan 14 hari terakhir, maks 31 hari.\nTanpa `status`/`q`/`page`/`size` = perilaku lama. Dengan salah satunya: ikut baris 'hanya_aplikasi', `q` = awalan\nnama, `X-Total-Count` = jumlah baris setelah filter.",
     "operationId": "banding_bayangan_api_v1_hikvision_devices__device_id__bayangan_get",
     "security": [
      {
@@ -17074,6 +17074,89 @@
        ],
        "title": "Sampai"
       }
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "enum": [
+          "cocok",
+          "waktu_berbeda",
+          "hanya_mesin",
+          "hanya_aplikasi"
+         ],
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Saring satu status (mode baru)",
+       "title": "Status"
+      },
+      "description": "Saring satu status (mode baru)"
+     },
+     {
+      "name": "q",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string",
+         "maxLength": 100
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)",
+       "title": "Q"
+      },
+      "description": "Kata kunci pencarian (tanpa beda huruf besar/kecil)"
+     },
+     {
+      "name": "page",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100000,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Nomor halaman, mulai dari 1",
+       "title": "Page"
+      },
+      "description": "Nomor halaman, mulai dari 1"
+     },
+     {
+      "name": "size",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "integer",
+         "maximum": 100,
+         "minimum": 1
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Jumlah baris per halaman (maks 100)",
+       "title": "Size"
+      },
+      "description": "Jumlah baris per halaman (maks 100)"
      }
     ],
     "responses": {
@@ -23667,18 +23750,35 @@
       "title": "Tgl"
      },
      "pertama": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Pertama"
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Pertama",
+      "description": "Tap pertama mesin; kosong pada baris 'hanya_aplikasi'"
      },
      "terakhir": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Terakhir"
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Terakhir",
+      "description": "Tap terakhir mesin; kosong pada baris 'hanya_aplikasi'"
      },
      "jumlah": {
       "type": "integer",
-      "title": "Jumlah"
+      "title": "Jumlah",
+      "description": "Jumlah tap mesin (0 pada baris 'hanya_aplikasi')"
      },
      "clock_in_at": {
       "anyOf": [
@@ -23725,6 +23825,17 @@
        }
       ],
       "title": "Selisih Pulang Menit"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "cocok",
+       "waktu_berbeda",
+       "hanya_mesin",
+       "hanya_aplikasi"
+      ],
+      "title": "Status",
+      "description": "cocok | waktu_berbeda (selisih > 5 menit) | hanya_mesin | hanya_aplikasi"
      }
     },
     "type": "object",
@@ -23732,13 +23843,12 @@
      "employee_id",
      "employee_name",
      "tgl",
-     "pertama",
-     "terakhir",
      "jumlah",
      "clock_in_at",
      "clock_out_at",
      "selisih_masuk_menit",
-     "selisih_pulang_menit"
+     "selisih_pulang_menit",
+     "status"
     ],
     "title": "BandingBaris"
    },
@@ -23782,6 +23892,18 @@
      "terpotong": {
       "type": "boolean",
       "title": "Terpotong"
+     },
+     "total_baris": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total Baris",
+      "description": "Jumlah baris setelah filter (sama dengan X-Total-Count); hanya pada mode filter/paginasi"
      },
      "items": {
       "items": {

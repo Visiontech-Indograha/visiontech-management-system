@@ -245,6 +245,15 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
         veh_ok = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_ok})"
         tool_by_holder = f"(t.office_id = ANY(CAST(:offices AS uuid[])) OR {tool_by_holder})"
         veh_by_holder = f"(v.office_id = ANY(CAST(:offices AS uuid[])) OR {veh_by_holder})"
+    # Dokumen serah terima (BAST) penerima eksternal: hanya pengelola aset, dibatasi kantor aset (ADR 0003).
+    bast = ""
+    if sees_all_assets(user):
+        bast = (
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN tool t ON t.tool_id = aa.tool_id WHERE bf.storage_key = :key AND {tool_ok}) "
+            "OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN file_object bf ON bf.id = aa.handover_file_id "
+            f"JOIN vehicle v ON v.vehicle_id = aa.vehicle_id WHERE bf.storage_key = :key AND {veh_ok})"
+        )
     row = await BaseRepository(db).scalar(
         f"""
         SELECT (
@@ -260,11 +269,30 @@ async def asset_file_visible(db: AsyncSession, storage_key: str, user: CurrentUs
                        WHERE aa.handover_photo_path = :key AND {tool_by_holder})
             OR EXISTS (SELECT 1 FROM asset_assignment aa JOIN vehicle v ON v.vehicle_id = aa.vehicle_id
                        WHERE aa.handover_photo_path = :key AND {veh_by_holder})
+            {bast}
         )
         """,
         {**viewer_params(user), "key": storage_key, **({} if offices is None else {"offices": offices})},
     )
     return bool(row)
+
+
+async def inspection_photo_visible(db: AsyncSession, user: CurrentUser, file_id: Any) -> bool:
+    """Foto bukti inspeksi kendaraan: pemegang view:vehicle_inspections, dibatasi kantor kendaraan bila perannya
+    dibatasi kantor (sama dengan daftar inspeksi)."""
+    restriction = await office_restriction(db, user, Permission.VIEW_VEHICLE_INSPECTIONS)
+    offices = None if restriction is None else offices_param(restriction) or ["00000000-0000-0000-0000-000000000000"]
+    extra = "" if offices is None else "AND v.office_id = ANY(CAST(:offices AS uuid[]))"
+    value = await BaseRepository(db).scalar(
+        f"""
+        SELECT EXISTS (
+            SELECT 1 FROM vehicle_safety_inspections vsi JOIN vehicle v ON v.vehicle_id = vsi.vehicle_id
+            WHERE vsi.photos_json ? :fid AND vsi.delete_at IS NULL {extra}
+        )
+        """,
+        {"fid": str(file_id), **({} if offices is None else {"offices": offices})},
+    )
+    return bool(value)
 
 
 # ── Work order ──────────────────────────────────────────────────────────────────

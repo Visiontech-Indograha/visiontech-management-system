@@ -27,7 +27,13 @@ from app.core.security import CurrentUser
 from app.shared.access.daily_access_repository import DailyAccessRepository
 from app.shared.access.file_access_repository import FileAccessRepository
 from app.shared.access.org_ref_repository import CRUDOrgRef
-from app.shared.access.scope_rules import asset_file_visible, employee_directory_visible, is_pm, sees_all_work_orders
+from app.shared.access.scope_rules import (
+    asset_file_visible,
+    employee_directory_visible,
+    inspection_photo_visible,
+    is_pm,
+    sees_all_work_orders,
+)
 
 # Jadwal yang sudah boleh dilihat & dikerjakan tim lapangan.
 RELEASED = ("APPROVED", "ONGOING", "COMPLETED")
@@ -130,7 +136,8 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     - dokumen karyawan: pemilik & pengelola dokumen (manage:employee_documents);
     - swafoto absensi: pemilik & peninjau absensi (review/view all attendance);
     - foto titik survei WO: tim WO, PM pengelola, SA/OM;
-    - lampiran jadwal harian / bukti item: siapa pun yang boleh melihat jadwal itu."""
+    - lampiran jadwal harian / bukti item: siapa pun yang boleh melihat jadwal itu;
+    - lampiran pengajuan lembur / mess: pemohon dan peninjaunya."""
     row = await FileAccessRepository(db).links(file_id, user.employee_id, is_pm=is_pm(user))
     if row is None:
         raise NotFoundError("Berkas")
@@ -140,6 +147,9 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
     if row.profile_photo and (row.own_profile or await employee_directory_visible(db, user, row.profile_owner)):
         return row
     if row.asset_file and await asset_file_visible(db, row.storage_key, user):
+        return row
+    if (getattr(row, "inspection_photo", False) and Permission.VIEW_VEHICLE_INSPECTIONS.value in perms
+            and await inspection_photo_visible(db, user, row.id)):
         return row
     if row.personal_document and (row.own_document or Permission.MANAGE_EMPLOYEE_DOCUMENTS.value in perms):
         return row
@@ -157,6 +167,13 @@ async def check_file_access(db: AsyncSession, file_id: UUID, user: CurrentUser) 
             return row
         except (NotFoundError, ForbiddenError):
             continue
+    # Lampiran pengajuan lembur / mess: pemohon dan peninjaunya (impor lokal: service lampiran memakai modul ini).
+    from app.shared.attachments.service import MESS, OVERTIME, can_view_attachment
+    linked = ((OVERTIME, getattr(row, "overtime_ids", None)), (MESS, getattr(row, "mess_stay_ids", None)))
+    for kind, parent_ids in linked:
+        for parent_id in parent_ids or []:
+            if await can_view_attachment(db, user, kind, parent_id):
+                return row
     raise NotFoundError("Berkas")
 
 

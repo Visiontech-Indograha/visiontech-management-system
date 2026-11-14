@@ -29,6 +29,7 @@ _MAX_BATCH_PER_PANGGILAN = 20
 _JENDELA_USULAN_HARI = 90
 _MAKS_USULAN = 500
 _MAKS_BANDING = 500
+_MAKS_HALAMAN_TANPA_PAGINASI = 5000  # mode filter tanpa page/size: batas aman satu respons
 _ALASAN = "Tidak ada karyawan dengan nomor ini di kantor perangkat."
 
 
@@ -209,14 +210,43 @@ class HikvisionAdminService:
             kemungkinan_duplikat_7_hari=await self.repo.duplicate_groups(str(device_id), t7),
         )
 
-    async def banding_bayangan(self, device_id: UUID, dari: date, sampai: date, user: CurrentUser) -> s.BandingBayangan:
+    @staticmethod
+    def _status_banding(x: Any) -> str:
+        """Aturan sama dengan SQL `banding_halaman` (satu sumber toleransi: konstanta)."""
+        if x.clock_in_at is None and x.clock_out_at is None:
+            return "hanya_mesin"
+        tol = hk.TOLERANSI_BANDING_MENIT
+        beda = any(m is not None and abs(m) > tol for m in (x.selisih_masuk_menit, x.selisih_pulang_menit))
+        return "waktu_berbeda" if beda else "cocok"
+
+    async def banding_bayangan(
+        self, device_id: UUID, dari: date, sampai: date, user: CurrentUser, *,
+        status: str | None = None, awalan: str | None = None, page: int | None = None, size: int | None = None,
+    ) -> s.BandingBayangan:
+        """Tanpa status/awalan/page/size = perilaku lama (baris mesin, maks 500). Selain itu mode baru: ikut baris
+        'hanya_aplikasi', filter status + awalan nama dan potong halaman di SQL."""
         row, _ = await self._perangkat(device_id, user)
         repo = HikvisionProsesRepository(self.db)
-        rows, r = await repo.banding_perangkat(
-            str(device_id), dari, sampai, _MAKS_BANDING, hk.MAJOR_AKSES, sorted(hk.MINOR_VERIFIKASI_LOLOS))
+        minor = sorted(hk.MINOR_VERIFIKASI_LOLOS)
+        if status is None and awalan is None and page is None and size is None:
+            rows, r = await repo.banding_perangkat(str(device_id), dari, sampai, _MAKS_BANDING, hk.MAJOR_AKSES, minor)
+            items = [
+                s.BandingBaris.model_validate({**x._mapping, "status": self._status_banding(x)}) for x in rows
+            ]
+            total_baris = None
+        else:
+            ukuran = size or 20
+            awal = ((page or 1) - 1) * ukuran if (page or size) else 0
+            akhir = awal + ukuran if (page or size) else _MAKS_HALAMAN_TANPA_PAGINASI
+            rows, total_baris = await repo.banding_halaman(
+                str(device_id), str(row.office_id), dari, sampai, major=hk.MAJOR_AKSES, minor=minor,
+                toleransi=hk.TOLERANSI_BANDING_MENIT, status=status, awalan=awalan, awal=awal, akhir=akhir)
+            r = await repo.banding_ringkasan(str(device_id), dari, sampai, hk.MAJOR_AKSES, minor)
+            items = [s.BandingBaris.model_validate(x, from_attributes=True) for x in rows]
         return s.BandingBayangan(
             device_id=device_id, mode=row.mode, dari=dari, sampai=sampai,
             akan_menghasilkan_absen=int(r.akan_dihasilkan), total_karyawan_hari=int(r.total),
-            tak_terpetakan=int(r.tak_terpetakan), terpotong=int(r.total) > len(rows),
-            items=[s.BandingBaris.model_validate(x, from_attributes=True) for x in rows],
+            tak_terpetakan=int(r.tak_terpetakan),
+            terpotong=int(r.total) > len(rows) if total_baris is None else False,
+            total_baris=total_baris, items=items,
         )

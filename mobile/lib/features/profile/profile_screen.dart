@@ -354,6 +354,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ('/recap', Icons.event_available_rounded, 'Rekap absen dan uang makan', Accent.teal),
     ('/leaves', Icons.beach_access_rounded, 'Cuti dan Izin', Accent.blue),
     ('/assets', Icons.directions_car_rounded, 'Kendaraan dan Alat', Accent.amber),
+    ('/inspeksi-kendaraan', Icons.car_crash_rounded, 'Inspeksi kendaraan', Accent.rose),
     ('/overtime', Icons.more_time_rounded, 'Riwayat lembur', Accent.indigo),
     ('/mess', Icons.home_work_rounded, 'Mess karyawan', Accent.violet),
     ('/documents', Icons.badge_rounded, 'Dokumen saya', Accent.emerald),

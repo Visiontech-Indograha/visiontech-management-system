@@ -27,6 +27,7 @@ import {
   OffboardingPage,
   OvertimePage,
   OvertimeRecapPage,
+  HikvisionBandingPage,
   HikvisionDevicesPage,
   SitesPage,
   TeamsPage,
@@ -40,6 +41,8 @@ import {
   VehicleDocsPage,
   MyVehicleDocsPage,
   HseCampaignsPage,
+  VehicleInspectionsPage,
+  ArchivePage,
 } from "./lazyPages";
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage";
 import { VerifyCompletionPage } from "@/pages/verify/VerifyCompletionPage";
@@ -55,6 +58,7 @@ const PAGES: Record<string, ReactNode> = {
   "/my-documents": <MyDocumentsPage />,
   "/sites": <SitesPage />,
   "/hikvision": <HikvisionDevicesPage />,
+  "/hikvision/banding": <HikvisionBandingPage />,
   "/work-types": <WorkTypesPage />,
   "/divisions": <DivisionsPage />,
   "/work-orders": <WorkOrdersPage />,
@@ -71,6 +75,8 @@ const PAGES: Record<string, ReactNode> = {
   "/overtime": <OvertimePage />,
   "/overtime-recap": <OvertimeRecapPage />,
   "/safety-campaigns": <HseCampaignsPage />,
+  "/vehicle-inspections": <VehicleInspectionsPage />,
+  "/archive": <ArchivePage />,
 };
 
 /** Route dibangun dari NAV_ITEMS agar menu dan guard selalu sejalan. */

@@ -1,4 +1,5 @@
 import {
+  ArchiveRestore,
   Bed,
   Network,
   Settings,
@@ -10,6 +11,7 @@ import {
   Clock,
   Fingerprint,
   ChartColumn,
+  ClipboardCheck,
   ClipboardList,
   FileClock,
   FolderOpen,
@@ -51,11 +53,13 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/attendance", label: "Absensi", icon: Clock, group: "Kehadiran dan SDM" },
   { path: "/leaves", label: "Cuti dan Izin", icon: CalendarDays, group: "Kehadiran dan SDM" },
   { path: "/hikvision", label: "Mesin absensi", icon: Fingerprint, requires: ["manage:hikvision"], group: "Kehadiran dan SDM" },
+  { path: "/hikvision/banding", label: "Banding mesin", icon: Fingerprint, requires: ["manage:hikvision"], group: "Kehadiran dan SDM" },
   { path: "/attendance-recap", label: "Rekap bulanan", icon: ChartColumn, group: "Kehadiran dan SDM" },
   { path: "/overtime", label: "Lembur", icon: Hourglass, group: "Kehadiran dan SDM" },
   { path: "/overtime-recap", label: "Rekap lembur", icon: Timer, anyOf: ["review:overtime", "create:plan"], group: "Kehadiran dan SDM" },
   // 3. Aset & Fasilitas
   { path: "/assets", label: "Kendaraan dan alat", icon: Truck, group: "Aset dan Fasilitas" },
+  { path: "/vehicle-inspections", label: "Inspeksi kendaraan", icon: ClipboardCheck, group: "Aset dan Fasilitas" },
   { path: "/vehicle-documents", label: "Dokumen kendaraan", icon: FileClock, anyOf: ["view:vehicle_documents", "manage:vehicle_documents"], group: "Aset dan Fasilitas" },
   { path: "/mess", label: "Mess Karyawan", icon: Bed, requires: ["view:mess"], group: "Aset dan Fasilitas" },
   // 4. SDM & Direktori
@@ -67,6 +71,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/sites", label: "Lokasi kerja", icon: MapPin, requires: ["manage:sites"], group: "Master dan Sistem" },
   { path: "/work-types", label: "Jenis pekerjaan", icon: ListChecks, requires: ["create:plan"], group: "Master dan Sistem" },
   { path: "/divisions", label: "Divisi dan jabatan", icon: Network, anyOf: ["manage:divisions", "manage:users"], group: "Master dan Sistem" },
+  { path: "/archive", label: "Arsip", icon: ArchiveRestore, anyOf: ["manage:assets", "create:plan", "manage:divisions", "manage:users", "manage:mess"], group: "Master dan Sistem" },
   { path: "/audit-logs", label: "Audit log", icon: ScrollText, requires: ["view:audit"], group: "Master dan Sistem" },
   { path: "/system-settings", label: "Setelan sistem", icon: Settings, requires: ["manage:system_settings"], group: "Master dan Sistem" },
 ];

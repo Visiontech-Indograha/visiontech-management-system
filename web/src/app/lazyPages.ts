@@ -12,6 +12,7 @@ export const MyDocumentsPage = lazy(() => import("@/pages/directory/MyDocumentsP
 export const WorkTypesPage = lazy(() => import("@/pages/work-types/WorkTypesPage").then((m) => ({ default: m.WorkTypesPage })));
 export const DivisionsPage = lazy(() => import("@/pages/divisions/DivisionsPage").then((m) => ({ default: m.DivisionsPage })));
 export const SitesPage = lazy(() => import("@/pages/sites/SitesPage").then((m) => ({ default: m.SitesPage })));
+export const HikvisionBandingPage = lazy(() => import("@/pages/hikvision/HikvisionBandingPage").then((m) => ({ default: m.HikvisionBandingPage })));
 export const HikvisionDevicesPage = lazy(() => import("@/pages/hikvision/HikvisionDevicesPage").then((m) => ({ default: m.HikvisionDevicesPage })));
 export const SystemSettingsPage = lazy(() => import("@/pages/system/SystemSettingsPage").then((m) => ({ default: m.SystemSettingsPage })));
 export const DailyPlansPage = lazy(() => import("@/pages/work-plans/DailyPlansPage").then((m) => ({ default: m.DailyPlansPage })));
@@ -33,3 +34,5 @@ export const SurveysPage = lazy(() => import("@/pages/surveys/SurveysPage").then
 export const SurveyDetailPage = lazy(() => import("@/pages/surveys/SurveyDetailPage").then((m) => ({ default: m.SurveyDetailPage })));
 export const WorkOrdersPage = lazy(() => import("@/pages/work-orders/WorkOrderBoardPage").then((m) => ({ default: m.WorkOrderBoardPage })));
 export const HseCampaignsPage = lazy(() => import("@/pages/hse/HseCampaignsPage").then((m) => ({ default: m.HseCampaignsPage })));
+export const ArchivePage = lazy(() => import("@/pages/archive/ArchivePage").then((m) => ({ default: m.ArchivePage })));
+export const VehicleInspectionsPage = lazy(() => import("@/pages/hse/VehicleInspectionsPage").then((m) => ({ default: m.VehicleInspectionsPage })));

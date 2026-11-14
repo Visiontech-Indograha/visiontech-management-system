@@ -5,6 +5,7 @@ Rute endpoint HTTP untuk pengajuan lembur (/overtime).
 Mengikuti Panduan Standar Arsitektur API FastAPI Modular §4 & §5.1.
 """
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -15,11 +16,14 @@ from app.core.list_params import ListParams, apply_list
 from app.core.permissions import Permission
 from app.core.security import CurrentUser
 from app.modules.overtime.controllers.overtime_controller import OvertimeController
+from app.modules.overtime.dependencies import get_overtime_attachments
 from app.modules.overtime.schemas.overtime_schema import (
     OvertimeCreate,
     OvertimeResponse,
     OvertimeReview,
 )
+from app.shared.attachments.schema import AttachmentAdd, AttachmentOut
+from app.shared.attachments.service import AttachmentService
 
 router = APIRouter(prefix="/overtime", tags=["Overtime"])
 
@@ -94,3 +98,36 @@ async def delete_overtime(
 ) -> dict[str, str]:
     """Hapus permanen pengajuan lembur — hanya SUPER_ADMIN."""
     return await controller.handle_delete(current_user, ot_id)
+
+
+@router.get("/{ot_id}/attachments", response_model=list[AttachmentOut])
+async def list_overtime_attachments(
+    ot_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_overtime_attachments),
+) -> list[dict[str, Any]]:
+    """Lampiran lembur (maksimal 5): pemohon dan peninjaunya. Orang lain di kantor yang sama 403; kantor lain 404."""
+    return await service.items(current_user, ot_id)
+
+
+@router.post("/{ot_id}/attachments", response_model=list[AttachmentOut], status_code=status.HTTP_201_CREATED)
+async def add_overtime_attachment(
+    ot_id: UUID,
+    data: AttachmentAdd,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_overtime_attachments),
+) -> list[dict[str, Any]]:
+    """Melampirkan berkas unggahan sendiri (POST /files/upload). Hanya selagi pengajuan menunggu keputusan (409
+    LAMPIRAN_TERKUNCI sesudahnya); batas 5 berkas (409 LAMPIRAN_PENUH). Mengulang berkas yang sama aman."""
+    return await service.add(current_user, ot_id, data.file_id)
+
+
+@router.delete("/{ot_id}/attachments/{file_id}", response_model=list[AttachmentOut])
+async def remove_overtime_attachment(
+    ot_id: UUID,
+    file_id: UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: AttachmentService = Depends(get_overtime_attachments),
+) -> list[dict[str, Any]]:
+    """Menghapus lampiran (pemohon: semua; peninjau: miliknya) selagi pengajuan menunggu keputusan."""
+    return await service.remove(current_user, ot_id, file_id)

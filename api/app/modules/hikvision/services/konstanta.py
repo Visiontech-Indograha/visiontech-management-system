@@ -14,6 +14,8 @@ MINOR_KARTU = 1                 # kartu lolos
 MINOR_SIDIK_JARI = 38           # sidik jari lolos
 MINOR_VERIFIKASI_LOLOS = frozenset({MINOR_WAJAH, MINOR_KARTU, MINOR_SIDIK_JARI})
 
+TOLERANSI_BANDING_MENIT = 5     # selisih mesin vs aplikasi yang masih dianggap cocok (sama dengan web)
+
 # --- Nama field (PERLU VERIFIKASI dari tangkapan perangkat asli). Tuple = urutan alternatif yang dicoba. ---
 BLOK_EVENT = "AccessControllerEvent"
 F_JENIS_EVENT = ("eventType",)

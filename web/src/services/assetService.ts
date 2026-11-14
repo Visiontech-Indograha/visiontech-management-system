@@ -107,12 +107,14 @@ export const useReviewLoanRequest = () =>
 export const BORROWERS_KEY = [...KEY, "borrowers"] as const;
 
 /** Pilihan penerima eksternal untuk form pinjam (satu halaman, cari awalan nama). */
-export const useBorrowerOptions = (q: string, enabled: boolean) =>
+export const useBorrowerOptions = (q: string, enabled: boolean, officeId?: string) =>
   useQuery({
-    queryKey: [...BORROWERS_KEY, "options", q],
+    queryKey: [...BORROWERS_KEY, "options", q, officeId ?? null],
     enabled,
     queryFn: async () =>
-      (await api.get<Borrower[]>("/assets/external-borrowers", { params: { q: q || undefined, page: 1, size: 50 } })).data,
+      (await api.get<Borrower[]>("/assets/external-borrowers", {
+        params: { q: q || undefined, office_id: officeId, page: 1, size: 50 },
+      })).data,
   });
 
 export const useCreateBorrower = () =>

@@ -17317,6 +17317,17 @@
       "title": "Photos Json",
       "type": "array"
      },
+     "reject_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reject Reason"
+     },
      "status": {
       "title": "Status",
       "type": "string"
@@ -17399,7 +17410,21 @@
         "type": "null"
        }
       ],
+      "description": "Usang (APK lama): jadi alasan tolak bila reject_reason kosong; tidak menimpa catatan pemeriksa",
       "title": "Notes"
+     },
+     "reject_reason": {
+      "anyOf": [
+       {
+        "maxLength": 1000,
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Alasan tolak",
+      "title": "Reject Reason"
      },
      "status": {
       "description": "VERIFIED atau REJECTED",

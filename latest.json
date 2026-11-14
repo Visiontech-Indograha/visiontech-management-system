@@ -1,0 +1,12 @@
+{
+  "package": "com.visiontech.vms_mobile.beta",
+  "version_name": "1.8.4",
+  "build": 2911,
+  "min_build": 1,
+  "released_at": "2026-11-14T07:56:33+07:00",
+  "notes": ["Merge pull request #559 from Visiontech-Indograha/development"],
+  "files": [
+    {"abi": "arm64-v8a", "name": "vms-1.8.4-2911-arm64-v8a.apk", "sha256": "903823468de32d64643e5c74048ee9f4d30bab2407d03375807b8fc5f19d8d31", "size": 28136099},
+    {"abi": "armeabi-v7a", "name": "vms-1.8.4-2911-armeabi-v7a.apk", "sha256": "3ded234376501defe47bef9ba353cbade40f6f0072fdb5364dd93f257fb62710", "size": 26122039}
+  ]
+}

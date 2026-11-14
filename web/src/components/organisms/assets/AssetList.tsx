@@ -14,6 +14,7 @@ import { assetRowActions } from "@/lib/aksiPeran";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListPagination } from "@/components/organisms/ListPagination";
 import { ListToolbar } from "@/components/organisms/ListToolbar";
+import { DocumentLink } from "@/components/organisms/DocumentLink";
 import { PhotoStrip } from "@/components/organisms/PhotoStrip";
 import { useListControls } from "@/hooks/useListControls";
 import { pagedView, usePagedList } from "@/hooks/usePagedList";
@@ -23,7 +24,7 @@ import type { AssetKind, Loan, Tool, Vehicle } from "@/services/assetService";
 /** Dialog yang dibuka dari kartu aset. */
 export type AssetAction =
   | { kind: "lend"; asset: AssetKind; id: string; name: string }
-  | { kind: "lend-external"; asset: AssetKind; id: string; name: string }
+  | { kind: "lend-external"; asset: AssetKind; id: string; name: string; officeId: string }
   | { kind: "status"; asset: AssetKind; id: string; name: string; status: string }
   | { kind: "files"; vehicle: Vehicle }
   | { kind: "drivers"; vehicle: Vehicle }
@@ -143,7 +144,8 @@ export function AssetList({ canManage, onOpen }: { canManage: boolean; onOpen: (
                     {l.work_date ? ` · jadwal ${formatDate(l.work_date)}` : ""}
                     {l.due_date ? ` · harus kembali ${formatDate(l.due_date)}` : ""}
                   </TextBlock>
-                  {l.handover_file_id && <PhotoStrip photos={[{ file_id: l.handover_file_id }]} alt="Foto serah terima" />}
+                  {l.bast_file_id && <DocumentLink fileId={l.bast_file_id} label="Buka dokumen serah terima" />}
+                  {l.handover_file_id &&<PhotoStrip photos={[{ file_id: l.handover_file_id }]} alt="Foto serah terima" />}
                 </div>
                 {l.external_borrower_id && <Pill tone="neutral">Pihak luar</Pill>}
                 {l.due_date && l.due_date < today() && <Pill tone="danger">Lewat tanggal kembali</Pill>}
@@ -173,7 +175,7 @@ function VehicleActions({ vehicle: v, canManage, onOpen }: { vehicle: Vehicle; c
         </ActionButton>
       )}
       {actions.includes("lend") && (
-        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "VEHICLE", id: v.vehicle_id, name: v.name })}>
+        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "VEHICLE", id: v.vehicle_id, name: v.name, officeId: v.office_id })}>
           Serahkan ke pihak luar
         </ActionButton>
       )}
@@ -205,7 +207,7 @@ function ToolActions({ tool: t, canManage, onOpen }: { tool: Tool; canManage: bo
         </ActionButton>
       )}
       {actions.includes("lend") && (
-        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "TOOL", id: t.tool_id, name: t.name })}>
+        <ActionButton size="sm" variant="outline" onClick={() => onOpen({ kind: "lend-external", asset: "TOOL", id: t.tool_id, name: t.name, officeId: t.office_id })}>
           Serahkan ke pihak luar
         </ActionButton>
       )}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/apiClient";
 import type { components } from "@/lib/apiTypes";
 
@@ -19,12 +19,28 @@ const KEY = ["hikvision"] as const;
 const dev = (id: string) => `/hikvision/devices/${id}`;
 
 /** GET /hikvision/devices/{id}/bayangan: tap mesin vs absen aplikasi per karyawan-hari (baca saja, maks 31 hari). */
-export const useBandingBayangan = (id: string, dari: string, sampai: string) =>
-  useQuery({
-    queryKey: [...KEY, "bayangan", id, dari, sampai],
+export interface BandingFilter {
+  status?: BandingBaris["status"];
+  q?: string;
+  page: number;
+  size: number;
+}
+
+/** Filter status, cari awalan nama, dan halaman dikerjakan server; total dari X-Total-Count (cadangan: total_baris). */
+export const useBandingBayangan = (id: string, dari: string, sampai: string, f: BandingFilter) => {
+  const params = { dari, sampai, status: f.status || undefined, q: f.q || undefined, page: f.page, size: f.size };
+  return useQuery({
+    queryKey: [...KEY, "bayangan", id, params],
     enabled: Boolean(id && dari && sampai),
-    queryFn: async () => (await api.get<BandingBayangan>(`${dev(id)}/bayangan`, { params: { dari, sampai } })).data,
+    placeholderData: keepPreviousData,
+    queryFn: async () => {
+      const res = await api.get<BandingBayangan>(`${dev(id)}/bayangan`, { params });
+      const header = Number(res.headers?.["x-total-count"]);
+      const total = Number.isFinite(header) && header >= 0 ? header : (res.data.total_baris ?? res.data.items.length);
+      return { ...res.data, total_baris: total };
+    },
   });
+};
 
 /** GET /hikvision/devices (izin manage:hikvision). */
 export const useHikvisionDevices = () =>

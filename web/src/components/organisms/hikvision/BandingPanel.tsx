@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { QueryState } from "@/components/molecules/QueryState";
 import { useListControls } from "@/hooks/useListControls";
-import { STATUS_BANDING, cocokAwalan, statusBanding } from "@/lib/hikvisionBanding";
+import { STATUS_BANDING, type StatusBanding } from "@/lib/hikvisionBanding";
 import { jakartaToday } from "@/lib/leaveRules";
 import { useBandingBayangan, useHikvisionDevices } from "@/services/hikvisionService";
-import { BandingFilters } from "./BandingFilters";
+import { BandingFilters, type BandingFilterValue } from "./BandingFilters";
 import { BandingTable } from "./BandingTable";
 
 const SIZE = 20;
@@ -16,10 +16,14 @@ const geser = (iso: string, hari: number) => {
   return d.toISOString().slice(0, 10);
 };
 
+const totalBaris = (d?: { total_baris?: number | null }) => d?.total_baris ?? 0;
+
+const mesinAktif = (pilihan: string, daftar?: { device_id: string }[]) => pilihan || daftar?.[0]?.device_id || "";
+
 const rentangBenar = (dari: string, sampai: string) =>
   Boolean(dari && sampai && dari <= sampai && (Date.parse(sampai) - Date.parse(dari)) / 86_400_000 < MAX_HARI);
 
-/** Pembanding mode Bayangan: absen mesin vs absen aplikasi per karyawan-hari, dengan filter dan halaman. */
+/** Pembanding mode Bayangan: absen mesin vs absen aplikasi per karyawan-hari, dengan filter dan halaman dari server. */
 export function BandingPanel() {
   const devices = useHikvisionDevices();
   const controls = useListControls({ size: SIZE });
@@ -27,18 +31,25 @@ export function BandingPanel() {
   const [pilihan, setPilihan] = useState("");
   const [dari, setDari] = useState(geser(hariIni, -6));
   const [sampai, setSampai] = useState(hariIni);
-  const deviceId = pilihan || devices.data?.[0]?.device_id || "";
+  const deviceId = mesinAktif(pilihan, devices.data);
   const rentangSah = rentangBenar(dari, sampai);
-  const query = useBandingBayangan(deviceId, rentangSah ? dari : "", sampai);
-  const status = controls.filter("status", STATUS_BANDING);
+  const status = controls.filter("status", STATUS_BANDING) as StatusBanding | "";
+  const query = useBandingBayangan(deviceId, rentangSah ? dari : "", sampai, {
+    status: status === "" ? undefined : status,
+    q: controls.search,
+    page: controls.page,
+    size: SIZE,
+  });
+  const total = totalBaris(query.data);
+  const lastPage = Math.max(1, Math.ceil(total / SIZE));
 
-  const rows = useMemo(
-    () => (query.data?.items ?? []).filter((r) => (!status || statusBanding(r) === status) && cocokAwalan(r.employee_name, controls.search)),
-    [query.data, status, controls.search],
-  );
-  const lastPage = Math.max(1, Math.ceil(rows.length / SIZE));
-  const shownPage = Math.min(controls.page, lastPage);
-  const view = rows.slice((shownPage - 1) * SIZE, shownPage * SIZE);
+  const terapkan = (p: Partial<BandingFilterValue>) => {
+    setPilihan((v) => p.deviceId ?? v);
+    setDari((v) => p.dari ?? v);
+    setSampai((v) => p.sampai ?? v);
+    if (p.status !== undefined) controls.setFilter("status", p.status);
+    if (p.input !== undefined) controls.setInput(p.input);
+  };
 
   return (
     <QueryState
@@ -52,21 +63,15 @@ export function BandingPanel() {
         value={{ deviceId, dari, sampai, status, input: controls.input }}
         active={controls.active}
         onReset={controls.reset}
-        onChange={(p) => {
-          setPilihan((v) => p.deviceId ?? v);
-          setDari((v) => p.dari ?? v);
-          setSampai((v) => p.sampai ?? v);
-          if (p.status !== undefined) controls.setFilter("status", p.status);
-          if (p.input !== undefined) controls.setInput(p.input);
-        }}
+        onChange={terapkan}
       />
       {rentangSah ? (
         <BandingTable
           query={query}
-          rows={view}
-          total={rows.length}
+          rows={query.data?.items ?? []}
+          total={total}
           page={controls.page}
-          shownPage={shownPage}
+          shownPage={Math.min(controls.page, lastPage)}
           lastPage={lastPage}
           onPageChange={controls.setPage}
           filtered={Boolean(status || controls.search)}

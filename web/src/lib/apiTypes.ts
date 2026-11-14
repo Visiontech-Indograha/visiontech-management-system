@@ -12396,6 +12396,8 @@ export interface components {
             photos_json: string[];
             /** Notes */
             notes?: string | null;
+            /** Reject Reason */
+            reject_reason?: string | null;
             /** Status */
             status: string;
             /** Verified By Id */
@@ -12417,7 +12419,15 @@ export interface components {
              * @description VERIFIED atau REJECTED
              */
             status: string;
-            /** Notes */
+            /**
+             * Reject Reason
+             * @description Alasan tolak
+             */
+            reject_reason?: string | null;
+            /**
+             * Notes
+             * @description Usang (APK lama): jadi alasan tolak bila reject_reason kosong; tidak menimpa catatan pemeriksa
+             */
             notes?: string | null;
         };
         /** VehicleOut */

@@ -54,7 +54,7 @@ class VehicleInspectionRepository(BaseRepository):
                 i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate, v.office_id,
                 i.inspector_id, e.full_name AS inspector_name,
                 i.period_type, i.inspection_date, i.odometer_km,
-                i.checklist_json, i.photos_json, i.notes, i.status,
+                i.checklist_json, i.photos_json, i.notes, i.reject_reason, i.status,
                 i.verified_by_id, COALESCE(ve.full_name, vu.email) AS verifier_name,
                 i.verified_at, i.create_at
             FROM vehicle_safety_inspections i
@@ -124,7 +124,7 @@ class VehicleInspectionRepository(BaseRepository):
                     i.inspection_id, i.vehicle_id, v.name AS vehicle_name, v.number_plate, v.office_id,
                     i.inspector_id, e.full_name AS inspector_name,
                     i.period_type, i.inspection_date, i.odometer_km,
-                    i.checklist_json, i.photos_json, i.notes, i.status,
+                    i.checklist_json, i.photos_json, i.notes, i.reject_reason, i.status,
                     i.verified_by_id, COALESCE(ve.full_name, vu.email) AS verifier_name,
                     i.verified_at, i.create_at,
                     COUNT(*) OVER () AS total_count,
@@ -139,7 +139,7 @@ class VehicleInspectionRepository(BaseRepository):
             SELECT
                 inspection_id, vehicle_id, vehicle_name, number_plate, office_id,
                 inspector_id, inspector_name, period_type, inspection_date, odometer_km,
-                checklist_json, photos_json, notes, status,
+                checklist_json, photos_json, notes, reject_reason, status,
                 verified_by_id, verifier_name, verified_at, create_at, total_count
             FROM page
             WHERE rn > :first AND rn <= :last
@@ -207,7 +207,7 @@ class VehicleInspectionRepository(BaseRepository):
             UPDATE vehicle_safety_inspections
             SET
                 status = :status,
-                notes = COALESCE(CAST(:notes AS TEXT), notes),
+                reject_reason = CAST(:reject_reason AS TEXT),
                 verified_by_id = :verifier_id,
                 verified_at = NOW(),
                 update_at = NOW()
@@ -217,7 +217,7 @@ class VehicleInspectionRepository(BaseRepository):
         params = {
             "inspection_id": inspection_id,
             "status": data.status,
-            "notes": data.notes,
+            "reject_reason": (data.reject_reason or data.notes) if data.status == "REJECTED" else None,
             "verifier_id": verifier_id,
         }
         row = await self.fetchone(query, params)

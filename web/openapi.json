@@ -39159,6 +39159,17 @@
       ],
       "title": "Notes"
      },
+     "reject_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reject Reason"
+     },
      "status": {
       "type": "string",
       "title": "Status"
@@ -39226,6 +39237,19 @@
       "title": "Status",
       "description": "VERIFIED atau REJECTED"
      },
+     "reject_reason": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 1000
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reject Reason",
+      "description": "Alasan tolak"
+     },
      "notes": {
       "anyOf": [
        {
@@ -39236,7 +39260,8 @@
         "type": "null"
        }
       ],
-      "title": "Notes"
+      "title": "Notes",
+      "description": "Usang (APK lama): jadi alasan tolak bila reject_reason kosong; tidak menimpa catatan pemeriksa"
      }
     },
     "type": "object",

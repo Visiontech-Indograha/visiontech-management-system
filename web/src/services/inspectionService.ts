@@ -47,7 +47,7 @@ export function useVerifyInspection() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: "VERIFIED" | "REJECTED"; notes?: string }) =>
-      (await api.patch<Inspection>(`/hse/inspections/${id}/verify`, { status, notes: notes || null })).data,
+      (await api.patch<Inspection>(`/hse/inspections/${id}/verify`, { status, reject_reason: notes || null })).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: INSPECTION_KEY }),
   });
 }

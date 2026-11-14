@@ -282,3 +282,55 @@ def test_inspection_list_paging_total_and_prefix_search(client, hse_world: World
     assert wild.json() == []
     legacy = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle})
     assert len(legacy.json()) == 3
+
+
+def _create(client, world: World, vehicle: str, notes: str) -> str:
+    resp = client.post("/hse/inspections", headers=world.headers(client, "hse"),
+                       json=_payload(vehicle, notes=notes))
+    assert resp.status_code == 201, resp.text
+    return resp.json()["inspection_id"]
+
+
+def test_reject_keeps_inspector_notes_and_stores_reason(client, hse_world: World, test_vehicle: str):
+    hse = hse_world.headers(client, "hse")
+    iid = _create(client, hse_world, test_vehicle, "Catatan awal pemeriksa")
+    resp = client.patch(f"/hse/inspections/{iid}/verify", headers=hse,
+                        json={"status": "REJECTED", "reject_reason": "Foto buram"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["status"] == "REJECTED"
+    assert body["notes"] == "Catatan awal pemeriksa"
+    assert body["reject_reason"] == "Foto buram"
+    detail = client.get(f"/hse/inspections/{iid}", headers=hse).json()
+    assert detail["notes"] == "Catatan awal pemeriksa" and detail["reject_reason"] == "Foto buram"
+    listed = client.get("/hse/inspections", headers=hse, params={"vehicle_id": test_vehicle}).json()
+    row = next(i for i in listed if i["inspection_id"] == iid)
+    assert row["reject_reason"] == "Foto buram" and row["notes"] == "Catatan awal pemeriksa"
+
+
+def test_reject_legacy_notes_field_becomes_reason_not_overwrite(client, hse_world: World, test_vehicle: str):
+    hse = hse_world.headers(client, "hse")
+    iid = _create(client, hse_world, test_vehicle, "Catatan awal")
+    body = client.patch(f"/hse/inspections/{iid}/verify", headers=hse,
+                        json={"status": "REJECTED", "notes": "Odometer salah"}).json()
+    assert body["notes"] == "Catatan awal" and body["reject_reason"] == "Odometer salah"
+
+
+def test_verify_does_not_touch_notes(client, hse_world: World, test_vehicle: str):
+    hse = hse_world.headers(client, "hse")
+    iid = _create(client, hse_world, test_vehicle, "Catatan awal")
+    body = client.patch(f"/hse/inspections/{iid}/verify", headers=hse,
+                        json={"status": "VERIFIED", "notes": "OK"}).json()
+    assert body["notes"] == "Catatan awal" and body["reject_reason"] is None
+
+
+def test_verify_role_matrix(client, hse_world: World, test_vehicle: str):
+    # kantor lain 404: test_pm_hse_extra_roles.py::test_hse_extra_scoped_to_assigned_office (HSE utama = semua kantor)
+    iid = _create(client, hse_world, test_vehicle, "Catatan awal")
+    path = f"/hse/inspections/{iid}/verify"
+    payload = {"status": "REJECTED", "reject_reason": "x"}
+    assert client.patch(path, headers=hse_world.headers(client, "member"), json=payload).status_code == 403
+    assert client.patch(path, headers=hse_world.headers(client, "hse"),
+                        json={"status": "REJECTED", "reject_reason": "y" * 1001}).status_code == 422
+    assert client.get(f"/hse/inspections/{iid}", headers=hse_world.headers(client, "hse")).json()[
+        "reject_reason"] is None

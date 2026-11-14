@@ -18,10 +18,11 @@ const fileOf = (form: HTMLFormElement, name: string) =>
  * Serah aset ke pihak luar perusahaan (klien sewa, subkontraktor): pilih penerima, tanggal harus kembali (opsional),
  * dokumen serah terima (opsional), foto (opsional). Tanpa jadwal harian. Aturan STNK/KIR dijaga API.
  */
-export function AssetLendExternalDialog({ kind, assetId, assetName, onClose }: {
+export function AssetLendExternalDialog({ kind, assetId, assetName, officeId, onClose }: {
   kind: AssetKind;
   assetId: string;
   assetName: string;
+  officeId: string;
   onClose: () => void;
 }) {
   const lend = useLend();
@@ -30,7 +31,7 @@ export function AssetLendExternalDialog({ kind, assetId, assetName, onClose }: {
   const [borrowerId, setBorrowerId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
-  const borrowers = useBorrowerOptions(q, true);
+  const borrowers = useBorrowerOptions(q, true, officeId);
   const idem = useIdempotencyKey(JSON.stringify({ kind, assetId, borrowerId, dueDate }));
   const today = wibDate();
 

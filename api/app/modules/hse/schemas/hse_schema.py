@@ -153,7 +153,11 @@ class VehicleInspectionCreate(BaseModel):
 
 class VehicleInspectionVerify(BaseModel):
     status: str = Field(..., pattern=INSPECTION_VERIFY_PATTERN, description="VERIFIED atau REJECTED")
-    notes: str | None = Field(None, max_length=INSPECTION_MAX_NOTES)
+    reject_reason: str | None = Field(None, max_length=INSPECTION_MAX_NOTES, description="Alasan tolak")
+    notes: str | None = Field(
+        None, max_length=INSPECTION_MAX_NOTES,
+        description="Usang (APK lama): jadi alasan tolak bila reject_reason kosong; tidak menimpa catatan pemeriksa",
+    )
 
 
 class InspectionChecklistItem(BaseModel):
@@ -182,6 +186,7 @@ class VehicleInspectionResponse(BaseModel):
     checklist_json: dict[str, Any]
     photos_json: list[str]
     notes: str | None = None
+    reject_reason: str | None = None
     status: str
     verified_by_id: UUID | None = None
     verifier_name: str | None = None

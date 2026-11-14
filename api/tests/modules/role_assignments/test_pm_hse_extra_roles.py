@@ -152,6 +152,14 @@ def test_hse_extra_scoped_to_assigned_office(client, world: World, other_world: 
         assert v.status_code == 404
     ok = client.patch(f"/hse/inspections/{ia}/verify", headers=h, json={"status": "VERIFIED", "notes": "ok"})
     assert ok.status_code == 200, ok.text
+    # tolak: kantor lain 404 (tanpa menulis alasan), kantor sendiri menyimpan alasan di reject_reason
+    other = client.patch(f"/hse/inspections/{ib}/verify", headers=h, json={"status": "REJECTED", "reject_reason": "x"})
+    assert other.status_code == 404
+    rej = client.patch(f"/hse/inspections/{ia}/verify", headers=h,
+                       json={"status": "REJECTED", "reject_reason": "Foto buram"})
+    assert rej.status_code == 200 and rej.json()["reject_reason"] == "Foto buram"
+    untouched = client.get(f"/hse/inspections/{ib}", headers=world.headers(client, "admin")).json()
+    assert untouched["reject_reason"] is None
     # dokumen karyawan: kantor penugasan saja
     assert client.get(f"/employees/{world.employees['member']}/documents", headers=h).status_code == 200
     assert client.get(f"/employees/{other_world.employees['member']}/documents", headers=h).status_code == 404

@@ -4,7 +4,7 @@ import { QueryState } from "@/components/molecules/QueryState";
 import { TableBlock, TableBlockBody, TableBlockCell, TableBlockHead, TableBlockHeaderCell, TableBlockRow } from "@/components/molecules/TableBlock";
 import { TextBlock } from "@/components/molecules/TextBlock";
 import { ListPagination } from "@/components/organisms/ListPagination";
-import { STATUS_LABEL, STATUS_TONE, selisihLabel, statusBanding } from "@/lib/hikvisionBanding";
+import { STATUS_LABEL, STATUS_TONE, selisihLabel } from "@/lib/hikvisionBanding";
 import { formatDate, formatTime } from "@/lib/format";
 import type { BandingBaris, BandingBayangan } from "@/services/hikvisionService";
 
@@ -58,12 +58,12 @@ export function BandingTable({ query, rows, total, page, shownPage, lastPage, on
           </TableBlockHead>
           <TableBlockBody>
             {rows.map((r) => {
-              const st = statusBanding(r);
+              const st = r.status;
               return (
                 <TableBlockRow key={`${r.employee_id}-${r.tgl}`} className="border-b border-line">
                   <TableBlockCell className="p-3 font-medium text-ink">{r.employee_name}</TableBlockCell>
                   <TableBlockCell className="p-3">{formatDate(r.tgl)}</TableBlockCell>
-                  <TableBlockCell className="p-3">{`${formatTime(r.pertama)} - ${formatTime(r.terakhir)} (${r.jumlah}x)`}</TableBlockCell>
+                  <TableBlockCell className="p-3">{r.pertama && r.terakhir ? `${formatTime(r.pertama)} - ${formatTime(r.terakhir)} (${r.jumlah}x)` : "Tidak ada di mesin"}</TableBlockCell>
                   <TableBlockCell className="p-3">
                     {r.clock_in_at || r.clock_out_at ? `${formatTime(r.clock_in_at)} - ${formatTime(r.clock_out_at)}` : "Belum absen"}
                   </TableBlockCell>

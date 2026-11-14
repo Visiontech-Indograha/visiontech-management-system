@@ -30,7 +30,7 @@ export function AssetsTemplate({ canManage, open, onOpen, close }: {
       {open?.kind === "borrowers" && <BorrowersDialog onClose={close} />}
       {open?.kind === "create" && <AssetCreateDialog kind={open.asset} onClose={close} />}
       {open?.kind === "lend" && <AssetLendDialog kind={open.asset} assetId={open.id} assetName={open.name} onClose={close} />}
-      {open?.kind === "lend-external" && <AssetLendExternalDialog kind={open.asset} assetId={open.id} assetName={open.name} onClose={close} />}
+      {open?.kind === "lend-external" && <AssetLendExternalDialog kind={open.asset} assetId={open.id} assetName={open.name} officeId={open.officeId} onClose={close} />}
       {open?.kind === "status" && <AssetStatusDialog kind={open.asset} id={open.id} name={open.name} status={open.status} onClose={close} />}
       {open?.kind === "files" && <VehicleFilesDialog vehicle={open.vehicle} canManage={canManage} onClose={close} />}
       {open?.kind === "return" && <AssetReturnDialog loan={open.loan} onClose={close} />}

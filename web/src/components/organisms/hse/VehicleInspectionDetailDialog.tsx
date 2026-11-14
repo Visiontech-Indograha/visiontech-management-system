@@ -102,7 +102,11 @@ export function VehicleInspectionDetailDialog({ id, canVerify, onClose }: { id: 
                 </ListEntry>
               ))}
             </ListBlock>
-            {d.notes && <TextBlock className="text-sm text-ink">Catatan: {d.notes}</TextBlock>}
+            {d.notes && (
+              <TextBlock className="text-sm text-ink">
+                {d.status === "REJECTED" ? "Alasan penolakan" : "Catatan pemeriksa"}: {d.notes}
+              </TextBlock>
+            )}
             <Photos ids={d.photos_json} />
             {canVerify && d.status === "SUBMITTED" && <VerifyBar id={id} onClose={onClose} />}
           </div>

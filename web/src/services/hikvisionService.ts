@@ -16,6 +16,22 @@ export type BandingBaris = S["BandingBaris"];
 export type BandingBayangan = S["BandingBayangan"];
 
 const KEY = ["hikvision"] as const;
+
+/** Batas `size` API (MAX_PAGE_SIZE di api/app/core/list_params.py). Lebih dari ini ditolak 422. */
+export const BATAS_UKURAN_HALAMAN = 100;
+const BATAS_HALAMAN = 50;
+
+/** Ambil semua baris sebuah daftar dengan paginasi sah (size <= batas API), berhenti saat halaman tak penuh. */
+export async function ambilSemuaHalaman<T>(url: string): Promise<T[]> {
+  const hasil: T[] = [];
+  for (let page = 1; page <= BATAS_HALAMAN; page += 1) {
+    const res = await api.get<T[]>(url, { params: { page, size: BATAS_UKURAN_HALAMAN } });
+    hasil.push(...res.data);
+    const total = Number(res.headers?.["x-total-count"]);
+    if (res.data.length < BATAS_UKURAN_HALAMAN || (Number.isFinite(total) && hasil.length >= total)) break;
+  }
+  return hasil;
+}
 const dev = (id: string) => `/hikvision/devices/${id}`;
 
 /** GET /hikvision/devices/{id}/bayangan: tap mesin vs absen aplikasi per karyawan-hari (baca saja, maks 31 hari). */
@@ -46,7 +62,7 @@ export const useBandingBayangan = (id: string, dari: string, sampai: string, f: 
 export const useHikvisionDevices = () =>
   useQuery({
     queryKey: [...KEY, "devices"],
-    queryFn: async () => (await api.get<Perangkat[]>("/hikvision/devices", { params: { size: 200 } })).data,
+    queryFn: () => ambilSemuaHalaman<Perangkat>("/hikvision/devices"),
   });
 
 export const useDeviceStatus = (id: string) =>
@@ -90,7 +106,7 @@ export const useRenewReceiver = () =>
 export const useMappings = (id: string) =>
   useQuery({
     queryKey: [...KEY, "mappings", id],
-    queryFn: async () => (await api.get<Pemetaan[]>(`${dev(id)}/mappings`, { params: { size: 200 } })).data,
+    queryFn: () => ambilSemuaHalaman<Pemetaan>(`${dev(id)}/mappings`),
   });
 
 export const useMappingSuggestions = (id: string, enabled: boolean) =>
